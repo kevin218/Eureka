@@ -297,13 +297,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 else:
                     meta.int_end = meta.int_start+meta.nplots
 
+                # Initialize bad pixel mask (False = good, True = bad)
+                data['mask'] = (['time', 'y', 'x'],
+                                np.zeros(data.flux.shape, dtype=bool))
+
                 # Perform BG subtraction along dispersion direction
                 # for untrimmed NIRCam spectroscopic data
                 if meta.bg_row_by_row:
                     meta.bg_dir = 'RxR'
-                    # Create bad pixel mask (1 = good, 0 = bad)
-                    data['mask'] = (['time', 'y', 'x'],
-                                    np.ones(data.flux.shape, dtype=bool))
                     data = bg.BGsubtraction(data, meta, log,
                                             m, meta.isplots_S3)
                     meta.bg_row_by_row = False
@@ -316,10 +317,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Trim data to subarray region of interest
                 # Dataset object no longer contains untrimmed data
                 data, meta = util.trim(data, meta)
-
-                # Create bad pixel mask (1 = good, 0 = bad)
-                data['mask'] = (['time', 'y', 'x'],
-                                np.ones(data.flux.shape, dtype=bool))
 
                 # Check if arrays have NaNs/infs
                 log.writelog('  Masking NaNs/infs in data arrays...',
@@ -339,7 +336,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Odd numbers in DQ array are bad pixels. Do not use.
                 if meta.dqmask:
                     dqmask = np.where(data.dq.values % 2 == 1)
-                    data.mask.values[dqmask] = 0
+                    data.mask.values[dqmask] = True
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if meta.manmask is not None:
@@ -360,7 +357,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             data.wave_2d.attrs['wave_units']
 
                     # Check for bad wavelengths (beyond wavelength solution)
-                    util.check_nans(data.wave_1d.values, np.ones(meta.subnx),
+                    util.check_nans(data.wave_1d.values, np.zeros(meta.subnx),
                                     log, name='wavelength')
 
                     if meta.calibrated_spectra:
@@ -485,7 +482,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             centerdriver.centerdriver(
                                 'mgmc_pri', data.flux.values, guess=1, trim=0,
                                 radius=None, size=None, meta=meta, i=None,
-                                m=None,
+                                m=None, mask=data.mask.values,
                                 saved_ref_median_frame=saved_ref_median_frame)
                         if saved_ref_median_frame is None:
                             saved_ref_median_frame = refrence_median_frame
@@ -509,16 +506,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                               data.flux.shape[2]//2]
                             # Do a 2D gaussian fit to the whole frame
                             position_pri, extra = \
-                                centerdriver.centerdriver('fgc',
-                                                          data.flux.values[i],
-                                                          centroid_guess,
-                                                          0, 0, 0,
-                                                          mask=None, uncd=None,
-                                                          fitbg=1,
-                                                          maskstar=True,
-                                                          expand=1.0, psf=None,
-                                                          psfctr=None, i=i,
-                                                          m=m, meta=meta)
+                                centerdriver.centerdriver(
+                                    'fgc', data.flux.values[i], centroid_guess,
+                                    0, 0, 0, mask=data.mask.values[i],
+                                    uncd=None, fitbg=1, maskstar=True,
+                                    expand=1.0, psf=None, psfctr=None, i=i,
+                                    m=m, meta=meta)
 
                         if meta.oneoverf_corr is not None:
                             # Correct for 1/f

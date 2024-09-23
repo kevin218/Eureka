@@ -57,7 +57,7 @@ def test_medstddev(capsys):
     np.testing.assert_allclose((std, med), (2.2146697055682827, 5.0))
 
     # use masks
-    mask = np.array([1, 1, 1, 0, 0, 0, 0])
+    mask = np.array([False, False, False, True, True, True, True])
     std, med = medstddev(a, mask, medi=True)
     np.testing.assert_allclose((std, med), (1.5275252316519468, 3.0))
 
@@ -69,13 +69,13 @@ def test_medstddev(capsys):
     # critical cases:
     # only one value, return std = 0.0
     a = np.array([1, 4, 6])
-    mask = np.array([0, 0, 1])
+    mask = np.array([True, True, False])
     std, med = medstddev(a, mask, medi=True)
     assert std == 0.0
     assert med == 6.0
 
     # no good values, return std = nan, med = nan
-    mask[-1] = 0
+    mask[-1] = True
     std, med = medstddev(a, mask, medi=True)
     assert np.isnan(std)
     assert np.isnan(med)

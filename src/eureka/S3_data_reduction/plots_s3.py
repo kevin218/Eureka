@@ -30,9 +30,10 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
         which have been set in the S3 ecf
     optspec : Xarray Dataset
         The optimally extracted spectrum.
-    optmask : Xarray Dataset; optional
-        A mask array to use if optspec is not a masked array. Defaults to None
-        in which case only the invalid values of optspec will be masked.
+    optmask : Xarray DataArray; optional
+        A boolean mask array to use if optspec is not a masked array. Defaults
+        to None in which case only the invalid values of optspec will be
+        masked. Will mask the values where the mask value is set to True.
     scandir : ndarray; optional
         For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
         Defaults to None which is fine for JWST data, but must be provided
@@ -77,7 +78,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
     ax1 = fig1.gca()
     ax2 = fig2.gca()
     if meta.time_axis == 'y':
-        im1 = ax1.pcolormesh(wave_1d, np.arange(meta.n_int),
+        im1 = ax1.pcolormesh(wave_1d, np.arange(meta.n_int)+0.5,
                              normspec, vmin=meta.vmin, vmax=meta.vmax,
                              cmap=cmap)
         im2 = ax2.imshow(normspec, origin='lower', aspect='auto',
@@ -147,8 +148,8 @@ def image_and_background(data, meta, log, m):
     intstart = data.attrs['intstart']
     subdata = np.ma.masked_invalid(data.flux.values)
     subbg = np.ma.masked_invalid(data.bg.values)
-    subdata = np.ma.masked_where(~data.mask.values, subdata)
-    subbg = np.ma.masked_where(~data.mask.values, subbg)
+    subdata = np.ma.masked_where(data.mask.values, subdata)
+    subbg = np.ma.masked_where(data.mask.values, subbg)
 
     # Determine bounds for subdata
     stddev = np.ma.std(subdata)
@@ -346,25 +347,21 @@ def profile(meta, profile, submask, n, m):
     profile : ndarray
         Fitted profile in the same shape as the data array.
     submask : ndarray
-        Outlier mask.
+        Outlier mask, where outliers are marked with the value True.
     n : int
         The current integration number.
     m : int
         The file number.
     '''
     profile = np.ma.masked_invalid(profile)
-    submask = np.ma.masked_invalid(submask)
-    mask = np.logical_or(np.ma.getmaskarray(profile),
-                         np.ma.getmaskarray(submask))
-    profile = np.ma.masked_where(mask, profile)
-    submask = np.ma.masked_where(mask, submask)
-    vmin = np.ma.min(profile*submask)
-    vmax = vmin + 0.3*np.ma.max(profile*submask)
+    profile = np.ma.masked_where(submask, profile)
+    vmin = np.ma.min(profile)
+    vmax = vmin + 0.3*np.ma.max(profile)
     cmap = plt.cm.viridis.copy()
     plt.figure(3303, figsize=(8, 4))
     plt.clf()
     plt.title(f"Optimal Profile - Integration {n}")
-    plt.imshow(profile*submask, aspect='auto', origin='lower',
+    plt.imshow(profile, aspect='auto', origin='lower',
                vmax=vmax, vmin=vmin, interpolation='nearest', cmap=cmap)
     plt.colorbar()
     plt.ylabel('Relative Pixel Position')
@@ -395,7 +392,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
     subdata : ndarray
         Background subtracted data.
     submask : ndarray
-        Outlier mask.
+        Outlier mask, where outliers are marked with the value True.
     expected : ndarray
         Expected profile
     loc : int
@@ -407,12 +404,12 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
     plt.figure(3501)
     plt.clf()
     plt.suptitle(f'Integration {n}, Columns {i}/{nx}')
-    plt.errorbar(np.arange(ny)[np.where(submask[:, i])[0]],
-                 subdata[np.where(submask[:, i])[0], i],
-                 np.sqrt(variance[np.where(submask[:, i])[0], i]),
+    plt.errorbar(np.arange(ny)[np.where(~submask[:, i])[0]],
+                 subdata[np.where(~submask[:, i])[0], i],
+                 np.sqrt(variance[np.where(~submask[:, i])[0], i]),
                  fmt='.', color='b')
-    plt.plot(np.arange(ny)[np.where(submask[:, i])[0]],
-             expected[np.where(submask[:, i])[0], i], 'g-')
+    plt.plot(np.arange(ny)[np.where(~submask[:, i])[0]],
+             expected[np.where(~submask[:, i])[0], i], 'g-')
     plt.plot((loc), (subdata[loc, i]), 'ro')
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
@@ -517,7 +514,7 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
     xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
 
     # Median flux of segment
-    subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
+    subdata = np.ma.masked_where(data.mask.values, data.flux.values)
     flux = np.ma.median(subdata, axis=0)
     # Compute vertical slice of width 10 columns
     flux_slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
@@ -884,26 +881,26 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     ax[1, 0].imshow(img, origin='lower', aspect='auto')
 
     # X gaussian plot
-    norm_x_factor = np.nansum(np.nansum(img, axis=0))
-    ax[0, 0].plot(range(len(np.nansum(img, axis=0))),
-                  np.nansum(img, axis=0)/norm_x_factor)
-    x_plot = np.linspace(0, len(np.nansum(img, axis=0)))
+    norm_x_factor = np.ma.sum(np.ma.sum(img, axis=0))
+    ax[0, 0].plot(range(len(np.ma.sum(img, axis=0))),
+                  np.ma.sum(img, axis=0)/norm_x_factor)
+    x_plot = np.linspace(0, len(np.ma.sum(img, axis=0)))
     norm_distr_x = stats.norm.pdf(x_plot, x, sx)
     norm_distr_x_scaled = \
-        norm_distr_x/np.nanmax(norm_distr_x)*np.nanmax(np.nansum(img, axis=0))
+        norm_distr_x/np.nanmax(norm_distr_x)*np.nanmax(np.ma.sum(img, axis=0))
     ax[0, 0].plot(x_plot, norm_distr_x_scaled/norm_x_factor,
                   linestyle='dashed')
     ax[0, 0].set_xlabel('x position')
     ax[0, 0].set_ylabel('Normalized Flux')
 
     # Y gaussian plot
-    norm_y_factor = np.nansum(np.nansum(img, axis=0))
-    ax[1, 1].plot(np.nansum(img, axis=1)/norm_y_factor,
-                  range(len(np.nansum(img, axis=1))))
-    y_plot = np.linspace(0, len(np.nansum(img, axis=1)))
+    norm_y_factor = np.ma.sum(np.ma.sum(img, axis=0))
+    ax[1, 1].plot(np.ma.sum(img, axis=1)/norm_y_factor,
+                  range(len(np.ma.sum(img, axis=1))))
+    y_plot = np.linspace(0, len(np.ma.sum(img, axis=1)))
     norm_distr_y = stats.norm.pdf(y_plot, y, sy)
     norm_distr_y_scaled = \
-        norm_distr_y/np.nanmax(norm_distr_y)*np.nanmax(np.nansum(img, axis=1))
+        norm_distr_y/np.nanmax(norm_distr_y)*np.nanmax(np.ma.sum(img, axis=1))
     ax[1, 1].plot(norm_distr_y_scaled/norm_y_factor, y_plot,
                   linestyle='dashed')
     ax[1, 1].set_ylabel('y position')

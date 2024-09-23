@@ -179,7 +179,7 @@ def check_nans(data, mask, log, name=''):
     data : ndarray
         a data-like array (e.g. data, err, dq, ...).
     mask : ndarray
-        Input mask.
+        Input boolean mask, where mask is applied where True.
     log : logedit.Logedit
         The open log in which NaNs/Infs will be mentioned, if existent.
     name : str; optional
@@ -192,8 +192,9 @@ def check_nans(data, mask, log, name=''):
         Output mask where 0 will be written where the input data array has NaNs
         or infs.
     """
-    data = np.ma.masked_where(mask == 0, np.copy(data))
-    masked = np.ma.masked_invalid(data).mask
+    data = np.ma.masked_invalid(data)
+    data = np.ma.masked_where(mask, data)
+    masked = np.ma.getmaskarray(data)
     inan = np.where(masked)
     num_nans = np.sum(masked)
     num_pixels = np.size(data)
@@ -204,9 +205,9 @@ def check_nans(data, mask, log, name=''):
                      f"consider removing indices {inan} as their data quality "
                      f"may be poor.")
     elif num_nans > 0:
-        log.writelog(f"  {name} has {num_nans} NaNs/infs, which is "
+        log.writelog(f"    {name} has {num_nans} NaNs/infs, which is "
                      f"{perc_nans:.2f}% of all pixels.")
-        mask[inan] = 0
+        mask[inan] = True
     if perc_nans > 10:
         log.writelog("  WARNING: Your region of interest may be off the edge "
                      "of the detector subarray.  Masking NaN/inf regions and "
@@ -401,16 +402,19 @@ def find_fits(meta):
     return meta
 
 
-def binData(data, nbin=100, err=False):
+def binData(data, mask=None, nbin=100, err=False):
     """Temporally bin data for easier visualization.
 
     Parameters
     ----------
     data : ndarray (1D)
         The data to temporally bin.
-    nbin : int, optional
+    mask : ndarray (1D); optional
+        A boolean array of bad values (marked with True) that should be masked.
+        Defaults to None, in which case only non-finite values will be masked.
+    nbin : int; optional
         The number of bins there should be. By default 100.
-    err : bool, optional
+    err : bool; optional
         If True, divide the binned data by sqrt(N) to get the error on the
         mean. By default False.
 
@@ -419,19 +423,24 @@ def binData(data, nbin=100, err=False):
     binned : ndarray
         The binned data.
     """
+    if mask is None:
+        mask = ~np.isfinite(data)
+
     # Make a copy for good measure
-    data = np.ma.copy(data)
-    data = np.ma.masked_invalid(data)
+    data = np.ma.masked_where(mask, data)
+
     # Make sure there's a whole number of bins
     data = data[:nbin*int(len(data)/nbin)]
+
     # Bin data
     binned = np.ma.mean(data.reshape(nbin, -1), axis=1)
     if err:
         binned /= np.sqrt(int(len(data)/nbin))
+
     return binned
 
 
-def binData_time(data, time, nbin=100, err=False):
+def binData_time(data, time, mask=None, nbin=100, err=False):
     """Temporally bin data for easier visualization.
 
     Parameters
@@ -440,6 +449,9 @@ def binData_time(data, time, nbin=100, err=False):
         The data to temporally bin.
     time : ndarray (1D)
         The time axis along which to bin
+    mask : ndarray (1D); optional
+        A boolean array of bad values (marked with True) that should be masked.
+        Defaults to None, in which case only non-finite values will be masked.
     nbin : int, optional
         The number of bins there should be. By default 100.
     err : bool, optional
@@ -451,14 +463,16 @@ def binData_time(data, time, nbin=100, err=False):
     binned : ndarray
         The binned data.
     """
+    if mask is None:
+        mask = ~np.isfinite(data)
+
     # Make a copy for good measure
-    data = np.ma.copy(data)
-    data = np.ma.masked_invalid(data)
+    data = np.ma.masked_where(mask, data)
 
     # Binned_statistic will copy data without keeping it a masked array
     # so we have to manually remove invalid points
-    good_time = time[~data.mask]
-    good_data = data[~data.mask]
+    good_time = time[~np.ma.getmaskarray(data.mask)]
+    good_data = data[~np.ma.getmaskarray(data.mask)]
 
     binned, _, _ = binned_statistic(good_time, good_data,
                                     statistic='mean',
@@ -486,8 +500,9 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
     opterr : ndarray; optional
         The noise array to normalize using optspec, by default None.
     optmask : ndarray (1D); optional
-        A mask array to use if optspec is not a masked array. Defaults to None
-        in which case only the invalid values of optspec will be masked.
+        A boolean mask array to use if optspec is not a masked array. Defaults
+        to None in which case only the invalid values of optspec will be
+        masked. Will mask the values where the mask value is set to True.
     scandir : ndarray; optional
         For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
         Defaults to None which is fine for JWST data, but must be provided
@@ -551,8 +566,9 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     optspec : ndarray
         Optimally extracted spectra, 2D array (time, nx)
     optmask : ndarray (1D); optional
-        A mask array to use if optspec is not a masked array. Defaults to None
-        in which case only the invalid values of optspec will be masked.
+        A boolean mask array to use if optspec is not a masked array. Defaults
+        to None in which case only the invalid values of optspec will be
+        masked. Will mask the values where the mask value is set to True.
     wave_min : float; optional
         Minimum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose a lower limit.
@@ -670,7 +686,7 @@ def read_time(meta, data, log):
 
 
 def manmask(data, meta, log):
-    '''Manually mask input bad pixels.
+    '''Manually mask input bad pixels specified through meta.manmask.
 
     Parameters
     ----------
@@ -690,7 +706,7 @@ def manmask(data, meta, log):
                  mute=(not meta.verbose))
     for i in range(len(meta.manmask)):
         colstart, colend, rowstart, rowend = meta.manmask[i]
-        data['mask'][:, rowstart:rowend, colstart:colend] = 0
+        data['mask'][:, rowstart:rowend+1, colstart:colend+1] = True
 
     return data
 
@@ -719,17 +735,17 @@ def interp_masked(data, meta, i, log):
         The updated Dataset object with requested pixels masked.
     """
     if i == 0:
-        log.writelog('  Interpolating masked values...',
+        log.writelog('    Interpolating masked values...',
                      mute=(not meta.verbose))
     flux = data.flux.values[i]
     mask = data.mask.values[i]
     nx = flux.shape[1]
     ny = flux.shape[0]
     grid_x, grid_y = np.mgrid[0:ny-1:complex(0, ny), 0:nx-1:complex(0, nx)]
-    points = np.where(mask == 1)
+    points = np.where(~mask)
     # x,y positions of not masked pixels
     points_t = np.array(points).transpose()
-    values = flux[np.where(mask == 1)]  # flux values of not masked pixels
+    values = flux[np.where(~mask)]  # flux values of not masked pixels
 
     # Use scipy.interpolate.griddata to interpolate
     if meta.interp_method == 'nearest':

@@ -30,11 +30,13 @@ def ctrguess(data, mask=None, guess=None):
         The image in the form of a 2D array containing the star
         to be centroided.  Works best if this is a small subarray
         of the actual data image.
-
-    mask : ndarray (2D)
-        The image in the form of a 2D array containing the star
-        to be centroided.  Works best if this is a small subarray
-        of the actual data image.
+    mask : ndarray (2D); optional
+        A boolean mask with the same shape as the stellar image, where True
+        values will be masked. Defaults to None, where only non-finite values
+        are masked.
+    guess : array_like; optional
+        The initial guess of the position of the star.  Has the form
+        (y, x) of the guess center.
 
     Returns
     -------
@@ -59,12 +61,16 @@ def ctrguess(data, mask=None, guess=None):
     - 2009-10-27, Christopher Campo
         Initial Version
     '''
+    # Default mask: only non-finite values are bad
     if mask is None:
-        mask = np.ones(np.shape(data))
+        mask = ~np.isfinite(data)
+
+    # Apply the mask
+    data = np.ma.masked_where(mask, data)
 
     # Center position guess, looking the max value
     if guess is None:
-        gcenter = np.unravel_index(np.argmax(data*mask), np.shape(data))
+        gcenter = np.unravel_index(np.ma.argmax(data), np.shape(data))
     else:
         gcenter = int(guess[0]), int(guess[1])
     gheight = data[gcenter]  # height guess
@@ -72,11 +78,11 @@ def ctrguess(data, mask=None, guess=None):
     # sum of the number of pixels that are greater than two
     # sigma of the values in the x and y direction. This
     # gives a (very) rough guess, in pixels, how wide the PSF is.
-    sigma = np.array([np.std(data[:, gcenter[1]]),  # y std (of central column)
-                      np.std(data[gcenter[0], :])])  # x std (of central row)
+    sigma = np.array([np.ma.std(data[:, gcenter[1]]),  # y std (of cent. col.)
+                      np.ma.std(data[gcenter[0], :])])  # x std (of cent. row)
 
-    gwidth = (np.sum((data*mask)[:, gcenter[1]] > 2*sigma[0]),
-              np.sum((data*mask)[gcenter[0], :] > 2*sigma[1]))
+    gwidth = (np.ma.sum((data)[:, gcenter[1]] > 2*sigma[0]),
+              np.ma.sum((data)[gcenter[0], :] > 2*sigma[1]))
 
     return (gwidth, gcenter, gheight)
 
@@ -95,18 +101,20 @@ def ctrgauss(data, guess=None, mask=None, indarr=None, trim=None):
     ----------
     data : ndarray (2D)
         The stellar image.
-    guess : array_like
+    guess : array_like; optional
         The initial guess of the position of the star.  Has the form
-        (y, x) of the guess center.
-    mask : ndarray (2D)
-        The stellar image.
-    indarr : array_like
+        (y, x) of the guess center. If None, will call the ctrguess function.
+    mask : ndarray (2D); optional
+        A boolean mask with the same shape as the stellar image, where True
+        values will be masked. Defaults to None, where only non-finite values
+        are masked.
+    indarr : array_like; optional
         The indices of the x and y center columns of the frame
         parameters and the width index.  Defaults to 4, 5, and 6
         respectively.
-    trim : Scalar (positive)
-        If trim!=0, trims the image in a box of 2*trim pixels around
-        the guess center. Must be !=0 for 'col' method.
+    trim : Scalar (positive); optional
+        If trim!=None, trims the image in a box of 2*trim pixels around
+        the guess center. Must be !=None for 'col' method.
 
     Returns
     -------
@@ -123,6 +131,13 @@ def ctrgauss(data, guess=None, mask=None, indarr=None, trim=None):
     - 2009-10-30, Christopher J. Campo
         Initial version.
     '''
+    # Default mask: only non-finite values are bad
+    if mask is None:
+        mask = ~np.isfinite(data)
+
+    # Apply the mask
+    data = np.ma.masked_where(mask, data)
+
     if guess is None:
         fitguess = ctrguess(data, mask, guess)
         guess = fitguess[1]
@@ -130,17 +145,19 @@ def ctrgauss(data, guess=None, mask=None, indarr=None, trim=None):
     # the pixel of the center
     roundguess = np.round(guess)
 
-    # Trim the image  around the star if requested
+    # Trim the image around the star if requested
     if trim is not None:
-        image = np.copy(data[roundguess[0]-trim:roundguess[0]+trim,
-                             roundguess[1]-trim:roundguess[1]+trim])
+        image = data[roundguess[0]-trim:roundguess[0]+trim,
+                     roundguess[1]-trim:roundguess[1]+trim]
+        mask = mask[roundguess[0]-trim:roundguess[0]+trim,
+                    roundguess[1]-trim:roundguess[1]+trim]
         loc = (trim, trim)
     else:
-        image = np.copy(data)
+        image = np.ma.copy(data)
         loc = roundguess
 
     # Subtract the median to fit a gaussian.
-    image -= np.median(image)
+    image -= np.ma.median(image)
 
     fitguess = ((1.0, 1.0), loc, image[loc[0], loc[1]])
 
@@ -148,7 +165,7 @@ def ctrgauss(data, guess=None, mask=None, indarr=None, trim=None):
         indarr = np.indices(np.shape(image))
 
     # Fit the gaussian:
-    p, err = g.fitgaussian(image, indarr, guess=fitguess)
+    p, err = g.fitgaussian(image, indarr, guess=fitguess, mask=mask)
     # fw = p[0:2]
     fc = p[2:4]
     # fh = p[4]
