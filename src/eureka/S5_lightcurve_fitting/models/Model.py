@@ -302,6 +302,7 @@ class CompositeModel(Model):
             eureka.S5_lightcurve_fitting.models.Model.__init__().
         """
         # Inherit from Model class
+        kwargs['name'] = kwargs.get('name', 'composite model')
         super().__init__(components=components, **kwargs)
 
         self.GP = False

@@ -1,6 +1,7 @@
 from .Model import Model, CompositeModel
 from .AstroModel import AstroModel, PlanetParams
 from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
+from .FleckModel import FleckTransitModel
 from .CentroidModel import CentroidModel
 from .DampedOscillator import DampedOscillatorModel
 from .ExpRampModel import ExpRampModel
