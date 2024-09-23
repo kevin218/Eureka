@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def trimimage(data, c, r, mask=None, uncd=None, oob=0):
+def trimimage(data, c, r, mask=None, uncd=None):
     """
     Extracts a rectangular area of an image masking out of bound pixels.
 
@@ -20,8 +20,6 @@ def trimimage(data, c, r, mask=None, uncd=None, oob=0):
     uncd : 2D ndarray
         If specified, this routine will extract the uncd subimage
         as well.
-    oob : scalar
-        Value for out of bound pixels in the mask. Default is 0.
 
     Returns
     -------
@@ -45,8 +43,8 @@ def trimimage(data, c, r, mask=None, uncd=None, oob=0):
         [10 11 12 13 14]
         [15 16 17 18 19]
         [20 21 22 23 24]]
-        >>> msk  = np.ones(np.shape(data))
-        >>> msk[1:4,2] = 0
+        >>> msk = np.zeros(np.shape(data), dtype=bool)
+        >>> msk[1:4,2] = True
 
         >>> # Extract a subimage centered on (3,1) of shape (3,5)
         >>> dyc,dxc = 3,1
@@ -56,16 +54,9 @@ def trimimage(data, c, r, mask=None, uncd=None, oob=0):
         [  0.  15.  16.  17.  18.]
         [  0.  20.  21.  22.  23.]]
         >>> print(mask)
-        [[ 0.  1.  1.  0.  1.]
-        [ 0.  1.  1.  0.  1.]
-        [ 0.  1.  1.  1.  1.]]
-
-        >>> # Set out of bound pixels in the mask to -1:
-        >>> subim, mask = trimimage(data, (dyc,dxc), (1,2), mask=msk, oob=-1)
-        >>> print(mask)
-        [[-1.  1.  1.  0.  1.]
-        [-1.  1.  1.  0.  1.]
-        [-1.  1.  1.  1.  1.]]
+        [[ True  False  False  True  False]
+        [ True  False  False  True  False]
+        [ True  False  False  False  False]]
 
     Notes
     -----
@@ -97,22 +88,23 @@ def trimimage(data, c, r, mask=None, uncd=None, oob=0):
 
     im[bot - lolim:top - lolim, lft - lelim:rgt - lelim] = data[bot:top,
                                                                 lft:rgt]
-    ret = im
+    ret = (im, )
 
     if mask is not None:
-        # The mask is initialized to oob
-        ma = np.zeros((2 * int(yr) + 1, 2 * int(xr) + 1)) + oob
-        ma[bot - lolim:top - lolim, lft - lelim:rgt - lelim] = mask[bot:top,
-                                                                    lft:rgt]
-        ret = (ret, ma)
+        # The mask is initialized to True to mask out-of-bounds pixels
+        ma = np.ones((2 * int(yr) + 1, 2 * int(xr) + 1), dtype=bool)
+        ma[bot-lolim:top-lolim, lft-lelim:rgt-lelim] = mask[bot:top, lft:rgt]
+        ret += (ma, )
 
     if uncd is not None:
         un = np.zeros((2*int(yr)+1, 2*int(xr)+1)) + np.amax(uncd[bot:top,
                                                                  lft:rgt])
         un[bot - lolim:top-lolim, lft-lelim:rgt-lelim] = uncd[bot:top,
                                                               lft:rgt]
-        ret = (ret, un) if mask is None else ret + (un,)
+        ret += (un, )
 
+    if len(ret) == 0:
+        ret = ret[0]
     return ret
 
 

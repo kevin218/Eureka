@@ -888,7 +888,7 @@ def compute_amp(meta, log, fit_methods):
     return meta
 
 
-def compute_pc_offset_poet(meta, log, fit_methods):    
+def compute_pc_offset_poet(meta, log, fit_methods):
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -954,10 +954,10 @@ def compute_pc_offset_poet(meta, log, fit_methods):
 
 
 def compute_pc_offset(meta, log, fit_methods):
-    if ('poet_pc' in meta.run_myfuncs and 
+    if ('poet_pc' in meta.run_myfuncs and
             'sinusoid_pc' not in meta.run_myfuncs):
         return compute_pc_offset_poet(meta, log, fit_methods)
-    
+
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -1039,7 +1039,7 @@ def compute_pc_offset(meta, log, fit_methods):
     return meta
 
 
-def compute_pc_amp_poet(meta, log, fit_methods):    
+def compute_pc_amp_poet(meta, log, fit_methods):
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -1100,7 +1100,7 @@ def compute_pc_amp_poet(meta, log, fit_methods):
                      cos2_amp[i][::ss, np.newaxis]/2 *
                      np.cos(4*np.pi/360*(deg-cos2_off[i][::ss, np.newaxis])))
         # Compute PC amplitude
-        amps = fp[i][::ss]*(np.max(phaseVars, axis=1) - 
+        amps = fp[i][::ss]*(np.max(phaseVars, axis=1) -
                             np.min(phaseVars, axis=1))
         amp = np.percentile(np.array(amps), [16, 50, 84])[[1, 2, 0]]
         amp[1] -= amp[0]
@@ -1119,10 +1119,10 @@ def compute_pc_amp_poet(meta, log, fit_methods):
 
 
 def compute_pc_amp(meta, log, fit_methods):
-    if ('poet_pc' in meta.run_myfuncs and 
+    if ('poet_pc' in meta.run_myfuncs and
             'sinusoid_pc' not in meta.run_myfuncs):
         return compute_pc_amp_poet(meta, log, fit_methods)
-    
+
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -1199,7 +1199,7 @@ def compute_pc_amp(meta, log, fit_methods):
                      ampcos2[i][::ss, np.newaxis]*(np.ma.cos(2.*phi)-1.) +
                      ampsin2[i][::ss, np.newaxis]*np.ma.sin(2.*phi))
         # Compute PC amplitude
-        amps = fp[i][::ss]*(np.max(phaseVars, axis=1) - 
+        amps = fp[i][::ss]*(np.max(phaseVars, axis=1) -
                             np.min(phaseVars, axis=1))
         amp = np.percentile(np.array(amps), [16, 50, 84])[[1, 2, 0]]
         amp[1] -= amp[0]
@@ -1310,7 +1310,7 @@ def compute_fn(meta, log, fit_methods):
     if (('nuts' in fit_methods or 'exoplanet' in fit_methods) and
             'sinusoid_pc' not in meta.run_myfuncs):
         return compute_fn_starry(meta, log, fit_methods)
-    elif ('poet_pc' in meta.run_myfuncs and 
+    elif ('poet_pc' in meta.run_myfuncs and
             'sinusoid_pc' not in meta.run_myfuncs):
         return compute_fn_poet(meta, log, fit_methods)
     elif ('quasilambert_pc' in meta.run_myfuncs):

@@ -10,8 +10,8 @@ def medstddev(data, mask=None, medi=False, axis=0):
     ----------
     data : ndarray
         An array from which to caculate the median standard deviation.
-    mask : 1D ndarray
-        Mask indicating the good values (ones) and bad values (zeros).
+    mask : 1D ndarray; optional
+        Boolean mask indicating the bad values with True.
         Same shape as data. Defaults to None.
     medi : boolean; optional
         If True return a tuple with (stddev, median) of data. Defaults
@@ -44,7 +44,7 @@ def medstddev(data, mask=None, medi=False, axis=0):
 
         >>> # use masks
         >>> a    = np.array([1,3,4,5,6,7,7])
-        >>> mask = np.array([1,1,1,0,0,0,0])
+        >>> mask = np.array([False,False,False,True,True,True,True])
         >>> std, med = m.medstddev(a, mask, medi=True)
         >>> print(std)
         1.58113883008
@@ -60,13 +60,13 @@ def medstddev(data, mask=None, medi=False, axis=0):
         >>> # critical cases:
         >>> # only one value, return std = 0.0
         >>> a    = np.array([1, 4, 6])
-        >>> mask = np.array([0, 0, 1])
+        >>> mask = np.array([True, True, False])
         >>> std, med = m.medstddev(a, mask, medi=True)
         >>> print(std, med)
         (0.0, 6.0)
 
         >>> # no good values, return std = nan, med = nan
-        >>> mask[-1] = 0
+        >>> mask[-1] = True
         >>> std, med = m.medstddev(a, mask, medi=True)
         >>> print(std, med)
         (nan, nan)
@@ -96,12 +96,15 @@ def medstddev(data, mask=None, medi=False, axis=0):
     - 2022-04-11  Taylor James Bell
         Efficiently using numpy axes
     """
-    # mask invalid values:
-    data = np.ma.masked_invalid(data)
-    if mask is not None:
-        data = np.ma.masked_where(~mask.astype(bool), data)
+    # Default mask: only non-finite values are bad
+    if mask is None:
+        mask = ~np.isfinite(data)
+
+    # Apply the mask
+    data = np.ma.masked_where(mask, data)
+
     # number of good values:
-    ngood = np.sum(~np.ma.getmaskarray(data), axis=axis)
+    ngood = np.sum(~mask, axis=axis)
 
     # calculate median of good values:
     median = np.ma.median(data, axis=axis)

@@ -7,7 +7,7 @@ rescale_err     False    # Rescale uncertainties to have reduced chi-squared of 
 fit_par         ./s5_fit_par.epf # What fitting epf do you want to use?
 verbose         True # If True, more details will be printed about steps
 fit_method      [dynesty] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [batman_tr,batman_ecl,sinusoid_pc,expramp,polynomial,xpos,ypos] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
+run_myfuncs     [fleck_tr,batman_ecl,sinusoid_pc,expramp,polynomial,xpos,ypos] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
 
 # Manual clipping in time
 manual_clip     None  # A list of lists specifying the start and end integration numbers for manual removal.

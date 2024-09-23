@@ -80,11 +80,11 @@ def minfunc(params, frame, x, y, x_mean, y_mean):
     # Evaluates the guassian using parameters given
     model_gauss = evalgauss(params, x, y, x_mean, y_mean)
 
-    # Returns the model - observations squared or "R^2" value
-    return np.nanmean((model_gauss-frame)**2)
+    # Returns the mean (model - observations) squared or "R^2" value
+    return np.ma.mean((model_gauss-frame)**2)
 
 
-def pri_cent(img, meta, saved_ref_median_frame):
+def pri_cent(img, mask, meta, saved_ref_median_frame):
     """
     Create initial centroid guess based off of median frame of data.
 
@@ -92,6 +92,9 @@ def pri_cent(img, meta, saved_ref_median_frame):
     ----------
     img : 2D ndarray
         Array containing the star image.
+    mask : 2D ndarray
+        A boolean mask array of bad pixels (marked with True). Same shape as
+        data.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     saved_ref_median_frame : ndarray
@@ -113,10 +116,10 @@ def pri_cent(img, meta, saved_ref_median_frame):
     - Feb 22, 2023 Isaac Edelman
         Initial implementation.
     """
-
     # Create median frame
     if saved_ref_median_frame is None:
-        refrence_median_frame = np.ma.median(img, axis=0)
+        img_temp = np.ma.masked_where(mask, img)
+        refrence_median_frame = np.ma.median(img_temp, axis=0)
     else:
         refrence_median_frame = saved_ref_median_frame
 
@@ -131,7 +134,7 @@ def pri_cent(img, meta, saved_ref_median_frame):
     return x, y, refrence_median_frame
 
 
-def mingauss(img, yxguess, meta):
+def mingauss(img, mask, yxguess, meta):
     """
     Using an inital centroid guess,
     get a more precise centroid and PSF-width measurement
@@ -141,6 +144,9 @@ def mingauss(img, yxguess, meta):
     ----------
     img : 2D ndarray
         Array containing the star image.
+    mask : 2D ndarray
+        A boolean mask array of bad pixels (marked with True). Same shape as
+        data.
     yxguess : tuple
         A guess at the y and x centroid positions.
     meta : eureka.lib.readECF.MetaClass
@@ -164,6 +170,8 @@ def mingauss(img, yxguess, meta):
     - Feb 22, 2023 Isaac Edelman
         Initial implementation.
     """
+    img = np.ma.masked_where(mask, img)
+
     # Create centroid position x,y
     # based off of centroid method
     # and inital centroid guess
@@ -171,7 +179,7 @@ def mingauss(img, yxguess, meta):
         cent_func = getattr(sys.modules[__name__],
                             ("centroid_" + meta.centroid_tech.lower()))
         x, y = centroid_sources(img, yxguess[1], yxguess[0],
-                                centroid_func=cent_func,
+                                mask=mask, centroid_func=cent_func,
                                 box_size=(2*meta.ctr_cutout_size+1))
         x, y = x[0], y[0]
     else:

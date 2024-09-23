@@ -136,7 +136,7 @@ def get_reference_frames(meta, log):
         data, meta = util.trim(data, meta)
         # Create bad pixel mask (1 = good, 0 = bad)
         data['mask'] = (['time', 'y', 'x'],
-                        np.ones(data.flux.shape, dtype=bool))
+                        np.zeros(data.flux.shape, dtype=bool))
         data['mask'] = util.check_nans(data['flux'], data['mask'],
                                        log, name='FLUX')
         data['mask'] = util.check_nans(data['err'], data['mask'],
@@ -619,7 +619,7 @@ def flatfield(data, meta, log):
                                            time_units, name='flatmask')
 
     # Calculate reduced image
-    subflat[np.where(flatmask == 0)] = 1
+    subflat[np.where(flatmask)] = 1
     subflat[np.where(subflat == 0)] = 1
     data['flux'] /= subflat
 
@@ -668,7 +668,7 @@ def difference_frames(data, meta, log):
     # Temporarily set this value for now
     meta.n_int = meta.nreads
 
-    diffmask = np.zeros((meta.nreads, meta.ny, meta.nx))
+    diffmask = np.ones((meta.nreads, meta.ny, meta.nx), dtype=bool)
     guess = np.zeros((meta.nreads), dtype=int)
     for n in range(meta.nreads):
         if np.all(np.isnan(diffflux[n])):
@@ -677,17 +677,19 @@ def difference_frames(data, meta, log):
         diffmask[n] = data['flatmask'][0][0]
         if meta.nreads > 1:
             diffmask[n][np.where(differr[n] > meta.diffthresh *
-                        np.median(differr[n], axis=1)[:, np.newaxis])] = 0
+                        np.median(differr[n], axis=1)[:, np.newaxis])] = True
         else:
             # Don't use diffthresh for FLT files
             pass
 
         # Guess spectrum position only using subarray region
-        masked_data = diffflux[n, meta.ywindow[0]:meta.ywindow[1],
-                               meta.xwindow[0]:meta.xwindow[1]] * \
+        masked_data = np.ma.masked_where(
             diffmask[n, meta.ywindow[0]:meta.ywindow[1],
-                     meta.xwindow[0]:meta.xwindow[1]]
-        guess[n] = (np.median(np.where(masked_data > np.mean(masked_data))[0])
+                     meta.xwindow[0]:meta.xwindow[1]],
+            diffflux[n, meta.ywindow[0]:meta.ywindow[1],
+                     meta.xwindow[0]:meta.xwindow[1]])
+        guess[n] = (np.median(np.ma.where(masked_data >
+                                          np.ma.mean(masked_data))[0])
                     + meta.ywindow[0]).astype(int)
     # Guess may be skewed if first read is zeros
     if guess[0] < 0 or guess[0] > meta.ny:
@@ -763,9 +765,9 @@ def flag_bg(data, meta, log):
                 x1 = (data.guess.values[iscan].min()-meta.bg_hw).astype(int)
                 x2 = (data.guess.values[iscan].max()+meta.bg_hw).astype(int)
                 bgdata1 = data.flux[iscan, :x1]
-                bgmask1 = data.flux[iscan, :x1]
+                bgmask1 = data.mask[iscan, :x1]
                 bgdata2 = data.flux[iscan, x2:]
-                bgmask2 = data.flux[iscan, x2:]
+                bgmask2 = data.mask[iscan, x2:]
                 if meta.use_estsig:
                     bgerr1 = np.median(data.err[iscan, :x1])
                     bgerr2 = np.median(data.err[iscan, x2:])
@@ -794,7 +796,7 @@ def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
     dataim : ndarray (2D)
         The 2D image array.
     datamask : ndarray (2D)
-        An array of which data should be masked.
+        A boolean array of which data (set to True) should be masked.
     datav0 : ndarray (2D)
         readNoise**2.
     datavariance : ndarray (2D)
@@ -811,7 +813,8 @@ def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
     bg : ndarray (2D)
         The fitted background level.
     mask : ndarray (2D)
-        The updated mask after background subtraction.
+        The updated boolean mask after background subtraction, where True
+        values should be masked.
     datav0 : ndarray (2D)
         readNoise**2+np.mean(bgerr**2)
     datavariance : ndarray (2D)
@@ -828,7 +831,7 @@ def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
 
     # Calculate variance assuming background dominated rather than
     # read noise dominated
-    bgerr = np.std(bg, axis=0)/np.sqrt(np.sum(datamask, axis=0))
+    bgerr = np.std(bg, axis=0)/np.sqrt(np.sum(~mask, axis=0))
     bgerr[np.logical_not(np.isfinite(bgerr))] = 0.
     datav0 += np.mean(bgerr**2)
     datavariance = abs(dataim) / meta.gain + datav0
@@ -879,8 +882,8 @@ def correct_drift2D(data, meta, log, m):
             # (0 = forward scan, 1 = reverse scan)
             p = data.scandir.values[n]
             writeDrift2D(hst.calcDrift2D((meta.subdata_ref[p][r] *
-                                          meta.subdiffmask_ref[p][r]),
-                                         (data.flux[n]*data.flatmask[n]),
+                                          ~meta.subdiffmask_ref[p][r]),
+                                         (data.flux[n]*~data.flatmask[n]),
                                          n))
     else:
         # Multiple CPUs
@@ -896,8 +899,8 @@ def correct_drift2D(data, meta, log, m):
             p = data.scandir.values[n]
             res = pool.apply_async(hst.calcDrift2D,
                                    args=((meta.subdata_ref[p][r] *
-                                          meta.subdiffmask_ref[p][r]),
-                                         (data.flux[n]*data.flatmask[n]),
+                                          ~meta.subdiffmask_ref[p][r]),
+                                         (data.flux[n]*~data.flatmask[n]),
                                          n),
                                    callback=writeDrift2D)
         pool.close()
@@ -970,14 +973,14 @@ def correct_drift2D(data, meta, log, m):
                                drift2D_int[n, 0]).flatten())
         # Need to be careful with shifting the mask. Do the shifting, and
         # mask whichever pixel was closest to the one that had been masked
-        spline = spi.RectBivariateSpline(iy, ix, data.mask[n], kx=kx,
-                                         ky=ky, s=0)
-        data.mask[n] = spline((iy-drift2D[n, 1] +
-                               drift2D_int[n, 1]).flatten(),
-                              (ix-drift2D[n, 0] +
-                               drift2D_int[n, 0]).flatten())
-        # Fractional masking won't work - make sure it is all integer
-        data.mask[n] = np.round(data.mask[n]).astype(int)
+        spline = spi.RectBivariateSpline(iy, ix, data.mask[n].data.astype(int),
+                                         kx=kx, ky=ky, s=0)
+        mask_temp = spline((iy-drift2D[n, 1] +
+                            drift2D_int[n, 1]).flatten(),
+                           (ix-drift2D[n, 0] +
+                            drift2D_int[n, 0]).flatten())
+        # Fractional masking won't work - make sure it is all boolean
+        data.mask[n] = np.round(mask_temp).astype(bool)
         spline = spi.RectBivariateSpline(iy, ix, data.variance[n], kx=kx,
                                          ky=ky, s=0)
         data.variance[n] = spline((iy-drift2D[n, 1] +
@@ -1013,7 +1016,7 @@ def cut_aperture(data, meta, log):
     aperr : ndarray
         The noise values over the aperture region.
     apmask : ndarray
-        The mask values over the aperture region.
+        The mask values over the aperture region. True values should be masked.
     apbg : ndarray
         The background flux values over the aperture region.
     apv0 : ndarray
@@ -1031,7 +1034,7 @@ def cut_aperture(data, meta, log):
 
     apdata = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
     aperr = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
-    apmask = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    apmask = np.ones((meta.n_int, meta.spec_hw*2+1, meta.subnx), dtype=bool)
     apbg = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
     apv0 = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
 

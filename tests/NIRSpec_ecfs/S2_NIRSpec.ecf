@@ -2,31 +2,11 @@
 
 suffix                  rateints # Data file suffix
 
-# Controls the cross-dispersion extraction
-slit_y_low              -1 # Use None to rely on the default parameters
-slit_y_high             50 # Use None to rely on the default parameters
-
-# Modify the existing file to broaden the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
-waverange_start         6e-08 # Use None to rely on the default parameters
-waverange_end           6e-06 # Use None to rely on the default parameters
-
 # Note: different instruments and modes will use different steps by default
-skip_bkg_subtract       False # Not run for TSO observations
-skip_imprint_subtract   True # Not run for NIRSpec Fixed Slit
-skip_msa_flagging       True # Not run for NIRSpec Fixed Slit
-skip_extract_2d         False
-skip_srctype            False
-skip_master_background  True # Not run for NIRSpec Fixed Slit
-skip_wavecorr           False
-skip_flat_field         True # ***NOTE*** At the time the NIRSpec ERS Hackathon simulated data was created, this step did not work correctly and is by default turned off.
-skip_straylight         True # Not run for NIRSpec Fixed Slit
-skip_fringe             True # Not run for NIRSpec Fixed Slit
-skip_pathloss           False # Not run for TSO observations
-skip_barshadow          True # Not run for NIRSpec Fixed Slit
-skip_photom             True
-skip_resample           False # Not run for TSO observations
-skip_cube_build         True # Not run for NIRSpec Fixed Slit
-skip_extract_1d         False
+skip_wavecorr           True    # By default is skipped for TSO data
+skip_flat_field         True    # Set this to False if you want to compute calibrated stellar spectra.
+skip_photom             True	# Recommended to skip to get better uncertainties out of Stage 3. Set this to False if you want to compute calibrated stellar spectra.
+skip_extract_1d         True
 
 # Diagnostics
 testing_S2              False

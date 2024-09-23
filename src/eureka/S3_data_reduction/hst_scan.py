@@ -283,7 +283,8 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
     flat_master : list
         Single master flatfield image.
     mask_master : list
-        Single bad-pixel mask image.
+        Single bad-pixel mask image. Boolean, where True values
+        should be masked.
 
     Notes
     -----
@@ -327,38 +328,8 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
                                                xlower:xupper]*x**j
 
         # Initialize bad-pixel mask
-        mask_window = np.ones(flat_window.shape, dtype=np.float32)
-        # mask_window[ywindow[i][0]:ywindow[i][1],
-        #             xwindow[i][0]:xwindow[i][1]] = 1
-        '''
-        # Populate bad pixel submask where flat > sigma*std
-        flat_mean = np.mean(subflat)
-        flat_std    = np.std(subflat)
-        #mask[np.where(np.abs(subflat-flat_mean) > sigma*flat_std)] = 0
-        # Mask bad pixels in subflat by setting to zero
-        subflat *= mask
-        '''
-        """
-        # Normalize flat by taking out the spectroscopic effect
-        # Not fitting median spectrum trace, using straight median instead
-        # flat_window /= np.median(flat_window, axis=0)
-        medflat        = np.median(flat_window, axis=0)
-        fitmedflat     = smooth.smooth(medflat, 15)
+        mask_window = np.zeros(flat_window.shape, dtype=bool)
 
-        if isplots >= 3:
-            plt.figure(1009)
-            plt.clf()
-            plt.suptitle("Median Flat Frame With Best Fit")
-            plt.title(str(i))
-            plt.plot(medflat, 'bo')
-            plt.plot(fitmedflat, 'r-')
-            #plt.savefig()
-            plt.pause(0.5)
-
-        flat_window /= fitmedflat
-        flat_norm = (flat_window /
-                     np.median(flat_window[np.where(flat_window > 0)]))
-        """
         flat_norm = flat_window
 
         if sigma is not None and sigma > 0:
@@ -368,7 +339,7 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
             # 1. Reject points < 0
             index = np.where(flat_norm < 0)
             flat_norm[index] = 1.
-            mask_window[index] = 0
+            mask_window[index] = True
             # 2. Reject outliers from low side
             ilow = np.where(flat_norm < 1)
             # Make distribution symetric about 1
@@ -377,7 +348,7 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
             std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
             ibadpix = np.where((1-flat_norm[ilow]) > sigma*std)
             flat_norm[ilow[0][ibadpix], ilow[1][ibadpix]] = 1.
-            mask_window[ilow[0][ibadpix], ilow[1][ibadpix]] = 0
+            mask_window[ilow[0][ibadpix], ilow[1][ibadpix]] = True
             # 3. Reject outliers from high side
             ihi = np.where(flat_norm > 1)
             # Make distribution symetric about 1
@@ -386,11 +357,11 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
             std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
             ibadpix = np.where((flat_norm[ihi]-1) > sigma*std)
             flat_norm[ihi[0][ibadpix], ihi[1][ibadpix]] = 1.
-            mask_window[ihi[0][ibadpix], ihi[1][ibadpix]] = 0
+            mask_window[ihi[0][ibadpix], ihi[1][ibadpix]] = True
 
         # Put the subframes back in the full frames
         flat_new = np.ones((ny, nx), dtype=np.float32)
-        mask = np.zeros((ny, nx), dtype=np.float32)
+        mask = np.ones((ny, nx), dtype=bool)
         flat_new[ywindow[i][0]:ywindow[i][1],
                  xwindow[i][0]:xwindow[i][1]] = flat_norm
         mask[ywindow[i][0]:ywindow[i][1],
@@ -424,7 +395,8 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
     flat_master : list
         Single master flatfield image
     mask_master : list
-        Single bad-pixel mask image
+        Single bad-pixel mask image. Boolean, where True values
+        should be masked.
 
     Notes
     -----
@@ -460,8 +432,7 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
         flat_window = hdulist[0].data[ylower:yupper, xlower:xupper]
 
     # Initialize bad-pixel mask
-    mask_window = np.ones(flat_window.shape, dtype=np.float32)
-    # mask_window[ywindow[i][0]:ywindow[i][1], xwindow[i][0]:xwindow[i][1]] = 1
+    mask_window = np.zeros(flat_window.shape, dtype=bool)
     flat_norm = flat_window
 
     if sigma is not None and sigma > 0:
@@ -471,7 +442,7 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
         # 1. Reject points < 0
         index = np.where(flat_norm < 0)
         flat_norm[index] = 1.
-        mask_window[index] = 0
+        mask_window[index] = True
         # 2. Reject outliers from low side
         ilow = np.where(flat_norm < 1)
         # Make distribution symetric about 1
@@ -480,7 +451,7 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
         std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
         ibadpix = np.where((1-flat_norm[ilow]) > sigma*std)
         flat_norm[ilow[0][ibadpix], ilow[1][ibadpix]] = 1.
-        mask_window[ilow[0][ibadpix], ilow[1][ibadpix]] = 0
+        mask_window[ilow[0][ibadpix], ilow[1][ibadpix]] = True
         # 3. Reject outliers from high side
         ihi = np.where(flat_norm > 1)
         # Make distribution symetric about 1
@@ -489,11 +460,11 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
         std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
         ibadpix = np.where((flat_norm[ihi]-1) > sigma*std)
         flat_norm[ihi[0][ibadpix], ihi[1][ibadpix]] = 1.
-        mask_window[ihi[0][ibadpix], ihi[1][ibadpix]] = 0
+        mask_window[ihi[0][ibadpix], ihi[1][ibadpix]] = True
 
     # Put the subframes back in the full frames
     flat_new = np.ones((ny, nx), dtype=np.float32)
-    mask = np.zeros((ny, nx), dtype=np.float32)
+    mask = np.ones((ny, nx), dtype=bool)
     flat_new[ywindow[0]:ywindow[1], xwindow[0]:xwindow[1]] = flat_norm
     mask[ywindow[0]:ywindow[1], xwindow[0]:xwindow[1]] = mask_window
     flat_master.append(flat_new)
