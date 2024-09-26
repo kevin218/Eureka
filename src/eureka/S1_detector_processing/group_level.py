@@ -185,8 +185,8 @@ def custom_ref_pixel(input_model, log, meta):
     for nint in range(all_data.shape[0]):
         for ngrp in range(all_data.shape[1]):
             intgrp_data = all_data[nint, ngrp, :, :]
-            dqmask = np.where((dq[nint, ngrp, :, :] % 2 == 1) |
-                              (dq[nint, ngrp, :, :] == 2))
+            dqmask = ((dq[nint, ngrp, :, :]%2 == 1) |
+                      (dq[nint, ngrp, :, :] == 2))
             intgrp_data = np.ma.masked_where(dqmask, intgrp_data)
 
             if meta.masktrace:
