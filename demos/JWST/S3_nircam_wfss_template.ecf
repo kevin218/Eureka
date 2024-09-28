@@ -16,7 +16,8 @@ ywindow         [5,64]      # Vertical axis as seen in DS9
 xwindow         [100,1700]  # Horizontal axis as seen in DS9
 src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, hst, or a numeric value)
 record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
-dqmask          False       # Mask pixels with an odd entry in the DQ array
+poly_wavelength	True		# Use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI
+dqmask          True        # Mask pixels with an odd entry in the DQ array
 expand          1           # Super-sampling factor along cross-dispersion direction
 
 # Outlier rejection along time axis

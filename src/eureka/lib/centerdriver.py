@@ -114,7 +114,7 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
 
     # only plot when we do the second fit
     if (meta.isplots_S3 >= 5 and method[-4:] == '_sec' and i < meta.nplots):
-        plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
+        plots_s3.phot_centroid_fgc(img, msk, x, y, sx, sy, i, m, meta)
 
     # Make trimming correction and return
     return ((y, x) + cen - trim), extra, refrence_median_frame
