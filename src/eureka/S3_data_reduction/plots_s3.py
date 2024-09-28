@@ -836,7 +836,7 @@ def phot_npix(data, meta):
         plt.pause(0.2)
 
 
-def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
+def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
     """
     Plot of the gaussian fit to the centroid cutout. (Fig 3503)
 
@@ -845,6 +845,9 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     img : 2D numpy array
         Cutout of the center of the target which is used to determine the
         centroid position.
+    mask: 2D numpy array
+        A False indicates the corresponding element of Data is good, a
+        True indicates it is bad, same shape as data.
     x : float
         Centroid position in x direction.
     y : float
@@ -870,6 +873,9 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
         Cleaned up plot &
         corrected plotting feature
     """
+    img = np.ma.copy(img)
+    img = np.ma.masked_where(mask, img)
+
     plt.figure(3503)
     plt.clf()
     fig, ax = plt.subplots(2, 2, num=3503, figsize=(8, 8))
