@@ -46,14 +46,6 @@ def read(filename, data, meta, log):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    try:
-        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
-        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
-    except:
-        # FINDME: Need to only catch the particular exception we expect
-        print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
-        data.attrs['intstart'] = 0
-        data.attrs['intend'] = data.attrs['mhdr']['NINTS']
     meta.filter = data.attrs['mhdr']['GRATING']
 
     sci = hdulist['SCI', 1].data
@@ -61,7 +53,16 @@ def read(filename, data, meta, log):
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
     wave_2d = hdulist['WAVELENGTH', 1].data
-    int_times = hdulist['INT_TIMES', 1].data
+
+    try:
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
+        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
+    except:
+        # FINDME: Need to only catch the particular exception we expect
+        log.writelog('  WARNING: Manually setting INTSTART to 0 and INTEND '
+                     'to NINTS')
+        data.attrs['intstart'] = 0
+        data.attrs['intend'] = sci.shape[0]
 
     meta.photometry = False  # Photometry for NIRSpec not implemented yet.
 
@@ -77,18 +78,23 @@ def read(filename, data, meta, log):
         wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=0)
 
     # Record integration mid-times in BMJD_TDB
+    int_times = hdulist['INT_TIMES', 1].data
     if meta.time_file is not None:
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         # There is no time information in the simulated NIRSpec data
-        print('  WARNING: The timestamps for the simulated NIRSpec data are '
-              'currently\n'
-              '           hardcoded because they are not in the .fits files '
-              'themselves')
+        if meta.firstFile:
+            log.writelog('  WARNING: The timestamps for simulated MIRI data '
+                         'are not in the .fits files, so using integration '
+                         'number as the time value instead.')
         time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'],
                            data.intend)
     else:
         time = int_times['int_mid_BJD_TDB']
+    if len(time) > len(sci):
+        # This line is needed to still handle the simulated data
+        # which had the full time array for all segments
+        time = time[data.attrs['intstart']:data.attrs['intend']]
 
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']
@@ -188,7 +194,7 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     dataim : ndarray (2D)
         The 2D image array.
     datamask : ndarray (2D)
-        An array of which data should be masked.
+        A boolean array of which data (set to True) should be masked.
     n : int
         The current integration.
     meta : eureka.lib.readECF.MetaClass
@@ -201,7 +207,8 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     bg : ndarray (2D)
         The fitted background level.
     mask : ndarray (2D)
-        The updated mask after background subtraction.
+        The updated boolean mask after background subtraction, where True
+        values should be masked.
     n : int
         The current integration number.
     """
@@ -229,7 +236,7 @@ def cut_aperture(data, meta, log):
     aperr : ndarray
         The noise values over the aperture region.
     apmask : ndarray
-        The mask values over the aperture region.
+        The mask values over the aperture region. True values should be masked.
     apbg : ndarray
         The background flux values over the aperture region.
     apv0 : ndarray
@@ -275,10 +282,8 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
     log.writelog("  Setting uncalibrated pixels to zero...",
                  mute=(not meta.verbose))
     boolmask = np.abs(data.flux.data) > cutoff
-    data['flux'].data = np.where(np.abs(data.flux.data) >
-                                 cutoff, 0,
-                                 data.flux.data)
-    log.writelog(f"    Zeroed {np.sum(boolmask.data)} " +
+    data['flux'].data = np.where(boolmask, 0, data.flux.data)
+    log.writelog(f"    Zeroed {np.sum(boolmask)} " +
                  "pixels in total.", mute=(not meta.verbose))
 
     # Convert from MJy to mJy

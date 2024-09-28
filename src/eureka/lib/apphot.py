@@ -30,10 +30,10 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
         Half-width of box size around centroid for beta calculation.
     targpos : 2 elements tuple
         x,y location of object's center calculated from mean image.
-    mask : 2D ndimage
-        Byte array giving status of corresponding pixel in
-        Image: bad pixel=0, good pixel=1.  Default: all pixels
-        are good. Same shape as image.
+    mask : 2D ndimage, boolean
+        Boolean array giving status of corresponding pixel in
+        Image: bad pixel=True, good pixel=False.  Default: only non-finite
+        values are masked. Same shape as image.
     imerr : 2D ndimage
         Error estimate for each pixel in the image.  Suggest
         sqrt(image/flat/gain+rdnoise^2), with proper adjustment
@@ -224,10 +224,10 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
         >>> test += 1
         >>> # A bit of the Gaussian leaks from aperture to sky, rest is right.
 
-        >>> mask = np.ones(sz, byte)
-        >>> mask[24,24] = 0
+        >>> mask = np.zeros(sz, bool)
+        >>> mask[24,24] = True
         >>> aplev, aperr, skylev, skyerr, \
-        >>> status = ap.apphot(image, ctr, photap, skyin, skyout, mask = mask,
+        >>> status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
         >>> aperr=True, skylev=True, skyerr=True, status=True)
 
         >>> print(aplev, aperr, skylev, skyerr, status)
@@ -237,7 +237,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
 
         >>> image[25,24] = np.nan
         >>> aplev, aperr, skylev, skyerr, \
-        >>> status = ap.apphot(image, ctr, photap, skyin, skyout, mask = mask,
+        >>> status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
         >>> aperr=True, skylev=True, skyerr=True, status=True)
 
         >>> print(aplev, aperr, skylev, skyerr, status)
@@ -284,7 +284,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
         >>> f = asy.gaussian(h, ctr[0], ctr[1], sig[0], sig[1])
         >>> image = f(r,l) + sky
         >>> imerr = np.sqrt(image)
-        >>> mask = np.ones(sz, byte)
+        >>> mask = np.zeros(sz, bool)
 
         >>> aplev, aperr, skylev, skyerr, \
         >>> status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
@@ -415,8 +415,9 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
             # break
             return ret[np.where(retidx)]
 
+        # Default mask: only non-finite values are bad
         if mask is None:
-            mask = np.ones(sz, dtype=np.byte)
+            mask = ~np.isfinite(image)
 
         if np.ndim(mask) != 2:
             print('mask must be a 2D array')
@@ -450,8 +451,10 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     y, x = np.arange(sz[0]), np.arange(sz[1])
     yi, xi = np.linspace(0, sz[0]-1, isz[0]), np.linspace(0, sz[1]-1, isz[1])
     iimage = i2d.interp2d(image, expand=iexpand, y=y, x=x, yi=yi, xi=xi)
-    imask = i2d.interp2d(mask, expand=iexpand, y=y, x=x, yi=yi, xi=xi)
-    imask = imask == 1
+    imask = i2d.interp2d(mask.astype(float), expand=iexpand, y=y, x=x,
+                         yi=yi, xi=xi)
+    # Need to convert fractions to booleans
+    imask = imask > 0.5
     if imerr is not None:
         iimerr = i2d.interp2d(imerr, expand=iexpand, y=y, x=x, yi=yi, xi=xi)
 
@@ -462,22 +465,23 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
         apFunc = di.disk
 
     # SKY
-    # make sky annulus mask
-    skyann = np.bitwise_xor(apFunc(iskyout, ictr, isz),
-                            apFunc(iskyin, ictr, isz))
+    # make sky annulus mask (True outside annulus, False inside annulus)
+    skyann = ~np.logical_and(apFunc(iskyout, ictr, isz),
+                             apFunc(iskyin, ictr, isz))
 
-    skymask = skyann * imask * np.isfinite(iimage)  # flag NaNs to eliminate
+    # combine masks to mask all bad pixels and pixels outside annulus
+    skymask = skyann | imask | ~np.isfinite(iimage)  # flag NaNs to eliminate
     # from nskypix
 
     # Check for skyfrac violation
     # FINDME: include NaNs and zero errors
-    ret[nskypix] = np.sum(skymask) / iexpand ** 2.0
+    ret[nskypix] = np.sum(~skymask) / iexpand ** 2.0
     szsky = (int(np.ceil(iskyout)) * 2 + 3) * np.array([1, 1], dtype=int)
     ctrsky = (ictr % 1.0) + np.ceil(iskyout) + 1.0
     # nskyideal = all pixels in sky
     ret[nskyideal] = (np.sum(
-                      np.bitwise_xor(apFunc(iskyout, ctrsky, szsky),
-                                     apFunc(iskyin, ctrsky, szsky)))
+                      ~np.logical_and(apFunc(iskyout, ctrsky, szsky),
+                                      apFunc(iskyin, ctrsky, szsky)))
                       / iexpand**2.0)
 
     if ret[nskypix] < iskyfrac * ret[nskyideal]:
@@ -493,7 +497,8 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     # Ignore the status flag from meanerr, it will skip bad
     # values intelligently.
     if med:  # Do median sky
-        ret[skylev] = np.median(iimage[np.where(skymask)])
+        iimage_temp = np.ma.masked_where(skymask, iimage)
+        ret[skylev] = np.ma.median(iimage_temp)
         if imerr is not None:
             # FINDME: We compute the standard deviation of the mean, not the
             # median.  The standard deviation of the median is complicated and
@@ -512,7 +517,8 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
                                                   mask=skymask, err=True)
             ret[skyerr] *= iexpand  # Expand correction.
         else:
-            ret[skylev] = np.mean(iimage[np.where(skymask)])
+            iimage_temp = np.ma.masked_where(skymask, iimage)
+            ret[skylev] = np.ma.mean(iimage)
 
     if meta.skip_apphot_bg:
         ret[skylev] = np.zeros_like(ret[skylev])
@@ -551,15 +557,15 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     if dstatus:  # is the aperture fully on the image?
         status |= statap
 
-    aploc = np.where(apmask)  # report number of pixels in aperture
+    aploc = np.where(~apmask)  # report number of pixels in aperture
     # make it unexpended pixels
-    ret[nappix] = np.sum(apmask[aploc])/iexpand**2.0
+    ret[nappix] = np.sum(~apmask[aploc])/iexpand**2.0
     if ret[nappix] == 0:  # is there *any* good aperture?
         status |= statbad
         ret[stat] = status
         return ret[np.where(retidx)]
 
-    if np.all(np.isfinite(iimage[aploc]) == 0):  # all aperture pixels are NaN?
+    if np.all(~np.isfinite(iimage[aploc])):  # all aperture pixels are NaN?
         status |= statnan
         ret[stat] = status
         return ret[np.where(retidx)]
@@ -569,17 +575,17 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     apmsk = imask[aploc]
 
     # flag NaNs and bad pixels
-    goodies = np.isfinite(apdat)
-    if np.any(goodies == 0):
+    goodies = ~np.isfinite(apdat)
+    if np.any(goodies):
         status |= statnan
 
-    if np.any(apmsk == 0):
+    if np.any(apmsk):
         status |= statbad
 
     # PHOTOMETRY
     # Do NOT multiply by bad pixel mask!  We need to use the interpolated
     # pixels here, unfortunately.
-    ret[aplev] = np.sum(apdat[goodies])
+    ret[aplev] = np.sum(apdat[~goodies])
 
     # Expand correction.  We overcount by iexpand^2.
     ret[aplev] /= iexpand ** 2.0
@@ -597,7 +603,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
         # another, it's zero, or should be close.  So, ignore those points.
         # Sky error still contributes.
         apunc[np.where(apuncloc == 0)] = 0
-        ret[aperr] = np.sqrt(np.sum(apmsk * apunc ** 2.0) +
+        ret[aperr] = np.sqrt(np.sum(~apmsk * apunc ** 2.0) +
                              np.size(aploc) * ret[skyerr] ** 2.0)
 
         # Expand correction.  We overcount by iexpand^2, but that's

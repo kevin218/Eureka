@@ -57,20 +57,21 @@ def read(filename, data, meta, log):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    try:
-        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
-    except:
-        data.attrs['intstart'] = 0
-    try:
-        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
-    except:
-        data.attrs['intend'] = (data.attrs['intstart'] +
-                                data.attrs['mhdr']['NINTS'])
 
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
+
+    try:
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
+        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
+    except:
+        # FINDME: Need to only catch the particular exception we expect
+        log.writelog('  WARNING: Manually setting INTSTART to 0 and INTEND '
+                     'to NINTS')
+        data.attrs['intstart'] = 0
+        data.attrs['intend'] = sci.shape[0]
 
     if meta.photometry:
         # Working on photometry data
@@ -138,71 +139,19 @@ def read(filename, data, meta, log):
     if meta.time_file is not None:
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
+        # There is no time information in the simulated MIRI data
         if meta.firstFile:
-            log.writelog('  WARNING: The timestamps for the simulated MIRI '
-                         'data are currently hardcoded because they are not '
-                         'in the .fits files themselves')
-        if ('WASP_80b' in data.attrs['filename']
-                and 'transit' in data.attrs['filename']):
-            # Time array for WASP-80b MIRISIM transit observations
-            # Assuming transit near August 1, 2022
-            phase_i = 0.95434
-            phase_f = 1.032726
-            t0 = 2456487.425006
-            per = 3.06785234
-            time_i = phase_i*per+t0
-            while np.abs(time_i-2459792.54237) > per:
-                time_i += per
-            time_f = phase_f*per+t0
-            while time_f < time_i:
-                time_f += per
-            time = np.linspace(time_i, time_f, 4507,
-                               endpoint=True)[data.attrs['intstart']:
-                                              data.attrs['intend']-1]
-        elif ('WASP_80b' in data.attrs['filename']
-              and 'eclipse' in data.attrs['filename']):
-            # Time array for WASP-80b MIRISIM eclipse observations
-            # Assuming eclipse near August 1, 2022
-            phase_i = 0.45434
-            phase_f = 0.532725929856498
-            t0 = 2456487.425006
-            per = 3.06785234
-            time_i = phase_i*per+t0
-            while np.abs(time_i-2459792.54237) > per:
-                time_i += per
-            time_f = phase_f*per+t0
-            while time_f < time_i:
-                time_f += per
-            time = np.linspace(time_i, time_f, 4506,
-                               endpoint=True)[data.attrs['intstart']:
-                                              data.attrs['intend']-1]
-        elif 'new_drift' in data.attrs['filename']:
-            # Time array for the newest MIRISIM observations
-            time = np.linspace(0, 47.712*(1849)/3600/24, 1849,
-                               endpoint=True)[data.attrs['intstart']:
-                                              data.attrs['intend']-1]
-        elif data.attrs['mhdr']['EFFINTTM'] == 10.3376:
-            # There is no time information in the old simulated MIRI data
-            # As a placeholder, I am creating timestamps indentical to the
-            # ones in STSci-SimDataJWST/MIRI/Ancillary_files/times.dat.txt
-            # converted to days
-            time = np.linspace(0, 17356.28742796742/3600/24, 1680,
-                               endpoint=True)[data.attrs['intstart']:
-                                              data.attrs['intend']]
-        elif data.attrs['mhdr']['EFFINTTM'] == 47.712:
-            # A new manually created time array for the new MIRI simulations
-            # Need to subtract an extra 1 from intend for these data
-            time = np.linspace(0, 47.712*(42*44-1)/3600/24, 42*44,
-                               endpoint=True)[data.attrs['intstart']:
-                                              data.attrs['intend']-1]
-        else:
-            if meta.firstFile:
-                log.writelog('  Eureka does not currently know how to '
-                             'generate the time array for these '
-                             'simulations. Using integer number instead.')
-            time = np.arange(data.attrs['intstart'], data.attrs['intend'])
+            log.writelog('  WARNING: The timestamps for simulated MIRI data '
+                         'are not in the .fits files, so using integration '
+                         'number as the time value instead.')
+        time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'],
+                           data.intend)
     else:
         time = int_times['int_mid_BJD_TDB']
+    if len(time) > len(sci):
+        # This line is needed to still handle the simulated data
+        # which had the full time array for all segments
+        time = time[data.attrs['intstart']:data.attrs['intend']]
 
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']
@@ -360,7 +309,7 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     dataim : ndarray (2D)
         The 2D image array.
     datamask : ndarray (2D)
-        An array of which data should be masked.
+        A boolean array of which data (set to True) should be masked.
     n : int
         The current integration.
     meta : eureka.lib.readECF.MetaClass
@@ -373,7 +322,8 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     bg : ndarray (2D)
         The fitted background level.
     mask : ndarray (2D)
-        The updated mask after background subtraction.
+        The updated boolean mask after background subtraction, where True
+        values should be masked.
     n : int
         The current integration number.
     """
@@ -406,7 +356,7 @@ def cut_aperture(data, meta, log):
     aperr : ndarray
         The noise values over the aperture region.
     apmask : ndarray
-        The mask values over the aperture region.
+        The mask values over the aperture region. True values should be masked.
     apbg : ndarray
         The background flux values over the aperture region.
     apv0 : ndarray
