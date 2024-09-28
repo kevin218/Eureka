@@ -284,15 +284,15 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     elif meta.y_param_basic[:12] == 'offset_order':
                         # Phase Curve Offset, nth order
                         suffix = planetSuffix+channelSuffix
-                        meta.y_label = (f'Order {meta.y_param_basic[12:]}\nPhase Curve Offset' +
-                                        suffix)
+                        meta.y_label = (f'Order {meta.y_param_basic[12:]}\n' +
+                                        'Phase Curve Offset' + suffix)
                         if meta.y_label_unit is None:
                             meta.y_label_unit = '($^{\\circ}$E)'
                     elif meta.y_param_basic[:9] == 'amp_order':
                         # Phase Curve Amplitude, nth order
                         suffix = planetSuffix+channelSuffix
-                        meta.y_label = (f'Order {meta.y_param_basic[9:]}\nPhase Curve Amplitude' +
-                                        suffix)
+                        meta.y_label = (f'Order {meta.y_param_basic[9:]}\n' +
+                                        'Phase Curve Amplitude' + suffix)
                     elif meta.y_param_basic in [f'u{i}' for i in range(1, 5)]:
                         # Limb darkening parameter
                         suffix = channelSuffix
