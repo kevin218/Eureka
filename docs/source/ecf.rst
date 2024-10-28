@@ -1186,7 +1186,7 @@ Available fitting parameters are:
 
       - ``h0--h5`` - Coefficients for the HST exponential + polynomial ramp model.
 
-         The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch + h2) + h3*time_batch + h4*time_batch**2``,
+         The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch) + h2*time_batch + h3*time_batch**2``,
          where ``h0--h1`` describe the exponential ramp per HST orbit, ``h2--h3`` describe the polynomial (up to order two) per HST orbit, ``h4`` is the orbital period of HST (in the same time units as the data, usually days), and ``h5`` is the time offset when computing ``time_batch``.  A good starting point for ``h4`` is 0.066422 days and ``h5`` is 0.03 days.  ``time_batch = (time_local-h5) % h4``.
          If you want to fit a linear trend in time, you can omit ``h3`` or fix it to ``0``.
 
