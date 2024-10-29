@@ -134,9 +134,12 @@ class S3MetaClass(MetaClass):
         if self.fittype in ['meddata', 'smooth']:
             # Require this parameter to be set if relevant
             self.window_len = getattr(self, 'window_len')
-        elif self.fittype == 'poly':
+        if self.fittype == 'poly':
             # Require this parameter to be set if relevant
             self.prof_deg = getattr(self, 'prof_deg')
+        else:
+            # Set it to None if not relevant
+            self.prof_deg = self.prof_deg = None
         if self.fittype in ['smooth', 'gauss', 'poly']:
             # Require this parameter to be set if relevant
             self.p5thresh = getattr(self, 'p5thresh')
