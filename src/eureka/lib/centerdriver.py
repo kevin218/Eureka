@@ -8,7 +8,7 @@ from ..S3_data_reduction import plots_s3
 def centerdriver(method, data, guess, trim, i, m, meta,
                  saved_ref_median_frame=None,
                  mask=None, uncd=None, fitbg=1, maskstar=True,
-                 expand=1.0):
+                 expand=1):
     """
     Use the center method to find the center of a star in data, starting
     from position guess.

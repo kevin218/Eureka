@@ -86,6 +86,10 @@ class S3MetaClass(MetaClass):
         self.dqmask = getattr(self, 'dqmask', True)
         self.manmask = getattr(self, 'manmask', None)
         self.expand = getattr(self, 'expand', 1)
+        if int(self.expand) != self.expand:
+            print('WARNING: meta.expand must be set to an integer. Rounding '
+                  f'{self.expand} to {int(np.round(self.expand))}')
+        self.expand = int(np.round(self.expand))
 
         # Outlier rejection along time axis
         self.ff_outlier = getattr(self, 'ff_outlier', False)
