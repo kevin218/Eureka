@@ -308,7 +308,9 @@ def source_pos_FWM(flux, meta, m, n=0, plot=True):
 
     pos_max = source_pos_median(flux, meta, m, n=n, plot=False)
 
-    ymin = max(0, pos_max-meta.spec_hw)
+    ymin = pos_max-meta.spec_hw
+    if ymin < 0:
+        ymin = None
     ymax = min(flux.shape[0], pos_max+meta.spec_hw)
     y_pixels = np.arange(0, x_dim)[ymin:ymax]
 
@@ -400,7 +402,9 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
 
     # Data cutout around the maximum row
     pos_max = source_pos_median(flux, meta, m, n=n, plot=False)
-    ymin = max(0, pos_max-meta.spec_hw)
+    ymin = pos_max-meta.spec_hw
+    if ymin < 0:
+        ymin = None
     ymax = min(flux.shape[0], pos_max+meta.spec_hw)
     y_pixels = np.arange(0, x_dim)[ymin:ymax]
     med_row = np.ma.median(flux, axis=1)[ymin:ymax]
