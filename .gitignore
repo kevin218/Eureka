@@ -164,3 +164,6 @@ ecfs/
 
 # Ignore version.py to allow automated version numbering
 version.py
+
+# GitHub Codespaces
+*build-commands.txt
