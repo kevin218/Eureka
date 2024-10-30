@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from . import astropytable
-from . import centroid
 from . import clipping
 from . import disk
 from . import gaussian

@@ -5,10 +5,10 @@ from . import gaussian_min as gmin
 from ..S3_data_reduction import plots_s3
 
 
-def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
-                 saved_ref_median_frame,
+def centerdriver(method, data, guess, trim, i, m, meta,
+                 saved_ref_median_frame=None,
                  mask=None, uncd=None, fitbg=1, maskstar=True,
-                 expand=5.0, psf=None, psfctr=None):
+                 expand=1.0):
     """
     Use the center method to find the center of a star in data, starting
     from position guess.
@@ -23,18 +23,15 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
         y, x initial guess position of the target.
     trim : integer
         Semi-lenght of the box around the target that will be trimmed.
-    radius : float
-        least asymmetry parameter. See err_fasym_c.
-    size : float
-        least asymmetry parameter. See err_fasym_c.
     mask : 2D ndarray
         A boolean mask array of bad pixels (marked with True). Same shape as
         data. Defaults to only masking non-finite vaules.
     uncd : 2D ndarray
         An array containing the uncertainty values of data.
         Same shape of data.
-    saved_ref_median_frame : ndarray
-        Stored median frame of the first batch.
+    saved_ref_median_frame : ndarray; optional
+        Stored median frame of the first batch. Defaults to None, in which
+        case a new reference frame will be computed.
 
     Returns
     -------

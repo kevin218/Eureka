@@ -5,8 +5,7 @@ try:
     imported_image_registration = True
 except ModuleNotFoundError:
     imported_image_registration = False
-from ..lib import centroid
-
+from ..lib import centerdriver
 
 def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
                   POSTARG2, meta, log):
@@ -62,12 +61,21 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
     guess = guess[::-1]
 
     for i in range(nfiles):
-        image = fits.getdata(filenames[i].rstrip())
-        calhdr0 = fits.getheader(filenames[i].rstrip(), 0)
-        calhdr1 = fits.getheader(filenames[i].rstrip(), 1)
-        # Calculate centroid, correct for difference in image size, if any
-        centers.append(centroid.ctrgauss(image, guess=guess, trim=trim) -
-                       (image.shape[0]-ny)/2.)
+        with fits.open(filenames[i].rstrip()) as file:
+            image = file['SCI'].data
+            dq = file['DQ'].data
+            calhdr0 = file[0].header
+            calhdr1 = file[1].header
+
+        reset_nint = not hasattr(meta, 'n_int')
+        if reset_nint:
+            meta.n_int = nfiles
+        position, _, _ = centerdriver.centerdriver('fgc_sec', image, guess,
+                                                   trim, i, 0, meta, maskstar=True)
+        centers.append(position)
+        if reset_nint:
+            delattr(meta, 'n_int')
+
         xoffset = (CRPIX1 - calhdr1['CRPIX1'] +
                    (POSTARG1[i] - calhdr0['POSTARG1'])/0.135)
         yoffset = (CRPIX2 - calhdr1['CRPIX2'] +

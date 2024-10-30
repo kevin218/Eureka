@@ -332,9 +332,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                                    log, name='V0')
 
                 # Start masking pixels based on DQ flags
-                # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
-                # Odd numbers in DQ array are bad pixels. Do not use.
-                if meta.dqmask:
+                if meta.dqmask and meta.inst == 'wfc3':
+                    # https://hst-docs.stsci.edu/wfc3ihb/appendix-e-reduction-and-calibration-of-wfc3-data/e-2-the-stsci-reduction-and-calibration-pipeline#E.2TheSTScIReductionandCalibrationPipeline-table-dq_flags
+                    # Non-zero numbers in HST data array are bad pixels.
+                    dqmask = np.where(data.dq.values != 0)
+                    data.mask.values[dqmask] = True
+                elif meta.dqmask:
+                    # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
+                    # Odd numbers in JWST DQ array are bad pixels.
                     dqmask = np.where(data.dq.values % 2 == 1)
                     data.mask.values[dqmask] = True
 
@@ -480,9 +485,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     elif meta.centroid_method == 'mgmc':
                         position_pri, extra, refrence_median_frame = \
                             centerdriver.centerdriver(
-                                'mgmc_pri', data.flux.values, guess=1, trim=0,
-                                radius=None, size=None, meta=meta, i=None,
-                                m=None, mask=data.mask.values,
+                                'mgmc_pri', data.flux.values, None, None,
+                                None, None, meta, mask=data.mask.values,
                                 saved_ref_median_frame=saved_ref_median_frame)
                         if saved_ref_median_frame is None:
                             saved_ref_median_frame = refrence_median_frame
@@ -508,10 +512,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             position_pri, extra = \
                                 centerdriver.centerdriver(
                                     'fgc', data.flux.values[i], centroid_guess,
-                                    0, 0, 0, mask=data.mask.values[i],
-                                    uncd=None, fitbg=1, maskstar=True,
-                                    expand=1.0, psf=None, psfctr=None, i=i,
-                                    m=m, meta=meta)
+                                    0, i, m, meta, mask=data.mask.values[i])
 
                         if meta.oneoverf_corr is not None:
                             # Correct for 1/f
@@ -529,13 +530,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             centerdriver.centerdriver(
                                 meta.centroid_method+'_sec',
                                 data.flux.values[i],
-                                guess=position_pri,
-                                trim=meta.ctr_cutout_size,
-                                radius=0, size=0,
+                                position_pri, meta.ctr_cutout_size, i, m, meta,
                                 mask=data.mask.values[i],
-                                uncd=None, fitbg=1,
-                                maskstar=True, expand=1, psf=None,
-                                psfctr=None, i=i, m=m, meta=meta,
                                 saved_ref_median_frame=saved_ref_median_frame)
 
                         # Store centroid positions and

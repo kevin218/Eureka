@@ -275,6 +275,8 @@ class S3MetaClass(MetaClass):
             self.hst_cal = getattr(self, 'hst_cal')
         self.leapdir = getattr(self, 'leapdir', 'leapdir')
         self.flatfile = getattr(self, 'flatfile', None)
+        # Applying DQ mask doesn't seem to work for WFC3
+        self.dqmask = getattr(self, 'dqmask', False)
 
         self.set_spectral_defaults()
 
