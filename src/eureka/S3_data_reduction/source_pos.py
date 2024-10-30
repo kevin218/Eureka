@@ -308,10 +308,13 @@ def source_pos_FWM(flux, meta, m, n=0, plot=True):
 
     pos_max = source_pos_median(flux, meta, m, n=n, plot=False)
 
-    y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
+    ymin = pos_max-meta.spec_hw
+    if ymin < 0:
+        ymin = None
+    ymax = min(flux.shape[0], pos_max+meta.spec_hw)
+    y_pixels = np.arange(0, x_dim)[ymin:ymax]
 
-    sum_row = np.ma.sum(flux, axis=1)[pos_max-meta.spec_hw:
-                                      pos_max+meta.spec_hw]
+    sum_row = np.ma.sum(flux, axis=1)[ymin:ymax]
     sum_row -= (sum_row[0]+sum_row[-1])/2
 
     y_pos = np.ma.sum(sum_row*y_pixels)/np.ma.sum(sum_row)
@@ -399,9 +402,12 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
 
     # Data cutout around the maximum row
     pos_max = source_pos_median(flux, meta, m, n=n, plot=False)
-    y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
-    med_row = np.ma.median(flux, axis=1)[pos_max-meta.spec_hw:
-                                         pos_max+meta.spec_hw]
+    ymin = pos_max-meta.spec_hw
+    if ymin < 0:
+        ymin = None
+    ymax = min(flux.shape[0], pos_max+meta.spec_hw)
+    y_pixels = np.arange(0, x_dim)[ymin:ymax]
+    med_row = np.ma.median(flux, axis=1)[ymin:ymax]
 
     # Initial Guesses
     sigma0 = np.ma.sqrt(np.ma.sum(med_row*(y_pixels-pos_max)**2) /
