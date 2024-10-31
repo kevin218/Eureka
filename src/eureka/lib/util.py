@@ -93,14 +93,19 @@ def ignore_nonscience(filename):
         False otherwise.
     """
     with fits.open(filename) as hdulist:
-        nonscience = (hdulist[0].header['EXP_TYPE'] in
-                      ['MIR_TACQ', 'MIR_TACONFIRM',
-                       'NRC_TACQ', 'NRC_TACONFIRM',
-                       'NRS_WATA', 'NRS_MSATA',
-                       'NRS_BOTA', 'NRS_TASLIT',
-                       'NRS_TACQ', 'NRS_CONFIRM',
-                       'NRS_TACONFIRM', 'NRS_VERIFY',
-                       'NIS_TACQ', 'NIS_TACONFIRM'])
+        try:
+            nonscience = (hdulist[0].header['EXP_TYPE'] in
+                          ['MIR_TACQ', 'MIR_TACONFIRM',
+                           'NRC_TACQ', 'NRC_TACONFIRM',
+                           'NRS_WATA', 'NRS_MSATA',
+                           'NRS_BOTA', 'NRS_TASLIT',
+                           'NRS_TACQ', 'NRS_CONFIRM',
+                           'NRS_TACONFIRM', 'NRS_VERIFY',
+                           'NIS_TACQ', 'NIS_TACONFIRM'])
+        except KeyError:
+            # HST data doesn't have EXP_TYPE, and we shouldn't need to worry
+            # about removing non-science data for HST anyway
+            nonscience = False
     return nonscience
 
 
