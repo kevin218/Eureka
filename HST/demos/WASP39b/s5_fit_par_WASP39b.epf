@@ -1,0 +1,35 @@
+
+            # Stage 5 Fit Parameters Documentation:
+            # https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-5-fit-parameters
+            # Name  Value    Free?   PriorPar1   PriorPar2   PriorType
+            # "Free?" can be free, fixed, white_free, white_fixed, shared, or
+            # independent
+            # PriorType can be U (Uniform), LU (Log Uniform), or N (Normal).
+            # If U/LU, PriorPar1 and PriorPar2 represent upper and lower limits of
+            # the parameter/log(the parameter).
+            # If N, PriorPar1 is the mean and PriorPar2 is the standard deviation
+            # of a Gaussian prior.
+            #-------------------------------------------------------------------------------------------------------
+            #
+            # ------------------
+            # ** Transit/eclipse parameters **
+            # ------------------
+            rp           0.02150239121731867     'free'   0     1      U
+            per          3.9846654  'fixed'  3.9846654    0.0000092     N
+            t0           58698.1523648165      'fixed'   58698.1559     0.00065      N
+            time_offset  2400000.5  'independent'
+            inc          86.5      'fixed'  86.5    0.16     N
+            a            10.11        'fixed'    7.1      1.0034833931292224       N
+            ecc          0.075      'fixed'  0    1     U
+            w            196.0      'fixed'    0      360       U
+            limb_dark    'quadratic'    'independent'
+            u1           0.172     'fixed'   0.15651933602854776     0.01      N
+            u2           0.245      'fixed'   0.2367380655160314     0.01      N
+            c0           0.9985409602491301       'free'   1     0.01      N
+            c1           -0.015325138271693704       'free'   -1     1      U
+            h0           -1.5861439313978668e-05       'free'   -2     2      U
+            h1           -81.42102761554943       'free'   -500     500      U
+            h3           0       'fixed'   0     2      N 
+            h5           0.0666667       'free'   0.0666667     0.0000000001      N
+            h6           0.04    'free'   0.04     0.0000000001      N
+            scatter_mult 1.5     'free'   1.5  1  N 
