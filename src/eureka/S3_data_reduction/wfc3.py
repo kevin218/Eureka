@@ -3,11 +3,12 @@
 import os
 import numpy as np
 import multiprocessing as mp
+from copy import copy
 from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
-from . import sigrej, source_pos, background
+from . import sigrej, source_pos, background, straighten
 from . import hst_scan as hst
 from . import bright2flux as b2f
 from ..lib import suntimecorr, utc_tt, util
@@ -103,10 +104,11 @@ def get_reference_frames(meta, log):
     meta.ncpu = 1
     isplots_S3 = meta.isplots_S3
     meta.isplots_S3 = 0
+    ywindow = copy(meta.ywindow)
 
     # Set some default values
-    meta.firstFile = False
-    meta.firstInBatch = False
+    meta.firstFile = True
+    meta.firstInBatch = True
     meta.int_start = 0
     meta.int_end = 0
     meta.files_per_batch = 1
@@ -135,7 +137,7 @@ def get_reference_frames(meta, log):
         data, meta, log = read(meta.segment_list[i], data, meta, log)
         meta.n_int, meta.ny, meta.nx = data.flux.shape
         data, meta = util.trim(data, meta)
-        # Create bad pixel mask (1 = good, 0 = bad)
+        # Create bad pixel mask (False = good, True = bad)
         data['mask'] = (['time', 'y', 'x'],
                         np.zeros(data.flux.shape, dtype=bool))
         data['mask'] = util.check_nans(data['flux'], data['mask'],
@@ -150,6 +152,8 @@ def get_reference_frames(meta, log):
         meta.guess.append(data.guess)
         data, meta, log = source_pos.source_pos_wrapper(data, meta, log, i)
         data, meta = b2f.convert_to_e(data, meta, log)
+        if meta.curvature == 'correct':
+            data, meta = straighten.straighten_trace(data, meta, log, i)
         data = flag_bg(data, meta, log)
         data = background.BGsubtraction(data, meta, log, i)
         cut_aperture(data, meta, log)
@@ -157,6 +161,9 @@ def get_reference_frames(meta, log):
         # Save the reference values
         meta.subdata_ref.append(data.flux)
         meta.subdiffmask_ref.append(data.flatmask)
+
+        # Reset ywindow to undo any changes from the application of meta.expand
+        meta.ywindow = copy(ywindow)
 
     # Restore input values
     meta.verbose = verbose
@@ -479,6 +486,11 @@ def read(filename, data, meta, log):
         dq = supersample(dq, meta.expand, 'cal', axis=1)
         meta.ny *= meta.expand
 
+        if meta.firstFile:
+            # Only apply super-sampling expansion once
+            meta.ywindow[0] *= meta.expand
+            meta.ywindow[1] *= meta.expand
+
     # Find the indices where there were actually reads (to use lower down)
     goodInds = ~np.all(np.isnan(sci), axis=(1, 2))
 
@@ -537,7 +549,7 @@ def read(filename, data, meta, log):
     # Use the same centroid for each read
     # Only set the centroids of non-NaN reads
     centroids[goodInds, 0] = meta.centroid[centroid_index][0]
-    centroids[goodInds, 1] = meta.centroid[centroid_index][1]
+    centroids[goodInds, 1] = meta.centroid[centroid_index][1]*meta.expand
     meta.centroids.append(centroids)
 
     # Calculate trace
@@ -696,14 +708,13 @@ def difference_frames(data, meta, log):
     for n in range(meta.nreads):
         if np.all(np.isnan(diffflux[n])):
             # This file had one fewer read, so skip this "filler" read
+            log.writelog(f'      Skipping filler read {n}...', mute=True)
             continue
         diffmask[n] = data['flatmask'][0][0]
         if meta.nreads > 1:
+            # Don't use diffthresh for FLT files where nreads = 1
             diffmask[n][np.where(differr[n] > meta.diffthresh *
                         np.median(differr[n], axis=1)[:, np.newaxis])] = True
-        else:
-            # Don't use diffthresh for FLT files
-            pass
 
         # Guess spectrum position only using subarray region
         masked_data = np.ma.masked_where(
@@ -726,11 +737,14 @@ def difference_frames(data, meta, log):
     for i in range(meta.nreads):
         if np.all(np.isnan(diffflux[i])):
             # This file had one fewer read, so skip this "filler" read
+            log.writelog(f'      Skipping filler read {i}...', mute=True)
             continue
-        scannedData = np.sum(diffflux[i], axis=1)
+        scannedData = np.ma.masked_where(diffmask[i], diffflux[i])
+        scannedData = np.ma.masked_invalid(scannedData)
+        scannedData = np.ma.sum(scannedData, axis=1)
         xmin = np.min(guess)
         xmax = np.max(guess)
-        scannedData /= np.median(scannedData[xmin:xmax+1])
+        scannedData /= np.ma.median(scannedData[xmin:xmax+1])
         scannedData -= 0.5
         yrng = range(meta.ny)
         spline = spi.UnivariateSpline(yrng, scannedData[yrng], k=3, s=0)
