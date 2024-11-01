@@ -1,0 +1,71 @@
+# Eureka! Control File for Stage 3: Data Reduction
+
+# Stage 3 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-3
+
+ncpu            8           # Number of CPUs
+nfiles          1000        # The max number of data files to analyze simultaneously. Strongly recommended to be >>1 for HST data.
+max_memory      0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
+suffix          ima         # Data file suffix
+
+# Calibration files
+hst_cal         /home/Data/HST/WFC3_Calibration/       # The path to the reference files
+horizonsfile    horizons/horizons_results_2023_2024.txt          # Generate your horizonsfile at https://ssd.jpl.nasa.gov/horizons/app.html#/
+leapdir         leapdir/                               # Folder where leapsecond calibration files will be read/saved
+# flatfile        flats/WFC3.IR.G102.flat.2.fits         # The calibration file to use for flat-fielding
+flatfile        flats/WFC3.IR.G141.flat.2.fits
+# flatfile        flats/sedFFcube-both.fits
+
+# Subarray region of interest
+xwindow         [153, 334]    # Horizontal axis as seen in DS9
+ywindow         [10, 500]    # Vertical axis as seen in DS9
+src_pos_type    hst         # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
+record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
+
+# Subarray region for direct images used for wavelength calibration
+centroidtrim    3           # The box width to cut around the centroid guess to perform centroiding on the direct images. This should be an integer.
+centroidguess   [271, 271]  # A guess for the location of the star in the direct images in the format [x, y].
+
+# Flatfield parameters
+flatoffset      [[374, 374]]
+# flatoffset      [[379, 379]]
+flatsigma       50
+
+# Sigma threshold for bad pixel identification in the differential non-destructive reads (NDRs)
+diffthresh      5      
+
+# Background parameters
+bg_hw           90          # Half-width of exclusion region for BG subtraction (relative to source position)
+# bg_hw         [6,8,1]     # Half-width of exclusion region for BG subtraction (relative to source position)
+bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
+bg_deg          -1           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
+p3thresh        3           # X-sigma threshold for outlier rejection during background subtraction
+
+# Spectral extraction parameters
+spec_hw         80          # Half-width of aperture region for spectral extraction (relative to source position)
+fittype         smooth      # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
+window_len      11          # Smoothing window length, when fittype = smooth or meddata (when computing median frame). Can set to 1 for no smoothing when computing median frame for fittype=meddata.
+median_thresh   5           # Sigma threshold when flagging outliers in median frame, when fittype=meddata and window_len > 1
+prof_deg        3           # Polynomial degree, when fittype = poly
+p5thresh        10          # X-sigma threshold for outlier rejection while constructing spatial profile
+p7thresh        10          # X-sigma threshold for outlier rejection during optimal spectral extraction
+
+# 2D drift correction parameters
+iref            [2, 3]      # The file indices to use as reference frames for each scan direction
+
+# Diagnostics
+isplots_S3      1  #5       # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)   #REDUCED FOR GA
+nplots          3  #50      # How many of each type of figure do you want to make per file?    #REDUCED FOR GA
+vmin            0.97        # Sets the vmin of the color bar for Figure 3101.
+vmax            1.03        # Sets the vmax of the color bar for Figure 3101.
+time_axis       'y'         # Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x')
+testing_S3      False       # Boolean, set True to only use last file and generate select figures
+hide_plots      True        # If True, plots will automatically be closed rather than popping up
+save_output     True        # Save outputs for use in S4
+verbose         True        # If True, more details will be printed about steps
+
+# Project directory
+topdir              /home/
+
+# Directories relative to topdir
+inputdir            Data/HST/WFC3/WASP39b/Visit10
+outputdir           DataAnalysis/HST/WASP39b/Stage3

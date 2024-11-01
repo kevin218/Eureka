@@ -1,0 +1,91 @@
+## EUREKA! OPTIMIZATION -- INPUT PARAMETERS ##
+
+
+## GENERAL ##
+planet_name = 'WASP-39 b'      # Name of exoplanet as spelled in the MAST archive
+eventlabel = 'WASP39b'
+
+## TARGET BRIGHTNESS ##
+bright_star = False             # If True, a larger box extraction window is used to ensure the entirespectra is captured
+
+## BOX EXTRACTION ##
+xwindow_selection = 'auto'      # 'manual' or 'auto'; manual will use the values in the S3 ECF
+ywindow_selection = 'auto'      # 'manual' or 'auto'; manual will use the values in the S3 ECF
+
+## SPEC_HW & BG_HW ##
+spec_hw_selection = 'auto'      # 'manual' or 'auto'; manual will use the values in the S3 ECF
+bg_hw_selection = 'auto'        # 'manual' or 'auto'; manual will use the values in the S3 ECF
+
+## OPTIMIZER ##
+optimizer = 'parametric'        # 'parametric' or 'genetic' (used for optimization of S3-S4 inputs)
+target_fitness = 0              # Target chi2red value (0 is default, where # of runs = pop_size * generations)
+
+# Fitness Scaling
+scaling_chi2red = 0.0           # Default = 0.0
+scaling_MAD_spec = 1.0          # Default = 1.0
+scaling_MAD_white = 0.1         # Default = 1.0
+
+## GENETIC ALGORITHM ##         # Only complete this section if optimizer == 'genetic'
+# Step 1 Settings
+population_size_Step_1 = 14     # Must be a multiple of 2
+generations_Step_1 = 12         # Number of Generations for Step 1 of GA
+# Step 2 Settings
+population_size_Step_2 = 12     # Must be a multiple of 2
+generations_Step_2 = 10         # Number of Generations for Step 2 of GA
+
+## SKIP STEPS ## 
+skip_xwindow_crop = True        # If True, xwindow cropping will be skipped. False recommended for first run.
+skip_ywindow_crop = True        # If True, ywindow cropping will be skipped. False recommended for first run.
+
+## DEFINE BOUNDS ##
+# Stage 3
+bounds_xwindow_crop = 'auto'    # 'auto' assumes a default of bounds_xwindow_crop = [0, 25]
+bounds_ywindow_crop = 'auto'    # 'auto' assumes a default of bounds_ywindow_crop = [0, 40]
+bounds_diffthresh = 'auto'      # 'auto' assumes a default of bounds_diffthresh = [3, 10]
+bounds_bg_hw = 'auto'           # 'auto' uses hstscan to estimate bounds_bg_hw
+bounds_spec_hw = 'auto'         # 'auto' uses hstscan to estimate bounds_spec_hw
+bounds_p3thresh = 'auto'        # 'auto' assumes a default of bounds_p3thresh = [3, 7]
+bounds_median_thresh = 'auto'   # 'auto' assumes a default of bounds_median_thresh = [3, 7]
+bounds_window_len = 'auto'      # 'auto' assumes a default of bounds_window_len = [1, 21]
+bounds_p5thresh = 'auto'        # 'auto' assumes a default of bounds_p5thresh = [5, 10]
+bounds_p7thresh = 'auto'        # 'auto' assumes a default of bounds_p7thresh = [5, 10]
+
+# Stage 4
+bounds_drift_range = 'auto'     # 'auto' assumes a default of bounds_drift_range = [8, 12]
+bounds_highpassWidth = 'auto'   # 'auto' assumes a default of bounds_highpassWidth = [8, 12]
+bounds_sigma = 'auto'           # 'auto' assumes a default of bounds_sigma = [8, 12]
+bounds_box_width = 'auto'       # 'auto' assumes a default of bounds_box_width = [8, 12]
+
+## HST ONLY ###
+offset_trace = 5                # Offset xrange of WFC3 Trace (5 is default for 256x256 pixel grid, 10 for 512x512 pixel grid.)
+
+## Manual Clipping ##
+clip_first_orbit = True         # Clip the first orbit. True or False.
+manual_clip_npoints = 3         # Clip first n data points of each frame. Value must be greater than 0.
+
+## Limb Darkening ##
+enable_exotic_ld = True         # If True, the final run of the white light data, as well as the spectroscopic data, will be analyzed using exotic limb darkening.
+
+use_generate_ld = 'exotic-ld'   # Turn on use_generate_ld and enter paths for ld files
+
+##  DEFINE FILEPATHS ##
+# File path to save optimization results
+outputdir_optimization = "/home/DataAnalysis/HST/WASP39b/Optimized/Visit10/"
+
+# Path to observation data
+loc_sci = '/home/Data/HST/WFC3/WASP39b/Visit10/' 
+
+# File path for MAST data
+exomast_file = "/home/Data/all_planet_data.pkl"
+
+# Path to exotic-ld ancillary files 
+exotic_ld_direc = '/home/Data/exotic-ld_data/'
+
+# File path for exotic-ld throughput file 
+exotic_ld_file = '/home/Data/exotic-ld_data/Sensitivity_files/HST_WFC3_G141_throughput.csv'
+
+# File path for ld file (white) 
+ld_file = '/home/Data/exotic-ld_data/Sensitivity_files/HST_WFC3_G141_throughput.csv'
+
+# File path for ld file (white) 
+ld_file_white = '/home/Data/exotic-ld_data/Sensitivity_files/HST_WFC3_G141_throughput.csv'
