@@ -88,6 +88,12 @@ class TransitModel():
             spotlon = np.concatenate([
                 spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
 
+        if np.any((np.abs(spotlat) > 90) | (np.abs(spotlon) > 180) |
+                  (spotrad > 1)):
+            # Returning nans or infs breaks the fits, so this was the
+            # best I could think of
+            return 1e6*np.ma.ones(self.t.shape)
+
         if pl_params.spotnpts is None:
             # Have a default spotnpts for fleck
             pl_params.spotnpts = 300
