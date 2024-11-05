@@ -589,7 +589,8 @@ def clean_median_flux(data, meta, log, m):
             goodrow = medflux[j][~np.ma.getmaskarray(outliers[j]) *
                                  ~np.ma.getmaskarray(medflux[j])]
             if len(goodrow) > 0:
-                f = spi.interp1d(x1, goodrow, 'linear', fill_value='extrapolate')
+                f = spi.interp1d(x1, goodrow, 'linear', 
+                                 fill_value='extrapolate')
                 clean_med[j] = f(xx)
 
         # Assign cleaned median frame to data object
