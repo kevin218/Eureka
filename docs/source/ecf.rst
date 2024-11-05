@@ -921,11 +921,11 @@ The following two parameters can help in the case of convergence issues when usi
 
 catwoman_max_err
 ^^^^^^^^^^^^^^^^
-The ``max_err`` parameter used by catwoman. For more information, see the relevant location of catwoman's `readthedocs page <https://catwoman.readthedocs.io/en/latest/tutorial.html#error-tolerance>`_ or the relevant location of `catwoman's API <https://catwoman.readthedocs.io/en/latest/API.html#catwoman.TransitModel>`_.
+The ``max_err`` parameter used by catwoman; defaults to ``1.0``. For more information, see the relevant location of catwoman's `readthedocs page <https://catwoman.readthedocs.io/en/latest/tutorial.html#error-tolerance>`_ or the relevant location of `catwoman's API <https://catwoman.readthedocs.io/en/latest/API.html#catwoman.TransitModel>`_.
 
 catwoman_fac
 ^^^^^^^^^^^^
-
+The ``fac`` parameter used by catwoman; defaults to ``None``. For more information, see the relevant location of catwoman's `readthedocs page <https://catwoman.readthedocs.io/en/latest/tutorial.html#error-tolerance>`_ or the relevant location of `catwoman's API <https://catwoman.readthedocs.io/en/latest/API.html#catwoman.TransitModel>`_.
 
 Limb Darkening Parameters
 '''''''''''''''''''''''''
