@@ -7,7 +7,7 @@ from ..lib.util import read_time, supersample
 
 
 def read(filename, data, meta, log):
-    '''Reads single FITS file from JWST's NIRCam instrument.
+    '''Reads single FITS file from JWST's NIRSpec instrument.
 
     Parameters
     ----------
@@ -29,16 +29,6 @@ def read(filename, data, meta, log):
     log : logedit.Logedit
         The current log.
 
-    Notes
-    -----
-    History:
-
-    - November 2012 Kevin Stevenson
-        Initial version
-    - June 2021 Aarynn Carter/Eva-Maria Ahrer
-        Updated for NIRSpec
-    - Apr 22, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     '''
     hdulist = fits.open(filename)
 
