@@ -167,8 +167,8 @@ def gaussianguess(data, mask=None, yxguess=None):
     data : ndarray (2D)
         The data to which a Gaussian is being fit.
     mask : ndarray (2D); optional
-        An integer mask array where 1 is unmasked and 0 is masked. Defaults
-        to None which leaves all data unmasked.
+        A boolean mask array where False is unmasked and True is masked.
+        Defaults to None which only masks non-finite values.
     yxguess : tuple; optional
         A guess at the centroid. Defaults to None which uses the data point
         with the highest value.
@@ -183,14 +183,17 @@ def gaussianguess(data, mask=None, yxguess=None):
     gheight : float
         The guess for the Gaussian amplitude.
     """
-    # Default mask:
+    # Default mask: only non-finite values are bad
     if mask is None:
-        mask = np.ones(np.shape(data))
+        mask = ~np.isfinite(data)
+
+    # Apply the mask
+    data = np.ma.masked_where(mask, data)
 
     # Center position guess, looking the max value:
     if yxguess is None:
         # Block will need to be updated and tested for python 3.5.
-        gcenter = np.unravel_index(np.argmax(data*mask), np.shape(data))
+        gcenter = np.unravel_index(np.ma.argmax(data), np.shape(data))
     else:
         gcenter = np.around(int(yxguess[0])), np.around(int(yxguess[1]))
 
@@ -203,8 +206,8 @@ def gaussianguess(data, mask=None, yxguess=None):
     sigma = np.array([np.std(data[:, gcenter[1]]),  # y std (of central column)
                       np.std(data[gcenter[0], :])])  # x std (of central row)
 
-    gwidth = (np.sum((data*mask)[:, gcenter[1]] > 2*sigma[0])/2.0,
-              np.sum((data*mask)[gcenter[0], :] > 2*sigma[1])/2.0)
+    gwidth = (np.ma.sum((data)[:, gcenter[1]] > 2*sigma[0])/2.0,
+              np.ma.sum((data)[gcenter[0], :] > 2*sigma[1])/2.0)
 
     return (gwidth, gcenter, gheight)
 
@@ -226,8 +229,8 @@ def residuals(params, x, data, mask, weights, bgpars, fitbg):
         Array giving the values of the function.
     mask : ndarray
         Same shape as data. Values where its corresponding mask value is
-        0 are disregarded for the minimization. Only values where the
-        mask value is 1 are considered.
+        True are disregarded for the minimization. Only values where the
+        mask value is False are considered.
     weights : ndarray
         Same shape as data. This array defines weights for the
         minimization, for scientific data the weights should be
@@ -283,11 +286,11 @@ def residuals(params, x, data, mask, weights, bgpars, fitbg):
     # Calculate residuals:
     res = (model - data) * weights
     # Return only unmasked values:
-    return res[np.where(mask)]
+    return res[np.where(~mask)]
 
 
 def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
-                mask=None, weights=None, maskg=False, yxguess=None):
+                mask=None, weights=None, maskg=False, yxguess=None, radius=3):
     """Fits an N-dimensional Gaussian to (value, coordinate) data.
 
     Parameters
@@ -319,17 +322,21 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
         tuple.
     mask : ndarray
         Same shape as y. Values where its corresponding mask value is
-        0 are disregarded for the minimization. Only values where the
-        mask value is 1 are considered.
+        True are disregarded for the minimization. Only values where the
+        mask value is False are considered. Defaults to only masking non-finite
+        values.
     weights : ndarray
         Same shape as y. This array defines weights for the
         minimization, for scientific data the weights should be
         1/sqrt(variance).
     maskg : bool; optional
-        If true, mask the gaussian.
+        If true, mask the gaussian. Defaults to False.
     yxguess : tuple; optional
         A guess at just the centroid. Defaults to None which uses the data
         point with the highest value.
+    radius : int; optional
+        The radius over which the fitted gaussian should be masked if maskg
+        was set to True.
 
     Returns
     -------
@@ -506,9 +513,12 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
         if val_err:
             raise ValueError("x must give coordinates of points in y.")
 
-    # Default mask: all good
+    # Default mask: only non-finite values are bad
     if mask is None:
-        mask = np.ones(np.shape(y))
+        mask = ~np.isfinite(y)
+
+    # Apply the mask
+    y = np.ma.masked_where(mask, y)
 
     # Default weights: no weighting
     if weights is None:
@@ -521,10 +531,10 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
             center = yxguess
         elif guess is not None:
             center = guess[1]
-        medmask *= (1 - d.disk(3, center, np.shape(y)))
+        medmask += ~d.disk(radius, center, np.shape(y))
 
     # Estimate the median of the image:
-    medbg = np.median(y[np.where(medmask)])
+    medbg = np.ma.median(y)
 
     if bgpars is None:
         bgpars = [0.0, 0.0, medbg]
@@ -567,6 +577,13 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
 
 def gaussians(x, param):
     """Evaluate more than 1 gaussian.
+
+    Parameters
+    ----------
+    x : ndarray (1D)
+        The x-positions at which to evaluate the Gaussian functions.
+    param : ndarray (1D)
+        The fitted parameters raveled into a 1D array.
     """
     ndim = x.ndim - 1
     if ndim == 0:    # We use an indexing trick below that fails for 1D case.
@@ -607,7 +624,7 @@ def gaussians(x, param):
     return result
 
 
-def resids(param, x, ngauss, y):
+def resids(param, x, ngauss, y, mask):
     """Get the residuals of a Gaussian compared to data for fitting.
 
     Parameters
@@ -620,11 +637,15 @@ def resids(param, x, ngauss, y):
         The number of Gaussians being fitted.
     y : ndarray (1D)
         The values to which a Gaussian should be fitted.
+    mask : ndarray
+        Same shape as data. Values where its corresponding mask value is
+        True are disregarded for the minimization. Only values where the
+        mask value is False are considered.
 
     Returns
     -------
     ndarray (1D)
-        The difference between y and the Gaussian.
+        The difference between (unmasked) y values and the Gaussian.
     """
     sigma = param[-1]
     param = np.reshape(param[0:-1], (ngauss, len(param[0:-1])/ngauss))
@@ -634,21 +655,25 @@ def resids(param, x, ngauss, y):
         gauss = np.append(sigma, np.append(sigma, param[k]))
         gss = np.append(gss, gauss)
     p = np.reshape(gss, (ngauss, len(gss)/ngauss))
-    return np.ravel(gaussians(x, param=p)-y)
+
+    res = np.ravel(gaussians(x, param=p)-y)
+
+    # Return only unmasked values:
+    return res[np.where(~mask)]
 
 
-def fitgaussians(y, x=None, guess=None, sigma=1.0):
+def fitgaussians(y, x=None, guess=None, mask=None, sigma=1.0):
     """Fit position and flux of a data image with gaussians, same sigma
     is applied to all directions.
 
     Parameters
     ----------
-    y : array_like
+    y : ndarray
         Array giving the values of the function.
-    x : array_like
-        (optional) Array (any shape) giving the abcissas of y (if
+    x : ndarray; optional
+        Array (sample shape as y) giving the abcissas of y (if
         missing, uses np.indices(y).
-    guess : 2D-tuple
+    guess : 2D-tuple; optional
         [[width1, center1, height1],
         [width2, center2, height2],
         ...                       ]
@@ -656,6 +681,13 @@ def fitgaussians(y, x=None, guess=None, sigma=1.0):
         the optimizer.  If supplied, x and y can be any shape and need
         not be sorted.  See gaussian() for meaning and format of this
         tuple.
+    mask : ndarray; optional
+        Same shape as y. Values where its corresponding mask value is
+        True are disregarded for the minimization. Only values where the
+        mask value is False are considered. Defaults to None which only masks
+        non-finite values.
+    sigma : float; optional
+        The fixed standard deviation of the fitted Gaussians. Defaults to 1.0.
     """
     if x is None:
         x = np.indices(y.shape)[0]
@@ -665,6 +697,10 @@ def fitgaussians(y, x=None, guess=None, sigma=1.0):
         if val_err:
             raise ValueError("x must give coordinates of points in y.")
 
+    # Default mask: only non-finite values are bad
+    if mask is None:
+        mask = ~np.isfinite(y)
+
     # "ravel" the guess
     ngauss = np.shape(guess)[0]
     params = np.ravel(guess)
@@ -672,7 +708,7 @@ def fitgaussians(y, x=None, guess=None, sigma=1.0):
 
     # Minimize residuals of the fit:
     p, cov, info, mesg, success = so.leastsq(resids, params,
-                                             args=(x, ngauss, y),
+                                             args=(x, ngauss, y, mask),
                                              full_output=True)
 
     sigma = p[-1]

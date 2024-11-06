@@ -35,7 +35,7 @@ class ExpRampModel(Model):
             self.parameters = Parameters(**params)
 
         # Update coefficients
-        self.coeffs = np.zeros((self.nchannel_fitted, 6))
+        self.coeffs = np.zeros((self.nchannel_fitted, 4))
         self._parse_coeffs()
 
     @property
@@ -62,7 +62,7 @@ class ExpRampModel(Model):
 
     def _parse_coeffs(self):
         """Convert dict of 'r#' coefficients into a list
-        of coefficients in increasing order, i.e. ['r0','r1','r2'].
+        of coefficients in increasing order, i.e. ['r0','r1'].
 
         Returns
         -------
@@ -76,7 +76,7 @@ class ExpRampModel(Model):
             else:
                 chan = 0
 
-            for i in range(6):
+            for i in range(4):
                 try:
                     if chan == 0:
                         self.coeffs[c, i] = self.parameters.dict[f'r{i}'][0]
@@ -125,8 +125,7 @@ class ExpRampModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            r0, r1, r2, r3, r4, r5 = self.coeffs[chan]
-            lcpiece = (1+r0*np.exp(-r1*time + r2)
-                       + r3*np.exp(-r4*time + r5))
+            r0, r1, r2, r3 = self.coeffs[chan]
+            lcpiece = (1 + r0*np.exp(-r1*time) + r2*np.exp(-r3*time))
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal

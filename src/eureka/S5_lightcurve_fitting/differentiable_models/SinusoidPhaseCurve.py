@@ -88,7 +88,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                 if (eval and pl_params.AmpCos1 == 0 and pl_params.AmpSin1 == 0
                         and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0):
                     # Don't waste time running the following code
-                    phaseVars = np.ma.ones_like(time)
+                    phaseVars = np.ma.ones(time.shape)
                     continue
 
                 if pl_params.t_secondary is None:

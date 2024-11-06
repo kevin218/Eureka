@@ -96,6 +96,11 @@ class S1MetaClass(MetaClass):
             # Force this to be specified if custom_linearity is True
             self.linearity_file = getattr(self, 'linearity_file')
 
+        self.custom_mask = getattr(self, 'custom_mask', False)
+        if self.custom_mask:
+            # Force this to be specified if custom_mask is True
+            self.mask_file = getattr(self, 'mask_file')
+
         # Custom bias when using NIRSpec G395H
         # Options: [mean, group_level, smooth, None].
         # If not None, requires masktrace=True
@@ -106,10 +111,10 @@ class S1MetaClass(MetaClass):
             if self.bias_correction == 'smooth':
                 # Force this to be specified if bias_correction is 'smooth'
                 self.bias_smooth_length = getattr(self, 'bias_smooth_length')
-            self.custom_bias = getattr(self, 'custom_bias', False)
-            if self.custom_bias:
-                # Force this to be specified if custom_bias is True
-                self.superbias_file = getattr(self, 'superbias_file')
+        self.custom_bias = getattr(self, 'custom_bias', False)
+        if self.custom_bias:
+            # Force this to be specified if custom_bias is True
+            self.superbias_file = getattr(self, 'superbias_file')
 
         # Manually mask groups
         self.mask_groups = getattr(self, 'mask_groups', False)
@@ -135,6 +140,12 @@ class S1MetaClass(MetaClass):
         # Mask curved traces
         self.masktrace = getattr(self, 'masktrace', False)
         if self.masktrace:
+            # Override bg_y1 and bg_y2 if masking the trace
+            print('  Overriding meta.bg_y1 and meta.bg_y2 since you set '
+                  'meta.masktrace to True, and the bg_y1 and bg_y2 parameters '
+                  'are not needed when masking the trace.')
+            self.bg_y1 = 17
+            self.bg_y2 = 16
             # Force these to be specified if masking the trace
             self.window_len = getattr(self, 'window_len')
             self.expand_mask = getattr(self, 'expand_mask')
@@ -174,10 +185,11 @@ class S1MetaClass(MetaClass):
             self.p3thresh = getattr(self, 'p3thresh', 3)
             # Row-by-row BG subtraction (only useful for NIRCam)
             self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
-            # Left edge of exclusion region for row-by-row BG subtraction
-            self.bg_x1 = getattr(self, 'bg_x1', None)
-            # Right edge of exclusion region for row-by-row BG subtraction
-            self.bg_x2 = getattr(self, 'bg_x2', None)
+        # bg_x1 and bg_x2 also need to be defined if meta.masktrace is True
+        # Left edge of exclusion region for row-by-row BG subtraction
+        self.bg_x1 = getattr(self, 'bg_x1', None)
+        # Right edge of exclusion region for row-by-row BG subtraction
+        self.bg_x2 = getattr(self, 'bg_x2', None)
 
         # Diagnostics
         self.isplots_S1 = getattr(self, 'isplots_S1', 1)

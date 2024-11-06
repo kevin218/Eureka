@@ -18,7 +18,6 @@ from ..lib.util import read_time, supersample
 # from scipy.ndimage import gaussian_filter
 
 from .background import fitbg3
-from .niriss_profiles import *
 from . import niriss_python
 
 # FINDME: update list
@@ -169,25 +168,27 @@ def wave_NIRISS(wavefile, meta):
     wavefile : str
        The name of the .FITS file with the wavelength
        solution.
-    meta : object
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Returns
     -------
-    meta : object
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
     """
-    hdu = fits.open(wavefile)
-
-    meta.wavelength_order1 = hdu[1].data + 0.0
-    meta.wavelength_order2 = hdu[2].data + 0.0
-    meta.wavelength_order3 = hdu[3].data + 0.0
-
-    hdu.close()
+    with fits.open(wavefile) as hdu:
+        meta.wavelength_order1 = hdu[1].data
+        meta.wavelength_order2 = hdu[2].data
+        meta.wavelength_order3 = hdu[3].data
 
     return meta
 
 
+
 def flag_bg(data, meta):
-    '''Outlier rejection of sky background along time axis.
+    '''A placeholder function until a flag_bg function is implemented.
+
+    Outlier rejection of sky background along time axis.
 
     Parameters
     ----------
@@ -198,7 +199,7 @@ def flag_bg(data, meta):
 
     Returns
     -------
-    data:   DataClass
+    data : DataClass
         The updated data object with outlier background pixels flagged.
     '''
 
@@ -207,55 +208,52 @@ def flag_bg(data, meta):
     return
 
 
-def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
+def dirty_mask(img, meta, boxsize1=70, boxsize2=60):
+    """Really dirty box mask for background purposes."""
+    mask = np.zeros(img.shape, dtype=bool)
+
+    for i in range(img.shape[1]):
+        s = int(meta.tab2['order_1'][i]-boxsize1/2)
+        e = int(meta.tab2['order_1'][i]+boxsize1/2)
+        mask[s:e, i] = True
+
+        s = int(meta.tab2['order_2'][i]-boxsize2/2)
+        e = int(meta.tab2['order_2'][i]+boxsize2/2)
+        try:
+            mask[s:e, i] = True
+        except:
+            # FINDME: Need to change this except to only catch the
+            # specific type of exception we expect
+            pass
+
+    return mask
+
+
+def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4]):
     """
     Subtracts background from non-spectral regions.
 
     Parameters
     ----------
-    data : object
-    meta : object
-    n_iters : int; optional
-       The number of iterations to go over and remove cosmic
-       rays. Default is 3.
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     readnoise : float; optional
        An estimation of the readnoise of the detector.
-       Default is 5.
-    sigclip : list, array; optional
-       A list or array of len(n_iiters) corresponding to the
+       Default is 11.
+    sigclip : interable; optional
+       A list or array corresponding to the
        sigma-level which should be clipped in the cosmic
-       ray removal routine. Default is [4,2,3].
-    isplots : int; optional
-       The level of output plots to display. Default is 0
-       (no plots).
+       ray removal routine. Default is [4, 4, 4].
 
     Returns
     -------
-    data : object
+    data : Xarray Dataset
+        The updated Dataset object now contains new attribute `bkg_removed`.
     """
-    def dirty_mask(img, boxsize1=70, boxsize2=60):
-        """Really dirty box mask for background purposes."""
-        order1 = np.zeros((boxsize1, len(img[0])))
-        order2 = np.zeros((boxsize2, len(img[0])))
-        mask = np.ones(img.shape)
-
-        for i in range(img.shape[1]):
-            s,e = int(meta.tab2['order_1'][i]-boxsize1/2), int(meta.tab2['order_1'][i]+boxsize1/2)
-            order1[:,i] = img[s:e,i]
-            mask[s:e,i] = 0
-
-            s,e = int(meta.tab2['order_2'][i]-boxsize2/2), int(meta.tab2['order_2'][i]+boxsize2/2)
-            try:
-                order2[:,i] = img[s:e,i]
-                mask[s:e,i] = 0
-            except:
-                pass
-
-        return mask
-
-    box_mask = dirty_mask(data.median)
-    data = fitbg3(data, np.array(box_mask-1, dtype=bool),
-                  readnoise, sigclip, isplots)
+    box_mask = dirty_mask(data.median, meta)
+    data = fitbg3(data, box_mask, readnoise, sigclip)
     return data
 
 
@@ -267,7 +265,8 @@ def set_which_table(i, meta):
     Parameters
     ----------
     i : int
-    meta : object
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Returns
     -------
@@ -293,52 +292,61 @@ def fit_orders(data, meta, which_table=2):
 
     Parameters
     ----------
-    data : object
-    meta : object
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     which_table : int; optional
        Sets with table of initial y-positions for the
        orders to use. Default is 2.
 
     Returns
     -------
-    meta : object
-       Adds two new attributes: `order1_mask` and `order2_mask`.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object with two new attributes:
+        `order1_mask` and `order2_mask`.
     """
     print("Go grab some food. This routing could take up to 30 minutes.")
 
     def construct_guesses(A, B, sig, length=10):
-        As   = np.linspace(A[0],   A[1],   length)  # amplitude of gaussian for first order
-        Bs   = np.linspace(B[0],   B[1],   length)  # amplitude of gaussian for second order
-        sigs = np.linspace(sig[0], sig[1], length)  # std of gaussian profile
-        combos = np.array(list(itertools.product(*[As,Bs,sigs]))) # generates all possible combos
+        # amplitude of gaussian for first order
+        As = np.linspace(A[0], A[1], length)
+        # amplitude of gaussian for second order
+        Bs = np.linspace(B[0], B[1], length)
+        # std of gaussian profile
+        sigs = np.linspace(sig[0], sig[1], length)
+        # generates all possible combos
+        combos = np.array(list(itertools.product(*[As, Bs, sigs])))
         return combos
 
     pos1, pos2 = set_which_table(which_table, meta)
 
     # Good initial guesses
-    combos = construct_guesses([0.1,30], [0.1,30], [1,40])
+    combos = construct_guesses([0.1, 30], [0.1, 30], [1, 40])
 
     # generates length x length x length number of images and fits to the data
     img1, sigout1 = niriss_python.build_image_models(data.median,
-                                                     combos[:,0], combos[:,1],
-                                                     combos[:,2],
+                                                     combos[:, 0],
+                                                     combos[:, 1],
+                                                     combos[:, 2],
                                                      pos1, pos2)
 
     # Iterates on a smaller region around the best guess
     best_guess = combos[np.argmin(sigout1)]
-    combos = construct_guesses( [best_guess[0]-0.5, best_guess[0]+0.5],
-                                [best_guess[1]-0.5, best_guess[1]+0.5],
-                                [best_guess[2]-0.5, best_guess[2]+0.5] )
+    combos = construct_guesses([best_guess[0]-0.5, best_guess[0]+0.5],
+                               [best_guess[1]-0.5, best_guess[1]+0.5],
+                               [best_guess[2]-0.5, best_guess[2]+0.5])
 
-    # generates length x length x length number of images centered around the previous
-    #   guess to optimize the image fit
+    # generates length x length x length number of images centered around the
+    # previous guess to optimize the image fit
     img2, sigout2 = niriss_python.build_image_models(data.median,
-                                                     combos[:,0], combos[:,1],
-                                                     combos[:,2],
+                                                     combos[:, 0],
+                                                     combos[:, 1],
+                                                     combos[:, 2],
                                                      pos1, pos2)
 
-    # creates a 2D image for the first and second orders with the best-fit gaussian
-    #    profiles
+    # creates a 2D image for the first and second orders with the best-fit
+    # gaussian profiles
     final_guess = combos[np.argmin(sigout2)]
     ord1, ord2, _ = niriss_python.build_image_models(data.median,
                                                      [final_guess[0]],
@@ -360,21 +368,25 @@ def fit_orders_fast(data, meta, which_table=2):
 
     Parameters
     ----------
-    data : object
-    meta : object
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     which_table : int; optional
        Sets with table of initial y-positions for the
        orders to use. Default is 2.
 
     Returns
     -------
-    meta : object
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
     """
     def residuals(params, data, y1_pos, y2_pos):
         """ Calcualtes residuals for best-fit profile. """
         A, B, sig1 = params
         # Produce the model:
-        model,_ = niriss_python.build_image_models(data, [A], [B], [sig1], y1_pos, y2_pos)
+        model, _ = niriss_python.build_image_models(data, [A], [B], [sig1],
+                                                    y1_pos, y2_pos)
         # Calculate residuals:
         res = (model[0] - data)
         return res.flatten()
@@ -382,20 +394,15 @@ def fit_orders_fast(data, meta, which_table=2):
     pos1, pos2 = set_which_table(which_table, meta)
 
     # fits the mask
-    results = so.least_squares( residuals,
-                                x0=np.array([2,3,30]),
-                                args=(data.median, pos1, pos2),
-                                xtol=1e-11, ftol=1e-11, max_nfev=1e3
-                               )
+    results = so.least_squares(residuals,
+                               x0=np.array([2, 3, 30]),
+                               args=(data.median, pos1, pos2),
+                               xtol=1e-11, ftol=1e-11, max_nfev=1e3)
 
     # creates the final mask
-    out_img1,out_img2,_= niriss_python.build_image_models(data.median,
-                                                          results.x[0:1],
-                                                          results.x[1:2],
-                                                          results.x[2:3],
-                                                          pos1,
-                                                          pos2,
-                                                          return_together=False)
+    out_img1, out_img2, _ = niriss_python.build_image_models(
+        data.median, results.x[0:1], results.x[1:2], results.x[2:3],
+        pos1, pos2, return_together=False)
     meta.order1_mask_fast = out_img1[0]
     meta.order2_mask_fast = out_img2[0]
 

@@ -226,7 +226,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 # Manipulate fitted values if needed
                 if meta.y_param_basic in ['rp^2', 'rprs^2']:
                     meta = compute_transit_depth(meta)
-                elif meta.y_param_basic in ['1/r1', '1/r4']:
+                elif meta.y_param_basic in ['1/r1', '1/r3']:
                     meta = compute_timescale(meta)
 
                 planetSuffix = getPlanetSuffix(meta)
@@ -281,17 +281,18 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                         # Phase Curve Amplitude, first order
                         suffix = planetSuffix+channelSuffix
                         meta.y_label = 'Phase Curve Amplitude'+suffix
-                    elif meta.y_param_basic == 'pc_offset2':
-                        # Phase Curve Offset, second order
+                    elif meta.y_param_basic[:12] == 'offset_order':
+                        # Phase Curve Offset, nth order
                         suffix = planetSuffix+channelSuffix
-                        meta.y_label = 'Second Order Phase Curve Offset'+suffix
+                        meta.y_label = (f'Order {meta.y_param_basic[12:]}\n' +
+                                        'Phase Curve Offset' + suffix)
                         if meta.y_label_unit is None:
                             meta.y_label_unit = '($^{\\circ}$E)'
-                    elif meta.y_param_basic == 'pc_amp2':
-                        # Phase Curve Amplitude, second order
+                    elif meta.y_param_basic[:9] == 'amp_order':
+                        # Phase Curve Amplitude, nth order
                         suffix = planetSuffix+channelSuffix
-                        meta.y_label = ('Second Order Phase Curve Amplitude' +
-                                        suffix)
+                        meta.y_label = (f'Order {meta.y_param_basic[9:]}\n' +
+                                        'Phase Curve Amplitude' + suffix)
                     elif meta.y_param_basic in [f'u{i}' for i in range(1, 5)]:
                         # Limb darkening parameter
                         suffix = channelSuffix
@@ -317,7 +318,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                         suffix = channelSuffix
                         meta.y_label = ('$r_{\\rm '+meta.y_param_basic[1:] +
                                         '}$'+suffix)
-                    elif meta.y_param_basic in ['1/r1', '1/r4']:
+                    elif meta.y_param_basic in ['1/r1', '1/r3']:
                         # Exponential ramp timescales
                         suffix = channelSuffix
                         meta.y_label = ('$1/r_{\\rm '+meta.y_param_basic[-1] +
@@ -415,7 +416,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
     """
     if meta.y_param_basic in ['rp^2', 'rprs^2']:
         y_param = meta.y_param[:-2]
-    elif meta.y_param_basic in ['1/r1', '1/r4']:
+    elif meta.y_param_basic in ['1/r1', '1/r3']:
         y_param = meta.y_param[2:]
     else:
         y_param = meta.y_param
@@ -574,7 +575,7 @@ def compute_transit_depth(meta):
 
 
 def compute_timescale(meta):
-    """Convert the fitted r1 or r4 value to a timescale.
+    """Convert the fitted r1 or r3 value to a timescale.
 
     Parameters
     ----------
@@ -888,7 +889,7 @@ def compute_amp(meta, log, fit_methods):
     return meta
 
 
-def compute_pc_offset_poet(meta, log, fit_methods):    
+def compute_pc_offset_poet(meta, log, fit_methods):
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -954,10 +955,10 @@ def compute_pc_offset_poet(meta, log, fit_methods):
 
 
 def compute_pc_offset(meta, log, fit_methods):
-    if ('poet_pc' in meta.run_myfuncs and 
+    if ('poet_pc' in meta.run_myfuncs and
             'sinusoid_pc' not in meta.run_myfuncs):
         return compute_pc_offset_poet(meta, log, fit_methods)
-    
+
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -1039,7 +1040,7 @@ def compute_pc_offset(meta, log, fit_methods):
     return meta
 
 
-def compute_pc_amp_poet(meta, log, fit_methods):    
+def compute_pc_amp_poet(meta, log, fit_methods):
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -1100,7 +1101,7 @@ def compute_pc_amp_poet(meta, log, fit_methods):
                      cos2_amp[i][::ss, np.newaxis]/2 *
                      np.cos(4*np.pi/360*(deg-cos2_off[i][::ss, np.newaxis])))
         # Compute PC amplitude
-        amps = fp[i][::ss]*(np.max(phaseVars, axis=1) - 
+        amps = fp[i][::ss]*(np.max(phaseVars, axis=1) -
                             np.min(phaseVars, axis=1))
         amp = np.percentile(np.array(amps), [16, 50, 84])[[1, 2, 0]]
         amp[1] -= amp[0]
@@ -1119,10 +1120,10 @@ def compute_pc_amp_poet(meta, log, fit_methods):
 
 
 def compute_pc_amp(meta, log, fit_methods):
-    if ('poet_pc' in meta.run_myfuncs and 
+    if ('poet_pc' in meta.run_myfuncs and
             'sinusoid_pc' not in meta.run_myfuncs):
         return compute_pc_amp_poet(meta, log, fit_methods)
-    
+
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -1199,7 +1200,7 @@ def compute_pc_amp(meta, log, fit_methods):
                      ampcos2[i][::ss, np.newaxis]*(np.ma.cos(2.*phi)-1.) +
                      ampsin2[i][::ss, np.newaxis]*np.ma.sin(2.*phi))
         # Compute PC amplitude
-        amps = fp[i][::ss]*(np.max(phaseVars, axis=1) - 
+        amps = fp[i][::ss]*(np.max(phaseVars, axis=1) -
                             np.min(phaseVars, axis=1))
         amp = np.percentile(np.array(amps), [16, 50, 84])[[1, 2, 0]]
         amp[1] -= amp[0]
@@ -1310,7 +1311,7 @@ def compute_fn(meta, log, fit_methods):
     if (('nuts' in fit_methods or 'exoplanet' in fit_methods) and
             'sinusoid_pc' not in meta.run_myfuncs):
         return compute_fn_starry(meta, log, fit_methods)
-    elif ('poet_pc' in meta.run_myfuncs and 
+    elif ('poet_pc' in meta.run_myfuncs and
             'sinusoid_pc' not in meta.run_myfuncs):
         return compute_fn_poet(meta, log, fit_methods)
     elif ('quasilambert_pc' in meta.run_myfuncs):

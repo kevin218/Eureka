@@ -92,7 +92,7 @@ def test_MIRI(capsys):
         s5_meta2 = deepcopy(s5_meta)
         s5_meta2.fit_method = '[exoplanet,nuts]'
         s5_meta2.run_myfuncs = s5_meta2.run_myfuncs.replace(
-            'batman_tr,batman_ecl,sinusoid_pc', 'starry')
+            'fleck_tr,batman_ecl,sinusoid_pc', 'starry')
         s5_meta2.fit_par = './s5_fit_par_starry.epf'
         s5_meta2.tune = 10
         s5_meta2.draws = 100
@@ -154,7 +154,8 @@ def test_MIRI(capsys):
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
-    s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] + ["dynesty", "batman"])
+    s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] +
+                          ["dynesty", "batman", "fleck"])
     assert np.array_equal(s5_meta.citations, s5_cites)
 
     if pymc3_installed:

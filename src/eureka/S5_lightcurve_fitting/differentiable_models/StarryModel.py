@@ -42,7 +42,10 @@ class StarryModel(PyMC3Model):
         missing = np.array([name not in self.paramtitles for name in required])
         if np.any(missing):
             message = (f'Missing required params {required[missing]} in your '
-                       f'EPF.')
+                       'EPF. Make sure it is not set to \'independent\' as '
+                       'this is no longer a supported option; you can set '
+                       'these parameters to fixed if you want to maintain the '
+                       'old \'independent\' behavior.')
             raise AssertionError(message)
 
         if 'u2' in self.paramtitles:
@@ -110,32 +113,71 @@ class StarryModel(PyMC3Model):
             # Initialize PlanetParams object
             pl_params = PlanetParams(self, 0, chan, eval=False)
 
-            # Initialize star object
-            star = starry.Primary(starry.Map(udeg=self.udeg),
-                                  m=0, r=pl_params.Rs)
-            if hasattr(self.parameters, 'limb_dark'):
-                if self.parameters.limb_dark.value == 'kipping2013':
-                    # Transform stellar variables to uniform used by starry
-                    star.map[1] = 2*tt.sqrt(pl_params.u1)*pl_params.u2
-                    star.map[2] = tt.sqrt(pl_params.u1)*(1-2*pl_params.u2)
-                elif self.parameters.limb_dark.value == 'quadratic':
-                    star.map[1] = pl_params.u1
-                    star.map[2] = pl_params.u2
-                elif self.parameters.limb_dark.value == 'linear':
-                    star.map[1] = pl_params.u1
-                elif self.parameters.limb_dark.value != 'uniform':
-                    message = (f'ERROR: Our StarryModel is not yet able to '
-                               f'handle {self.parameters.limb_dark.value} '
-                               f'limb darkening.\n'
-                               f'       limb_dark must be one of uniform, '
-                               f'linear, quadratic, or kipping2013.')
-                    raise ValueError(message)
+            if pl_params.nspots > 0:
+                # Check for spots and set spot parameters if needed
+                # create arrays to hold values
+                spotrad = tt.zeros(0)
+                spotlat = tt.zeros(0)
+                spotlon = tt.zeros(0)
+                spotcon = tt.zeros(0)
+
+                for n in range(pl_params.nspots):
+                    # read radii, latitudes, longitudes, and contrasts
+                    if n > 0:
+                        spot_id = f'{n}'
+                    else:
+                        spot_id = ''
+                    spotrad = tt.concatenate([
+                        spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
+                    spotlat = tt.concatenate([
+                        spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
+                    spotlon = tt.concatenate([
+                        spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
+                    spotcon = tt.concatenate([
+                        spotcon, [getattr(pl_params, f'spotcon{spot_id}'),]])
+
+                # Apply some conversions since inputs are in fleck units
+                spotrad *= 90
+                spotcon = 1-spotcon
+
+                if pl_params.spotnpts is None:
+                    # Have a default spotnpts for starry
+                    pl_params.spotnpts = 30
+
+                # Initialize map object and add spots
+                map = starry.Map(ydeg=pl_params.spotnpts, udeg=self.udeg,
+                                 inc=pl_params.spotstari)
+                for n in range(pl_params.nspots):
+                    map.spot(contrast=spotcon[n], radius=spotrad[n],
+                             lat=spotlat[n], lon=spotlon[n])
+
+                # Initialize star object
+                star = starry.Primary(map, m=0, r=pl_params.Rs,
+                                      prot=pl_params.spotrot)
+            else:
+                # Initialize star object without any spots
+                star = starry.Primary(starry.Map(udeg=self.udeg),
+                                      m=0, r=pl_params.Rs)
+
+            if pl_params.limb_dark == 'quadratic':
+                # PlanetParams takes care of doing kipping2013->quadratic
+                star.map[1] = pl_params.u1
+                star.map[2] = pl_params.u2
+            elif pl_params.limb_dark == 'linear':
+                star.map[1] = pl_params.u1
+            elif pl_params.limb_dark != 'uniform':
+                message = (f'ERROR: Our StarryModel is not yet able to '
+                           f'handle {self.parameters.limb_dark.value} '
+                           f'limb darkening.\n'
+                           f'       limb_dark must be one of uniform, '
+                           f'linear, quadratic, or kipping2013.')
+                raise ValueError(message)
 
             # Setup each planet
             planets = []
             for pid in range(self.num_planets):
                 # Initialize PlanetParams object for this planet
-                pl_params = PlanetParams(self, pid, chan)
+                pl_params = PlanetParams(self, pid, chan, eval=False)
 
                 if not hasattr(pl_params, 'fp'):
                     planet_map = starry.Map(ydeg=self.ydeg, amp=0)
@@ -245,10 +287,7 @@ class StarryModel(PyMC3Model):
             if self.mutualOccultations:
                 result = temp_system.flux(time, total=False)
                 fstar = result.pop(0)
-                if self.num_planets == 0:
-                    fplanets = []
-                else:
-                    fplanets = result
+                fplanets = result
             else:
                 fstar = lib.ones(len(time))
                 fplanets = []
@@ -267,6 +306,10 @@ class StarryModel(PyMC3Model):
                     fplanets_eval.append(fplanet.eval())
                 fplanets = fplanets_eval
 
+            if hasattr(self.parameters, 'spotrad'):
+                # Re-normalize to avoid degenaricies with c0
+                fstar = fstar/fstar[0]
+
             result = [fstar, *fplanets]
 
             if piecewise:
@@ -276,11 +319,8 @@ class StarryModel(PyMC3Model):
                 # Return the system lightcurve
                 lcpiece = lib.zeros(len(time))
                 for piece in result:
-                    lcpiece = lcpiece+piece
-                if c == 0:
-                    returnVal = lcpiece
-                else:
-                    returnVal = lib.concatenate([returnVal, lcpiece])
+                    lcpiece += piece
+                returnVal = lib.concatenate([returnVal, lcpiece])
 
         return returnVal
 
@@ -326,26 +366,64 @@ class StarryModel(PyMC3Model):
             # Initialize PlanetParams object
             pl_params = PlanetParams(self, 0, chan, eval=True)
 
-            # Initialize star object
-            star = starry.Primary(starry.Map(udeg=self.udeg),
-                                  m=0, r=pl_params.Rs)
-            if hasattr(self.parameters, 'limb_dark'):
-                if self.parameters.limb_dark.value == 'kipping2013':
-                    # Transform stellar variables to uniform used by starry
-                    star.map[1] = 2*np.sqrt(pl_params.u1)*pl_params.u2
-                    star.map[2] = np.sqrt(pl_params.u1)*(1-2*pl_params.u2)
-                elif self.parameters.limb_dark.value == 'quadratic':
-                    star.map[1] = pl_params.u1
-                    star.map[2] = pl_params.u2
-                elif self.parameters.limb_dark.value == 'linear':
-                    star.map[1] = pl_params.u1
-                elif self.parameters.limb_dark.value != 'uniform':
-                    message = (f'ERROR: Our StarryModel is not yet able to '
-                               f'handle {self.parameters.limb_dark.value} '
-                               f'limb darkening.\n'
-                               f'       limb_dark must be one of uniform, '
-                               f'linear, quadratic, or kipping2013.')
-                    raise ValueError(message)
+            if pl_params.nspots > 0:
+                # Check for spots and set spot parameters if needed
+                # create arrays to hold values
+                spotrad = np.zeros(0)
+                spotlat = np.zeros(0)
+                spotlon = np.zeros(0)
+                spotcon = np.zeros(0)
+
+                for n in range(pl_params.nspots):
+                    # read radii, latitudes, longitudes, and contrasts
+                    if n > 0:
+                        spot_id = f'{n}'
+                    else:
+                        spot_id = ''
+                    spotrad = np.concatenate([
+                        spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
+                    spotlat = np.concatenate([
+                        spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
+                    spotlon = np.concatenate([
+                        spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
+                    spotcon = np.concatenate([
+                        spotcon, [getattr(pl_params, f'spotcon{spot_id}'),]])
+
+                # Apply some conversions since inputs are in fleck units
+                spotrad *= 90
+                spotcon = 1-spotcon
+
+                if pl_params.spotnpts is None:
+                    # Have a default spotnpts for starry
+                    pl_params.spotnpts = 30
+
+                # Initialize map object and add spots
+                map = starry.Map(ydeg=pl_params.spotnpts, udeg=self.udeg,
+                                 inc=pl_params.spotstari)
+                for n in range(pl_params.nspots):
+                    map.spot(contrast=spotcon[n], radius=spotrad[n],
+                             lat=spotlat[n], lon=spotlon[n])
+
+                # Initialize star object
+                star = starry.Primary(map, m=0, r=pl_params.Rs,
+                                      prot=pl_params.spotrot)
+            else:
+                # Initialize star object without any spots
+                star = starry.Primary(starry.Map(udeg=self.udeg),
+                                      m=0, r=pl_params.Rs)
+
+            if pl_params.limb_dark == 'quadratic':
+                # PlanetParams takes care of doing kipping2013->quadratic
+                star.map[1:] = pl_params.u
+            elif pl_params.limb_dark == 'linear':
+                star.map[1] = pl_params.u1
+            elif pl_params.limb_dark != 'uniform':
+                message = (f'ERROR: Our StarryModel is not yet able to '
+                           f'handle {self.parameters.limb_dark.value} '
+                           f'limb darkening.\n'
+                           f'       limb_dark must be one of uniform, '
+                           f'linear, quadratic, or kipping2013.')
+                raise ValueError(message)
 
             # Setup each planet
             planets = []

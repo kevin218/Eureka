@@ -4,7 +4,6 @@ import scipy.interpolate as spi
 import scipy.ndimage as spn
 from astropy.stats import sigma_clip
 from tqdm import tqdm
-import warnings
 
 from ..lib import gaussian as g
 from ..lib import smooth
@@ -21,7 +20,8 @@ def standard_spectrum(data, apdata, apmask, aperr):
     apdata : ndarray
         The pixel values in the aperture region.
     apmask : ndarray
-        The outlier mask in the aperture region.
+        The outlier mask in the aperture region. True where pixels should be
+        masked.
     aperr : ndarray
         The noise values in the aperture region.
 
@@ -33,7 +33,7 @@ def standard_spectrum(data, apdata, apmask, aperr):
     # Replace masked pixels with spectral neighbors
     apdata_cleaned = np.copy(apdata)
     aperr_cleaned = np.copy(aperr)
-    for t, y, x in np.array(np.where(apmask == 0)).T:
+    for t, y, x in np.array(np.where(apmask)).T:
         # Do not extend to negative indices (short and long wavelengths
         # do not have similar profiles)
         lower = x-2
@@ -44,18 +44,18 @@ def standard_spectrum(data, apdata, apmask, aperr):
                               apmask[t, y, x+1:x+3])
 
         # Gather current data neighbors and apply mask
-        replacement_val = mask_temp*np.append(apdata_cleaned[t, y, lower:x],
-                                              apdata_cleaned[t, y, x+1:x+3])
+        replacement_val = ~mask_temp*np.append(apdata_cleaned[t, y, lower:x],
+                                               apdata_cleaned[t, y, x+1:x+3])
         # Figure out how many data neighbors are being used
-        denom = np.sum(mask_temp)
+        denom = np.sum(~mask_temp)
         # Compute the mean of the unmasked data neighbors
         replacement_val = np.nansum(replacement_val)/denom
         # Replace masked value with the newly computed data value
         apdata_cleaned[t, y, x] = replacement_val
 
         # Gather current err neighbors and apply mask
-        replacement_val = mask_temp*np.append(aperr_cleaned[t, y, lower:x],
-                                              aperr_cleaned[t, y, x+1:x+3])
+        replacement_val = ~mask_temp*np.append(aperr_cleaned[t, y, lower:x],
+                                               aperr_cleaned[t, y, x+1:x+3])
         # Compute the mean of the unmasked err neighbors
         replacement_val = np.nansum(replacement_val)/denom
         # Replace masked value with the newly computed err value
@@ -89,7 +89,7 @@ def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
     subdata : ndarray
         Background subtracted data.
     mask : ndarray
-        Outlier mask.
+        Outlier mask, with True values being masked.
     deg : int; optional
         Polynomial degree, defaults to 3.
     threshold : float; optional
@@ -112,33 +112,33 @@ def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
         iternum = 0
         while not nobadpixels and iternum < maxiter:
             # Do not want to alter original data
-            dataslice = np.copy(subdata[j])
+            dataslice = np.ma.masked_where(submask[j], subdata[j])
             # Replace masked points with median of nearby points
-            for ind in np.where(submask[j] == 0)[0]:
+            for ind in np.where(submask[j])[0]:
                 dataslice[ind] = \
-                    np.median(dataslice[np.max((0, ind-10)):ind+11])
+                    np.ma.median(dataslice[np.max((0, ind-10)):ind+11])
 
             # Smooth each row
-            coeffs = np.polyfit(range(nx), dataslice, deg)
+            coeffs = np.ma.polyfit(range(nx), dataslice, deg)
             model = np.polyval(coeffs, range(nx))
             if isplots == 7:
                 plt.figure(3703)
                 plt.clf()
                 plt.suptitle(str(j) + "," + str(iternum))
-                plt.plot(dataslice, 'ro')
-                plt.plot(dataslice*submask[j], 'bo')
+                plt.plot(dataslice.data, 'ro')
+                plt.plot(dataslice, 'bo')
                 plt.plot(model, 'g-')
                 plt.pause(0.1)
 
             # Calculate residuals and number of sigma from the model
-            residuals = submask[j]*(dataslice - model)
-            stdevs = np.abs(residuals) / np.std(residuals)
+            residuals = dataslice - model
+            stdevs = np.ma.abs(residuals) / np.ma.std(residuals)
             # Find worst data point
-            loc = np.argmax(stdevs)
+            loc = np.ma.argmax(stdevs)
             # Mask data point if > threshold
             if stdevs[loc] > threshold:
                 nobadpixels = False
-                submask[j, loc] = 0
+                submask[j, loc] = True
             else:
                 nobadpixels = True  # exit while loop
             iternum += 1
@@ -151,7 +151,8 @@ def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
     # Enforce positivity
     profile[np.where(profile < 0)] = 0
     # Normalize along spatial direction
-    profile /= np.sum(profile, axis=0)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        profile /= np.nansum(profile, axis=0)
 
     return profile
 
@@ -165,7 +166,7 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
     subdata : ndarray
         Background subtracted data.
     mask : ndarray
-        Outlier mask.
+        Outlier mask, with True values being masked.
     threshold : float; optional
         Sigma threshold for outlier rejection while constructing
         spatial profile.
@@ -189,20 +190,20 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
     maxiter = nx
     for j in range(ny):
         # Check for good pixels in row
-        if np.sum(submask[j]) > 0:
+        if np.sum(~submask[j]) > 0:
             nobadpixels = False
             iternum = 0
-            maxiter = np.sum(submask[j])
+            maxiter = np.sum(~submask[j])
             while not nobadpixels and iternum < maxiter:
                 # Do not want to alter original data
-                dataslice = np.copy(subdata[j])
+                dataslice = np.ma.masked_where(submask[j], subdata[j])
                 # Replace masked points with median of nearby points
                 # dataslice[np.where(submask[j] == 0)] = 0
                 # FINDME: Code below appears to be effective, but is slow for
                 # lots of masked points
-                for ind in np.where(submask[j] == 0)[0]:
+                for ind in np.where(submask[j])[0]:
                     dataslice[ind] = \
-                        np.median(dataslice[np.max((0, ind-10)):ind+11])
+                        np.ma.median(dataslice[np.max((0, ind-10)):ind+11])
 
                 # Smooth each row
                 # model = smooth.smooth(dataslice, window_len=window_len,
@@ -212,22 +213,20 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
                     plt.figure(3703)
                     plt.clf()
                     plt.suptitle(str(j) + "," + str(iternum))
-                    plt.plot(dataslice, 'ro')
-                    plt.plot(dataslice*submask[j], 'bo')
+                    plt.plot(dataslice.data, 'ro')
+                    plt.plot(dataslice, 'bo')
                     plt.plot(model, 'g-')
                     plt.pause(0.1)
 
                 # Calculate residuals and number of sigma from the model
-                igoodmask = np.where(submask[j] == 1)[0]
-                residuals = submask[j]*(dataslice - model)
-                stdevs = (np.abs(residuals[igoodmask]) /
-                          np.std(residuals[igoodmask]))
+                residuals = dataslice - model
+                stdevs = np.ma.abs(residuals) / np.ma.std(residuals)
                 # Find worst data point
-                loc = np.argmax(stdevs)
+                loc = np.ma.argmax(stdevs)
                 # Mask data point if > threshold
                 if stdevs[loc] > threshold:
                     nobadpixels = False
-                    submask[j, igoodmask[loc]] = 0
+                    submask[j, loc] = True
                 else:
                     nobadpixels = True  # exit while loop
                 iternum += 1
@@ -240,9 +239,7 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
     # Enforce positivity
     profile[np.where(profile < 0)] = 0
     # Normalize along spatial direction
-    with warnings.catch_warnings():
-        # Ignore warnings about columns that are completely masked
-        warnings.filterwarnings("ignore", "invalid value encountered in")
+    with np.errstate(divide='ignore', invalid='ignore'):
         profile /= np.nansum(profile, axis=0)
 
     return profile
@@ -261,13 +258,12 @@ def profile_meddata(meddata):
     profile : ndarray
         Fitted profile in the same shape as the input data array.
     '''
-    # profile = np.copy(meddata*mask)
-    profile = np.copy(meddata)
+    profile = np.ma.copy(meddata)
     # Enforce positivity
     profile[np.where(profile < 0)] = 0
     # Normalize along spatial direction
     with np.errstate(divide='ignore', invalid='ignore'):
-        profile /= np.sum(profile, axis=0)
+        profile /= np.ma.sum(profile, axis=0)
 
     return profile
 
@@ -282,7 +278,7 @@ def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
     subdata : ndarray
         Background subtracted data.
     mask : ndarray
-        Outlier mask.
+        Outlier mask, with True values being masked.
     wavelet : Wavelet object or name string
         qWavelet to use
     numlvls : int
@@ -302,6 +298,7 @@ def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
     '''
     import pywt
     submask = np.copy(mask)
+    subdata = np.ma.masked_where(submask, subdata)
     ny, nx = np.shape(subdata)
     profile = np.zeros((ny, nx))
 
@@ -311,14 +308,14 @@ def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
         # Estimate noise variance
         noisevar = np.inf
         for i in range(-1, -numlvls-1, -1):
-            noisevar = np.min([(np.median(np.abs(dec[i]))/0.6745)**2,
+            noisevar = np.min([(np.ma.median(np.ma.abs(dec[i]))/0.6745)**2,
                                noisevar])
         # At each level of decomposition...
         for i in range(-1, -numlvls-1, -1):
             # Estimate variance at level i then compute the threshold value
             # sigmay2 = np.mean(dec[i]*dec[i])
             # sigmax = np.sqrt(np.max([sigmay2-noisevar, 0]))
-            threshold = np.max(np.abs(dec[i]))
+            threshold = np.ma.max(np.ma.abs(dec[i]))
             # if sigmax == 0 or i == -1:
             #     threshold = np.max(np.abs(dec[i]))
             # else:
@@ -332,15 +329,16 @@ def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
             plt.figure(3703)
             plt.clf()
             plt.suptitle(str(j))
-            plt.plot(subdata[j], 'ro')
-            plt.plot(subdata[j]*submask[j], 'bo')
+            plt.plot(subdata[j].data, 'ro')
+            plt.plot(subdata[j], 'bo')
             plt.plot(profile[j], 'g-')
             plt.pause(0.1)
 
     # Enforce positivity
     profile[np.where(profile < 0)] = 0
     # Normalize along spatial direction
-    profile /= np.sum(profile, axis=0)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        profile /= np.nansum(profile, axis=0)
 
     return profile
 
@@ -356,7 +354,7 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
     subdata : ndarray
         Background subtracted data.
     mask : ndarray
-        Outlier mask.
+        Outlier mask, with True values being masked.
     wavelet : Wavelet object or name string
         qWavelet to use
     numlvls : int
@@ -376,6 +374,7 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
     '''
     import pywt
     submask = np.copy(mask)
+    subdata = np.ma.masked_where(submask, subdata)
     ny, nx = np.shape(subdata)
     profile = np.zeros((ny, nx))
 
@@ -384,14 +383,15 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
     # Estimate noise variance
     noisevar = np.inf
     for i in range(-1, -numlvls-1, -1):
-        noisevar = np.min([(np.median(np.abs(dec[i]))/0.6745)**2, noisevar])
+        noisevar = np.min([(np.ma.median(np.ma.abs(dec[i]))/0.6745)**2,
+                           noisevar])
     # At each level of decomposition...
     for i in range(-1, -numlvls-1, -1):
         # Estimate variance at level i then compute the threshold value
         # sigmay2 = np.mean((dec[i][0]*dec[i][0]+dec[i][1]*dec[i][1] +
         #                    dec[i][2]*dec[i][2])/3.)
         # sigmax = np.sqrt(np.max([sigmay2-noisevar, 0]))
-        threshold = np.max(np.abs(dec[i]))
+        threshold = np.ma.max(np.ma.abs(dec[i]))
         # if sigmax == 0:
         #     threshold = np.max(np.abs(dec[i]))
         # else:
@@ -404,21 +404,23 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
         plt.figure(3703)
         plt.clf()
         # plt.suptitle(str(j) + "," + str(iternum))
-        plt.plot(subdata[ny/2], 'ro')
-        plt.plot(subdata[ny/2]*submask[ny/2], 'bo')
-        plt.plot(profile[ny/2], 'g-')
+        plt.plot(subdata[ny//2].data, 'ro')
+        plt.plot(subdata[ny//2], 'bo')
+        plt.plot(profile[ny//2], 'g-')
+
         plt.figure(3704)
         plt.clf()
         # plt.suptitle(str(j) + "," + str(iternum))
-        plt.plot(subdata[:, nx/2], 'ro')
-        plt.plot(subdata[:, nx/2]*submask[:, nx/2], 'bo')
-        plt.plot(profile[:, nx/2], 'g-')
+        plt.plot(subdata[:, int(nx/2)].data, 'ro')
+        plt.plot(subdata[:, int(nx/2)], 'bo')
+        plt.plot(profile[:, int(nx/2)], 'g-')
         plt.pause(0.1)
 
     # Enforce positivity
     profile[np.where(profile < 0)] = 0
     # Normalize along spatial direction
-    profile /= np.sum(profile, axis=0)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        profile /= np.nansum(profile, axis=0)
 
     return profile
 
@@ -431,7 +433,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     subdata : ndarray
         Background subtracted data.
     mask : ndarray
-        Outlier mask.
+        Outlier mask, with True values being masked.
     threshold : float; optional
         Sigma threshold for outlier rejection while constructing
         spatial profile. Defaults to 10.
@@ -454,16 +456,18 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
         nobadpixels = False
         iternum = 0
         # Do not want to alter original data
-        dataslice = np.copy(subdata[:, i])
+        dataslice = np.ma.masked_where(submask[:, i], subdata[:, i])
         # Set initial guess if none given
-        guess = [ny/10., np.argmax(dataslice), dataslice.max()]
+        guess = [ny/10., np.ma.argmax(dataslice), np.ma.max(dataslice)]
         while not nobadpixels and iternum < maxiter:
             # Fit Gaussian to each column
-            if sum(submask[:, i]) >= 3:
+            if sum(~submask[:, i]) >= 3:
+                # If there are 3 or more good elements, fit the gaussian
                 params, err = g.fitgaussian(dataslice, np.arange(ny),
                                             mask=submask[:, i], fitbg=0,
                                             guess=guess)
             else:
+                # If there are fewer than 3 elements, don't fit gaussian
                 params = guess
                 err = None
             # Create model
@@ -472,19 +476,19 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
                 plt.figure(3703)
                 plt.clf()
                 plt.suptitle(str(i) + "," + str(iternum))
-                plt.plot(dataslice, 'ro')
-                plt.plot(dataslice*submask[:, i], 'bo')
+                plt.plot(dataslice.data, 'ro')
+                plt.plot(dataslice, 'bo')
                 plt.plot(model, 'g-')
                 plt.pause(0.1)
 
             # Calculate residuals and number of sigma from the model
-            residuals = submask[:, i]*(dataslice - model)
-            if np.std(residuals) == 0:
+            residuals = dataslice - model
+            if np.ma.std(residuals) == 0:
                 stdevs = np.zeros(residuals.shape)
             else:
-                stdevs = np.abs(residuals) / np.std(residuals)
+                stdevs = np.ma.abs(residuals) / np.ma.std(residuals)
             # Find worst data point
-            loc = np.argmax(stdevs)
+            loc = np.ma.argmax(stdevs)
             # Mask data point if > threshold
             if stdevs[loc] > threshold:
                 # Check for bad fit, possibly due to a bad pixel
@@ -493,11 +497,11 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
                     # print(i, params)
                     # Remove brightest pixel within region of fit
                     loc = (params[1]-3 +
-                           np.argmax(dataslice[params[1]-3:params[1]+4]))
+                           np.ma.argmax(dataslice[params[1]-3:params[1]+4]))
                     # print(loc)
                 else:
                     guess = np.abs(params)
-                submask[loc, i] = 0
+                submask[loc, i] = True
             else:
                 nobadpixels = True  # exit while loop
                 guess = np.abs(params)
@@ -511,7 +515,8 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     # Enforce positivity
     profile[np.where(profile < 0)] = 0
     # Normalize along spatial direction
-    profile /= np.sum(profile, axis=0)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        profile /= np.nansum(profile, axis=0)
 
     return profile
 
@@ -545,7 +550,7 @@ def clean_median_flux(data, meta, log, m):
     log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
 
     # Compute median flux using masked arrays
-    flux_ma = np.ma.masked_where(data.mask.values == 0, data.flux.values)
+    flux_ma = np.ma.masked_where(data.mask.values, data.flux.values)
     medflux = np.ma.median(flux_ma, axis=0)
     ny, nx = medflux.shape
 
@@ -568,7 +573,7 @@ def clean_median_flux(data, meta, log, m):
         # Apply smoothing filter along dispersion direction
         smoothflux = spn.median_filter(interp_med, size=(1, meta.window_len))
         # Compute median error array
-        err_ma = np.ma.masked_where(data.mask.values == 0, data.err.values)
+        err_ma = np.ma.masked_where(data.mask.values, data.err.values)
         mederr = np.ma.median(err_ma, axis=0)
         # Smooth error array along dispersion direction
         # to enable flagging bad points with large uncertainties
@@ -621,7 +626,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     apdata : ndarray
         Background subtracted data.
     apmask : ndarray
-        Outlier mask.
+        Outlier mask, with True values being masked.
     apbg : ndarray
         Background array.
     apv0 : ndarray
@@ -691,8 +696,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     # Mask out NaNs and Infs
     optspec_ma = np.ma.masked_invalid(data.optspec.values)
     opterr_ma = np.ma.masked_invalid(data.opterr.values)
-    optmask = np.logical_or(np.ma.getmaskarray(optspec_ma),
-                            np.ma.getmaskarray(opterr_ma))
+    optmask = np.ma.getmaskarray(optspec_ma) + np.ma.getmaskarray(opterr_ma)
     data.optmask.values = optmask
 
     return data, meta, log
@@ -710,7 +714,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
     subdata : ndarray
         Background subtracted data.
     mask : ndarray
-        Outlier mask.
+        Outlier mask, with True values being masked.
     bg : ndarray
         Background array.
     spectrum : ndarray
@@ -755,6 +759,8 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
     '''
     submask = np.copy(mask)
     ny, nx = subdata.shape
+    subdata = np.ma.masked_invalid(subdata)
+    subdata = np.ma.masked_where(submask, subdata)
     isnewprofile = True
     # Loop through steps 5-8 until no more bad pixels are uncovered
     while isnewprofile:
@@ -789,20 +795,24 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         isoutliers = True
         # Loop through steps 6-8 until no more bad pixels are uncovered
         while isoutliers:
+            # Mask any known bad points
+            subdata = np.ma.masked_where(submask, subdata)
             # STEP 6: Revise variance estimates
-            expected = profile*spectrum
-            variance = np.abs(expected + bg) / Q + v0
+            expected = np.ma.masked_invalid(profile*spectrum)
+            variance = np.ma.abs(expected + bg) / Q + v0
             # STEP 7: Mask cosmic ray hits
-            stdevs = np.abs(subdata - expected)*submask/np.sqrt(variance)
-            submask[np.isnan(stdevs)] = 0
+            stdevs = np.ma.abs(subdata - expected)/np.ma.sqrt(variance)
+            submask[np.ma.getmaskarray(stdevs)] = True
+            # Mask any known bad points
+            subdata = np.ma.masked_where(submask, subdata)
             if meta.isplots_S3 >= 5 and n < meta.int_end:
                 plots_s3.stddev_profile(meta, n, m, stdevs, p7thresh)
             isoutliers = False
             for i in range(nx):
                 # Only continue if there are unmasked values
-                if np.sum(submask[:, i]) > 0:
+                if np.any(~submask[:, i]):
                     # Find worst data point in each column
-                    loc = np.nanargmax(stdevs[:, i])
+                    loc = np.ma.argmax(stdevs[:, i])
 
                     if meta.isplots_S3 == 8:
                         try:
@@ -810,7 +820,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                             plt.clf()
                             plt.suptitle(str(i) + "/" + str(nx))
                             plt.errorbar(np.arange(ny), subdata[:, i],
-                                         yerr=np.sqrt(variance[:, i]),
+                                         yerr=np.ma.sqrt(variance[:, i]),
                                          fmt='.', color='b')
                             plt.plot(expected[:, i], 'g-')
                             plt.pause(0.01)
@@ -821,26 +831,24 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                     if stdevs[loc, i] > p7thresh:
                         isnewprofile = True
                         isoutliers = True
-                        submask[loc, i] = 0
+                        submask[loc, i] = True
                         # Generate plot
                         if meta.isplots_S3 >= 5 and n < meta.int_end:
                             plots_s3.subdata(meta, i, n, m, subdata, submask,
                                              expected, loc, variance)
                         # Check for insufficient number of good points
-                        if sum(submask[:, i]) < ny/2.:
-                            submask[:, i] = 0
+                        if np.sum(~submask[:, i]) < ny/2.:
+                            submask[:, i] = True
             # STEP 8: Extract optimal spectrum
-            with warnings.catch_warnings():
+            with np.errstate(divide='ignore', invalid='ignore'):
                 # Ignore warnings about columns that are completely masked
-                warnings.filterwarnings(
-                    "ignore", "invalid value encountered in")
-                denom = np.nansum(profile*profile*submask/variance, axis=0)
-            denom[np.where(denom == 0)] = np.inf
-            spectrum = np.nansum(profile*submask*subdata/variance,
+                denom = np.ma.sum(profile*profile*~submask/variance, axis=0)
+            denom = np.ma.masked_where(denom == 0, denom)
+            spectrum = np.ma.sum(profile*~submask*subdata/variance,
                                  axis=0)/denom
 
     # Calculate variance of optimal spectrum
-    specvar = np.sum(profile*submask, axis=0) / denom
+    specvar = np.ma.sum(profile*~submask, axis=0) / denom
 
     # Return spectrum and uncertainties
     return spectrum, np.sqrt(specvar), submask

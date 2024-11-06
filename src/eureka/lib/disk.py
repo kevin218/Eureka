@@ -4,13 +4,13 @@ from matplotlib.path import Path
 
 def disk(r, ctr, size, status=False):
     """
-    This function returns a byte array containing a disk.
+    This function returns a boolean array containing a disk.
 
     The disk is centered at (ctr[0], ctr[1]), and has radius r. The array is
-    (size[0], size[1]) in size and has byte type. Pixel values of 1 indicate
-    that the center of a pixel is within r of (ctr[0], ctr[1]). Pixel values
-    of 0 indicate the opposite. The center of each pixel is the integer
-    position of that pixel.
+    (size[0], size[1]) in size and has boolean type. Pixel values of False
+    indicate that the center of a pixel is within r of (ctr[0], ctr[1]). Pixel
+    values of True indicate the opposite. The center of each pixel is the
+    integer position of that pixel.
 
     Parameters
     ----------
@@ -26,7 +26,7 @@ def disk(r, ctr, size, status=False):
     Returns
     -------
     ret : ndarray
-        A boolean array where False if outside the disk or True if inside
+        A boolean array where True if outside the disk or False if inside
         the disk.
     retstatus : int; optional
         Set to 1 if any part of the disk is outside the image boundaries.
@@ -54,7 +54,7 @@ def disk(r, ctr, size, status=False):
     fdisk = (ind[0]-ctr[0])**2.0 + (ind[1]-ctr[1])**2.0
 
     # return mask disk (and status if requested)
-    ret = fdisk <= r**2.0
+    ret = fdisk > r**2.0
     if status:
         ret = ret, retstatus
     return ret
@@ -114,7 +114,7 @@ def hex(r, ctr, size, status=False):
     coors = np.hstack((ind[0].reshape(-1, 1), ind[1].reshape(-1, 1)))
 
     # use matplotlib.path to do easy masking
-    ret = poly_path.contains_points(coors).reshape(size[0], size[1])
+    ret = ~poly_path.contains_points(coors).reshape(size[0], size[1])
 
     # return mask disk (and status if requested)
     if status:

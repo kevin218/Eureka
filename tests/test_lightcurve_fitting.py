@@ -391,10 +391,9 @@ class TestModels(unittest.TestCase):
     def test_exponentialmodel(self):
         """Tests for the ExponentialModel class"""
         # Create the model
-        freenames = ['r0', 'r1', 'r2']
+        freenames = ['r0', 'r1']
         self.exp_model = models.ExpRampModel(coeff_dict={'r0': [1., 'free'],
-                                                         'r1': [0.05, 'free'],
-                                                         'r2': [0.01, 'free']},
+                                                         'r1': [0.05, 'free']},
                                              freenames=freenames,
                                              nchan=1)
 
@@ -404,13 +403,11 @@ class TestModels(unittest.TestCase):
         self.assertEqual(vals.size, self.time.size)
 
         # Create the model
-        freenames = ['r0', 'r1', 'r2', 'r3', 'r4', 'r5']
+        freenames = ['r0', 'r1', 'r2', 'r3']
         self.exp_model = models.ExpRampModel(coeff_dict={'r0': [1., 'free'],
                                                          'r1': [0.05, 'free'],
-                                                         'r2': [0.01, 'free'],
-                                                         'r3': [1., 'free'],
-                                                         'r4': [0.05, 'free'],
-                                                         'r5': [0.01, 'free']},
+                                                         'r2': [1., 'free'],
+                                                         'r3': [0.05, 'free']},
                                              freenames=freenames,
                                              nchan=1)
 

@@ -48,7 +48,7 @@ class GPModel(PyMC3Model):
                          kernel_input_names=kernel_input_names,
                          kernel_inputs=None,
                          gp_code_name=gp_code_name, normalize=normalize,
-                         fit_lc=np.ma.ones(self.flux.shape),
+                         fit_lc=np.ma.ones(lc.flux.shape),
                          flux=lc.flux, unc=lc.unc, unc_fit=lc.unc_fit,
                          **kwargs)
         self.name = 'GP'
@@ -69,8 +69,13 @@ class GPModel(PyMC3Model):
             raise AssertionError('Our celerite2 implementation currently only '
                                  'supports a Matern32 kernel.')
 
-    def setup(self):
+    def setup(self, newparams):
         """Setup a model for evaluation and fitting.
+
+        Parameters
+        ----------
+        newparams : ndarray
+            New parameter values.
         """
         self.gps = []
         for c in range(self.nchannel_fitted):
@@ -88,9 +93,9 @@ class GPModel(PyMC3Model):
         super().update(newparams, **kwargs)
 
         self.unc_fit = update_uncertainty(newparams, self.nints, self.unc,
-                                          self.freenames)
+                                          self.freenames, self.nchannel_fitted)
 
-    def eval(self, fit_lc, channel=None, gp=None, **kwargs):
+    def eval(self, fit_lc, channel=None, gp=None, eval=True, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
@@ -111,6 +116,11 @@ class GPModel(PyMC3Model):
         """
         input_gp = gp
 
+        if eval:
+            lib = np.ma
+        else:
+            lib = tt
+
         if channel is None:
             nchan = self.nchannel_fitted
             channels = self.fitted_channels
@@ -122,7 +132,7 @@ class GPModel(PyMC3Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        lcfinal = np.ma.array([])
+        lcfinal = lib.zeros(0)
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -141,21 +151,27 @@ class GPModel(PyMC3Model):
                 flux = self.flux
                 fit_lc_temp = fit_lc
                 unc_fit = self.unc_fit
-            residuals = np.ma.masked_invalid(flux-fit_lc_temp)
+            residuals = flux-fit_lc_temp
+
             if self.multwhite:
                 time = split([self.time, ], self.nints, chan)[0]
             else:
                 time = self.time
-            residuals = np.ma.masked_where(time.mask, residuals)
 
-            # Remove poorly handled masked values
-            good = ~np.ma.getmaskarray(residuals)
-            unc_fit = unc_fit[good]
-            residuals = residuals[good]
+            if eval:
+                residuals = np.ma.masked_invalid(residuals)
+                residuals = np.ma.masked_where(time.mask, residuals)
+
+                # Remove poorly handled masked values
+                good = ~np.ma.getmaskarray(residuals)
+                unc_fit = unc_fit[good]
+                residuals = residuals[good]
+            else:
+                good = np.ones_like(time, dtype=bool)
 
             # Create the GP object with current parameters
             if input_gp is None:
-                gp = self.setup_GP(np, chan)
+                gp = self.setup_GP(lib, chan)
             else:
                 gp = input_gp
 
@@ -169,7 +185,7 @@ class GPModel(PyMC3Model):
             mu_full = np.ma.masked_where(~good, mu_full)
 
             # Append this channel to the outputs
-            lcfinal = np.ma.append(lcfinal, mu_full)
+            lcfinal = lib.concatenate([lcfinal, mu_full])
 
         return lcfinal
 

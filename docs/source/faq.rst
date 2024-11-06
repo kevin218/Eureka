@@ -119,6 +119,15 @@ Some more permanent solutions would be to:
   An example of this is to change ``export PATH="~/anaconda3/bin:$PATH"`` in your **~/.bashrc** file to ``export PATH="~/anaconda3/bin:~/Library/TeX/texbin:$PATH"``.
   For anyone using Ubuntu or an older version of Mac this might be found in /usr/bin instead. Make sure you run source ~/.bash_profile or source ~/.bashrc to apply the changes.
 
+
+"ERROR: Inconsistent numbers of reads" when running HST analyses
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+HST observations are usually consistent between scans (i.e. all the spatial scans are the same number of reads), but some observations may modify 
+the number of reads in a scan for timing purposes. Ensure that your datasets have scans of consistent length, or exclude the shorter 
+scans at the end of orbits if needed (e.g. by removing those FITS files from your input data directory).
+
+
+
 My question isn't listed here!
 ''''''''''''''''''''''''''''''
 

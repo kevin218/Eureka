@@ -34,7 +34,7 @@ cos1_off		0.0000	        'free'			-20 			20			U
 # --------------------
 # Systematic variables
 # Polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
-# Exponential ramp model variables (r0--r2 for one exponential ramp, r3--r5 for a second exponential ramp)
+# Exponential ramp model variables (r0--r1 for one exponential ramp, r2--r3 for a second exponential ramp)
 # GP model parameters (A, WN, m1, m2) in log scale
 # Step-function model variables (step# and steptime# for step-function model #; e.g. step0 and steptime0)
 # Drift model variables (xpos, ypos, xwidth, ywidth)
@@ -42,7 +42,6 @@ cos1_off		0.0000	        'free'			-20 			20			U
 c0			1.000           	'free'			1				0.05		N
 r0			-0.124315778343348	'free' 			-0.12			0.05		N
 r1			35.5170488452062	'free' 			35 				20			N
-r2			-0.603176745805961	'free' 			-0.5 			0.4			N
 # -----------
 # ** White noise **
 # Use scatter_mult to fit a multiplier to the expected noise level from Stage 3 (recommended)

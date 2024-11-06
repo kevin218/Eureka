@@ -26,7 +26,6 @@ interp_method   linear      # Interpolate bad pixels. Options: None (if no inter
 ctr_guess       [698, 516]  # Initial guess of centroid position. If None, will first perform centroiding on whole frame (can sometimes fail)
 ctr_cutout_size 10          # Cutoff size all around the centroid after the coarse centroid calculation or first centroid guess when using the mgmc method.
 centroid_method mgmc        # Method used for centroiding. Options: mgmc, fgc
-oneoverf_corr   None        # Options: None, meanerr, median
 skip_apphot_bg  False       # Skips the background subtraction during the aperture photometry step
 photap          5           # Size of photometry aperture in pixels
 skyin           12          # Inner sky annulus edge, in pixels

@@ -1,6 +1,7 @@
 import numpy as np
 import astropy.constants as const
 from copy import deepcopy
+import inspect
 
 try:
     import theano
@@ -16,6 +17,7 @@ except ImportError:
 
 from .Model import Model
 from .KeplerOrbit import KeplerOrbit
+from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
 
@@ -62,7 +64,7 @@ class PlanetParams():
             self.channel_id = ''
         else:
             self.channel_id = f'_ch{self.channel}'
-        # Set transit/eclipse parameters
+        # Transit/eclipse parameters
         self.t0 = None
         self.rprs = None
         self.rp = None
@@ -77,20 +79,42 @@ class PlanetParams():
         self.fpfs = None
         self.fp = None
         self.t_secondary = None
+        # POET phase curve parameters
         self.cos1_amp = 0.
         self.cos1_off = 0.
         self.cos2_amp = 0.
         self.cos2_off = 0.
+        # Sinusoidal phase curve parameters
         self.AmpCos1 = 0.
         self.AmpSin1 = 0.
         self.AmpCos2 = 0.
         self.AmpSin2 = 0.
+        # Quasi-Lambertian parameters
         self.quasi_gamma = 0.
         self.quasi_offset = 0.
+        # Limb-darkening parameters
         self.u1 = 0.
         self.u2 = 0.
         self.u3 = 0.
         self.u4 = 0.
+        # Fleck/starry star-spot parameters
+        # Figure out how many star spots
+        self.nspots = len([s for s in model.parameters.dict.keys()
+                           if 'spotrad' in s and '_' not in s])
+        self.spotrad = 0.
+        self.spotlat = 0.
+        self.spotlon = 0.
+        self.spotcon = 0.
+        for n in range(1, self.nspots):
+            # read radii, latitudes, longitudes, and contrasts
+            spot_id = f'{n}'
+            setattr(self, f'spotrad{spot_id}', 0)
+            setattr(self, f'spotlat{spot_id}', 0)
+            setattr(self, f'spotlon{spot_id}', 0)
+            setattr(self, f'spotcon{spot_id}', 0)
+        self.spotstari = 90
+        self.spotrot = None
+        self.spotnpts = None
 
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
@@ -102,8 +126,9 @@ class PlanetParams():
                     value = value.value
                 setattr(self, item, value)
             except KeyError:
-                if item in [f'u{i}' for i in range(1, 5)]:
-                    # Limb darkening probably doesn't vary with planet
+                if (item in [f'u{i}' for i in range(1, 5)] or
+                        'spot' == item[:4]):
+                    # Limb darkening and spots probably don't vary with planet
                     try:
                         item0 = item
                         if model.parameters.dict[item0][1] == 'free':
@@ -151,6 +176,12 @@ class PlanetParams():
                 value = value.value
             setattr(self, 'a', value)
         # Allow for (ecc, w) or (ecosw, esinw)
+        if (self.ecosw is None) and self.ecc == 0:
+            self.ecosw = 0.
+            self.esinw = 0.
+        elif (self.ecc is None) and self.ecosw == 0 and self.sinw == 0:
+            self.ecc = 0.
+            self.w = None
         if (self.ecosw is None) and ('ecc' in model.parameters.dict.keys()):
             item0 = 'ecc' + self.pid_id
             item1 = 'w' + self.pid_id
@@ -213,10 +244,41 @@ class PlanetParams():
             item0 = 'Rs'
             if model.parameters.dict[item0][1] == 'free':
                 item0 += self.channel_id
-            value = getattr(parameterObject, item0)
+            try:
+                value = getattr(parameterObject, item0)
+            except AttributeError as message:
+                message = ('Missing required parameter Rs in your EPF. Make'
+                           ' sure it is not set to \'independent\' as'
+                           ' this is no longer a supported option; you can set'
+                           ' these parameters to fixed if you want to maintain'
+                           ' the old \'independent\' behavior.')
+                raise AssertionError(message)
             if eval:
                 value = value.value
             setattr(self, 'Rs', value)
+
+        # Nicely packaging limb-darkening coefficients
+        if not hasattr(model.parameters, 'limb_dark'):
+            self.limb_dark = 'uniform'
+        else:
+            self.limb_dark = model.parameters.limb_dark.value
+        ld_func = ld_profile(self.limb_dark)
+        len_params = len(inspect.signature(ld_func).parameters)
+        coeffs = ['u{}'.format(n) for n in range(1, len_params)]
+        self.u = [getattr(self, coeff) for coeff in coeffs]
+        if self.limb_dark == '4-parameter':
+            self.limb_dark = 'nonlinear'
+        elif self.limb_dark == 'kipping2013':
+            self.limb_dark = 'quadratic'
+            if eval:
+                self.u_original = np.copy(self.u)
+                u1 = 2*np.sqrt(self.u[0])*self.u[1]
+                u2 = np.sqrt(self.u[0])*(1-2*self.u[1])
+                self.u = np.array([u1, u2])
+            else:
+                u1 = 2*tt.sqrt(self.u1)*self.u2
+                u2 = tt.sqrt(self.u1)*(1-2*self.u2)
+                self.u = np.array([u1, u2])
 
         # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
         if self.ecc is None:
@@ -224,6 +286,11 @@ class PlanetParams():
             self.w = None
             self.ecosw = 0
             self.esinw = 0
+
+        if self.spotrot is None:
+            # spotrot will default to 10k years (important if t0 is not ~0)
+            self.spotrot = 3650000
+            self.fleck_fast = True
 
 
 class AstroModel(Model):
@@ -457,7 +524,7 @@ def eccentric_anomaly(model, t, lib=np, xtol=1e-10):
     ma_peri = ea_peri - model.ecc*np.sin(ea_peri)
     t_peri = (model.t0 - (ma_peri/(2.*np.pi)*model.per))
 
-    if lib != np:
+    if lib not in [np, np.ma]:
         t_peri = t_peri + model.per*(lib.lt(t_peri, 0))
     elif t_peri < 0:
         t_peri = t_peri + model.per
@@ -561,7 +628,7 @@ def FSSI(Y, x, f, fP, lib=np):
     c2 = ((2.*d0 + d1)*dy - 3.*dx)/dy2
     c3 = ((d0 + d1)*dy - 2.*dx)/(dy2*dy)
 
-    if lib == np:
+    if lib in [np, np.ma]:
         j = np.searchsorted(y1, Y)
         # Protect against indexing beyond the size of the array
         j[j >= y1.size] = y1.size-1

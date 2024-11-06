@@ -8,7 +8,7 @@ suffix		calints     # Data file suffix
 convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
 
 # Subarray region of interest
-ywindow         [140, 393]  # Vertical axis as seen in DS9
+ywindow         [150, 383]  # Vertical axis as seen in DS9
 xwindow         [13, 64]    # Horizontal axis as seen in DS9
 src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
 record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
@@ -18,7 +18,7 @@ expand          2           # Super-sampling factor along cross-dispersion direc
 # Outlier rejection along time axis
 ff_outlier      False       # Set False to use only background region (recommended for deep transits)
                             # Set True to use full frame (works well for shallow transits/eclipses)
-bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
+bg_thresh       [4,4]       # Double-iteration X-sigma threshold for outlier rejection along time axis
 
 # Background parameters
 bg_hw           10          # Half-width of exclusion region for BG subtraction (relative to source position)
