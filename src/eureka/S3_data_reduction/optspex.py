@@ -593,9 +593,10 @@ def clean_median_flux(data, meta, log, m):
                     ~np.ma.getmaskarray(medflux[j])]
             goodrow = medflux[j][~np.ma.getmaskarray(outliers[j]) *
                                  ~np.ma.getmaskarray(medflux[j])]
-            f = spi.interp1d(x1, goodrow, 'linear', fill_value='extrapolate')
-            # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
-            clean_med[j] = f(xx)
+            if len(goodrow) > 0:
+                f = spi.interp1d(x1, goodrow, 'linear', 
+                                 fill_value='extrapolate')
+                clean_med[j] = f(xx)
 
         # Assign cleaned median frame to data object
         data['medflux'] = (['y', 'x'], clean_med)
