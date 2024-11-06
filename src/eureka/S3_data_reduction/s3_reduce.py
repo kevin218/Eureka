@@ -192,8 +192,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             elif meta.inst == 'nirspec':
                 from . import nirspec as inst
             elif meta.inst == 'niriss':
-                raise ValueError('NIRISS observations are currently '
-                                 'unsupported!')
+                from . import niriss as inst
             elif meta.inst == 'wfc3':
                 from . import wfc3 as inst
                 meta.bg_dir = 'CxC'
