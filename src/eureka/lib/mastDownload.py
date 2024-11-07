@@ -239,7 +239,7 @@ def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
         calib_level = [calib_level]
     # Specify obsid using wildcards, obs_id can come in two flavours
     obsid = f'jw{proposal_id}{observation}{visit}_04*'
-    obsid2 = f'jw{proposal_id}-o{observation}_t{visit}*'
+    obsid2 = f'jw{proposal_id}-o{observation}_t*'
 
     # Query MAST for requested visit
     sci_table = Observations.query_criteria(proposal_id=proposal_id,
