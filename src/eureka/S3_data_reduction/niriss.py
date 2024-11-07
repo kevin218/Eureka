@@ -22,9 +22,9 @@ from .background import fitbg3
 from . import niriss_python
 
 # FINDME: update list
-__all__ = ['read', 'simplify_niriss_img', 'image_filtering',
-           'f277_mask', 'fit_bg', 'wave_NIRISS',
-           'mask_method_one', 'mask_method_two', 'fit_orders',
+__all__ = ['read', 'fit_ff', 'fit_bg', 'get_trace',
+           'wave_NIRISS',
+            'fit_orders',
            'fit_orders_fast']
 
 '''
@@ -116,7 +116,7 @@ def read(filename, data, meta, log):
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']
     time_units = 'BMJD_TDB'
-    wave_units = 'microns'
+    # wave_units = 'microns'
 
     if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
             meta.bg_hw == meta.bg_hw_range[0]):
@@ -132,8 +132,8 @@ def read(filename, data, meta, log):
                                      name='dq')
     data['v0'] = xrio.makeFluxLikeDA(v0, time, flux_units, time_units,
                                      name='v0')
-    data['wave_2d'] = (['y', 'x'], wave_2d)
-    data['wave_2d'].attrs['wave_units'] = wave_units
+    # data['wave_2d'] = (['y', 'x'], wave_2d)
+    # data['wave_2d'].attrs['wave_units'] = wave_units
 
     return data, meta, log
 
@@ -181,8 +181,9 @@ def flag_bg(data, meta, log):
     return nircam.flag_bg(data, meta, log)
 
 
-def get_trace(data, meta, log):
-    '''Use NIRISS pupil position to determine location of traces.
+def get_wave(data, meta, log):
+    '''Use NIRISS pupil position to determine location 
+    of traces and corresponding wavelength solutions.
 
     Parameters
     ----------
@@ -206,8 +207,23 @@ def get_trace(data, meta, log):
     # Fet the order 1 and 2 traces for the desired pupil position
     trace_order1, trace_order2 = get_soss_traces(pwcpos=pwcpos, order='12', 
                                                    interp=True)
-    data.attrs['trace_o1'] = trace_order1
-    data.attrs['trace_o2'] = trace_order2
+    
+    # Assign trace and wavelength for order 1
+    ind1 = np.nonzero(np.in1d(trace_order1.x, data.x.values))[0]
+    ind2 = np.nonzero(np.in1d(data.x.values, trace_order1.x))[0]
+    data['trace_o1'] = (['x'], np.zeros(data.x.shape))
+    data['trace_o1'][ind2] = trace_order1.y[ind1]
+    data['wave_o1'] = (['x'], np.zeros(data.x.shape))
+    data['wave_o1'][ind2] = trace_order1.wavelength[ind1]
+
+    # Assign trace and wavelength for  order 2
+    ind1 = np.nonzero(np.in1d(trace_order2.x, data.x.values))[0]
+    ind2 = np.nonzero(np.in1d(data.x.values, trace_order2.x))[0]
+    data['trace_o2'] = (['x'], np.zeros(data.x.shape))
+    data['trace_o2'][ind2] = trace_order2.y[ind1]
+    data['wave_o2'] = (['x'], np.zeros(data.x.shape))
+    data['wave_o2'][ind2] = trace_order2.wavelength[ind1]
+
     return data
 
 
