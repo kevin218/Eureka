@@ -134,6 +134,7 @@ def read(filename, data, meta, log):
                                      name='v0')
     # data['wave_2d'] = (['y', 'x'], wave_2d)
     # data['wave_2d'].attrs['wave_units'] = wave_units
+    data = data.assign_coords(order=('order', [1,2]))
 
     return data, meta, log
 
@@ -204,75 +205,32 @@ def get_wave(data, meta, log):
     log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
                  mute=(not meta.verbose))
     
-    # Fet the order 1 and 2 traces for the desired pupil position
-    trace_order1, trace_order2 = get_soss_traces(pwcpos=pwcpos, order='12', 
-                                                   interp=True)
-    
-    # Assign trace and wavelength for order 1
-    ind1 = np.nonzero(np.in1d(trace_order1.x, data.x.values))[0]
-    ind2 = np.nonzero(np.in1d(data.x.values, trace_order1.x))[0]
-    data['trace_o1'] = (['x'], np.zeros(data.x.shape))
-    data['trace_o1'][ind2] = trace_order1.y[ind1]
-    data['wave_o1'] = (['x'], np.zeros(data.x.shape))
-    data['wave_o1'][ind2] = trace_order1.wavelength[ind1]
+    data['trace'] = (['x', 'order'], np.zeros((data.x.shape[0], 2)))
+    data['wave_1d'] = (['x', 'order'], np.zeros((data.x.shape[0], 2)))
+
+    for order in meta.orders:
+        # Get trace for the given order and pupil position
+        trace = get_soss_traces(pwcpos=pwcpos, order=str(order), interp=True)
+
+        # Assign trace and wavelength for given order
+        ind1 = np.nonzero(np.in1d(trace.x, data.x.values))[0]
+        ind2 = np.nonzero(np.in1d(data.x.values, trace.x))[0]
+        data['trace'].sel(order=order)[ind2] = trace.y[ind1]
+        data['wave_1d'].sel(order=order)[ind2] = trace.wavelength[ind1]
 
     # Assign trace and wavelength for  order 2
-    ind1 = np.nonzero(np.in1d(trace_order2.x, data.x.values))[0]
-    ind2 = np.nonzero(np.in1d(data.x.values, trace_order2.x))[0]
-    data['trace_o2'] = (['x'], np.zeros(data.x.shape))
-    data['trace_o2'][ind2] = trace_order2.y[ind1]
-    data['wave_o2'] = (['x'], np.zeros(data.x.shape))
-    data['wave_o2'][ind2] = trace_order2.wavelength[ind1]
+    # ind1 = np.nonzero(np.in1d(trace_order2.x, data.x.values))[0]
+    # ind2 = np.nonzero(np.in1d(data.x.values, trace_order2.x))[0]
+    # # data['trace_o2'] = (['x'], np.zeros(data.x.shape))
+    # # data['trace_o2'][ind2] = trace_order2.y[ind1]
+    # # data['wave_o2'] = (['x'], np.zeros(data.x.shape))
+    # # data['wave_o2'][ind2] = trace_order2.wavelength[ind1]
+    # data['trace'].sel(order=2)[ind2] = trace_order2.y[ind1]
+    # data['wave_1d'].sel(order=2)[ind2] = trace_order2.wavelength[ind1]
+    
+    data['wave_1d'].attrs['wave_units'] = 'microns'
 
     return data
-
-
-def wave_NIRISS(wavefile, meta):
-    """
-    Adds the 2D wavelength solutions to the meta object.
-
-    Parameters
-    ----------
-    wavefile : str
-       The name of the .FITS file with the wavelength
-       solution.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-
-    Returns
-    -------
-    meta : eureka.lib.readECF.MetaClass
-        The updated metadata object.
-    """
-    with fits.open(wavefile) as hdu:
-        meta.wavelength_order1 = hdu[1].data
-        meta.wavelength_order2 = hdu[2].data
-        meta.wavelength_order3 = hdu[3].data
-
-    return meta
-
-
-
-
-def dirty_mask(img, meta, boxsize1=70, boxsize2=60):
-    """Really dirty box mask for background purposes."""
-    mask = np.zeros(img.shape, dtype=bool)
-
-    for i in range(img.shape[1]):
-        s = int(meta.tab2['order_1'][i]-boxsize1/2)
-        e = int(meta.tab2['order_1'][i]+boxsize1/2)
-        mask[s:e, i] = True
-
-        s = int(meta.tab2['order_2'][i]-boxsize2/2)
-        e = int(meta.tab2['order_2'][i]+boxsize2/2)
-        try:
-            mask[s:e, i] = True
-        except:
-            # FINDME: Need to change this except to only catch the
-            # specific type of exception we expect
-            pass
-
-    return mask
 
 
 def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4]):
@@ -301,6 +259,32 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4]):
     box_mask = dirty_mask(data.median, meta)
     data = fitbg3(data, box_mask, readnoise, sigclip)
     return data
+
+
+
+
+
+
+def dirty_mask(img, meta, boxsize1=70, boxsize2=60):
+    """Really dirty box mask for background purposes."""
+    mask = np.zeros(img.shape, dtype=bool)
+
+    for i in range(img.shape[1]):
+        s = int(meta.tab2['order_1'][i]-boxsize1/2)
+        e = int(meta.tab2['order_1'][i]+boxsize1/2)
+        mask[s:e, i] = True
+
+        s = int(meta.tab2['order_2'][i]-boxsize2/2)
+        e = int(meta.tab2['order_2'][i]+boxsize2/2)
+        try:
+            mask[s:e, i] = True
+        except:
+            # FINDME: Need to change this except to only catch the
+            # specific type of exception we expect
+            pass
+
+    return mask
+
 
 
 def set_which_table(i, meta):

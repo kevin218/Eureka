@@ -108,7 +108,7 @@ def roll_columns(data, shifts):
     return rolled_data
 
 
-def straighten_trace(data, meta, log, m):
+def straighten_trace(data, meta, log, m, order=1):
     '''Takes a set of integrations with a curved trace and shifts the
     columns to bring the center of mass to the middle of the detector
     (and straighten the trace)
@@ -127,6 +127,8 @@ def straighten_trace(data, meta, log, m):
         The open log in which notes from this step can be added.
     m : int
         The file number.
+    order : int; optional
+        NIRISS order number. Default is 1.
 
     Returns
     -------
@@ -141,19 +143,24 @@ def straighten_trace(data, meta, log, m):
     log.writelog('  !!! Ensure that you are using meddata for the optimal '
                  'extraction profile !!!', mute=(not meta.verbose))
 
-    # compute the correction needed from this median frame
-    shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
+    if meta.inst == 'niriss':
+        shifts = np.round(data.trace.sel(order=order).values).astype(int)
+        new_center = int(data.medflux.shape[0]/2) - 1
+        data.trace.values -= shifts[:, np.newaxis]
+    else:
+        # compute the correction needed from this median frame
+        shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
 
-    # Correct wavelength (only one frame)
-    log.writelog('    Correcting the wavelength solution...',
-                 mute=(not meta.verbose))
-    # broadcast to (1, detector.shape) which is the expected shape of
-    # the function
-    single_shift = np.expand_dims(shifts, axis=0)
-    wave_data = np.expand_dims(data.wave_2d.values, axis=0)
-    # apply the correction and update wave_1d accordingly
-    data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
-    data.wave_1d.values = data.wave_2d[new_center].values
+        # Correct wavelength (only one frame)
+        log.writelog('    Correcting the wavelength solution...',
+                    mute=(not meta.verbose))
+        # broadcast to (1, detector.shape) which is the expected shape of
+        # the function
+        single_shift = np.expand_dims(shifts, axis=0)
+        wave_data = np.expand_dims(data.wave_2d.values, axis=0)
+        # apply the correction and update wave_1d accordingly
+        data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
+        data.wave_1d.values = data.wave_2d[new_center].values
 
     log.writelog('    Correcting the curvature over all integrations...',
                  mute=(not meta.verbose))
