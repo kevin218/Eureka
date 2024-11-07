@@ -895,6 +895,8 @@ def make_citations(meta, stage=None):
         # check if batman or GP is being used for transit/eclipse modeling
         if "batman_tr" in meta.run_myfuncs or "batman_ecl" in meta.run_myfuncs:
             other_cites.append("batman")
+        if "catwoman_tr" in meta.run_myfuncs:
+            other_cites.append("catwoman")
         if "fleck_tr" in meta.run_myfuncs:
             other_cites.append("fleck")
         if "starry" in meta.run_myfuncs:
