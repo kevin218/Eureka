@@ -4,6 +4,7 @@ from astropy.io import fits
 import astraeus.xarrayIO as xrio
 from . import nircam, sigrej
 from ..lib.util import read_time, supersample
+from pastasoss import get_soss_traces
 
 # import itertools
 # import ccdproc as ccdp
@@ -74,13 +75,15 @@ def read(filename, data, meta, log):
     #     print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
     #     data.attrs['intstart'] = 0
     #     data.attrs['intend'] = data.attrs['mhdr']['NINTS']
-    meta.filter = data.attrs['mhdr']['GRATING']
+    # meta.filter = data.attrs['mhdr']['FILTER']
+    # meta.pupil_position = data.attrs['mhdr']['PWCPOS']
 
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
-    wave_2d = hdulist['WAVELENGTH', 1].data
+    # wave_2d = hdulist['WAVELENGTH', 1].data
+    wave_2d = np.zeros_like(sci[0])
     int_times = hdulist['INT_TIMES', 1].data
 
     # meta.photometry = False  # Photometry for NIRSpec not implemented yet.
@@ -99,14 +102,14 @@ def read(filename, data, meta, log):
     # Record integration mid-times in BMJD_TDB
     if meta.time_file is not None:
         time = read_time(meta, data, log)
-    elif len(int_times['int_mid_BJD_TDB']) == 0:
-        # There is no time information in the simulated NIRSpec data
-        print('  WARNING: The timestamps for the simulated NIRSpec data are '
-              'currently\n'
-              '           hardcoded because they are not in the .fits files '
-              'themselves')
-        time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'],
-                           data.intend)
+    # elif len(int_times['int_mid_BJD_TDB']) == 0:
+    #     # There is no time information in the simulated NIRSpec data
+    #     print('  WARNING: The timestamps for the simulated NIRSpec data are '
+    #           'currently\n'
+    #           '           hardcoded because they are not in the .fits files '
+    #           'themselves')
+    #     time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'],
+    #                        data.intend)
     else:
         time = int_times['int_mid_BJD_TDB']
 
@@ -157,6 +160,55 @@ def flag_ff(data, meta, log):
     return nircam.flag_ff(data, meta, log)
 
 
+def flag_bg(data, meta, log):
+    '''Outlier rejection of sky background along time axis.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
+    '''
+
+    return nircam.flag_bg(data, meta, log)
+
+
+def get_trace(data, meta, log):
+    '''Use NIRISS pupil position to determine location of traces.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with...
+    '''
+    # Report pupil position 
+    pwcpos = data.attrs['mhdr']['PWCPOS']
+    log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
+                 mute=(not meta.verbose))
+    
+    # Fet the order 1 and 2 traces for the desired pupil position
+    trace_order1, trace_order2 = get_soss_traces(pwcpos=pwcpos, order='12', 
+                                                   interp=True)
+    data.attrs['trace_o1'] = trace_order1
+    data.attrs['trace_o2'] = trace_order2
+    return data
 
 
 def wave_NIRISS(wavefile, meta):
@@ -184,28 +236,6 @@ def wave_NIRISS(wavefile, meta):
     return meta
 
 
-
-def flag_bg(data, meta):
-    '''A placeholder function until a flag_bg function is implemented.
-
-    Outlier rejection of sky background along time axis.
-
-    Parameters
-    ----------
-    data:   DataClass
-        The data object in which the fits data will stored
-    meta:   MetaClass
-        The metadata object
-
-    Returns
-    -------
-    data : DataClass
-        The updated data object with outlier background pixels flagged.
-    '''
-
-    print('WARNING, niriss.flag_bg is not yet implemented!')
-
-    return
 
 
 def dirty_mask(img, meta, boxsize1=70, boxsize2=60):
