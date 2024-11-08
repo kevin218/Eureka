@@ -521,7 +521,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     return profile
 
 
-def clean_median_flux(data, meta, log, m):
+def clean_median_flux(data, meta, log, m, order=None):
     """Computes a median flux frame that is free of bad pixels.
 
     Parameters
@@ -534,6 +534,8 @@ def clean_median_flux(data, meta, log, m):
         The current log.
     m : int
         The file number.
+    order : int; optional
+        Spectral order. Default is None
 
     Returns
     -------
@@ -550,9 +552,18 @@ def clean_median_flux(data, meta, log, m):
     log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
 
     # Compute median flux using masked arrays
-    flux_ma = np.ma.masked_where(data.mask.values, data.flux.values)
+    if order is None:
+        flux_ma = np.ma.masked_where(data.mask.values, data.flux.values)
+        err_ma = np.ma.masked_where(data.mask.values, data.err.values)
+    else:
+        flux_ma = np.ma.masked_where(data.mask.sel(order=order).values, 
+                                     data.flux.sel(order=order).values)
+        err_ma = np.ma.masked_where(data.mask.sel(order=order).values, 
+                                    data.err.sel(order=order).values)
     medflux = np.ma.median(flux_ma, axis=0)
-    ny, nx = medflux.shape
+    # iy = data.flux.get_axis_num('y')
+    nx = len(data.x)
+    ny = len(data.y)
 
     # Interpolate over masked regions
     interp_med = np.zeros((ny, nx))
@@ -573,7 +584,6 @@ def clean_median_flux(data, meta, log, m):
         # Apply smoothing filter along dispersion direction
         smoothflux = spn.median_filter(interp_med, size=(1, meta.window_len))
         # Compute median error array
-        err_ma = np.ma.masked_where(data.mask.values, data.err.values)
         mederr = np.ma.median(err_ma, axis=0)
         # Smooth error array along dispersion direction
         # to enable flagging bad points with large uncertainties

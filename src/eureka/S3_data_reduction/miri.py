@@ -206,6 +206,8 @@ def read(filename, data, meta, log):
     else:
         data['wave_1d'] = (['x'], wave_1d)
         data['wave_1d'].attrs['wave_units'] = wave_units
+    # Initialize bad pixel mask (False = good, True = bad)
+    data['mask'] = (['time', 'y', 'x'], np.zeros(data.flux.shape, dtype=bool))
 
     return data, meta, log
 

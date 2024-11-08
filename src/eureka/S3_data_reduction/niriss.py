@@ -101,14 +101,6 @@ def read(filename, data, meta, log):
     # Record integration mid-times in BMJD_TDB
     if meta.time_file is not None:
         time = read_time(meta, data, log)
-    # elif len(int_times['int_mid_BJD_TDB']) == 0:
-    #     # There is no time information in the simulated NIRSpec data
-    #     print('  WARNING: The timestamps for the simulated NIRSpec data are '
-    #           'currently\n'
-    #           '           hardcoded because they are not in the .fits files '
-    #           'themselves')
-    #     time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'],
-    #                        data.intend)
     else:
         time = int_times['int_mid_BJD_TDB']
 
@@ -117,6 +109,15 @@ def read(filename, data, meta, log):
     time_units = 'BMJD_TDB'
     # wave_units = 'microns'
 
+    # Duplicate science arrays for each order to be analyzed
+    if isinstance(meta.orders, int):
+        meta.orders = [meta.orders]
+    norders = len(meta.orders)
+    sci = np.repeat(sci[:,:,:,np.newaxis], norders, axis=3)
+    err = np.repeat(err[:,:,:,np.newaxis], norders, axis=3)
+    dq = np.repeat(dq[:,:,:,np.newaxis], norders, axis=3)
+    v0 = np.repeat(v0[:,:,:,np.newaxis], norders, axis=3)
+
     if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
             meta.bg_hw == meta.bg_hw_range[0]):
         # Only apply super-sampling expansion once
@@ -124,16 +125,17 @@ def read(filename, data, meta, log):
         meta.ywindow[1] *= meta.expand
 
     data['flux'] = xrio.makeFluxLikeDA(sci, time, flux_units, time_units,
-                                       name='flux')
+                                       name='flux', order=meta.orders)
     data['err'] = xrio.makeFluxLikeDA(err, time, flux_units, time_units,
-                                      name='err')
+                                      name='err', order=meta.orders)
     data['dq'] = xrio.makeFluxLikeDA(dq, time, "None", time_units,
-                                     name='dq')
+                                     name='dq', order=meta.orders)
     data['v0'] = xrio.makeFluxLikeDA(v0, time, flux_units, time_units,
-                                     name='v0')
-    # data['wave_2d'] = (['y', 'x'], wave_2d)
-    # data['wave_2d'].attrs['wave_units'] = wave_units
-    data = data.assign_coords(order=('order', [1,2]))
+                                     name='v0', order=meta.orders)
+    # data = data.assign_coords(order=('order', [1,2]))
+    # Initialize bad pixel mask (False = good, True = bad)
+    data['mask'] = (['time', 'y', 'x', 'order'], np.zeros(data.flux.shape, 
+                                                          dtype=bool))
 
     return data, meta, log
 
@@ -236,22 +238,26 @@ def flag_bg(data, meta, log):
 
     # Mask out region around each trace
     mask = np.zeros_like(data.mask.values[0], dtype=bool)
-    for order in [1, 2]:
+    for order in meta.orders:
         trace = np.round(data.trace.sel(order=order).values).astype(int)
         for j in np.where(~np.isnan(trace))[0]:
             ymin = np.max((0, trace[j] - meta.bg_hw))
             ymax = np.min((trace[j] + meta.bg_hw + 1, mask.shape[0] + 1))
             # print(order, j, trace[j], ymin, ymax)
-            mask[ymin:ymax, j] = True
+            mask[ymin:ymax, j, order] = True
 
+    # FINDME: Remove figure once code is fully tested
     # import matplotlib.pyplot as plt
     # plt.figure(1)
     # plt.imshow(mask, origin='lower', aspect='auto')
 
-    # Combine masks
-    bgmask = data.mask.values + mask[np.newaxis]
-    # Perform sigma rejection
-    data['mask'][:,:,:] = sigrej.sigrej(data.flux, meta.bg_thresh, bgmask)
+    for order in meta.orders:
+        # Combine masks
+        bgmask = data.mask.sel(order=order).values + \
+            mask[np.newaxis, :, :, order]
+        # Perform sigma rejection
+        data['mask'][:, :, :, order] = sigrej.sigrej(data.flux, meta.bg_thresh, 
+                                                     bgmask)
 
     return data
 
