@@ -252,6 +252,7 @@ class S3MetaClass(MetaClass):
             Initial empty version setting defaults for NIRISS.
         '''
         self.curvature = getattr(self, 'curvature', True)
+        self.src_ypos = getattr(self, 'src_ypos', 35)
 
         self.set_spectral_defaults()
 

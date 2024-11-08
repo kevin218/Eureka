@@ -145,8 +145,10 @@ def straighten_trace(data, meta, log, m, order=1):
 
     if meta.inst == 'niriss':
         shifts = np.round(data.trace.sel(order=order).values).astype(int)
-        new_center = int(data.medflux.shape[0]/2) - 1
-        data.trace.values -= shifts[:, np.newaxis]
+        new_center = meta.src_ypos
+        data.trace.values -= (shifts[:, np.newaxis] - new_center)
+        # FINDME: Need to mod the trace positions 
+        # data.trace.values = data.trace.values % 
     else:
         # compute the correction needed from this median frame
         shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
@@ -177,9 +179,10 @@ def straighten_trace(data, meta, log, m, order=1):
     data.medflux.values = roll_columns(np.expand_dims(data.medflux.values,
                                        axis=0), shifts).squeeze()
 
-    # update the new src_ypos
-    log.writelog(f'    Updating src_ypos to new center, row {new_center}...',
-                 mute=(not meta.verbose))
-    meta.src_ypos = new_center
+    if not meta.inst == 'niriss':
+        # update the new src_ypos
+        log.writelog(f'    Updating src_ypos to new center, row {new_center}...',
+                    mute=(not meta.verbose))
+        meta.src_ypos = new_center
 
     return data, meta

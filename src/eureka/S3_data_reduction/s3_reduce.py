@@ -354,10 +354,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                            data.wave_2d[meta.src_ypos].values)
                         data['wave_1d'].attrs['wave_units'] = \
                             data.wave_2d.attrs['wave_units']
-
-                    # Check for bad wavelengths (beyond wavelength solution)
-                    util.check_nans(data.wave_1d.values, np.zeros(meta.subnx),
-                                    log, name='wavelength')
+                        # Check for bad wavelengths (beyond wavelength solution)
+                        util.check_nans(data.wave_1d.values, 
+                                        np.zeros(meta.subnx),
+                                        log, name='wavelength')
+                    else:
+                        # Get wavelength solution
+                        data = inst.get_wave(data, meta, log)
 
                     if meta.calibrated_spectra:
                         # Instrument-specific steps for generating
@@ -402,11 +405,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.bg_y1 = meta.src_ypos - meta.bg_hw
                     if not meta.ff_outlier:
                         data = inst.flag_bg(data, meta, log)
+                    return data, meta
 
                     # Do the background subtraction
                     data = bg.BGsubtraction(data, meta, log,
                                             m, meta.isplots_S3)
 
+                    return data, meta
                     # Calulate and correct for 2D drift
                     if hasattr(inst, 'correct_drift2D'):
                         data, meta, log = inst.correct_drift2D(data, meta, log,

@@ -30,7 +30,6 @@ __all__ = ['read', 'fit_ff', 'fit_bg', 'get_trace',
 '''
 Thoughts as I work through S3_reduce:
     Don't need to run source_pos.source_pos_wrapper(), should call PASTASOSS instead
-    How to handle 2D wavelength solution?
     Will need to implement inst.calibrated_spectra()
     inst.flag_ff() should work the same as NIRCam
     Do we want to correct the curvature using straighten.straighten_trace()?
@@ -139,6 +138,57 @@ def read(filename, data, meta, log):
     return data, meta, log
 
 
+def get_wave(data, meta, log):
+    '''Use NIRISS pupil position to determine location 
+    of traces and corresponding wavelength solutions.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with...
+    '''
+    # Report pupil position 
+    pwcpos = data.attrs['mhdr']['PWCPOS']
+    log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
+                 mute=(not meta.verbose))
+    
+    data['trace'] = (['x', 'order'], np.zeros((data.x.shape[0], 2))*np.nan)
+    data['wave_1d'] = (['x', 'order'], np.zeros((data.x.shape[0], 2))*np.nan)
+
+    for order in meta.orders:
+        # Get trace for the given order and pupil position
+        trace = get_soss_traces(pwcpos=pwcpos, order=str(order), interp=True)
+
+        # Assign trace and wavelength for given order
+        ind1 = np.nonzero(np.in1d(trace.x, data.x.values))[0]
+        ind2 = np.nonzero(np.in1d(data.x.values, trace.x))[0]
+        data['trace'].sel(order=order)[ind2] = trace.y[ind1]
+        data['wave_1d'].sel(order=order)[ind2] = trace.wavelength[ind1]
+
+    # Assign trace and wavelength for  order 2
+    # ind1 = np.nonzero(np.in1d(trace_order2.x, data.x.values))[0]
+    # ind2 = np.nonzero(np.in1d(data.x.values, trace_order2.x))[0]
+    # # data['trace_o2'] = (['x'], np.zeros(data.x.shape))
+    # # data['trace_o2'][ind2] = trace_order2.y[ind1]
+    # # data['wave_o2'] = (['x'], np.zeros(data.x.shape))
+    # # data['wave_o2'][ind2] = trace_order2.wavelength[ind1]
+    # data['trace'].sel(order=2)[ind2] = trace_order2.y[ind1]
+    # data['wave_1d'].sel(order=2)[ind2] = trace_order2.wavelength[ind1]
+    
+    data['wave_1d'].attrs['wave_units'] = 'microns'
+
+    return data
+
+
 def flag_ff(data, meta, log):
     '''Outlier rejection of full frame along time axis.
     For data with deep transits, there is a risk of masking good transit data.
@@ -178,57 +228,30 @@ def flag_bg(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with outlier background pixels flagged.
     '''
-
-    return nircam.flag_bg(data, meta, log)
-
-
-def get_wave(data, meta, log):
-    '''Use NIRISS pupil position to determine location 
-    of traces and corresponding wavelength solutions.
-
-    Parameters
-    ----------
-    data : Xarray Dataset
-        The Dataset object.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    log : logedit.Logedit
-        The current log.
-
-    Returns
-    -------
-    data : Xarray Dataset
-        The updated Dataset object with...
-    '''
-    # Report pupil position 
-    pwcpos = data.attrs['mhdr']['PWCPOS']
-    log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
+    log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
-    
-    data['trace'] = (['x', 'order'], np.zeros((data.x.shape[0], 2)))
-    data['wave_1d'] = (['x', 'order'], np.zeros((data.x.shape[0], 2)))
 
-    for order in meta.orders:
-        # Get trace for the given order and pupil position
-        trace = get_soss_traces(pwcpos=pwcpos, order=str(order), interp=True)
+    # FINDME: This code still doesn't handle corner cases
+    # where the 2nd order trace is rolled over the array
 
-        # Assign trace and wavelength for given order
-        ind1 = np.nonzero(np.in1d(trace.x, data.x.values))[0]
-        ind2 = np.nonzero(np.in1d(data.x.values, trace.x))[0]
-        data['trace'].sel(order=order)[ind2] = trace.y[ind1]
-        data['wave_1d'].sel(order=order)[ind2] = trace.wavelength[ind1]
+    # Mask out region around each trace
+    mask = np.zeros_like(data.mask.values[0], dtype=bool)
+    for order in [1, 2]:
+        trace = np.round(data.trace.sel(order=order).values).astype(int)
+        for j in np.where(~np.isnan(trace))[0]:
+            ymin = np.max((0, trace[j] - meta.bg_hw))
+            ymax = np.min((trace[j] + meta.bg_hw + 1, mask.shape[0] + 1))
+            # print(order, j, trace[j], ymin, ymax)
+            mask[ymin:ymax, j] = True
 
-    # Assign trace and wavelength for  order 2
-    # ind1 = np.nonzero(np.in1d(trace_order2.x, data.x.values))[0]
-    # ind2 = np.nonzero(np.in1d(data.x.values, trace_order2.x))[0]
-    # # data['trace_o2'] = (['x'], np.zeros(data.x.shape))
-    # # data['trace_o2'][ind2] = trace_order2.y[ind1]
-    # # data['wave_o2'] = (['x'], np.zeros(data.x.shape))
-    # # data['wave_o2'][ind2] = trace_order2.wavelength[ind1]
-    # data['trace'].sel(order=2)[ind2] = trace_order2.y[ind1]
-    # data['wave_1d'].sel(order=2)[ind2] = trace_order2.wavelength[ind1]
-    
-    data['wave_1d'].attrs['wave_units'] = 'microns'
+    # import matplotlib.pyplot as plt
+    # plt.figure(1)
+    # plt.imshow(mask, origin='lower', aspect='auto')
+
+    # Combine masks
+    bgmask = data.mask.values + mask[np.newaxis]
+    # Perform sigma rejection
+    data['mask'][:,:,:] = sigrej.sigrej(data.flux, meta.bg_thresh, bgmask)
 
     return data
 
