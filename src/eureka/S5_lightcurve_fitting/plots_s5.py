@@ -813,9 +813,15 @@ def plot_fleck_star(lc, model, meta, fitter):
     fitter : str
         The name of the fitter (for plot filename).
     """
-    for channel in lc.fitted_channels:
+    for c in range(lc.nchannel_fitted):
+        channel = lc.fitted_channels[c]
+        if lc.nchannel_fitted > 1:
+            chan = channel
+        else:
+            chan = 0
+
         # Initialize PlanetParams object
-        pl_params = PlanetParams(model, 0, channel)
+        pl_params = PlanetParams(model, 0, chan)
 
         # create arrays to hold values
         spotrad = np.zeros(0)
@@ -877,9 +883,15 @@ def plot_starry_star(lc, model, meta, fitter):
     fitter : str
         The name of the fitter (for plot filename).
     """
-    for channel in lc.fitted_channels:
+    for c in range(lc.nchannel_fitted):
+        channel = lc.fitted_channels[c]
+        if lc.nchannel_fitted > 1:
+            chan = channel
+        else:
+            chan = 0
+
         # Initialize PlanetParams object
-        pl_params = PlanetParams(model, 0, channel, eval=True)
+        pl_params = PlanetParams(model, 0, chan, eval=True)
 
         # create arrays to hold values
         spotrad = np.zeros(0)
