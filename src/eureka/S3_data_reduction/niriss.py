@@ -2,7 +2,7 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
-from . import nircam, sigrej
+from . import nircam, sigrej, optspex, plots_s3
 from ..lib.util import read_time, supersample
 from pastasoss import get_soss_traces
 
@@ -163,8 +163,11 @@ def get_wave(data, meta, log):
     log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
                  mute=(not meta.verbose))
     
-    data['trace'] = (['x', 'order'], np.zeros((data.x.shape[0], 2))*np.nan)
-    data['wave_1d'] = (['x', 'order'], np.zeros((data.x.shape[0], 2))*np.nan)
+    norders = len(data.order)
+    data['trace'] = (['x', 'order'], 
+                     np.zeros((data.x.shape[0], norders))*np.nan)
+    data['wave_1d'] = (['x', 'order'], 
+                       np.zeros((data.x.shape[0], norders))*np.nan)
 
     for order in meta.orders:
         # Get trace for the given order and pupil position
@@ -262,6 +265,56 @@ def flag_bg(data, meta, log):
     return data
 
 
+def clean_median_flux(data, meta, log, m):
+    """Computes a median flux frame that is free of bad pixels.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+    m : int
+        The file number.
+    order : int; optional
+        Spectral order. Default is None
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object.
+    """
+    data['medflux'] = (['y', 'x', 'order'], np.zeros_like(data.flux[0]))
+    data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
+
+    # FINDME: Currently, the median frame is identical for each order,
+    # so looping over the orders feels unnecesary; however, when only
+    # a single order is specified in the ECF, the following code will
+    # work on the correct order.
+    for order in meta.orders:
+        # Compute median flux using masked arrays
+        flux_ma = np.ma.masked_where(data.mask.sel(order=order).values, 
+                                     data.flux.sel(order=order).values)
+        medflux = np.ma.median(flux_ma, axis=0)
+        # Compute median error array
+        err_ma = np.ma.masked_where(data.mask.sel(order=order).values, 
+                                    data.err.sel(order=order).values)
+        mederr = np.ma.median(err_ma, axis=0)
+
+        # Call subroutine
+        clean_flux = optspex.get_clean(data, meta, log, medflux, mederr)
+
+        # Assign (un)cleaned median frame to data object
+        data['medflux'].sel(order=order)[:] = clean_flux    
+
+        if meta.isplots_S3 >= 3:
+            plots_s3.median_frame(data, meta, m, clean_flux, order)
+
+    return data
+    
+
 def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4]):
     """
     Subtracts background from non-spectral regions.
@@ -288,8 +341,6 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4]):
     box_mask = dirty_mask(data.median, meta)
     data = fitbg3(data, box_mask, readnoise, sigclip)
     return data
-
-
 
 
 

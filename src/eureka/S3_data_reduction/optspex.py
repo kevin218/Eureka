@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from ..lib import gaussian as g
 from ..lib import smooth
-from . import plots_s3
+from . import plots_s3, niriss
 
 
 def standard_spectrum(data, apdata, apmask, aperr):
@@ -521,7 +521,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     return profile
 
 
-def clean_median_flux(data, meta, log, m, order=None):
+def clean_median_flux(data, meta, log, m):
     """Computes a median flux frame that is free of bad pixels.
 
     Parameters
@@ -534,33 +534,40 @@ def clean_median_flux(data, meta, log, m, order=None):
         The current log.
     m : int
         The file number.
-    order : int; optional
-        Spectral order. Default is None
 
     Returns
     -------
     data : Xarray Dataset
         The updated Dataset object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-03, KBS
-        Inital version
     """
     log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
 
-    # Compute median flux using masked arrays
-    if order is None:
-        flux_ma = np.ma.masked_where(data.mask.values, data.flux.values)
-        err_ma = np.ma.masked_where(data.mask.values, data.err.values)
+    if meta.inst == 'niriss':
+        return niriss.clean_median_flux(data, meta, log, m)
     else:
-        flux_ma = np.ma.masked_where(data.mask.sel(order=order).values, 
-                                     data.flux.sel(order=order).values)
-        err_ma = np.ma.masked_where(data.mask.sel(order=order).values, 
-                                    data.err.sel(order=order).values)
-    medflux = np.ma.median(flux_ma, axis=0)
+        # Compute median flux using masked arrays
+        flux_ma = np.ma.masked_where(data.mask.values, data.flux.values)
+        medflux = np.ma.median(flux_ma, axis=0)
+        # Compute median error array
+        err_ma = np.ma.masked_where(data.mask.values, data.err.values)
+        mederr = np.ma.median(err_ma, axis=0)
+
+        # Call subroutine
+        clean_flux = get_clean(data, meta, log, medflux, mederr)
+
+        # Assign (un)cleaned median frame to data object
+        data['medflux'] = (['y', 'x'], clean_flux)
+        data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
+
+        if meta.isplots_S3 >= 3:
+            plots_s3.median_frame(data, meta, m, clean_flux)
+
+    return data
+
+    
+def get_clean(data, meta, log, medflux, mederr):
+    """
+    """
     # iy = data.flux.get_axis_num('y')
     nx = len(data.x)
     ny = len(data.y)
@@ -583,8 +590,6 @@ def clean_median_flux(data, meta, log, m, order=None):
     if meta.window_len > 1:
         # Apply smoothing filter along dispersion direction
         smoothflux = spn.median_filter(interp_med, size=(1, meta.window_len))
-        # Compute median error array
-        mederr = np.ma.median(err_ma, axis=0)
         # Smooth error array along dispersion direction
         # to enable flagging bad points with large uncertainties
         smooth_mederr = spn.median_filter(mederr, size=(1, meta.window_len))
@@ -608,17 +613,9 @@ def clean_median_flux(data, meta, log, m, order=None):
                                  fill_value='extrapolate')
                 clean_med[j] = f(xx)
 
-        # Assign cleaned median frame to data object
-        data['medflux'] = (['y', 'x'], clean_med)
+        return clean_med
     else:
-        # Assign uncleaned median frame to data object
-        data['medflux'] = (['y', 'x'], medflux.data)
-    data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
-
-    if meta.isplots_S3 >= 3:
-        plots_s3.median_frame(data, meta, m)
-
-    return data
+        return medflux.data
 
 
 def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,

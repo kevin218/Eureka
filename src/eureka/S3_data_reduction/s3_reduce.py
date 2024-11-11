@@ -281,7 +281,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 data.attrs['intend'] = batch[-1].attrs['intend']
 
                 # Get number of integrations and frame dimensions
-                meta.n_int, meta.ny, meta.nx = data.flux.shape
+                meta.n_int = len(data.time)
+                meta.nx = len(data.x)
+                meta.ny = len(data.y)
+
                 if meta.testing_S3:
                     # Only process the last 5 integrations when testing
                     meta.int_start = np.max((0, meta.n_int-5))
@@ -295,10 +298,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.int_end = meta.n_int
                 else:
                     meta.int_end = meta.int_start+meta.nplots
-
-                # Initialize bad pixel mask (False = good, True = bad)
-                data['mask'] = (['time', 'y', 'x'],
-                                np.zeros(data.flux.shape, dtype=bool))
 
                 # Perform BG subtraction along dispersion direction
                 # for untrimmed NIRCam spectroscopic data
@@ -374,7 +373,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     # Perform outlier rejection of
                     # full frame along time axis
                     if meta.ff_outlier:
-                        data = inst.flag_ff(data, meta, log)
+                        data = inst.flag_ff(data, meta, log)                    
 
                     if saved_ref_median_frame is None:
                         # Compute clean median frame
@@ -398,6 +397,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         log.writelog('WARNING: NIRCam spectra is slightly '
                                      'curved and may benefit from setting '
                                      'meta.curvature to "correct".')
+                    return data, meta # FINDME
 
                     # Perform outlier rejection of
                     # sky background along time axis
@@ -405,13 +405,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.bg_y1 = meta.src_ypos - meta.bg_hw
                     if not meta.ff_outlier:
                         data = inst.flag_bg(data, meta, log)
-                    return data, meta
+                    return data, meta # FINDME
 
                     # Do the background subtraction
                     data = bg.BGsubtraction(data, meta, log,
                                             m, meta.isplots_S3)
 
-                    return data, meta
+                    return data, meta # FINDME
                     # Calulate and correct for 2D drift
                     if hasattr(inst, 'correct_drift2D'):
                         data, meta, log = inst.correct_drift2D(data, meta, log,

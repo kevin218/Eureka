@@ -627,7 +627,7 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
         plt.pause(0.1)
 
 
-def median_frame(data, meta, m):
+def median_frame(data, meta, m, medflux, order=None):
     '''Plot the cleaned time-median frame. (Fig 3308)
 
     Parameters
@@ -638,23 +638,20 @@ def median_frame(data, meta, m):
         The metadata object.
     m : int
         The file number.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-06 KBS
-        Initial version
+    medflux : masked array
+        The cleaned median flux array.
+    order : int; optional
+        Spectral order. Default is None
     '''
     xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
-    vmin = data.medflux.min().values
-    vmax = data.medflux.max().values/3
+    vmin = medflux.min()
+    vmax = medflux.max()/3
     cmap = plt.cm.plasma.copy()
 
     plt.figure(3308, figsize=(8, 4))
     plt.clf()
     plt.title("Cleaned Median Frame")
-    plt.imshow(data.medflux, origin='lower', aspect='auto',
+    plt.imshow(medflux, origin='lower', aspect='auto',
                vmin=vmin, vmax=vmax, interpolation='nearest',
                extent=[xmin, xmax, ymin, ymax], cmap=cmap)
     plt.colorbar()
@@ -662,8 +659,12 @@ def median_frame(data, meta, m):
     plt.xlabel('Detector Pixel Position')
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    fname = (f'figs{os.sep}fig3308_file{file_number}_MedianFrame' +
-             plots.figure_filetype)
+    if order is None:
+        fname = (f'figs{os.sep}fig3308_file{file_number}_MedianFrame' +
+                plots.figure_filetype)
+    else:
+        fname = (f'figs{os.sep}fig3308_file{file_number}' +
+                 f'_order{order}_MedianFrame' + plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
