@@ -165,7 +165,8 @@ def get_wave(data, meta, log):
     
     norders = len(data.order)
     data['trace'] = (['x', 'order'], 
-                     np.zeros((data.x.shape[0], norders))*np.nan)
+                     np.zeros((data.x.shape[0], norders)) + 
+                     np.array(meta.src_ypos)[np.newaxis])
     data['wave_1d'] = (['x', 'order'], 
                        np.zeros((data.x.shape[0], norders))*np.nan)
 

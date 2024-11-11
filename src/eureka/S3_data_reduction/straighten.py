@@ -108,7 +108,7 @@ def roll_columns(data, shifts):
     return rolled_data
 
 
-def straighten_trace(data, meta, log, m, order=1):
+def straighten_trace(data, meta, log, m):
     '''Takes a set of integrations with a curved trace and shifts the
     columns to bring the center of mass to the middle of the detector
     (and straighten the trace)
@@ -127,8 +127,6 @@ def straighten_trace(data, meta, log, m, order=1):
         The open log in which notes from this step can be added.
     m : int
         The file number.
-    order : int; optional
-        NIRISS order number. Default is 1.
 
     Returns
     -------
@@ -143,12 +141,39 @@ def straighten_trace(data, meta, log, m, order=1):
     log.writelog('  !!! Ensure that you are using meddata for the optimal '
                  'extraction profile !!!', mute=(not meta.verbose))
 
+    # FINDME: need to move code to niriss.py
     if meta.inst == 'niriss':
-        shifts = np.round(data.trace.sel(order=order).values).astype(int)
-        new_center = meta.src_ypos
-        data.trace.values -= (shifts[:, np.newaxis] - new_center)
-        # FINDME: Need to mod the trace positions 
-        # data.trace.values = data.trace.values % 
+        for j, order in enumerate(meta.orders):
+            shifts = np.round(data.trace.sel(order=order).values).astype(int)
+            new_center = meta.src_ypos[j]
+            new_shifts = new_center - shifts
+            # print(order, shifts.shape)
+            data.trace.sel(order=order).values += new_shifts
+            # FINDME: Need to mod the trace positions 
+            # data.trace.values = data.trace.values % 
+            # broadcast the shifts to the number of integrations
+            new_shifts = np.reshape(np.repeat(new_shifts, 
+                                    data.flux.shape[0]),
+                                    (data.flux.shape[0], 
+                                    data.flux.shape[2]),
+                                    order='F')
+            
+            log.writelog('    Correcting the curvature over all integrations...',
+                        mute=(not meta.verbose))
+
+            # apply the shifts to the data
+            data['flux'].sel(order=order)[:] = roll_columns(
+                data.flux.sel(order=order).values, new_shifts)
+            data['mask'].sel(order=order)[:] = roll_columns(
+                data.mask.sel(order=order).values, new_shifts)
+            data['err'].sel(order=order)[:] = roll_columns(
+                data.err.sel(order=order).values, new_shifts)
+            data['dq'].sel(order=order)[:] = roll_columns(
+                data.dq.sel(order=order).values, new_shifts)
+            data['v0'].sel(order=order)[:] = roll_columns(
+                data.v0.sel(order=order).values, new_shifts)
+            data['medflux'].sel(order=order)[:] = roll_columns(
+                np.expand_dims(data.medflux.sel(order=order).values, axis=0), new_shifts).squeeze()
     else:
         # compute the correction needed from this median frame
         shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
@@ -163,23 +188,22 @@ def straighten_trace(data, meta, log, m, order=1):
         # apply the correction and update wave_1d accordingly
         data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
         data.wave_1d.values = data.wave_2d[new_center].values
+        # broadcast the shifts to the number of integrations
+        shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
+                            (data.flux.shape[0], data.flux.shape[2]), order='F')
 
-    log.writelog('    Correcting the curvature over all integrations...',
-                 mute=(not meta.verbose))
-    # broadcast the shifts to the number of integrations
-    shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
-                        (data.flux.shape[0], data.flux.shape[2]), order='F')
+        log.writelog('    Correcting the curvature over all integrations...',
+                    mute=(not meta.verbose))
 
-    # apply the shifts to the data
-    data.flux.values = roll_columns(data.flux.values, shifts)
-    data.mask.values = roll_columns(data.mask.values, shifts)
-    data.err.values = roll_columns(data.err.values, shifts)
-    data.dq.values = roll_columns(data.dq.values, shifts)
-    data.v0.values = roll_columns(data.v0.values, shifts)
-    data.medflux.values = roll_columns(np.expand_dims(data.medflux.values,
-                                       axis=0), shifts).squeeze()
+        # apply the shifts to the data
+        data.flux.values = roll_columns(data.flux.values, shifts)
+        data.mask.values = roll_columns(data.mask.values, shifts)
+        data.err.values = roll_columns(data.err.values, shifts)
+        data.dq.values = roll_columns(data.dq.values, shifts)
+        data.v0.values = roll_columns(data.v0.values, shifts)
+        data.medflux.values = roll_columns(np.expand_dims(data.medflux.values,
+                                        axis=0), shifts).squeeze()
 
-    if not meta.inst == 'niriss':
         # update the new src_ypos
         log.writelog(f'    Updating src_ypos to new center, row {new_center}...',
                     mute=(not meta.verbose))
