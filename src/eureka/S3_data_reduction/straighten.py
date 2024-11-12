@@ -1,6 +1,6 @@
 import numpy as np
 from ..lib import smooth
-from . import plots_s3
+from . import plots_s3, niriss
 
 
 def find_column_median_shifts(data, meta, m):
@@ -135,46 +135,18 @@ def straighten_trace(data, meta, log, m):
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
     '''
-    log.writelog('  Correcting curvature and bringing the trace to the '
-                 'center of the detector...', mute=(not meta.verbose))
-    # This method only works with the median profile for the extraction
-    log.writelog('  !!! Ensure that you are using meddata for the optimal '
-                 'extraction profile !!!', mute=(not meta.verbose))
-
-    # FINDME: need to move code to niriss.py
+    if meta.fittype != 'meddata':
+        # This method only works with the median profile for the extraction
+        log.writelog('  !!! Must use meddata as the optimal '
+                        'extraction profile !!!', mute=(not meta.verbose))
+        raise Exception('Must use meddata as the optimal ' +
+                        'extraction profile')
+    
     if meta.inst == 'niriss':
-        for j, order in enumerate(meta.orders):
-            shifts = np.round(data.trace.sel(order=order).values).astype(int)
-            new_center = meta.src_ypos[j]
-            new_shifts = new_center - shifts
-            # print(order, shifts.shape)
-            data.trace.sel(order=order).values += new_shifts
-            # FINDME: Need to mod the trace positions 
-            # data.trace.values = data.trace.values % 
-            # broadcast the shifts to the number of integrations
-            new_shifts = np.reshape(np.repeat(new_shifts, 
-                                    data.flux.shape[0]),
-                                    (data.flux.shape[0], 
-                                    data.flux.shape[2]),
-                                    order='F')
-            
-            log.writelog('    Correcting the curvature over all integrations...',
-                        mute=(not meta.verbose))
-
-            # apply the shifts to the data
-            data['flux'].sel(order=order)[:] = roll_columns(
-                data.flux.sel(order=order).values, new_shifts)
-            data['mask'].sel(order=order)[:] = roll_columns(
-                data.mask.sel(order=order).values, new_shifts)
-            data['err'].sel(order=order)[:] = roll_columns(
-                data.err.sel(order=order).values, new_shifts)
-            data['dq'].sel(order=order)[:] = roll_columns(
-                data.dq.sel(order=order).values, new_shifts)
-            data['v0'].sel(order=order)[:] = roll_columns(
-                data.v0.sel(order=order).values, new_shifts)
-            data['medflux'].sel(order=order)[:] = roll_columns(
-                np.expand_dims(data.medflux.sel(order=order).values, axis=0), new_shifts).squeeze()
+        return niriss.straighten_trace(data, meta, log, m)
     else:
+        log.writelog('  Correcting curvature and bringing the trace to the '
+                    'center of the detector...', mute=(not meta.verbose))
         # compute the correction needed from this median frame
         shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
 

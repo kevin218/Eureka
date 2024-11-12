@@ -5,6 +5,7 @@ import astraeus.xarrayIO as xrio
 from . import nircam, sigrej, optspex, plots_s3
 from ..lib.util import read_time, supersample
 from pastasoss import get_soss_traces
+from .straighten import roll_columns
 
 # import itertools
 # import ccdproc as ccdp
@@ -22,10 +23,8 @@ from .background import fitbg3
 from . import niriss_python
 
 # FINDME: update list
-__all__ = ['read', 'fit_ff', 'fit_bg', 'get_trace',
-           'wave_NIRISS',
-            'fit_orders',
-           'fit_orders_fast']
+__all__ = ['read', 'get_wave', 'straighten_trace', 'flag_ff', 'flag_bg',
+           'clean_median_flux', 'fit_bg']
 
 '''
 Thoughts as I work through S3_reduce:
@@ -169,6 +168,7 @@ def get_wave(data, meta, log):
                      np.array(meta.src_ypos)[np.newaxis])
     data['wave_1d'] = (['x', 'order'], 
                        np.zeros((data.x.shape[0], norders))*np.nan)
+    data['wave_1d'].attrs['wave_units'] = 'microns'
 
     for order in meta.orders:
         # Get trace for the given order and pupil position
@@ -178,21 +178,82 @@ def get_wave(data, meta, log):
         ind1 = np.nonzero(np.in1d(trace.x, data.x.values))[0]
         ind2 = np.nonzero(np.in1d(data.x.values, trace.x))[0]
         data['trace'].sel(order=order)[ind2] = trace.y[ind1]
-        data['wave_1d'].sel(order=order)[ind2] = trace.wavelength[ind1]
-
-    # Assign trace and wavelength for  order 2
-    # ind1 = np.nonzero(np.in1d(trace_order2.x, data.x.values))[0]
-    # ind2 = np.nonzero(np.in1d(data.x.values, trace_order2.x))[0]
-    # # data['trace_o2'] = (['x'], np.zeros(data.x.shape))
-    # # data['trace_o2'][ind2] = trace_order2.y[ind1]
-    # # data['wave_o2'] = (['x'], np.zeros(data.x.shape))
-    # # data['wave_o2'][ind2] = trace_order2.wavelength[ind1]
-    # data['trace'].sel(order=2)[ind2] = trace_order2.y[ind1]
-    # data['wave_1d'].sel(order=2)[ind2] = trace_order2.wavelength[ind1]
-    
-    data['wave_1d'].attrs['wave_units'] = 'microns'
+        data['wave_1d'].sel(order=order)[ind2] = trace.wavelength[ind1] 
 
     return data
+
+
+def straighten_trace(data, meta, log, m):
+    '''Takes a set of integrations with a curved trace and shifts the
+    columns to bring the center of mass to the middle of the detector
+    (and straighten the trace)
+
+    The correction is made by whole pixels (i.e. no fractional pixel shifts)
+    The shifts to be applied are computed once from the median frame and then
+    applied to each integration in the timeseries
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+            The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with the fits data stored inside.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    '''
+    # Mask trace regions from other orders
+    for order in meta.orders:
+        trace = np.round(data.trace.sel(order=order).values).astype(int)
+        wave = data.wave_1d.sel(order=order).values
+        other_orders = list.copy(meta.orders)
+        other_orders.remove(order)
+        for j in np.where(~np.isnan(wave))[0]:
+            ymin = np.max((0, trace[j] - meta.bg_hw))
+            ymax = np.min((trace[j] + meta.bg_hw + 1, len(data.y) + 1))
+            for other_order in other_orders:
+                data['mask'].sel(order=other_order)[:, ymin:ymax, j] = True
+
+    for j, order in enumerate(meta.orders):
+        log.writelog(f'  Correcting curvature for order {order} and ' +
+                        f'bringing the trace to row {meta.src_ypos[j]}... ',
+                        mute=(not meta.verbose))
+        shifts = np.round(data.trace.sel(order=order).values).astype(int)
+        new_center = meta.src_ypos[j]
+        new_shifts = new_center - shifts
+        data.trace.sel(order=order).values += new_shifts
+        # FINDME: May need to mod the trace positions 
+        # data.trace.values = data.trace.values % 
+        # broadcast the shifts to the number of integrations
+        new_shifts = np.reshape(np.repeat(new_shifts, 
+                                data.flux.shape[0]),
+                                (data.flux.shape[0], 
+                                data.flux.shape[2]),
+                                order='F')
+        
+        # Apply the shifts to the data
+        data['flux'].sel(order=order)[:] = roll_columns(
+            data.flux.sel(order=order).values, new_shifts)
+        data['mask'].sel(order=order)[:] = roll_columns(
+            data.mask.sel(order=order).values, new_shifts)
+        data['err'].sel(order=order)[:] = roll_columns(
+            data.err.sel(order=order).values, new_shifts)
+        data['dq'].sel(order=order)[:] = roll_columns(
+            data.dq.sel(order=order).values, new_shifts)
+        data['v0'].sel(order=order)[:] = roll_columns(
+            data.v0.sel(order=order).values, new_shifts)
+        data['medflux'].sel(order=order)[:] = roll_columns(
+            np.expand_dims(data.medflux.sel(order=order).values, axis=0), new_shifts).squeeze()
+        
+    return data, meta
 
 
 def flag_ff(data, meta, log):
@@ -237,32 +298,26 @@ def flag_bg(data, meta, log):
     log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
-    # FINDME: This code still doesn't handle corner cases
-    # where the 2nd order trace is rolled over the array
-
-    # Mask out region around each trace
-    mask = np.zeros_like(data.mask.values[0], dtype=bool)
-    for order in meta.orders:
-        trace = np.round(data.trace.sel(order=order).values).astype(int)
-        for j in np.where(~np.isnan(trace))[0]:
-            ymin = np.max((0, trace[j] - meta.bg_hw))
-            ymax = np.min((trace[j] + meta.bg_hw + 1, mask.shape[0] + 1))
-            # print(order, j, trace[j], ymin, ymax)
-            mask[ymin:ymax, j, order] = True
+    # FINDME: This code should work once the rolled trace is computed correctly
+    for j, order in enumerate(meta.orders):
+        print(meta.bg_y1[j], meta.bg_y2[j])
+        bgdata1 = data.flux.sel(order=order)[:, :meta.bg_y1[j]]
+        bgmask1 = data.mask.sel(order=order)[:, :meta.bg_y1[j]]
+        bgdata2 = data.flux.sel(order=order)[:, meta.bg_y2[j]:]
+        bgmask2 = data.mask.sel(order=order)[:, meta.bg_y2[j]:]
+        
+        data['mask'].sel(order=order)[:, :meta.bg_y1[j]] = sigrej.sigrej(
+            bgdata1, meta.bg_thresh, bgmask1, None)
+        data['mask'].sel(order=order)[:, meta.bg_y2[j]:] = sigrej.sigrej(
+            bgdata2, meta.bg_thresh, bgmask2, None)
 
     # FINDME: Remove figure once code is fully tested
     # import matplotlib.pyplot as plt
     # plt.figure(1)
-    # plt.imshow(mask, origin='lower', aspect='auto')
-
-    for order in meta.orders:
-        # Combine masks
-        bgmask = data.mask.sel(order=order).values + \
-            mask[np.newaxis, :, :, order]
-        # Perform sigma rejection
-        data['mask'][:, :, :, order] = sigrej.sigrej(data.flux, meta.bg_thresh, 
-                                                     bgmask)
-
+    # plt.subplot(211)
+    # plt.imshow(data['mask'][0,:,:,0], origin='lower', aspect='auto')
+    # plt.subplot(212)
+    # plt.imshow(data['mask'][0,:,:,1], origin='lower', aspect='auto')
     return data
 
 

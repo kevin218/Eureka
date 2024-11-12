@@ -397,7 +397,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         log.writelog('WARNING: NIRCam spectra is slightly '
                                      'curved and may benefit from setting '
                                      'meta.curvature to "correct".')
-                    return data, meta # FINDME
 
                     # Perform outlier rejection of
                     # sky background along time axis
@@ -405,7 +404,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.bg_y1 = meta.src_ypos - meta.bg_hw
                     if not meta.ff_outlier:
                         data = inst.flag_bg(data, meta, log)
-                    return data, meta # FINDME
 
                     # Do the background subtraction
                     data = bg.BGsubtraction(data, meta, log,
