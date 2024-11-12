@@ -52,7 +52,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
         # Need to skip doing background subtraction
         log.writelog('  Skipping background subtraction...',
                      mute=(not meta.verbose))
-        data['bg'] = (['time', 'y', 'x'], np.zeros(data.flux.shape))
+        data['bg'] = (list(data.coords.keys()), np.zeros_like(data.flux))
         data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']
         return data
 
@@ -64,7 +64,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     elif meta.inst == 'nirspec':
         from . import nirspec as inst
     elif meta.inst == 'niriss':
-        raise ValueError('NIRISS observations are currently unsupported!')
+        from . import niriss as inst
     elif meta.inst == 'wfc3':
         from . import wfc3 as inst
     else:
@@ -88,7 +88,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     # Compute background for each integration
     log.writelog('  Performing ' + meta.bg_dir + ' background subtraction...',
                  mute=(not meta.verbose))
-    data['bg'] = (['time', 'y', 'x'], np.zeros(data.flux.shape))
+    data['bg'] = (list(data.coords.keys()), np.zeros_like(data.flux))
     data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']
     if meta.ncpu == 1:
         # Only 1 CPU
@@ -97,9 +97,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
             iterfn = tqdm(iterfn)
         for n in iterfn:
             # Fit sky background with out-of-spectra data
-            if meta.inst == 'niriss':
-                writeBG(inst.fit_bg(data, meta, n, isplots))
-            elif meta.inst == 'wfc3':
+            if meta.inst == 'wfc3':
                 writeBG_WFC3(inst.fit_bg(data.flux[n].values,
                                          data.mask[n].values,
                                          data.v0[n].values,
@@ -114,14 +112,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
         pool = mp.Pool(meta.ncpu)
         args_list = []
 
-        # Todo, convert NIRISS fit_bg to only accept individual frames
-        # (see nircam and below for example)
-        if meta.inst == 'niriss':
-            for n in range(meta.int_start, meta.n_int):
-                args_list.append((data, meta, n, isplots))
-            jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,),
-                                     callback=writeBG) for args in args_list]
-        elif meta.inst == 'wfc3':
+        if meta.inst == 'wfc3':
             # The WFC3 background subtraction needs a few more inputs
             # and outputs
             jobs = [pool.apply_async(func=inst.fit_bg,
@@ -155,7 +146,12 @@ def BGsubtraction(data, meta, log, m, isplots=0):
 
     # Make image+background plots
     if isplots >= 3:
-        plots_s3.image_and_background(data, meta, log, m)
+        if meta.orders == None:
+            plots_s3.image_and_background(data, meta, log, m)
+        else:
+            for order in meta.orders:
+                plots_s3.image_and_background(data.sel(order=order), meta, 
+                                              log, m, order=order)
 
     return data
 

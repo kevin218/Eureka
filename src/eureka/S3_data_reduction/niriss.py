@@ -6,6 +6,7 @@ from . import nircam, sigrej, optspex, plots_s3
 from ..lib.util import read_time, supersample
 from pastasoss import get_soss_traces
 from .straighten import roll_columns
+from .background import fitbg
 
 # import itertools
 # import ccdproc as ccdp
@@ -19,7 +20,6 @@ from .straighten import roll_columns
 # from skimage import filters, feature
 # from scipy.ndimage import gaussian_filter
 
-from .background import fitbg3
 from . import niriss_python
 
 # FINDME: update list
@@ -300,7 +300,6 @@ def flag_bg(data, meta, log):
 
     # FINDME: This code should work once the rolled trace is computed correctly
     for j, order in enumerate(meta.orders):
-        print(meta.bg_y1[j], meta.bg_y2[j])
         bgdata1 = data.flux.sel(order=order)[:, :meta.bg_y1[j]]
         bgmask1 = data.mask.sel(order=order)[:, :meta.bg_y1[j]]
         bgdata2 = data.flux.sel(order=order)[:, meta.bg_y2[j]:]
@@ -371,7 +370,47 @@ def clean_median_flux(data, meta, log, m):
     return data
     
 
-def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4]):
+def fit_bg(dataim, datamask, n, meta, isplots=0):
+    """Fit for a non-uniform background.
+
+    Parameters
+    ----------
+    dataim : ndarray (3D)
+        The 3D image array (y, x, order).
+    datamask : ndarray (3D)
+        A boolean array of which data (set to True) should be masked.
+    n : int
+        The current integration.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    isplots : int; optional
+        The plotting verbosity, by default 0.
+
+    Returns
+    -------
+    bg : ndarray (2D)
+        The fitted background level.
+    mask : ndarray (2D)
+        The updated boolean mask after background subtraction, where True
+        values should be masked.
+    n : int
+        The current integration number.
+    """
+    norders = len(meta.orders)
+    bg = np.zeros_like(dataim)
+    mask = np.zeros_like(dataim, dtype=bool)
+    for i in range(norders):
+        bg[:,:,i], mask[:,:,i] = fitbg(dataim[:,:,i], meta, 
+            datamask[:,:,i], meta.bg_y1[i], meta.bg_y2[i], deg=meta.bg_deg,
+            threshold=meta.p3thresh, isrotate=2, isplots=isplots)
+
+    return bg, mask, n
+
+
+############################################################
+# OLD ROUTINES
+############################################################
+def fit_bg_old(data, meta, readnoise=11, sigclip=[4, 4, 4]):
     """
     Subtracts background from non-spectral regions.
 
@@ -397,8 +436,6 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4]):
     box_mask = dirty_mask(data.median, meta)
     data = fitbg3(data, box_mask, readnoise, sigclip)
     return data
-
-
 
 
 def dirty_mask(img, meta, boxsize1=70, boxsize2=60):

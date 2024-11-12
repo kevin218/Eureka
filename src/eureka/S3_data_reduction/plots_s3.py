@@ -123,7 +123,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
         plt.pause(0.2)
 
 
-def image_and_background(data, meta, log, m):
+def image_and_background(data, meta, log, m, order=None):
     '''Make image+background plot. (Figs 3301)
 
     Parameters
@@ -136,12 +136,14 @@ def image_and_background(data, meta, log, m):
         The current log.
     m : int
         The file number.
+    order : int; optional
+        Spectral order. Default is None
     '''
     log.writelog('  Creating figures for background subtraction...',
                  mute=(not meta.verbose))
 
     # If need be, transpose array so that largest dimension is on x axis
-    if len(data.flux.x.values) < len(data.flux.y.values):
+    if len(data.x) < len(data.y):
         data = data.transpose('time', 'x', 'y')
     xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
 
@@ -161,7 +163,8 @@ def image_and_background(data, meta, log, m):
     # Set bad pixels to plot as black
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
-    iterfn = range(meta.int_end-meta.int_start)
+    # iterfn = range(meta.int_end-meta.int_start)
+    iterfn = range(meta.int_start, meta.int_end)
     if meta.verbose:
         iterfn = tqdm(iterfn)
     for n in iterfn:
@@ -188,8 +191,13 @@ def image_and_background(data, meta, log, m):
         file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))
                                        + 1))
         int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-        fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}_' +
-                 meta.bg_dir + '_ImageAndBackground'+plots.figure_filetype)
+        if order is None:
+            fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}_' +
+                     meta.bg_dir + '_ImageAndBackground'+plots.figure_filetype)
+        else:
+            fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}_' +
+                    f'_order{order}_' + meta.bg_dir + '_ImageAndBackground' +
+                    plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
