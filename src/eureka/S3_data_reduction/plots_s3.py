@@ -163,7 +163,6 @@ def image_and_background(data, meta, log, m, order=None):
     # Set bad pixels to plot as black
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
-    # iterfn = range(meta.int_end-meta.int_start)
     iterfn = range(meta.int_start, meta.int_end)
     if meta.verbose:
         iterfn = tqdm(iterfn)
@@ -258,7 +257,7 @@ def optimal_spectrum(data, meta, n, m):
     m : int
         The file number.
     '''
-    xmin, xmax = get_bounds(data.stdspec.x.values)
+    xmin, xmax = get_bounds(data.x.values)
     intstart, stdspec, optspec, opterr = (data.attrs['intstart'],
                                           data.stdspec.values,
                                           data.optspec.values,
@@ -267,11 +266,23 @@ def optimal_spectrum(data, meta, n, m):
     plt.figure(3302)
     plt.clf()
     plt.suptitle(f'1D Spectrum - Integration {intstart + n}')
-    plt.semilogy(data.stdspec.x.values, stdspec[n], '-', color='C1',
-                 label='Standard Spec')
-    plt.errorbar(data.stdspec.x.values, optspec[n], yerr=opterr[n], fmt='-',
-                 color='C2', ecolor='C2', label='Optimal Spec')
+    if meta.orders is None:
+        plt.semilogy(data.stdspec.x.values, stdspec[n], '-', color='C1',
+                     label='Standard Spec')
+        plt.errorbar(data.stdspec.x.values, optspec[n], yerr=opterr[n], fmt='-',
+                     color='C2', ecolor='C2', label='Optimal Spec')
+    else:
+        norders = len(meta.orders)
+        for j in range(norders):
+            order = meta.orders[j]
+            inotnan = np.where(~np.isnan(data.wave_1d[:, j]))[0]
+            plt.semilogy(data.x.values[inotnan], stdspec[n, inotnan, j], '-',
+                         label=f'Standard Spec - Order {order}')
+            plt.errorbar(data.stdspec.x.values, optspec[n,:,j], 
+                         yerr=opterr[n,:,j], fmt='-',
+                         label=f'Optimal Spec - Order {order}')
     plt.xlim(xmin, xmax)
+    plt.ylim(np.nanmin(optspec[n])/2, np.nanmax(optspec[n])*2)
     plt.ylabel('Flux')
     plt.xlabel('Detector Pixel Position')
     plt.legend(loc='best')
@@ -353,7 +364,7 @@ def source_position(meta, x_dim, pos_max, m, n,
         plt.pause(0.2)
 
 
-def profile(meta, profile, submask, n, m):
+def profile(meta, profile, submask, n, m, order=None):
     '''Plot weighting profile from optimal spectral extraction routine.
     (Figs 3303)
 
@@ -369,6 +380,8 @@ def profile(meta, profile, submask, n, m):
         The current integration number.
     m : int
         The file number.
+    order : int; optional
+        Spectral order. Default is None
     '''
     profile = np.ma.masked_invalid(profile)
     profile = np.ma.masked_where(submask, profile)
@@ -386,8 +399,12 @@ def profile(meta, profile, submask, n, m):
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}_Profile' +
-             plots.figure_filetype)
+    if order is None:
+        fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}' + 
+                 '_Profile' + plots.figure_filetype)
+    else:
+        fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}' + 
+                 f'_Order{order}_Profile' + plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)

@@ -24,7 +24,7 @@ from . import niriss_python
 
 # FINDME: update list
 __all__ = ['read', 'get_wave', 'straighten_trace', 'flag_ff', 'flag_bg',
-           'clean_median_flux', 'fit_bg']
+           'clean_median_flux', 'fit_bg', 'cut_aperture']
 
 '''
 Thoughts as I work through S3_reduce:
@@ -406,6 +406,126 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
 
     return bg, mask, n
 
+
+def cut_aperture(data, meta, log):
+    """Select the aperture region out of each trimmed image.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    apdata : ndarray
+        The flux values over the aperture region.
+    aperr : ndarray
+        The noise values over the aperture region.
+    apmask : ndarray
+        The mask values over the aperture region. True values should be masked.
+    apbg : ndarray
+        The background flux values over the aperture region.
+    apv0 : ndarray
+        The v0 values over the aperture region.
+    """
+    log.writelog('  Extracting aperture region...',
+                 mute=(not meta.verbose))
+
+    apdata = np.zeros((len(data.time), 2*meta.spec_hw+1, 
+                       len(data.x), len(data.order)))
+    aperr = np.zeros((len(data.time), 2*meta.spec_hw+1, 
+                      len(data.x), len(data.order)))
+    apmask = np.zeros((len(data.time), 2*meta.spec_hw+1, 
+                       len(data.x), len(data.order)), dtype=bool)
+    apbg = np.zeros((len(data.time), 2*meta.spec_hw+1, 
+                     len(data.x), len(data.order)))
+    apv0 = np.zeros((len(data.time), 2*meta.spec_hw+1, 
+                     len(data.x), len(data.order)))
+    apmedflux = np.zeros((2*meta.spec_hw+1, len(data.x), len(data.order)))
+    for j in range(len(data.order)):
+        ap_y1 = int(meta.src_ypos[j]-meta.spec_hw)
+        ap_y2 = int(meta.src_ypos[j]+meta.spec_hw+1)
+        apdata[:, :, :, j] = data.flux.values[:, ap_y1:ap_y2, :, j]
+        aperr[:, :, :, j] = data.err.values[:, ap_y1:ap_y2, :, j]
+        apmask[:, :, :, j] = data.mask.values[:, ap_y1:ap_y2, :, j]
+        apbg[:, :, :, j] = data.bg.values[:, ap_y1:ap_y2, :, j]
+        apv0[:, :, :, j] = data.v0.values[:, ap_y1:ap_y2, :, j]
+        apmedflux[:, :, j] = data.medflux.values[ap_y1:ap_y2, :, j]
+        # Mask invalid regions
+        inan = np.where(np.isnan(data.wave_1d[:, j]))
+        apmask[:, :, inan, j] = True
+        # FINDME: using lists would likely be faster since
+        # standard_spectrum() tries to fix each masked pixel
+
+    return apdata, aperr, apmask, apbg, apv0, apmedflux
+
+
+def standard_spectrum(data, meta, apdata, apmask, aperr):
+    """Instrument wrapper for computing the standard box spectrum.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    apdata : ndarray
+        The pixel values in the aperture region.
+    apmask : ndarray
+        The outlier mask in the aperture region. True where pixels should be
+        masked.
+    aperr : ndarray
+        The noise values in the aperture region.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object in which the spectrum data will stored.
+    """
+
+    # Create xarray
+    # coords = list(data.coords.keys())
+    # coords.remove('y')
+    # data['stdspec'] = (coords, np.zeros_like(data.flux[:, 0]))
+    # data['stdvar'] = (coords, np.zeros_like(data.flux[:, 0]))
+    # data['stdspec'].attrs['flux_units'] = \
+    #     data.flux.attrs['flux_units']
+    # data['stdspec'].attrs['time_units'] = \
+    #     data.flux.attrs['time_units']
+    # data['stdvar'].attrs['flux_units'] = \
+    #     data.flux.attrs['flux_units']
+    # data['stdvar'].attrs['time_units'] = \
+    #     data.flux.attrs['time_units']
+    
+    # for j, order in enumerate(meta.orders):
+    #     # Compute standard box spectrum and variance
+    #     stdspec, stdvar = optspex.standard_spectrum(apdata[:, :, :, j], 
+    #                                                 apmask[:, :, :, j], 
+    #                                                 aperr[:, :, :, j])
+    #     # Store results in data xarray
+    #     data['stdspec'].sel(order=order)[:] = stdspec
+    #     data['stdvar'].sel(order=order)[:] = stdvar
+    
+    return nircam.standard_spectrum(data, meta, apdata, apmask, aperr)
+
+
+# def optimize():
+#     """
+#     """
+
+#     data['optspec'][n], data['opterr'][n], _ = \
+#             optimize(meta, apdata[n], apmask[n], apbg[n],
+#                      data.stdspec[n].values, gain, apv0[n],
+#                      p5thresh=meta.p5thresh,
+#                      p7thresh=meta.p7thresh,
+#                      fittype=meta.fittype,
+#                      window_len=meta.window_len,
+#                      deg=meta.prof_deg, windowtype=windowtype,
+#                      n=n, m=m, meddata=apmedflux)
 
 ############################################################
 # OLD ROUTINES

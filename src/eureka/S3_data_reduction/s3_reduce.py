@@ -409,7 +409,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     data = bg.BGsubtraction(data, meta, log,
                                             m, meta.isplots_S3)
 
-                    return data, meta # FINDME
                     # Calulate and correct for 2D drift
                     if hasattr(inst, 'correct_drift2D'):
                         data, meta, log = inst.correct_drift2D(data, meta, log,
@@ -425,18 +424,22 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             plots_s3.driftywidth(data, meta, m)
 
                     # Select only aperture region
-                    apdata, aperr, apmask, apbg, apv0 = \
+                    apdata, aperr, apmask, apbg, apv0, apmedflux = \
                         inst.cut_aperture(data, meta, log)
 
                     # Extract standard spectrum and its variance
-                    data = optspex.standard_spectrum(data, apdata, apmask,
-                                                     aperr)
+                    log.writelog('  Computing standard spectrum...',
+                        mute=(not meta.verbose))
+                    data = inst.standard_spectrum(data, meta, apdata, apmask,
+                                                  aperr)
 
                     # Perform optimal extraction
                     data, meta, log = optspex.optimize_wrapper(data, meta, log,
                                                                apdata, apmask,
-                                                               apbg, apv0, m=m)
+                                                               apbg, apv0, 
+                                                               apmedflux, m=m)
 
+                    # return data, meta # FINDME
                     # Plot results
                     if meta.isplots_S3 >= 3:
                         log.writelog('  Creating figures for optimal spectral '

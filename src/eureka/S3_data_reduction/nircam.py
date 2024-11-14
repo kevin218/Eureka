@@ -2,7 +2,7 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
-from . import sigrej, background
+from . import sigrej, background, optspex
 from ..lib.util import read_time, supersample
 from tqdm import tqdm
 from ..lib import meanerr as me
@@ -350,8 +350,67 @@ def cut_aperture(data, meta, log):
     apmask = data.mask[:, ap_y1:ap_y2].values
     apbg = data.bg[:, ap_y1:ap_y2].values
     apv0 = data.v0[:, ap_y1:ap_y2].values
+    apmedflux = data.medflux[ap_y1:ap_y2].values
 
-    return apdata, aperr, apmask, apbg, apv0
+    return apdata, aperr, apmask, apbg, apv0, apmedflux
+
+
+def standard_spectrum(data, meta, apdata, apmask, aperr):
+    """Instrument wrapper for computing the standard box spectrum.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    apdata : ndarray
+        The pixel values in the aperture region.
+    apmask : ndarray
+        The outlier mask in the aperture region. True where pixels should be
+        masked.
+    aperr : ndarray
+        The noise values in the aperture region.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object in which the spectrum data will stored.
+    """
+
+    # Create xarray
+    coords = list(data.coords.keys())
+    coords.remove('y')
+    data['stdspec'] = (coords, np.zeros_like(data.flux[:, 0]))
+    data['stdvar'] = (coords, np.zeros_like(data.flux[:, 0]))
+    data['stdspec'].attrs['flux_units'] = \
+        data.flux.attrs['flux_units']
+    data['stdspec'].attrs['time_units'] = \
+        data.flux.attrs['time_units']
+    data['stdvar'].attrs['flux_units'] = \
+        data.flux.attrs['flux_units']
+    data['stdvar'].attrs['time_units'] = \
+        data.flux.attrs['time_units']
+    
+    if meta.orders is None:
+        # Compute standard box spectrum and variance without orders
+        stdspec, stdvar = optspex.standard_spectrum(apdata, 
+                                                    apmask, 
+                                                    aperr)
+        # Store results in data xarray
+        data['stdspec'] = stdspec
+        data['stdvar'] = stdvar
+    else:
+        for j, order in enumerate(meta.orders):
+            # Compute standard box spectrum and variance with orders
+            stdspec, stdvar = optspex.standard_spectrum(apdata[:, :, : , j], 
+                                                        apmask[:, :, :, j], 
+                                                        aperr[:, :, :, j])
+            # Store results in data xarray
+            data['stdspec'].sel(order=order)[:] = stdspec
+            data['stdvar'].sel(order=order)[:] = stdvar
+    
+    return data
 
 
 def flag_bg_phot(data, meta, log):

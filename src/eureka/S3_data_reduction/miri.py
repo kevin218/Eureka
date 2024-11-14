@@ -1,13 +1,12 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
-from . import background
+from . import background, nircam
 try:
     from jwst import datamodels
 except ImportError:
     print('WARNING: Unable to load the jwst package. As a result, the MIRI '
           'wavelength solution will not be able to be calculated in Stage 3.')
-from . import nircam
 from ..lib.util import read_time, supersample
 
 
@@ -372,6 +371,32 @@ def cut_aperture(data, meta, log):
         Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
+
+
+def standard_spectrum(data, meta, apdata, apmask, aperr):
+    """Instrument wrapper for computing the standard box spectrum.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    apdata : ndarray
+        The pixel values in the aperture region.
+    apmask : ndarray
+        The outlier mask in the aperture region. True where pixels should be
+        masked.
+    aperr : ndarray
+        The noise values in the aperture region.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object in which the spectrum data will stored.
+    """
+    
+    return nircam.standard_spectrum(data, meta, apdata, apmask, aperr)
 
 
 def flag_bg_phot(data, meta, log):

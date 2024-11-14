@@ -2,7 +2,7 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
-from . import nircam, sigrej
+from . import nircam, sigrej, optspex
 from ..lib.util import read_time, supersample
 
 
@@ -242,6 +242,50 @@ def cut_aperture(data, meta, log):
         Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
+
+
+def standard_spectrum(data, meta, apdata, apmask, aperr):
+    """Instrument wrapper for computing the standard box spectrum.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    apdata : ndarray
+        The pixel values in the aperture region.
+    apmask : ndarray
+        The outlier mask in the aperture region. True where pixels should be
+        masked.
+    aperr : ndarray
+        The noise values in the aperture region.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object in which the spectrum data will stored.
+    """
+    # # Compute standard box spectrum and variance
+    # stdspec, stdvar = optspex.standard_spectrum(apdata, 
+    #                                             apmask, 
+    #                                             aperr)
+    
+    # # Store results in data xarray
+    # coords = list(data.coords.keys())
+    # coords.remove('y')
+    # data['stdspec'] = (coords, stdspec)
+    # data['stdvar'] = (coords, stdvar)
+    # data['stdspec'].attrs['flux_units'] = \
+    #     data.flux.attrs['flux_units']
+    # data['stdspec'].attrs['time_units'] = \
+    #     data.flux.attrs['time_units']
+    # data['stdvar'].attrs['flux_units'] = \
+    #     data.flux.attrs['flux_units']
+    # data['stdvar'].attrs['time_units'] = \
+    #     data.flux.attrs['time_units']
+    
+    return nircam.standard_spectrum(data, meta, apdata, apmask, aperr)
 
 
 def calibrated_spectra(data, meta, log, cutoff=1e-4):
