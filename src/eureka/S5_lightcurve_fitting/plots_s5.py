@@ -892,6 +892,11 @@ def plot_eclipse_map(lc, flux_maps, meta):
                             wspace=0.38,
                             hspace=0.22)
 
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5105_{fname_tag}_eclipse_map' +
                  plots.figure_filetype)
 
