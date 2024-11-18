@@ -54,11 +54,11 @@ def ld_profile(name='quadratic', latex=False, use_gen_ld='batman'):
     https://www.cfa.harvard.edu/~lkreidberg/batman/tutorial.html#limb-darkening-options
     https://exotic-ld.readthedocs.io/en/latest/views/quick_start.html
     """
-    # Supported profiles a la BATMAN
+    # Supported profiles a la BATMAN and/or POET
     names = ['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot',
              'logarithmic', 'exponential', '3-parameter', '4-parameter']
-    
-    # Generated profiles by exotic-ld 
+
+    # Generated profiles by exotic-ld
     exotic_ld_names = ['linear', 'quadratic', '3-parameter', '4-parameter']
     if use_gen_ld == 'exotic-ld':
         names = exotic_ld_names

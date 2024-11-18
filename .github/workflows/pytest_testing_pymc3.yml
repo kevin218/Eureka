@@ -1,0 +1,44 @@
+name: Pytest Testing with PyMC3
+on:
+  pull_request:
+    types: [opened,reopened,synchronize]
+  push:
+    branches:
+      - 'main'
+      - 'releases/**'
+jobs:
+  test:
+    name: pytest
+    runs-on: 'ubuntu-latest'
+    env:
+      OS: 'ubuntu-latest'
+      PYTHON: '3.10'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.14'
+      - name: Setup Environment
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[hst,pymc3,test]
+          conda install mkl-service
+          mkdir $HOME/crds_cache
+          echo "CRDS_PATH=$HOME/crds_cache" >> $GITHUB_ENV
+          echo "CRDS_SERVER_URL=https://jwst-crds.stsci.edu" >> $GITHUB_ENV
+      - name: Log the current Eureka version
+        run: pip show eureka
+      - name: Run tests, generate coverage report
+        run: pytest tests --cov=./src/eureka --cov-report=xml
+      - name: Upload coverage reports to Codecov with GitHub Action
+        uses: codecov/codecov-action@v4
+        with:
+          env_vars: OS,PYTHON
+          files: ./coverage.xml
+          fail_ci_if_error: true
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}

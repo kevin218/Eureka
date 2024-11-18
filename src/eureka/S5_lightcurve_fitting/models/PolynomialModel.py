@@ -20,6 +20,7 @@ class PolynomialModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'polynomial'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -48,15 +49,15 @@ class PolynomialModel(Model):
         if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = []
+                self.time_local = np.ma.zeros(0)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
                     time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local.extend(time - time.mean())
-                self.time_local = np.array(self.time_local)
+                    self.time_local = np.ma.append(
+                        self.time_local, time-np.ma.mean(time))
             else:
-                self.time_local = self.time - self.time.mean()
+                self.time_local = self.time - np.ma.mean(self.time)
 
     def _parse_coeffs(self):
         """Convert dict of 'c#' coefficients into a list
@@ -82,7 +83,7 @@ class PolynomialModel(Model):
                             self.parameters.dict[f'c{i}'][0]
                     else:
                         self.coeffs[c, 9-i] = \
-                            self.parameters.dict[f'c{i}_{chan}'][0]
+                            self.parameters.dict[f'c{i}_ch{chan}'][0]
                 except KeyError:
                     pass
 
@@ -116,7 +117,7 @@ class PolynomialModel(Model):
             self.time = kwargs.get('time')
 
         # Create the polynomial from the coeffs
-        lcfinal = np.array([])
+        lcfinal = np.ma.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -127,8 +128,9 @@ class PolynomialModel(Model):
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
-            
+
             poly = np.poly1d(self.coeffs[chan])
             lcpiece = np.polyval(poly, time)
-            lcfinal = np.append(lcfinal, lcpiece)
+            lcpiece = np.ma.masked_where(np.ma.getmaskarray(time), lcpiece)
+            lcfinal = np.ma.append(lcfinal, lcpiece)
         return lcfinal

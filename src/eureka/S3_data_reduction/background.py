@@ -6,7 +6,7 @@ import multiprocessing as mp
 import matplotlib.pyplot as plt
 from astropy.nddata import CCDData
 from astropy.stats import SigmaClip
-from photutils import MMMBackground, MedianBackground, Background2D
+from photutils.background import MMMBackground, MedianBackground, Background2D
 import os
 
 from ..lib import clipping
@@ -160,7 +160,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     return data
 
 
-def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
+def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
           isplots=0):
     '''Fit sky background with out-of-spectra data.
 
@@ -171,7 +171,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     mask : ndarray
-        A mask array.
+        A boolean mask array, where True values are masked.
     x1 : ndarray
     x2 : ndarray
     deg : int; optional
@@ -180,8 +180,8 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
     threshold : int; optional
         Sigma threshold for outlier rejection during background subtraction.
         Defaullt is 5.
-    isrotate : bool; optional
-        Default is False.
+    isrotate : int; optional
+        Default is 0 (no rotation).
     isplots : int; optional
         The amount of plots saved; set in ecf. Default is 0.
 
@@ -205,17 +205,17 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
 
     # Convert x1 and x2 to array, if need be
     ny, nx = np.shape(dataim)
-    if isinstance(x1, (int, np.int64)):
+    if isinstance(x1, (int, np.int32, np.int64)):
         x1 = np.zeros(ny, dtype=int)+x1
-    if isinstance(x2, (int, np.int64)):
+    if isinstance(x2, (int, np.int32, np.int64)):
         x2 = np.zeros(ny, dtype=int)+x2
 
     if deg < 0:
         # Calculate median background of entire frame
         # Assumes all x1 and x2 values are the same
-        submask = np.concatenate((mask[:, :x1[0]].T, mask[:, x2[0]+1:nx].T)).T
+        submask = np.concatenate((mask[:, :x1[0]].T, mask[:, x2[0]+1:].T)).T
         subdata = np.concatenate((dataim[:, :x1[0]].T,
-                                  dataim[:, x2[0]+1:nx].T)).T
+                                  dataim[:, x2[0]+1:].T)).T
         bg = np.zeros((ny, nx)) + np.median(subdata[np.where(submask)])
     elif deg is None:
         # No background subtraction
@@ -223,7 +223,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
     else:
         degs = np.ones(ny)*deg
         # Initiate background image with zeros
-        bg = np.zeros((ny, nx))            
+        bg = np.zeros((ny, nx))
         # Fit polynomial to each column
         for j in range(ny):
             nobadpixels = False
@@ -231,20 +231,20 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
             xvals = np.concatenate((range(x1[j]),
                                     range(x2[j]+1, nx))).astype(int)
             # If too few good pixels then average
-            too_few_pix = (np.sum(mask[j, :x1[j]]) < deg
-                           or np.sum(mask[j, x2[j]+1:nx]) < deg)
+            too_few_pix = (np.sum(~mask[j, :x1[j]]) < deg
+                           or np.sum(~mask[j, x2[j]+1:]) < deg)
             if too_few_pix:
                 degs[j] = 0
             while not nobadpixels:
                 try:
-                    goodxvals = xvals[np.where(mask[j, xvals])]
+                    goodxvals = xvals[~mask[j, xvals]]
                 except:
                     # FINDME: Need to change this except to only catch the
                     # specific type of exception we expect
                     print("****Warning: Background subtraction failed!****")
                     print(j)
                     print(xvals)
-                    print(np.where(mask[j, xvals]))
+                    print(np.where(~mask[j, xvals]))
                     return
                 dataslice = dataim[j, goodxvals]
                 # Check for at least 1 good x value
@@ -259,19 +259,17 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     model = np.polyval(coeffs, goodxvals)
                     # Calculate residuals and number of sigma from the model
                     residuals = dataslice - model
-                    #Choose method for finding bad pixels
-                    if hasattr(meta, 'bg_method') and meta.bg_method=='std':
-                        # Simple standard deviation (faster but prone to missing
-                        # scanned background stars)
-                        stdres = np.std(residuals)
-                    elif hasattr(meta, 'bg_method') and meta.bg_method=='median':
+                    # Choose method for finding bad pixels
+                    if meta.bg_method == 'median':
                         # Median Absolute Deviation (slower but more robust)
-                        stdres  = np.median(np.abs(np.ediff1d(residuals)))
-                    elif hasattr(meta, 'bg_method') and meta.bg_method=='mean':
+                        stdres = np.median(np.abs(np.ediff1d(residuals)))
+                    elif meta.bg_method == 'mean':
                         # Mean Absolute Deviation (good compromise)
                         stdres = np.mean(np.abs(np.ediff1d(residuals)))
                     else:
-                        #Default to standard deviation with no input
+                        # Simple standard deviation (faster but prone to
+                        # missing scanned background stars)
+                        # Default to standard deviation with no input
                         stdres = np.std(residuals)
                     if stdres == 0:
                         stdres = np.inf
@@ -280,7 +278,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     loc = np.argmax(stdevs)
                     # Mask data point if > threshold
                     if stdevs[loc] > threshold:
-                        mask[j, goodxvals[loc]] = 0
+                        mask[j, goodxvals[loc]] = True
                     else:
                         nobadpixels = True  # exit while loop
             # Evaluate background model at all points, write model to
@@ -308,7 +306,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
     return bg, mask
 
 
-def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
+def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
            isplots=0):
     '''Fit sky background with out-of-spectra data.
 
@@ -323,17 +321,18 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     mask : ndarray
-        A mask array.
+        A boolean mask array, where True values are masked.
     bgmask : ndarray
-        A background mask array.
+        A boolean background mask array, where True values are not part of the
+        background.
     deg : int; optional
         Polynomial order for column-by-column background subtraction.
         Default is 1.
     threshold : int; optional
         Sigma threshold for outlier rejection during background subtraction.
         Default is 5.
-    isrotate : bool; optional
-        Default is False.
+    isrotate : int; optional
+        Default is 0 (no rotation).
     isplots : int; optional
         The amount of plots saved; set in ecf. Default is 0.
 
@@ -359,10 +358,10 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
     # Initiate background image with zeros
     ny, nx = np.shape(dataim)
     bg = np.zeros((ny, nx))
-    mask2 = mask*bgmask
+    mask2 = mask | bgmask
     if deg < 0:
         # Calculate median background of entire frame
-        bg += np.median(dataim[np.where(mask2)])
+        bg += np.median(dataim[~mask2])
 
     elif deg is None:
         # No background subtraction
@@ -373,28 +372,27 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
         for j in tqdm(range(ny)):
             nobadpixels = False
             # Create x indices for background sections of frame
-            xvals = np.where(bgmask[j] == 1)[0]
+            xvals = np.where(~bgmask[j])[0]
             # If too few good pixels on either half of detector then
             # compute average
-            too_few_pixels = (np.sum(bgmask[j, :int(nx/2)]) < deg
-                              or np.sum(bgmask[j, int(nx/2):nx]) < deg)
+            too_few_pixels = (np.sum(~bgmask[j, :int(nx/2)]) < deg
+                              or np.sum(~bgmask[j, int(nx/2):nx]) < deg)
             if too_few_pixels:
                 degs[j] = 0
             while not nobadpixels:
                 try:
-                    goodxvals = xvals[np.where(bgmask[j, xvals])]
+                    goodxvals = xvals[~bgmask[j, xvals]]
                 except:
                     # FINDME: Need to change this except to only catch the
                     # specific type of exception we expect
                     print('column: ', j, 'xvals: ', xvals)
-                    print(np.where(mask[j, xvals]))
+                    print(np.where(~mask[j, xvals]))
                     return
                 dataslice = dataim[j, goodxvals]
                 # Check for at least 1 good x value
                 if len(goodxvals) == 0:
                     nobadpixels = True  # exit while loop
                     # Use coefficients from previous row
-
                 else:
                     # Fit along spatial direction with a polynomial of
                     # degree 'deg'
@@ -434,7 +432,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
 
                     # Mask data point if > threshold
                     if stdevs[loc] > threshold:
-                        bgmask[j, goodxvals[loc]] = 0
+                        bgmask[j, goodxvals[loc]] = True
                     else:
                         nobadpixels = True  # exit while loop
 
@@ -474,7 +472,7 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
     img : np.ndarray
        Single exposure frame.
     mask : np.ndarray
-       Mask to remove the orders.
+       A boolean mask to remove the orders, where True values are masked.
     sigma : float; optional
        Sigma to remove above. Default is 5.
     bkg_estimator : str; optional
@@ -499,6 +497,9 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
         bkg = MMMBackground()
     elif bkg_estimator.lower() == 'median':
         bkg = MedianBackground()
+    else:
+        raise ValueError('Unrecognized bkg_estimator setting, '
+                         f'{bkg_estimator.lower()}')
 
     b = Background2D(img, box,
                      filter_size=filter_size,
@@ -508,20 +509,29 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
     return b.background
 
 
-def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 2, 3], isplots=0):
+def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 4, 4]):
     """Fit sky background with out-of-spectra data. Optimized to remove
     the 1/f noise in the NIRISS spectra (works in the y-direction).
 
     Parameters
     ----------
-    isplots : bool; optional
-       Plots intermediate steps for the background fitting routine.
-       Default is False.
+    data : Xarray Dataset
+        The Dataset object.
+    order_mask : np.ndarray
+       A boolean mask to remove the orders, where True values are part of
+       the orders.
+    readnoise : float; optional
+        The read noise level of the image in the same units as the data.
+        Used to generate the noise model of the image. Default value is 11.
+    sigclip : interable; optional
+       A list or array corresponding to the
+       sigma-level which should be clipped in the cosmic
+       ray removal routine. Default is [4, 4, 4].
 
     Returns
     -------
-    data : object
-       data object now contains new attribute `bkg_removed`.
+    data : Xarray Dataset
+       The updated Dataset object now contains new attribute `bkg_removed`.
     """
     # Removes cosmic rays
     # Loops through niters cycles to make sure all pesky
@@ -532,16 +542,16 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 2, 3], isplots=0):
     for i in tqdm(range(len(data.data))):
 
         ccd = CCDData((data.data[i])*units.electron)
-        mask = np.zeros(data.data[i].shape)
+        mask = np.zeros(data.data[i].shape, dtype=bool)
 
         for n in range(len(sigclip)):
             m1 = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise,
                                          sigclip=sigclip[n])
             ccd = CCDData(m1.data*units.electron)
-            mask[m1.mask] += 1
+            mask[m1.mask] = True
 
         rm_crs[i] = m1.data
-        rm_crs[i][mask >= 1] = np.nan
+        rm_crs[i][mask] = np.nan
 
         # removal from background
         rm_crs[i] = clipping.gauss_removal(rm_crs[i], ~order_mask,

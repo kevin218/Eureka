@@ -8,12 +8,12 @@ from . import fitters
 from . import gradient_fitters
 from .utils import COLORS, color_gen
 from ..lib import plots, util
-from ..lib.split_channels import split
+from ..lib.split_channels import get_trim, split
 
 
 class LightCurve(m.Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist,
-                 parameters, unc=None, time_units='BJD',
+                 parameters, freenames, unc=None, time_units='BJD',
                  name='My Light Curve', share=False, white=False,
                  multwhite=False, nints=[], **kwargs):
         """
@@ -33,9 +33,11 @@ class LightCurve(m.Model):
             The open log in which notes from this step can be added.
         unc : sequence
             The uncertainty on the flux
-        parameters : str or object
-            The orbital parameters of the star/planet system,
-            may be a path to a JSON file or a parameter object.
+        parameters : eureka.lib.readEPF.Parameters
+            The Parameters object containing the fitted parameters
+            and their priors.
+        freenames : list
+            The specific names of all fitted parameters (e.g., including _ch#)
         time_units : str; optional
             The time units.
         name : str; optional
@@ -65,7 +67,7 @@ class LightCurve(m.Model):
         - Jan. 15, 2022 Megan Mansfield
             Added ability to share fit between all channels
         - Oct. 2022 Erin May
-            Added ability to joint fit WLCs with different time arrays    
+            Added ability to joint fit WLCs with different time arrays
         """
         # Initialize the model
         super().__init__(**kwargs)
@@ -77,6 +79,7 @@ class LightCurve(m.Model):
         self.nchannel = nchannel
         self.multwhite = multwhite
         self.nints = nints
+        self.freenames = freenames
         if self.share or self.multwhite:
             self.nchannel_fitted = self.nchannel
             self.fitted_channels = np.arange(self.nchannel)
@@ -109,9 +112,20 @@ class LightCurve(m.Model):
         self.unc_fit = np.ma.copy(self.unc)
 
         if hasattr(parameters, 'scatter_mult'):
-            self.unc_fit *= parameters.scatter_mult.value
+            for chan in range(self.nchannel_fitted):
+                trim1, trim2 = get_trim(nints, chan)
+                name = 'scatter_mult'
+                if chan > 0:
+                    name += f'_ch{chan}'
+                self.unc_fit[trim1:trim2] *= getattr(parameters, name).value
         elif hasattr(parameters, 'scatter_ppm'):
-            self.unc_fit[:] = parameters.scatter_ppm.value/1e6
+            for chan in range(self.nchannel_fitted):
+                trim1, trim2 = get_trim(nints, chan)
+                name = 'scatter_ppm'
+                if chan > 0:
+                    name += f'_ch{chan}'
+                self.unc_fit[trim1:trim2] *= \
+                    getattr(parameters, name).value/1e6
 
         # Place to save the fit results
         self.results = []
@@ -146,18 +160,6 @@ class LightCurve(m.Model):
         - Dec 29, 2021 Taylor Bell
             Updated documentation and reduced repeated code
         """
-        # Empty default fit
-        fit_model = None
-
-        model.time = self.time
-        model.multwhite = meta.multwhite
-
-        if fitter not in ['exoplanet', 'nuts']:
-            # Make sure the model is a CompositeModel
-            if not isinstance(model, m.CompositeModel):
-                model = m.CompositeModel([model])
-                model.time = self.time
-
         if fitter == 'lmfit':
             self.fitter_func = fitters.lmfitter
         elif fitter == 'lsq':
@@ -194,10 +196,10 @@ class LightCurve(m.Model):
         """
         # Make the figure
         for i, channel in enumerate(self.fitted_channels):
-            flux = self.flux
+            flux = np.ma.copy(self.flux)
             unc = np.ma.copy(self.unc_fit)
-            time = self.time
-            
+            time = np.ma.copy(self.time)
+
             if self.share and not meta.multwhite:
                 # Split the arrays that have lengths of the original time axis
                 flux, unc = split([flux, unc], meta.nints, channel)
@@ -207,14 +209,16 @@ class LightCurve(m.Model):
                                         meta.nints, channel)
 
             # Get binned data and times
-            if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
-               meta.nbin_plot > len(time):
+            if not meta.nbin_plot or meta.nbin_plot > len(time):
                 nbin_plot = len(time)
+                binned_time = time
+                binned_flux = flux
+                binned_unc = unc
             else:
                 nbin_plot = meta.nbin_plot
-            binned_time = util.binData_time(time, time, nbin_plot)
-            binned_flux = util.binData_time(flux, time, nbin_plot)
-            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+                binned_time = util.binData_time(time, time, nbin_plot)
+                binned_flux = util.binData_time(flux, time, nbin_plot)
+                binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
 
             fig = plt.figure(5103, figsize=(8, 6))
             fig.clf()
@@ -238,7 +242,7 @@ class LightCurve(m.Model):
             else:
                 wave = meta.wave[channel]
             # Format axes
-            ax.set_title(f'{meta.eventlabel} - Channel {channel} ' + 
+            ax.set_title(f'{meta.eventlabel} - Channel {channel} ' +
                          f'- {wave} microns')
             ax.set_xlabel(str(self.time_units))
             ax.set_ylabel('Normalized Flux', size=14)

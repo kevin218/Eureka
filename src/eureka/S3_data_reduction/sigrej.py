@@ -14,10 +14,11 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
         1D array of sigma values for each iteration of sigma rejection.
         Number of elements determines number of iterations.
     mask : byte array; optional
-        Same shape as Data, where 1 indicates the corresponding element in
-        Data is good and 0 indicates it is bad.  Only
+        Same shape as Data, where False indicates the corresponding element in
+        Data is good and True indicates it is bad.  Only
         rejection of good-flagged data will be further
-        considered.  This input mask is NOT modified in the caller.
+        considered.  This input mask is NOT modified in the caller. Defaults to
+        None where only non-finite data is masked.
     estsig : ndarray; optional
         [nsig] array of estimated standard deviations to
         use instead of calculated ones in each iteration.
@@ -49,8 +50,8 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
     -------
     ret : tuple
         This function returns a mask of accepted values in the data.  The
-        mask is a byte array of the same shape as Data.  In the mask, 1
-        indicates good data, 0 indicates an outlier in the corresponding
+        mask is a byte array of the same shape as Data.  In the mask, False
+        indicates good data, True indicates an outlier in the corresponding
         location of Data. fmean, fstddev, fmedian, and fmedstddev will also
         be updated and returned if they were passed in. All of these will be
         packaged together into a tuple.
@@ -63,8 +64,8 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
     median, using MEDSTDDEV. For each successive iteration and value of
     sigma SIGREJ recalculates the median and standard deviation from
     the set of 'good' (not masked) points, and uses these new values in
-    calculating further outliers. The final mask contains a value of 1
-    for every 'inlier' and 0 for every outlying data point.
+    calculating further outliers. The final mask contains a value of False
+    for every 'inlier' and True for every outlying data point.
 
     History:
 
@@ -102,8 +103,8 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
         >>>                         fmedstddev=True)
 
         >>> print(q)
-        [True False True False True True True True True True True True
-        True]
+        [False True False True False False False False False False False False
+        False]
         >>> print(w)
         [[66.          65.5       ]
         [313.02675604  181.61572819]]
@@ -125,8 +126,12 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
         nsig = 1
         sigma = [sigma]
 
+    # Default mask: only non-finite values are bad
     if mask is None:
-        mask = np.ones(dims, bool)
+        mask = ~np.isfinite(data)
+
+    # Apply the mask
+    data = np.ma.masked_where(mask, data)
 
     # defining estsig makes the logic below easier
     # if estsig is None:
@@ -156,19 +161,19 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
             for j in np.arange(dims[0]):
                 for i in np.arange(dims[1]):
                     ival[0, iter, j, i] = \
-                        np.median(data[:, j, i][np.where(mask[:, j, i])])
+                        np.ma.median(data[:, j, i])
             # note: ival is slicing
             ival[1, iter] = estsig[iter]
 
             # Fixes
-            count = np.sum(mask, axis=axis)
+            count = np.sum(~mask, axis=axis)
             # note: ival is slicing
             (ival[1, iter])[np.where(count == 0)] = np.nan
 
         # Update mask
         # note: ival is slicing
-        mask *= ((data >= (ival[0, iter] - sigma[iter] * ival[1, iter])) &
-                 (data <= (ival[0, iter] + sigma[iter] * ival[1, iter])))
+        mask |= ((data < (ival[0, iter] - sigma[iter] * ival[1, iter])) |
+                 (data > (ival[0, iter] + sigma[iter] * ival[1, iter])))
 
     # the return arrays
     ret = (mask,)
@@ -177,8 +182,8 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
 
     # final calculations
     if retfmean or retfstddev:
-        count = np.sum(mask, axis=axis)
-        fmean = np.nansum(data*mask, axis=axis)
+        count = np.sum(~mask, axis=axis)
+        fmean = np.nansum(data*~mask, axis=axis)
 
         # calculate only where there are good pixels
         goodvals = np.isfinite(fmean) * (count > 0)
@@ -188,7 +193,7 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
             fmean[np.where(goodvals)] /= count[np.where(goodvals)]
 
         if retfstddev:
-            resid = (data-fmean)*mask
+            resid = (data-fmean)*~mask
             fstddev = np.sqrt(np.sum(resid**2, axis=axis)/(count-1))
             if np.ndim(fstddev) == 0:
                 if count == 1:

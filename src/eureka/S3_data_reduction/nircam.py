@@ -58,17 +58,34 @@ def read(filename, data, meta, log):
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
-    int_times = hdulist['INT_TIMES', 1].data
+
+    try:
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
+        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
+    except:
+        # FINDME: Need to only catch the particular exception we expect
+        log.writelog('  WARNING: Manually setting INTSTART to 0 and INTEND '
+                     'to NINTS')
+        data.attrs['intstart'] = 0
+        data.attrs['intend'] = sci.shape[0]
+
+    meta.filter = data.attrs['mhdr']['FILTER']
 
     if hdulist[0].header['CHANNEL'] == 'LONG':
         # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
-        if not hasattr(meta, 'poly_wavelength') or not meta.poly_wavelength:
+        if not meta.poly_wavelength:
             # Use the FITS data
             wave_2d = hdulist['WAVELENGTH', 1].data
-        elif hdulist[0].header['FILTER'] == 'F322W2':
+        elif meta.filter == 'F322W2':
             # The new way, using the polynomial model Everett Schlawin computed
-            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
+            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1], dtype=float)
+            if meta.wave_pixel_offset is not None:
+                if meta.firstFile:
+                    log.writelog('\n  Offsetting polynomial wavelength '
+                                 f'solution by {meta.wave_pixel_offset} '
+                                 'pixels.')
+                X += meta.wave_pixel_offset
             Xprime = (X - 1571)/1000
             wave_2d = (3.9269369110332657
                        + 0.9811653393151226*Xprime
@@ -77,9 +94,15 @@ def read(filename, data, meta, log):
             # Convert 1D array to 2D
             wave_2d = np.repeat(wave_2d[np.newaxis],
                                 hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
-        elif hdulist[0].header['FILTER'] == 'F444W':
+        elif meta.filter == 'F444W':
             # The new way, using the polynomial model Everett Schlawin computed
-            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
+            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1], dtype=float)
+            if meta.wave_pixel_offset is not None:
+                if meta.firstFile:
+                    log.writelog('\n  Offsetting polynomial wavelength '
+                                 f'solution by {meta.wave_pixel_offset} '
+                                 'pixels.')
+                X += meta.wave_pixel_offset
             Xprime = (X - 852.0756)/1000
             wave_2d = (3.928041104137344
                        + 0.979649332832983*Xprime)
@@ -87,7 +110,7 @@ def read(filename, data, meta, log):
             wave_2d = np.repeat(wave_2d[np.newaxis],
                                 hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
         # Increase pixel resolution along cross-dispersion direction
-        if hasattr(meta, 'expand') and meta.expand > 1:
+        if meta.expand > 1:
             log.writelog(f'    Super-sampling y axis from {sci.shape[1]} ' +
                          f'to {sci.shape[1]*meta.expand} pixels...',
                          mute=(not meta.verbose))
@@ -106,28 +129,36 @@ def read(filename, data, meta, log):
         data.attrs['shdr']['DISPAXIS'] = 1
 
         # FINDME: make this better for all filters
-        if hdulist[0].header['FILTER'] == 'F210M':
+        if meta.filter == 'F210M':
             # will be deleted at the end of S3
             wave_1d = np.ones_like(sci[0, 0]) * 2.095
             # Is used in S4 for plotting.
             meta.phot_wave = 2.095
-        elif hdulist[0].header['FILTER'] == 'F187N':
+        elif meta.filter == 'F187N':
             wave_1d = np.ones_like(sci[0, 0]) * 1.874
             meta.phot_wave = 1.874
-        elif (hdulist[0].header['FILTER'] == 'WLP4'
-              or hdulist[0].header['FILTER'] == 'F212N'):
+        elif meta.filter in ['WLP4', 'F212N']:
             wave_1d = np.ones_like(sci[0, 0]) * 2.121
             meta.phot_wave = 2.121
 
     # Record integration mid-times in BMJD_TDB
-    if (hasattr(meta, 'time_file') and meta.time_file is not None):
+    int_times = hdulist['INT_TIMES', 1].data
+    if meta.time_file is not None:
         time = read_time(meta, data, log)
+    elif len(int_times['int_mid_BJD_TDB']) == 0:
+        # There is no time information in the simulated data
+        if meta.firstFile:
+            log.writelog('  WARNING: The timestamps for simulated data '
+                         'are not in the .fits files, so using integration '
+                         'number as the time value instead.')
+        time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'],
+                           data.intend)
     else:
         time = int_times['int_mid_BJD_TDB']
-        if len(time) > len(sci):
-            # This line is needed to still handle the simulated data
-            # which had the full time array for all segments
-            time = time[data.attrs['intstart']:data.attrs['intend']]
+    if len(time) > len(sci):
+        # This line is needed to still handle the simulated data
+        # which had the full time array for all segments
+        time = time[data.attrs['intstart']:data.attrs['intend']]
 
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']
@@ -181,7 +212,7 @@ def flag_bg(data, meta, log):
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
     bgmask2 = data.mask[:, meta.bg_y2:]
-    if hasattr(meta, 'use_estsig') and meta.use_estsig:
+    if meta.use_estsig:
         bgerr1 = np.median(data.err[:, :meta.bg_y1])
         bgerr2 = np.median(data.err[:, meta.bg_y2:])
         estsig1 = [bgerr1 for j in range(len(meta.bg_thresh))]
@@ -220,13 +251,13 @@ def flag_ff(data, meta, log):
                  mute=(not meta.verbose))
 
     size = data.mask.size
-    prev_count = data.mask.values.sum()
+    prev_count = (~data.mask.values).sum()
 
     # Compute new pixel mask
     data['mask'] = sigrej.sigrej(data.flux, meta.bg_thresh, data.mask, None)
 
     # Count difference in number of good pixels
-    new_count = data.mask.values.sum()
+    new_count = (~data.mask.values).sum()
     diff_count = prev_count - new_count
     perc_rej = 100*(diff_count/size)
     log.writelog(f'    Flagged {perc_rej:.6f}% of pixels as bad.',
@@ -243,7 +274,7 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     dataim : ndarray (2D)
         The 2D image array.
     datamask : ndarray (2D)
-        An array of which data should be masked.
+        A boolean array of which data (set to True) should be masked.
     n : int
         The current integration.
     meta : eureka.lib.readECF.MetaClass
@@ -256,11 +287,12 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     bg : ndarray (2D)
         The fitted background level.
     mask : ndarray (2D)
-        The updated mask after background subtraction.
+        The updated boolean mask after background subtraction, where True
+        values should be masked.
     n : int
         The current integration number.
     """
-    if hasattr(meta, 'bg_dir') and meta.bg_dir == 'RxR':
+    if meta.bg_dir == 'RxR':
         bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_x1,
                                     meta.bg_x2, deg=meta.bg_deg,
                                     threshold=meta.p3thresh, isrotate=0,
@@ -293,7 +325,7 @@ def cut_aperture(data, meta, log):
     aperr : ndarray
         The noise values over the aperture region.
     apmask : ndarray
-        The mask values over the aperture region.
+        The mask values over the aperture region. True values should be masked.
     apbg : ndarray
         The background flux values over the aperture region.
     apv0 : ndarray
@@ -345,7 +377,7 @@ def flag_bg_phot(data, meta, log):
     mask = data.mask.values
     # FINDME: KBS removed estsig from inputs to speed up outlier detection.
     # Need to test performance with and without estsig on real data.
-    if hasattr(meta, 'use_estsig') and meta.use_estsig:
+    if meta.use_estsig:
         bgerr = np.median(data.err)
         estsig = [bgerr for j in range(len(meta.bg_thresh))]
     else:
@@ -355,17 +387,17 @@ def flag_bg_phot(data, meta, log):
     for i in tqdm(range(flux.shape[1]),
                   desc='  Looping over rows for outlier removal'):
         for j in range(flux.shape[2]):  # Loops over Columns
-            ngoodpix = np.sum(mask[:, i, j] == 1)
-            data['mask'][:, i, j] *= sigrej.sigrej(flux[:, i, j],
+            ngoodpix = np.sum(~mask[:, i, j])
+            data['mask'][:, i, j] |= sigrej.sigrej(flux[:, i, j],
                                                    meta.bg_thresh,
                                                    mask[:, i, j], estsig)
-            if not all(data['mask'][:, i, j].values):
+            if any(data['mask'][:, i, j].values):
                 # counting the amount of flagged bad pixels
-                nbadpix = ngoodpix - np.sum(data['mask'][:, i, j].values)
+                nbadpix = ngoodpix - np.sum(~data['mask'][:, i, j].values)
                 nbadpix_total += nbadpix
     flag_percent = nbadpix_total/np.product(flux.shape)*100
-    log.writelog(f"  {flag_percent:.5f} of the pixels have been flagged as "
-                 "outliers\n", mute=(not meta.verbose))
+    log.writelog(f"    {flag_percent:.5f}% of the pixels have been flagged as "
+                 "outliers", mute=(not meta.verbose))
 
     return data
 
@@ -394,7 +426,8 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
         The updated Dataset object after the 1/f correction has been completed.
     """
     if i == 0:
-        log.writelog('Correcting for 1/f noise...', mute=(not meta.verbose))
+        log.writelog('    Correcting for 1/f noise...',
+                     mute=(not meta.verbose))
 
     # Let's first determine which amplifier regions are left in the frame.
     # For NIRCam: 4 amplifiers, 512 pixels in x dimension per amplifier
@@ -403,9 +436,9 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
     pxl_in_window_bool = np.zeros(2048, dtype=bool)
     # pxl_in_window_bool is True for pixels which weren't trimmed away
     # by meta.xwindow
-    for j in range(len(pxl_idxs)):
-        if meta.xwindow[0] <= pxl_idxs[j] < meta.xwindow[1]:
-            pxl_in_window_bool[j] = True
+    for p in pxl_idxs:
+        if meta.xwindow[0] <= pxl_idxs[p] < meta.xwindow[1]:
+            pxl_in_window_bool[p] = True
     ampl_used_bool = np.any(pxl_in_window_bool.reshape((4, 512)), axis=1)
     # Example: if only the middle two amplifier are left after trimming:
     # ampl_used = [False, True, True, False]
@@ -417,9 +450,9 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
                   star_pos_x_untrim+meta.oneoverf_dist])
 
     use_cols = np.ones(2048, dtype=bool)
-    for k in range(2048):
-        if star_exclusion_area_untrim[0] <= k < star_exclusion_area_untrim[1]:
-            use_cols[k] = False
+    for p in pxl_idxs:
+        if star_exclusion_area_untrim[0] <= p < star_exclusion_area_untrim[1]:
+            use_cols[p] = False
     use_cols = use_cols[meta.xwindow[0]:meta.xwindow[1]]
     # Array with bools checking if column should be used for
     # background subtraction
@@ -431,14 +464,15 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
     edges = np.array([[0, 512], [512, 1024], [1024, 1536], [1536, 2048]])
 
     # Let's go through each amplifier region
-    for j in range(4):
-        if not ampl_used_bool[j]:
-            edges_all.append(np.zeros(2))
-            flux_all.append(np.zeros(2))
-            err_all.append(np.zeros(2))
-            mask_all.append(np.zeros(2))
+    for k in range(4):
+        if not ampl_used_bool[k]:
+            # Add a place-holder so indexing doesn't get messed up below
+            edges_all.append([])
+            flux_all.append([])
+            err_all.append([])
+            mask_all.append([])
             continue
-        edge = edges[j] - meta.xwindow[0]
+        edge = edges[k] - meta.xwindow[0]
         edge[np.where(edge < 0)] = 0
         use_cols_temp = np.copy(use_cols)
         inds = np.arange(len(use_cols_temp))
@@ -471,12 +505,13 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
         for k in range(4):
             if ampl_used_bool[k]:
                 edges_temp = edges_all[k]
+                temp_vals = np.ma.masked_where(mask_all[k], flux_all[k])
                 data.flux.values[i][:, edges_temp[0]:edges_temp[1]] -= \
-                    np.nanmedian(flux_all[k], axis=1)[:, None]
+                    np.ma.median(temp_vals, axis=1)[:, None]
     else:
-        log.writelog('This 1/f correction method is not supported.'
-                     ' Please choose between meanerr or median.',
-                     mute=(not meta.verbose))
+        raise AssertionError(f'The 1/f correction method {meta.oneoverf_corr} '
+                             'is not supported. Please choose between meanerr '
+                             'or median.')
 
     return data
 
@@ -511,7 +546,7 @@ def calibrated_spectra(data, meta, log):
     data['flux'].data *= 1e9*data.shdr['PIXAR_SR']
     data['err'].data *= 1e9*data.shdr['PIXAR_SR']
     data['v0'].data *= 1e9*data.shdr['PIXAR_SR']
-    
+
     # Update units
     data['flux'].attrs["flux_units"] = 'mJy'
     data['err'].attrs["flux_units"] = 'mJy'

@@ -30,9 +30,16 @@ Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. 
 
 
 maximum_cores
-''''''''''''''''''
+'''''''''''''
 Fraction of processor cores to use when computing the jump step and the ramp fits. Options are ``''none'``, ``'quarter'``, ``'half'``, or ``'all'``.
 
+jump_rejection_threshold
+''''''''''''''''''''''''
+A floating-point value that sets the sigma threshold for jump detection. The default is 4.0, but it is often best to increase this number for time-series observations to avoid excessively high false-positives. The optimal value will vary between different datasets and different instruments, but from experience we have found that values around 6.0--8.0 are often reasonable.
+
+minimum_sigclip_groups
+''''''''''''''''''''''
+The minimum number of groups to switch the jump detection to use sigma clipping. The default is 100.
 
 skip_*
 ''''''
@@ -47,20 +54,28 @@ Boolean. If True, allows user to supply a custom linearity correction file and o
 
 linearity_file
 ''''''''''''''
-The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
+The fully qualified path to the custom linearity correction file to use if custom_linearity is True. The linearity file should be a FITS file that is formatted like the ``linearity`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/linearity/reference_files.html#linearity-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__, with any desired changes made to the values of the file.
+
+custom_mask
+'''''''''''
+Boolean. If True, allows user to supply a custom bad pixel mask file and overwrite the default file.
+
+mask_file
+'''''''''
+The fully qualified path to the custom bad pixel mask file to use if custom_mask is True. The mask file should be a FITS file that is formatted like the ``mask`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/dq_init/reference_files.html#mask-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__ with any additional bad pixels marked by changing the pixel value to the "DO_NOT_USE" value (see `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags>`__ for more details on data quality flags)
 
 bias_correction
-'''''''''''''''''
+'''''''''''''''
 Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
 
 Note that this routine requires masking the trace; therefore, ``masktrace`` must be set to True.
 
 bias_group
-'''''''''''''''''
+''''''''''
 Integer or string.  Specifies which group number should be used when applying the bias correction.  For NIRSpec, we currently recommend using the first group (``bias_group`` = 1).  There is no group 0.  Users can also specify ``each``, which computes a unique bias correction for each group.
 
 bias_smooth_length
-'''''''''''''''''
+''''''''''''''''''
 Integer. When ``bias_correction = smooth``, this value is used as the window length during smoothing across integrations.
 
 custom_bias
@@ -80,7 +95,7 @@ expand_prev_group
 Boolean, if a given group is saturated, this option will mark the previous group as saturated as well.
 
 dq_sat_mode
-'''''''''''''''''
+'''''''''''
 Method to use for updating the saturation flags. Options are percentile (a pixel must be saturated in this percent of integrations to be marked as saturated), min, and defined (user can define which columns are saturated in a given group)
 
 dq_sat_percentile
@@ -116,7 +131,7 @@ bg_deg
 See Stage 3 inputs
 
 bg_method
-''''''
+'''''''''
 See Stage 3 inputs
 
 p3thresh
@@ -139,8 +154,8 @@ hide_plots
 ''''''''''
 See Stage 3 inputs
 
-bg_disp
-'''''''
+bg_row_by_row
+'''''''''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
 bg_x1
@@ -153,14 +168,14 @@ Right edge of exclusion region for row-by-row background subtraction.
 
 masktrace
 '''''''''
-Boolean, creates a mask centered on the trace prior to GLBS for curved traces
+Boolean, creates a mask centered on the trace prior to GLBS for curved traces. ``bg_y1`` and ``bg_y2`` will be ignored if ``masktrace`` is ``True`` since the trace will already be masked.
 
 window_len
 ''''''''''
 Smoothing length for the trace location
 
 expand_mask
-'''''''''''''''''
+'''''''''''
 Aperture (in pixels) around the trace to mask
 
 ignore_low
@@ -255,6 +270,9 @@ skip_*
 If True, skip the named step.
 
 .. note::
+   To produce flux-calibrated stellar spectra, it is recommended to set ``skip_flat_field`` and ``skip_photom`` to ``False``.
+
+.. note::
 	Note that some instruments and observing modes might skip a step either way! See the `calwebb_spec2 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_spec2.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
 
 
@@ -332,7 +350,7 @@ photometry
 Only used for photometry analyses. Set to True if the user wants to analyze a photometric dataset.
 
 calibrated_spectra
-''''''''''''
+''''''''''''''''''
 An optional input parameter. If False (default), convert the units of the images to electrons for easy noise estimation. If True (useful for flux-calibrated spectroscopy/photometry), the units of the images will be converted to mJy.
 
 poly_wavelength
@@ -481,11 +499,11 @@ Possible values:
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
 
 bg_method
-''''''
+'''''''''
 Sets the method for calculating the sigma for use in outlier rejection. Options: 'std', 'median', 'mean'. Defaults to 'std'.
 
-bg_disp
-'''''''
+bg_row_by_row
+'''''''''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
 bg_x1
@@ -565,13 +583,17 @@ skip_apphot_bg
 ''''''''''''''
 Only used for photometry analyses. Skips the background subtraction in the aperture photometry routine. If the user does the 1/f noise subtraction during S3, the code will subtract the background from each amplifier region. The aperture photometry code will again subtract a background flux from the target flux by calculating the flux in an annulus in the background. If the user wants to skip this background subtraction by setting an background annulus, skip_apphot_bg has to be set to True.
 
+aperture_shape
+''''''''''''''
+Only used for photometry analyses. Specifies the shape of the extraction aperture, either 'circle' for circular apertures, or 'hexagon' for hexagonal apertures, to better match the shape of the JWST primary mirror for defocused NIRCam photometry.
+
 photap
 ''''''
-Only used for photometry analyses. Size of photometry aperture in pixels. The shape of the aperture is a circle. If the center of a pixel is not included within the aperture, it is being considered. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If skyin and/or skywidth are also lists, all combinations of the three will be attempted.
+Only used for photometry analyses. Size of photometry aperture in pixels. If aperture_shape is 'circle', then photap is the radius of the circle. If aperture_shape is 'hexagon', then photap is the radius of the circle circumscribing the hexagon. If the center of a pixel is not included within the aperture, it is being considered. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If skyin and/or skywidth are also lists, all combinations of the three will be attempted.
 
 skyin
 '''''
-Only used for photometry analyses. Inner sky annulus edge, in pixels. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If photap and/or skywidth are also lists, all combinations of the three will be attempted.
+Only used for photometry analyses. Inner sky annulus edge, in pixels. If aperture_shape is 'circle', then skyin is the radius of the circle. If aperture_shape is 'hexagon', then skyin is the radius of the circle circumscribing the hexagon. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If photap and/or skywidth are also lists, all combinations of the three will be attempted.
 
 skywidth
 ''''''''
@@ -662,6 +684,10 @@ wave_min & wave_max
 '''''''''''''''''''
 Start and End of the wavelength range being considered. Set to None to use the shortest/longest extracted wavelength from Stage 3.
 
+wave_input
+'''''''''''''''''''
+Path to a user supplied txt file with pre-defined wavelength bins. Two columns (separated by whitespace): first column is the lower edge of the wavelength bins and the second column is the upper edge of the wavelength bins.
+
 
 allapers
 ''''''''
@@ -669,7 +695,7 @@ If True, run S4 on all of the apertures considered in S3. Otherwise the code wil
 
 
 mask_columns
-''''''''
+''''''''''''
 List of pixel columns that should not be used when constructing a light curve.  Absolute (not relative) pixel columns should be used. Figure 3102 is very helpful for identifying bad pixel columns.
 
 
@@ -757,10 +783,6 @@ compute_ld
 ''''''''''
 Whether or not to compute limb-darkening coefficients using exotic-ld.
 
-inst_filter
-'''''''''''
-Used by exotic-ld if compute_ld=True. The filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html (leave off the observatory and instrument so that JWST_NIRSpec_Prism becomes just Prism).
-
 metallicity
 '''''''''''
 Used by exotic-ld if compute_ld=True. The metallicity of the star.
@@ -779,11 +801,16 @@ Used by exotic-ld if compute_ld=True. The fully qualified path to the directory 
 
 exotic_ld_grid
 ''''''''''''''
-Used by exotic-ld if compute_ld=True. You can choose from kurucz (or 1D), stagger (or 3D), mps1, or mps2 model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
+Used by exotic-ld if compute_ld=True. You can choose from "kurucz" (or "1D"), "stagger" (or "3D"), "mps1", or "mps2" model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
+You can also use "custom" for a custom stellar intensity grid specified through the ``custom_si_grid`` parameter.
 
 exotic_ld_file
 ''''''''''''''
 Used by exotic-ld as throughput input file. If none, exotic-ld uses throughput from ancillary files. Make sure that wavelength is given in Angstrom!
+
+custom_si_grid
+''''''''''''''
+If exotic_ld_grid = custom, supply the fully qualified path to your stellar intensity grid file here.
 
 isplots_S4
 ''''''''''
@@ -838,9 +865,9 @@ allapers
 ''''''''
 Boolean to determine whether Stage 5 is run on all the apertures considered in Stage 4. If False, will just use the most recent output in the input directory.
 
-rescale_err
-'''''''''''
-Boolean to determine whether the uncertainties will be rescaled to have a reduced chi-squared of 1
+multwhite
+'''''''''
+Boolean to determine whether to run a joint fit of multiple white light curves. If True, must use inputdirlist.
 
 fit_par
 '''''''
@@ -860,10 +887,11 @@ run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP].
+[batman_tr, batman_ecl, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
 For theano-based differentiable functions, this can be one or more of the following:
-[starry, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
+[starry, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
+The POET transit and eclipse models assume a symmetric transit shape and, thus, are best-suited for planets with small eccentricities (e < 0.2).  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1)
 
 compute_ltt
 '''''''''''
@@ -871,10 +899,33 @@ Optional. Determines whether to correct the astrophysical model for the light tr
 The light travel time effect is caused by the finite speed of light which means that the signal from a secondary eclipse (which occurs on the far side of the orbit) arrive later than would be expected if the speed of light were infinite.
 Unless specified, compute_ltt is set to True for batman_ecl and starry models but set to False for batman_tr models (since the light travel time is insignificant during transit).
 
+num_planets
+'''''''''''
+Optional. By default, the code will assume that you are only fitting for a single exoplanet. If, however, you are fitting signals from multiple planets simultaneously, you must set ``num_planets`` to the number of planets being fitted.
+
+force_positivity
+''''''''''''''''
+Optional boolean. Used by the sinusoid_pc and poet_pc models. If True, force positive phase variations (phase variations that never go below the bottom of the eclipse). Physically speaking, a negative phase curve is impossible, but strictly enforcing this can hide issues with the decorrelation or potentially bias your measured minimum flux level. Either way, use caution when choosing the value of this parameter.
+
+mutualOccultations
+''''''''''''''''''
+Optional boolean, only relevant for starry astrophysical models. If True (default), then the model will account for planet-planet occultations; if False, then the model will not include planet-planet occultations (and will likely take longer since each planet needs to be modelled separately).
+
 manual_clip
 '''''''''''
 Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]]. If you want to clip the 10th integration, this would be index 9 since python uses zero-indexing. And the manual_clip start and end values are used to slice a numpy array, so they follow the same convention of *inclusive* start index and *exclusive* end index. In other words, to trim the 10th integrations, you would set manual_clip to [[9,10]].
 
+Catwoman Convergence Parameters
+'''''''''''''''''''''''''''''''
+The following two parameters can help in the case of convergence issues when using catwoman_tr.
+
+catwoman_max_err
+^^^^^^^^^^^^^^^^
+The ``max_err`` parameter used by catwoman; defaults to ``1.0``. For more information, see the relevant location of catwoman's `readthedocs page <https://catwoman.readthedocs.io/en/latest/tutorial.html#error-tolerance>`_ or the relevant location of `catwoman's API <https://catwoman.readthedocs.io/en/latest/API.html#catwoman.TransitModel>`_.
+
+catwoman_fac
+^^^^^^^^^^^^
+The ``fac`` parameter used by catwoman; defaults to ``None``. For more information, see the relevant location of catwoman's `readthedocs page <https://catwoman.readthedocs.io/en/latest/tutorial.html#error-tolerance>`_ or the relevant location of `catwoman's API <https://catwoman.readthedocs.io/en/latest/API.html#catwoman.TransitModel>`_.
 
 Limb Darkening Parameters
 '''''''''''''''''''''''''
@@ -882,7 +933,7 @@ The following three parameters control the use of pre-generated limb darkening c
 
 use_generate_ld
 ^^^^^^^^^^^^^^^
-If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld are linear, quadratic, 3-parameter and 4-parameter non-linear.
+If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld or spam. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld and spam are linear, quadratic, 3-parameter and 4-parameter non-linear.
 
 ld_file
 ^^^^^^^
@@ -919,11 +970,15 @@ The following set the parameters for running the least-squares fitter.
 
 lsq_method
 ^^^^^^^^^^
-Least-squares fitting method: one of any of the scipy.optimize.minimize least-squares methods.
+Least-squares fitting method: one of any of the scipy.optimize.minimize least-squares methods.  We recommend using Powell.
 
 lsq_tolerance
 ^^^^^^^^^^^^^
 Float to determine the tolerance of the scipy.optimize.minimize method.
+
+lsq_maxiter
+^^^^^^^^^^^
+Integer.  Maximum number of iterations to perform.  Set to None to use the default value for the given scipy.optimize.minimize method.
 
 
 Emcee Fitting Parameters
@@ -976,6 +1031,10 @@ NUTS Fitting Parameters
 '''''''''''''''''''''''
 The following set the parameters for running PyMC3's NUTS sampler. These options are described in more detail in: https://docs.pymc.io/en/v3/api/inference.html#pymc3.sampling.sample
 
+exoplanet_first
+'''''''''''''''
+Boolean to determine whether to run exoplanet optimizer before NUTS. This is generally not recommended, but it can sometimes be helpful if your initial manual guess is quite poor.
+
 tune
 ^^^^
 Number of iterations to tune. Samplers adjust the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition to the number specified in the draws argument.
@@ -992,31 +1051,35 @@ target_accept
 ^^^^^^^^^^^^^
 Adapt the step size such that the average acceptance probability across the trajectories are close to target_accept. Higher values for target_accept lead to smaller step sizes. A default of 0.8 is recommended, but setting this to higher values like 0.9 or 0.99 can help with sampling from difficult posteriors. Valid values are between 0 and 1 (exclusive).
 
-
-force_positivity
-''''''''''''''''
-Used by the sinusoid_pc model. If True, force positive phase variations (phase variations that never go below the bottom of the eclipse). Physically speaking, a negative phase curve is impossible, but strictly enforcing this can hide issues with the decorrelation or potentially bias your measured minimum flux level. Either way, use caution when choosing the value of this parameter.
+Plotting and Diagnostics
+''''''''''''''''''''''''
 
 interp
-''''''
+^^^^^^
 Boolean to determine whether the astrophysical model is interpolated when plotted. This is useful when there is uneven sampling in the observed data.
 
 isplots_S5
-''''''''''
+^^^^^^^^^^
 Sets how many plots should be saved when running Stage 5. A full description of these outputs is available here: :ref:`Stage 5 Output <s5-out>`
 
 nbin_plot
-'''''''''
+^^^^^^^^^
 The number of bins that should be used for figures 5104 and 5304. Defaults to 100.
 
 hide_plots
-''''''''''
+^^^^^^^^^^
 If True, plots will automatically be closed rather than popping up on the screen.
 
 
 topdir + inputdir
 '''''''''''''''''
 The path to the directory containing the Stage 4 JWST data. Directories containing spaces should be enclosed in quotation marks.
+
+
+topdir + inputdirlist
+'''''''''''''''''''''
+List of paths to the additional white lightcurve directories. topdir + inputdir contains the first white lightcurve, while this list contains additional lightcurves. Each item must be enclosed in quotation marks. Ensure there are brakets around the list.
+For example, to simultaneously fit white light curves of WASP-39b from NIRSpec/G395H NRS1 & NRS2 and MIRI/LRS, you might set ``topdir`` to ``/home/User/Data/WASP-39b``, ``inputdir`` to ``NIRSpec/NRS1/Stage4_white/S4_2024-06-04_nirspec_fs_template_run1/``, and ``inputdirlist`` to ``['NIRSpec/NRS2/Stage4_white/S4_2024-06-04_nirspec_fs_template_run1/','MIRI/LRS/Stage4_white/S4_2024-06-04_miri_lrs_template_run1/']``.
 
 
 topdir + outputdir
@@ -1034,31 +1097,48 @@ This file describes the transit/eclipse and systematics parameters and their pri
 
 ``Name    Value    Free    PriorPar1    PriorPar2    PriorType``
 
-``Name`` defines the specific parameter being fit for. Available options are:
-   - Transit and Eclipse Parameters
-      - ``rp`` - planet-to-star radius ratio, for the transit models.
-      - ``fp`` - planet-to-star flux ratio, for the eclipse models.
+``Name`` defines the specific parameter being fit for. When fitting for multiple channels simultaneously, you can add optionally add ``_ch#`` after the parameter (e.g., ``rprs``, ``rprs_ch1``, ``rprs_ch2``, etc.) to set channel-specific priors; if you don't manually set a different prior for each channel, the code will default to the prior for the 0th channel (e.g., ``rprs``).
+Available fitting parameters are:
+   - Transit and Eclipse Depth Parameters
+      - ``rp`` or ``rprs`` - planet-to-star radius ratio, for the transit models.
+      - ``fp`` or ``fpfs`` - planet-to-star flux ratio, for the eclipse models.
+      - ``rp2`` or ``rprs2`` - an additional planet-to-star radius ratio for use with the catwoman transit model to model transit limb-asymmetries.
+      - ``phi`` - the angle (in degrees) of the line separating the semi-circles defined by ``rp`` and ``rp2`` in the catwoman transit model. If ``phi`` is set to 90 degrees (the parameter's default value), the ``rp`` is the trailing hemisphere and ``rp2`` is the leading hemisphere. If ``phi`` is set to 0, then ``rp`` is the northern hemisphere and ``rp2`` is the southern hemisphere.
+      When fitting for multiple planets, add ``_pl#`` after the parameter (e.g., ``rprs``, ``rprs_pl1``, ``rprs_pl2``, etc.). This also applies to the planetaty orbital parameters below. Also be sure to set the ``num_planets`` parameter in your ECF (not EPF) to specify the number of planets being modelled simultaneously.
    - Orbital Parameters
       - ``per`` - orbital period (in days)
       - ``t0`` - transit time (in the same units as your input data - most likely BMJD_TDB)
       - ``time_offset`` - (optional), the absolute time offset of your time-series data (in days)
       - ``inc`` - orbital inclination (in degrees)
-      - ``a`` - a/R*, the ratio of the semimajor axis to the stellar radius
+      - ``a`` or ``ars`` - a/R*, the ratio of the semimajor axis to the stellar radius
       - ``ecc`` - orbital eccentricity
       - ``w`` - argument of periapsis (degrees)
+      - ``t_secondary`` - (optional) time of secondary eclipse
       - ``Rs`` - the host star's radius in units of solar radii.
 
-         This parameter is recommended for batman_ecl fits as it allows for a conversion of a/R* to physical units in order to account for light travel time.
+         This parameter is recommended for batman_ecl and poet_ecl fits as it allows for a conversion of a/R* to physical units in order to account for light travel time.
          If not provided for batman_ecl fits, the finite speed of light will not be accounted for.
          Fits with the starry model **require** that ``Rs`` be provided as starry always uses physical units. This parameter should be set to ``fixed``
          unless you really want to marginalize over ``Rs``.
    - Sinusoidal Phase Curve Parameters
       The sinusoid_pc phase curve model for the standard numpy models allows for the inclusion of up to four sinusoids into a single phase curve. The theano-based differentiable functions allow for any number of sinusoids.
 
-      - ``AmpCos1`` - Amplitude of the first cosine with one peak near eclipse (orbital phase 0.5)
-      - ``AmpSin1`` - Amplitude of the first sine with one peak near quadrature at orbital phase 0.75
-      - ``AmpCos2`` - Amplitude of the second cosine with two peaks near eclipse (orbital phase 0.5) and transit (orbital phase 0)
-      - ``AmpSin2`` - Amplitude of the second sine with two peaks near quadrature at orbital phases 0.25 and 0.75
+      - ``AmpCos1`` - Amplitude of the first cosine with one peak near eclipse (orbital phase 0.5). The units are in fractions of the eclipse depth.
+      - ``AmpSin1`` - Amplitude of the first sine with one peak near quadrature at orbital phase 0.75. The units are in fractions of the eclipse depth.
+      - ``AmpCos2`` - Amplitude of the second cosine with two peaks near eclipse (orbital phase 0.5) and transit (orbital phase 0). The units are in fractions of the eclipse depth.
+      - ``AmpSin2`` - Amplitude of the second sine with two peaks near quadrature at orbital phases 0.25 and 0.75. The units are in fractions of the eclipse depth.
+   - POET Phase Curve Parameters
+      The poet_pc phase curve model allows for the inclusion of up to two sinusoids into a single phase curve, but allows for the inclusion of offsets, thus making it functionally identical to sinusoid_pc.
+
+      - ``cos1_amp`` - Amplitude of the first cosine with period, per. The units are in fractions of the eclipse depth.
+      - ``cos1_off`` - Offset (in degrees) of the first cosine, relative to the time of secondary eclipse.
+      - ``cos2_amp`` - Amplitude of the second cosine with period, per/2. The units are in fractions of the eclipse depth.
+      - ``cos2_off`` - Offset (in degrees) of the second cosine, relative to the time of secondary eclipse.
+   - Quasi-Lambertian Phase Curve Parameters
+      The quasilambert_pc phase curve model allows modelling of thermal phase variations of airless planets or reflected light due to aerosols. The phase function follows the formalism of `Agol+2007 <https://ui.adsabs.harvard.edu/abs/2007MNRAS.374.1271A/abstract>`__ and has the form ``np.abs(np.cos((phi+quasi_offset*np.pi/180)/2))**quasi_gamma``, where ``phi`` is the orbital phase in radians with a value of zero at mid-eclipse.
+
+      - ``quasi_gamma`` - The exponential coefficient of the quasi-Lambertian phase function. A true Lambertian phase function is closely approximated with a value of 3.285.  A value below 2 produces unphysical results.
+      - ``quasi_offset`` - Offset in degrees East (i.e., before eclipse) of the quasi-Lambertian phase function, relative to the time of secondary eclipse.
    - Starry Phase Curve and Eclipse Mapping Parameters
       The starry model allows for the modelling of an arbitrarily complex phase curve by fitting the phase curve using spherical harmonics terms for the planet's brightness map
 
@@ -1076,29 +1156,55 @@ This file describes the transit/eclipse and systematics parameters and their pri
          ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``,
          ``quadratic``, ``kipping2013``, ``squareroot``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``,
          and ``4-parameter`` has four parameters ``u1, u2, u3, u4``.
+   - Stellar Variability Parameters, Flares
+      - ``lor_amp``, ``lor_amp_lhs``, ``lor_amp_rhs`` - The amplitude of the Lorentzian.  For a single basline/amplitude, use ``lor_amp``.  For different baselines/amplitudes, use ``lor_amp_lhs`` and ``lor_amp_rhs`` for the left and right hand sides, respectively.
+      - ``lor_hwhm``, ``lor_hwhm_lhs``, ``lor_hwhm_rhs`` - The half-width at half maximum.  For a symmetric Lorentzian, use ``lor_hwhm``.  For an asymmetric Lorentzian, use ``lor_hwhm_lhs`` and ``lor_hwhm_rhs`` for the left and right hand sides, respectively.
+      - ``lor_t0`` - The midpoint of the Lorentzian.
+      - ``lor_power`` - The exponent, ``p``, in a modified Lorentzian with functional form, ``1/(1+x^p)``.  The default is 2, representing a standard Lorentzian.
+
+         The Lorentzian model is defined as: ``lorentzian = 1 + lor_amp/(1 + x**lor_power)``, such that ``x = 2*(time-lor_t0)/lor_hwhm``.
+   - Stellar Variability Parameters, Quasi-Periodic Pulsations
+      - ``osc_amp`` - The initial amplitude of the sinusoidal function.
+      - ``osc_amp_decay`` - The rate of amplitude damping.
+      - ``osc_per`` - The initial period of the sinusoidal function.
+      - ``osc_per_decay`` - The rate of period damping.
+      - ``osc_t0`` - The start time of the oscillations.  The models returns unity flux for all times before ``osc_t0``.
+      - ``osc_t1`` - This offset determined the start phase of the sinusoidal function.
+
+         The time-dependent amplitude and period are defined as follows: ``amp = osc_amp * np.exp(-osc_amp_decay * (time - osc_t0))`` and ``per = osc_per * np.exp(-osc_per_decay * (time - osc_t0))``.  The damped oscillator model is then defined as: ``osc = 1 + amp * np.sin(2 * np.pi * (time - osc_t1) / per)``.  Note that ``osc[time < osc_t0] = 1``.
+
+   - Star Spot Parameters (using fleck_tr or starry)
+      - ``spotstari`` - The stellar inclination in degrees. Only matters when the star is rotating so that spots move appropriately relative to the planet, do not need to set unless you're accounting for stellar rotation (fleck slow mode, see ``spotrot`` below), then place priors based on inclination measurements of the stellar inclination. Recommend using fast mode if this is not known! If running multwhite or shared fits, this should be set to 'shared'.
+      - ``spotrot`` - The stellar rotation rate in days. For fleck, only assign if you'd like to run in slow mode! (In slow mode the star rotates and spots move appropriately. Otherwise, Eureka! will use fleck's fast mode which assumes the stellar rotation is >> transit time and spots are stationary). If running multwhite or shared fits, this should be set to 'shared'.
+      - ``spotcon#`` - The spot contrast ratio. Fleck only supports a single contrast ratio that is used for all spots, but for starry assign one value per spot. Replace the # with the spot number (starting with nothing (just ``spotcon``) for spot #0, and then ``spotcon1`` for the next spot)
+      - ``spotrad#`` - The spot radius relative to the star. Replace the # with the spot number (starting with nothing (just ``spotrad``) for spot #0, and then ``spotrad1`` for the next spot)
+      - ``spotlat#`` - The spot latitude in degrees. 0 is the center of the star (at time=0 if you have set the ``spotrot`` parameter). Replace the # with the spot number (starting with nothing (just ``spotlat``) for spot #0, and then ``spotlat1`` for the next spot)
+      - ``spotlon#`` - The spot longitude in degrees. 0 is the center of the star (at time=0 if you have set the ``spotrot`` parameter). Replace the # with the spot number (starting with nothing (just ``spotlon``) for spot #0, and then ``spotlon1`` for the next spot)
+      Fleck specific parameters:
+      - ``spotnpts`` - The number of temporal points to evalaute at. ~200-500 is good.
+      Starry specific parameters:
+      - ``spotnpts`` - The degree of spherical harmonics on the star (ydeg). ~30 is needed to appropriately model the spot.
+
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
       - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
 
          The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.).
          The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array.
          Polynomial fits should include at least ``c0`` for usable results.
-      - ``r0--r2`` and ``r3--r5`` - Coefficients for the first and second exponential ramp models.
+      - ``r0--r1`` and ``r2--r3`` - Coefficients for the first and second exponential ramp models.
 
-         The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``,
-         where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset.
-         If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``.
-         Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the ``r0`` and ``r2`` parameters (and ``r3`` and ``r5`` parameters).
-         One option is to set ``r0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``r0--r1`` and set ``r2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
+         The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local) + r2*np.exp(-r3*time_local) + 1``,
+         where ``r0--r1`` describe the first ramp, and ``r2--r3`` the second. ``time_local`` is the time relative to the first frame of the dataset.
+         If you only want to fit a single ramp, you can omit ``r2--r3`` or set them as fixed to ``0``.
+
       - ``h0--h5`` - Coefficients for the HST exponential + polynomial ramp model.
 
          The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch + h2) + h3*time_batch + h4*time_batch**2``,
-         where ``h0--h2`` describe the exponential ramp per HST orbit, ``h3--h4`` describe the polynomial (up to order two) per HST orbit,  ``h5`` is the orbital period of HST (in the same time units as the data, usually days), and ``h6`` is the time offset when computing ``time_batch``.  A good starting point for ``h5`` is 0.066422 days and ``h6`` is 0.03 days.  ``time_batch = (time_local-h6) % h5``.
-         If you want to fit a linear trend in time, you can omit ``h4`` or fix it to ``0``.
-         Users should not fit all three parameters from the exponential model at the same time as there are significant degeneracies between the ``h0`` and ``h2`` parameters.  
-         One option is to set ``h0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``h0--h1`` and set ``h2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
+         where ``h0--h1`` describe the exponential ramp per HST orbit, ``h2--h3`` describe the polynomial (up to order two) per HST orbit, ``h4`` is the orbital period of HST (in the same time units as the data, usually days), and ``h5`` is the time offset when computing ``time_batch``.  A good starting point for ``h4`` is 0.066422 days and ``h5`` is 0.03 days.  ``time_batch = (time_local-h5) % h4``.
+         If you want to fit a linear trend in time, you can omit ``h3`` or fix it to ``0``.
 
       - ``step0`` and ``steptime0`` - The step size and time for the first step function (useful for removing mirror segment tilt events).
-      
+
          For additional steps, simply increment the integer at the end (e.g. ``step1`` and ``steptime1``).  The change in flux is relative to the flux from the previous step.
       - ``xpos`` - Coefficient for linear decorrelation against drift/jitter in the x direction (spectral direction for spectroscopy data).
       - ``xwidth`` - Coefficient for linear decorrelation against changes in the PSF width in the x direction (cross-correlation width in the spectral direction for spectroscopy data).
@@ -1106,7 +1212,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``ywidth`` - Coefficient for linear decorrelation against changes in the PSF width in the y direction (spatial direction for spectroscopy data).
 
       - ``A`` and ``m`` - The natural logarithm (``ln``) of the covariance amplitude and lengthscale to use for the GP model specified in your Stage 5 ECF.
-      
+
          Significant care should be used when specifying the priors on these parameters as an excessively flexible GP model may end up competing with your astrophysical model.
          That said, there are no hard and fast rules about what your priors should be, and you will need to experiment to find what works best.
          If there are multiple kernels that are being added, the second kernel's parameters will be ``A1`` and ``m1``, and so on.
@@ -1154,8 +1260,8 @@ timescales. It is also possible to plot
 'fn' (the nightside flux from a sinusoidal phase curve),
 'pc_offset' (the sinusoidal offset of the phase curve),
 'pc_amp' (the sinusoidal amplitude of the phase curve),
-'pc_offset2' (the second order sinusoidal offset of the phase curve), and
-'pc_amp2' (the second order sinusoidal amplitude of the phase curve).
+'offset_order1' or 'offset_order2' (the first or second order sinusoidal offset of the phase curve), and
+'amp_order1' or 'amp_order2' (the first or second order sinusoidal amplitude of the phase curve).
 y_params can also be formatted as a list to make many different plots. A "cleaned" version
 of y_params will be used in the filenames of the figures and save files relevant for that y_param
 (e.g. '1/r1' would not work in a filename, so it becomes '1-r1').
@@ -1185,6 +1291,14 @@ x_unit
 ''''''
 The x-unit to use in the plot. This can be any unit included in astropy.units.spectral
 (e.g. um, nm, Hz, etc.) but cannot include wavenumber units.
+
+pc_nstep
+''''''''
+The number of time steps used to sample the phase variation when computing the phase curve amplitude and offset.  Defaults to 1000.
+
+pc_stepsize
+'''''''''''
+Computing uncertainties on the phase curve amplitude and offset can be slow; however, thinning the number of MCMC samples will speed up the calculation.  Increasing ``pc_stepsize`` to larger integer values will steadily decrease the computation time at the cost of accuracy.  Defaults to 50.  Use 1 for no thinning.
 
 ncol
 ''''

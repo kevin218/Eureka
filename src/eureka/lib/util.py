@@ -25,15 +25,13 @@ COMMON_IMPORTS = np.array([
 ], dtype=object)
 
 
-def readfiles(meta, log):
+def readfiles(meta):
     """Read in the files saved in topdir + inputdir and save them to a list.
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    log : logedit.Logedit
-        The current log.
 
     Returns
     -------
@@ -45,7 +43,8 @@ def readfiles(meta, log):
 
     # Look for files in the input directory
     for fname in glob.glob(meta.inputdir+'*'+meta.suffix+'.fits'):
-        meta.segment_list.append(fname)
+        if not ignore_nonscience(fname):
+            meta.segment_list.append(fname)
 
     # Need to allow for separated sci and cal directories for WFC3
     if len(meta.segment_list) == 0:
@@ -54,15 +53,15 @@ def readfiles(meta, log):
             meta.sci_dir = 'sci'
         sci_path = os.path.join(meta.inputdir, meta.sci_dir)+os.sep
         for fname in glob.glob(sci_path+'*'+meta.suffix+'.fits'):
-            meta.segment_list.append(fname)
+            if not ignore_nonscience(fname):
+                meta.segment_list.append(fname)
         # Add files from the cal directory if present
         if not hasattr(meta, 'cal_dir') or meta.cal_dir is None:
             meta.cal_dir = 'cal'
         cal_path = os.path.join(meta.inputdir, meta.cal_dir)+os.sep
         for fname in glob.glob(cal_path+'*'+meta.suffix+'.fits'):
-            meta.segment_list.append(fname)
-
-    meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
+            if not ignore_nonscience(fname):
+                meta.segment_list.append(fname)
 
     meta.num_data_files = len(meta.segment_list)
     if meta.num_data_files == 0:
@@ -71,15 +70,84 @@ def readfiles(meta, log):
                              f'You likely need to change the inputdir in '
                              f'{meta.filename} to point to the folder '
                              f'containing the "{meta.suffix}.fits" files.')
-    else:
-        mute = hasattr(meta, 'verbose') and not meta.verbose
-        log.writelog(f'\nFound {meta.num_data_files} data file(s) '
-                     f'ending in {meta.suffix}.fits',
-                     mute=mute)
 
-        with fits.open(meta.segment_list[-1]) as hdulist:
-            # Figure out which instrument we are using
-            meta.inst = hdulist[0].header['INSTRUME'].lower()
+    meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
+
+    meta = get_inst(meta, meta.segment_list[-1])
+
+    return meta
+
+
+def ignore_nonscience(filename):
+    """Determine whether a file is a TA-related file that should be ignored.
+
+    Parameters
+    ----------
+    filename : str
+        The fully qualified path to a FITS file.
+
+    Returns
+    -------
+    bool
+        True if the specified file is a TA-related file that should be ignored.
+        False otherwise.
+    """
+    with fits.open(filename) as hdulist:
+        try:
+            nonscience = (hdulist[0].header['EXP_TYPE'] in
+                          ['MIR_TACQ', 'MIR_TACONFIRM',
+                           'NRC_TACQ', 'NRC_TACONFIRM',
+                           'NRS_WATA', 'NRS_MSATA',
+                           'NRS_BOTA', 'NRS_TASLIT',
+                           'NRS_TACQ', 'NRS_CONFIRM',
+                           'NRS_TACONFIRM', 'NRS_VERIFY',
+                           'NIS_TACQ', 'NIS_TACONFIRM'])
+        except KeyError:
+            # HST data doesn't have EXP_TYPE, and we shouldn't need to worry
+            # about removing non-science data for HST anyway
+            nonscience = False
+    return nonscience
+
+
+def get_inst(meta, file):
+    """Get the instrument used to collect a FITS file.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    file : str
+        The filename of a FITS file.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object with meta.inst set (if not previously
+        set) to a lowercase string specifying the utilized instrument and with
+        meta.photometry set (if not previously set) to a boolean specifying
+        whether or not the data is photometric.
+    """
+    with fits.open(file) as hdulist:
+        # Figure out which instrument we are using
+        meta.inst = getattr(meta, 'inst',
+                            hdulist[0].header['INSTRUME'].lower())
+        if meta.inst != 'wfc3':
+            # Also figure out which pipeline we need to use
+            # (spectra or images)
+            exp_type = getattr(meta, 'exp_type',
+                               hdulist[0].header['EXP_TYPE'])
+
+            if 'IMAGE' in exp_type:
+                # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE,
+                # NRC_TSIMAGE, NIS_IMAGE, or NRS_IMAGING
+                meta.photometry = getattr(meta, 'photometry', True)
+            else:
+                # EXP_TYPE doesn't say image, so it should be a spectrum
+                # (or someone is putting weird files into Eureka!)
+                meta.photometry = getattr(meta, 'photometry', False)
+        else:
+            # WFC3 photometry isn't supported
+            meta.photometry = getattr(meta, 'photometry', False)
 
     return meta
 
@@ -150,8 +218,6 @@ def manual_clip(lc, meta, log):
 
     # Remove the requested integrations
     lc = lc.isel(time=time_inds)
-    if hasattr(meta, 'scandir'):
-        meta.scandir = meta.scandir[time_bool[::meta.nreads]]
 
     return meta, lc, log
 
@@ -164,7 +230,7 @@ def check_nans(data, mask, log, name=''):
     data : ndarray
         a data-like array (e.g. data, err, dq, ...).
     mask : ndarray
-        Input mask.
+        Input boolean mask, where mask is applied where True.
     log : logedit.Logedit
         The open log in which NaNs/Infs will be mentioned, if existent.
     name : str; optional
@@ -177,8 +243,9 @@ def check_nans(data, mask, log, name=''):
         Output mask where 0 will be written where the input data array has NaNs
         or infs.
     """
-    data = np.ma.masked_where(mask == 0, np.copy(data))
-    masked = np.ma.masked_invalid(data).mask
+    data = np.ma.masked_invalid(data)
+    data = np.ma.masked_where(mask, data)
+    masked = np.ma.getmaskarray(data)
     inan = np.where(masked)
     num_nans = np.sum(masked)
     num_pixels = np.size(data)
@@ -189,9 +256,9 @@ def check_nans(data, mask, log, name=''):
                      f"consider removing indices {inan} as their data quality "
                      f"may be poor.")
     elif num_nans > 0:
-        log.writelog(f"  {name} has {num_nans} NaNs/infs, which is "
+        log.writelog(f"    {name} has {num_nans} NaNs/infs, which is "
                      f"{perc_nans:.2f}% of all pixels.")
-        mask[inan] = 0
+        mask[inan] = True
     if perc_nans > 10:
         log.writelog("  WARNING: Your region of interest may be off the edge "
                      "of the detector subarray.  Masking NaN/inf regions and "
@@ -346,7 +413,6 @@ def find_fits(meta):
         # there are in children folders
         fnames = glob.glob(meta.inputdir+'**'+os.sep+'*'+meta.suffix+'.fits',
                            recursive=True)
-        fnames = sn.sort_nicely(fnames)
 
     if len(fnames) == 0:
         # If the code can't find any of the reqested files, raise an error
@@ -380,19 +446,31 @@ def find_fits(meta):
     if meta.inputdir[-1] != os.sep:
         meta.inputdir += os.sep
 
+    # Only get the relevant files
+    # Now also protecting against nested folders and against non-science files
+    relevant_fnames = [fname for fname in fnames if
+                       # check that the file is in the relevant folder
+                       (folder == os.sep.join(fname.split(os.sep)[:-1])
+                        # check that the file is not a TA-related file
+                        and not ignore_nonscience(fname))]
+    meta = get_inst(meta, relevant_fnames[-1])
+
     return meta
 
 
-def binData(data, nbin=100, err=False):
+def binData(data, mask=None, nbin=100, err=False):
     """Temporally bin data for easier visualization.
 
     Parameters
     ----------
     data : ndarray (1D)
         The data to temporally bin.
-    nbin : int, optional
+    mask : ndarray (1D); optional
+        A boolean array of bad values (marked with True) that should be masked.
+        Defaults to None, in which case only non-finite values will be masked.
+    nbin : int; optional
         The number of bins there should be. By default 100.
-    err : bool, optional
+    err : bool; optional
         If True, divide the binned data by sqrt(N) to get the error on the
         mean. By default False.
 
@@ -401,19 +479,24 @@ def binData(data, nbin=100, err=False):
     binned : ndarray
         The binned data.
     """
+    if mask is None:
+        mask = ~np.isfinite(data)
+
     # Make a copy for good measure
-    data = np.ma.copy(data)
-    data = np.ma.masked_invalid(data)
+    data = np.ma.masked_where(mask, data)
+
     # Make sure there's a whole number of bins
     data = data[:nbin*int(len(data)/nbin)]
+
     # Bin data
     binned = np.ma.mean(data.reshape(nbin, -1), axis=1)
     if err:
         binned /= np.sqrt(int(len(data)/nbin))
+
     return binned
 
 
-def binData_time(data, time, nbin=100, err=False):
+def binData_time(data, time, mask=None, nbin=100, err=False):
     """Temporally bin data for easier visualization.
 
     Parameters
@@ -422,6 +505,9 @@ def binData_time(data, time, nbin=100, err=False):
         The data to temporally bin.
     time : ndarray (1D)
         The time axis along which to bin
+    mask : ndarray (1D); optional
+        A boolean array of bad values (marked with True) that should be masked.
+        Defaults to None, in which case only non-finite values will be masked.
     nbin : int, optional
         The number of bins there should be. By default 100.
     err : bool, optional
@@ -433,25 +519,32 @@ def binData_time(data, time, nbin=100, err=False):
     binned : ndarray
         The binned data.
     """
-    # Make a copy for good measure
-    data = np.ma.copy(data)
-    data = np.ma.masked_invalid(data)
+    if mask is None:
+        mask = ~np.isfinite(data)
 
-    binned, _, _ = binned_statistic(time, data, 
-                                    statistic=np.ma.mean, 
+    # Make a copy for good measure
+    data = np.ma.masked_where(mask, data)
+
+    # Binned_statistic will copy data without keeping it a masked array
+    # so we have to manually remove invalid points
+    good_time = time[~np.ma.getmaskarray(data.mask)]
+    good_data = data[~np.ma.getmaskarray(data.mask)]
+
+    binned, _, _ = binned_statistic(good_time, good_data,
+                                    statistic='mean',
                                     bins=nbin)
     if err:
-        binned_count, _, _ = binned_statistic(time, data,
+        binned_count, _, _ = binned_statistic(good_time, good_data,
                                               statistic='count',
                                               bins=nbin)
         binned /= np.sqrt(binned_count)
 
-    # Need to mask invalid data in case there is an empty bin 
+    # Need to mask invalid data in case there is an empty bin
     # (leading to divide by zero)
     return np.ma.masked_invalid(binned)
 
 
-def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
+def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
     """Normalize a spectrum by its temporal mean.
 
     Parameters
@@ -463,8 +556,13 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
     opterr : ndarray; optional
         The noise array to normalize using optspec, by default None.
     optmask : ndarray (1D); optional
-        A mask array to use if optspec is not a masked array. Defaults to None
-        in which case only the invalid values of optspec will be masked.
+        A boolean mask array to use if optspec is not a masked array. Defaults
+        to None in which case only the invalid values of optspec will be
+        masked. Will mask the values where the mask value is set to True.
+    scandir : ndarray; optional
+        For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
+        Defaults to None which is fine for JWST data, but must be provided
+        for HST data (can be all zero values if not spatial scanning mode).
 
     Returns
     -------
@@ -482,8 +580,6 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
 
     # Normalize the spectrum
     if meta.inst == 'wfc3':
-        scandir = np.repeat(meta.scandir, meta.nreads)
-
         for p in range(2):
             iscans = np.where(scandir == p)[0]
             if len(iscans) > 0:
@@ -505,7 +601,7 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
 
 
 def get_mad(meta, log, wave_1d, optspec, optmask=None,
-            wave_min=None, wave_max=None):
+            wave_min=None, wave_max=None, scandir=None):
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 2D data.
 
@@ -526,14 +622,19 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     optspec : ndarray
         Optimally extracted spectra, 2D array (time, nx)
     optmask : ndarray (1D); optional
-        A mask array to use if optspec is not a masked array. Defaults to None
-        in which case only the invalid values of optspec will be masked.
+        A boolean mask array to use if optspec is not a masked array. Defaults
+        to None in which case only the invalid values of optspec will be
+        masked. Will mask the values where the mask value is set to True.
     wave_min : float; optional
         Minimum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose a lower limit.
     wave_maxf : float; optional
         Maximum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose an upper limit.
+    scandir : ndarray; optional
+        For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
+        Defaults to None which is fine for JWST data, but must be provided
+        for HST data (can be all zero values if not spatial scanning mode).
 
     Returns
     -------
@@ -553,14 +654,14 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
         iwmax = None
 
     # Normalize the spectrum
-    normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax])
+    normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax],
+                                  optmask=optmask[:, iwmin:iwmax],
+                                  scandir=scandir)
 
     if meta.inst == 'wfc3':
         # Setup 1D MAD arrays
         n_wav = normspec.shape[1]
         ediff = np.ma.zeros((2, n_wav))
-
-        scandir = np.repeat(meta.scandir, meta.nreads)
 
         # Compute the MAD for each scan direction
         for p in range(2):
@@ -573,7 +674,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
                 mad = np.ma.mean(ediff[p])
                 log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
                 setattr(meta, f'mad_scandir{p}', mad)
-        
+
         if np.all(scandir == scandir[0]):
             # Only scanned in one direction, so get rid of the other
             ediff = ediff[scandir[0]]
@@ -641,7 +742,7 @@ def read_time(meta, data, log):
 
 
 def manmask(data, meta, log):
-    '''Manually mask input bad pixels.
+    '''Manually mask input bad pixels specified through meta.manmask.
 
     Parameters
     ----------
@@ -661,7 +762,7 @@ def manmask(data, meta, log):
                  mute=(not meta.verbose))
     for i in range(len(meta.manmask)):
         colstart, colend, rowstart, rowend = meta.manmask[i]
-        data['mask'][:, rowstart:rowend, colstart:colend] = 0
+        data['mask'][:, rowstart:rowend+1, colstart:colend+1] = True
 
     return data
 
@@ -690,17 +791,17 @@ def interp_masked(data, meta, i, log):
         The updated Dataset object with requested pixels masked.
     """
     if i == 0:
-        log.writelog('  Interpolating masked values...',
+        log.writelog('    Interpolating masked values...',
                      mute=(not meta.verbose))
     flux = data.flux.values[i]
     mask = data.mask.values[i]
     nx = flux.shape[1]
     ny = flux.shape[0]
     grid_x, grid_y = np.mgrid[0:ny-1:complex(0, ny), 0:nx-1:complex(0, nx)]
-    points = np.where(mask == 1)
+    points = np.where(~mask)
     # x,y positions of not masked pixels
     points_t = np.array(points).transpose()
-    values = flux[np.where(mask == 1)]  # flux values of not masked pixels
+    values = flux[np.where(~mask)]  # flux values of not masked pixels
 
     # Use scipy.interpolate.griddata to interpolate
     if meta.interp_method == 'nearest':
@@ -794,6 +895,10 @@ def make_citations(meta, stage=None):
         # check if batman or GP is being used for transit/eclipse modeling
         if "batman_tr" in meta.run_myfuncs or "batman_ecl" in meta.run_myfuncs:
             other_cites.append("batman")
+        if "catwoman_tr" in meta.run_myfuncs:
+            other_cites.append("catwoman")
+        if "fleck_tr" in meta.run_myfuncs:
+            other_cites.append("fleck")
         if "starry" in meta.run_myfuncs:
             other_cites.append("starry")
         if "GP" in meta.run_myfuncs:
@@ -897,3 +1002,66 @@ def supersample(data, expand, type, axis=1):
               "or wave. No super-sampling applied.")
         zdata = data
     return zdata
+
+
+def add_meta_to_xarray(meta, data):
+    """Add meta information to the attributes of an xarray.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    data : Xarray Dataset
+        The updated Dataset object, meta parameters can be accessed in
+        data.attrs.
+    """
+    if not hasattr(meta, 'data_format'):
+        meta.data_format = 'eureka'
+
+    all_attrs = meta.params
+    for attr in all_attrs.keys():
+        attr_value = all_attrs[attr]
+        # None values cannot be saved, convert to string
+        if attr_value is None:
+            attr_value = 'None'
+        # Bibliography needs special handling
+        if attr == 'bibliography':
+            # Can't have different sized lists, must collapse
+            # citations for each citation flag.
+            attr_value = ['_ENDOFCITATION_'.join(citations)
+                          for citations in attr_value]
+        # Need to convert numpy arrays of strings to lists
+        if isinstance(attr_value, np.ndarray):
+            if '<U' in str(attr_value.dtype):
+                attr_value = attr_value.tolist()
+        # Save value to xarray attributes
+        data.attrs[attr] = attr_value
+
+
+def load_attrs_from_xarray(data):
+    """Function to load attrs from xarray file, ensuring
+    that potential conversions performed in add_meta_to_xarray()
+    are reversed.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The updated Dataset object, meta parameters can be accessed in
+        data.attrs.
+
+    Returns
+    -------
+    attrs : dict
+        Dictionary of attributes saved to the Xarray.
+    """
+    attrs = data.attrs
+    for attr in attrs.keys():
+        # Convert None strings back to None
+        if isinstance(attrs[attr], str) and attrs[attr] == 'None':
+            attrs[attr] = None
+        # Restructure bibliography correctly
+        if attr == 'bibliography':
+            attrs[attr] = [citations.split('_ENDOFCITATION_')
+                           for citations in attrs[attr]]
+
+    return attrs

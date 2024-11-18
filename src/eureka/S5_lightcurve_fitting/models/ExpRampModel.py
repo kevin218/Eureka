@@ -2,7 +2,7 @@ import numpy as np
 
 from .Model import Model
 from ...lib.readEPF import Parameters
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class ExpRampModel(Model):
@@ -20,6 +20,7 @@ class ExpRampModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'exp. ramp'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -34,7 +35,7 @@ class ExpRampModel(Model):
             self.parameters = Parameters(**params)
 
         # Update coefficients
-        self.coeffs = np.zeros((self.nchannel_fitted, 6))
+        self.coeffs = np.zeros((self.nchannel_fitted, 4))
         self._parse_coeffs()
 
     @property
@@ -45,23 +46,23 @@ class ExpRampModel(Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        self._time = time_array
-        if self.time is not None:
+        if time_array is not None:
+            self._time = np.ma.masked_invalid(time_array)
             # Convert to local time
             if self.multwhite:
-                self.time_local = []
+                self.time_local = np.ma.zeros(self.time.shape)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local.extend(time - time[0])
-                self.time_local = np.array(self.time_local)
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    time = self.time[trim1:trim2]
+                    self.time_local[trim1:trim2] = time-time[0]
             else:
                 self.time_local = self.time - self.time[0]
 
     def _parse_coeffs(self):
         """Convert dict of 'r#' coefficients into a list
-        of coefficients in increasing order, i.e. ['r0','r1','r2'].
+        of coefficients in increasing order, i.e. ['r0','r1'].
 
         Returns
         -------
@@ -75,13 +76,13 @@ class ExpRampModel(Model):
             else:
                 chan = 0
 
-            for i in range(6):
+            for i in range(4):
                 try:
                     if chan == 0:
                         self.coeffs[c, i] = self.parameters.dict[f'r{i}'][0]
                     else:
                         self.coeffs[c, i] = \
-                            self.parameters.dict[f'r{i}_{chan}'][0]
+                            self.parameters.dict[f'r{i}_ch{chan}'][0]
                 except KeyError:
                     pass
 
@@ -124,8 +125,7 @@ class ExpRampModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            r0, r1, r2, r3, r4, r5 = self.coeffs[chan]
-            lcpiece = (1+r0*np.exp(-r1*time + r2)
-                       + r3*np.exp(-r4*time + r5))
+            r0, r1, r2, r3 = self.coeffs[chan]
+            lcpiece = (1 + r0*np.exp(-r1*time) + r2*np.exp(-r3*time))
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal

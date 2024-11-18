@@ -38,6 +38,28 @@ def preparation_step(meta, log):
     meta, log = separate_direct(meta, log)
     meta, log = separate_scan_direction(meta, log)
 
+    if meta.segment_list[0].endswith('flt.fits'):
+        # FLT files subtract first from last, 2 reads
+        meta.nreads = 1
+    else:
+        meta.nreads_full = 0
+        nreads_list = []
+        for fname in meta.segment_list:
+            with fits.open(fname) as file:
+                nreads_temp = file[1].header['SAMPNUM']
+                if meta.nreads_full < nreads_temp:
+                    meta.nreads_full = nreads_temp
+                if nreads_temp not in nreads_list:
+                    nreads_list.append(nreads_temp)
+        meta.nreads = meta.nreads_full-1
+
+        # Input observations have inconsistent number of reads.
+        # Going to need to pad with NaNs.
+        if len(nreads_list) > 1:
+            log.writelog("WARNING: Input spectra have inconsistent numbers "
+                         "of reads. Padding arrays with NaN values to make "
+                         "all arrays the same size.")
+
     # Calculate centroid of direct image(s)
     # meta.centroid order is (y,x)
     meta.centroid = hst.imageCentroid(meta.direct_list, meta.centroidguess,
@@ -88,15 +110,21 @@ def get_reference_frames(meta, log):
     meta.int_end = 0
     meta.files_per_batch = 1
 
-    # Use the first two files by default
-    if not hasattr(meta, 'iref'):
-        raise AttributeError(
-            'You must set the meta.iref parameter in your ECF for WFC3 '
-            'observations. The recommended setting is [2, 3].'
-        )
-    
+    # Only have one reference frame for forward-only scans
+    if (len(meta.iref) > 1 and
+            (meta.n_scan0 == 0 or meta.n_scan1 == 0)):
+        meta.iref = [meta.iref[0],]
+
+    # Make sure reference frames exist
+    for i in range(len(meta.iref)):
+        while meta.iref[i] >= len(meta.segment_list):
+            if len(meta.iref) > 1:
+                meta.iref[i] -= 2
+            else:
+                meta.iref[i] -= 1
+
     # Make sure that the scan directions are in the right order
-    if meta.iref[0] % 2 != 0:
+    if len(meta.iref) > 1 and meta.iref[0] % 2 != 0:
         meta.iref = meta.iref[::-1]
 
     # Save the reference frame for each scan direction
@@ -108,14 +136,14 @@ def get_reference_frames(meta, log):
         data, meta = util.trim(data, meta)
         # Create bad pixel mask (1 = good, 0 = bad)
         data['mask'] = (['time', 'y', 'x'],
-                        np.ones(data.flux.shape, dtype=bool))
+                        np.zeros(data.flux.shape, dtype=bool))
         data['mask'] = util.check_nans(data['flux'], data['mask'],
                                        log, name='FLUX')
         data['mask'] = util.check_nans(data['err'], data['mask'],
                                        log, name='ERR')
         data['mask'] = util.check_nans(data['v0'], data['mask'],
                                        log, name='V0')
-        if hasattr(meta, 'manmask'):
+        if meta.manmask is not None:
             util.manmask(data, meta, log)
         # Need to add guess after trimming and before cut_aperture
         meta.guess.append(data.guess)
@@ -124,7 +152,7 @@ def get_reference_frames(meta, log):
         data = flag_bg(data, meta, log)
         data = background.BGsubtraction(data, meta, log, i)
         cut_aperture(data, meta, log)
-        
+
         # Save the reference values
         meta.subdata_ref.append(data.flux)
         meta.subdiffmask_ref.append(data.flatmask)
@@ -159,10 +187,14 @@ def conclusion_step(data, meta, log):
     log : logedit.Logedit
         The updated log.
     """
+
     meta.centroids = np.array(meta.centroids)
     meta.guess = np.array(meta.guess)
     meta.subdata_ref = np.array(meta.subdata_ref)
     meta.subdiffmask_ref = np.array(meta.subdiffmask_ref)
+
+    # Delete the no-longer needed scandir attribute
+    delattr(meta, 'scandir')
 
     return data, meta, log
 
@@ -320,26 +352,27 @@ def separate_scan_direction(meta, log):
     log : logedit.Logedit
         The updated log.
     """
-    if meta.num_data_files == 1:
-        # There is only one image
-        meta.scandir = np.zeros(meta.num_data_files, dtype=int)
-        meta.n_scan0 = 1
-        meta.n_scan1 = 0
-    else:
-        # Assign scan direction
-        meta.scandir = np.zeros(meta.num_data_files, dtype=int)
-        meta.n_scan0 = 0
-        meta.n_scan1 = 0
-        scan0 = meta.postarg2[0]
-        scan1 = meta.postarg2[1]
-        for m in range(meta.num_data_files):
-            if meta.postarg2[m] == scan0:
+    # Assign scan direction
+    meta.scandir = np.zeros(meta.num_data_files, dtype=int)
+    meta.n_scan0 = 0
+    meta.n_scan1 = 0
+    scan0 = meta.postarg2[0]
+    scan1 = meta.postarg2[1]
+    for m in range(meta.num_data_files):
+        if meta.postarg2[m] == scan0:
+            meta.n_scan0 += 1
+        elif meta.postarg2[m] == scan1:
+            meta.scandir[m] = 1
+            meta.n_scan1 += 1
+        else:
+            log.writelog(f'WARNING: Unknown scan direction for file {m},'
+                         f' {meta.segment_list[m]}.')
+            # Guess based on closest postarg2 value
+            if np.abs(meta.postarg2[m]-scan0) < np.abs(meta.postarg2[m]-scan1):
                 meta.n_scan0 += 1
-            elif meta.postarg2[m] == scan1:
+            else:
                 meta.scandir[m] = 1
                 meta.n_scan1 += 1
-            else:
-                log.writelog(f'WARNING: Unknown scan direction for file {m}.')
 
     log.writelog(f"# of files in scan direction 0: {meta.n_scan0}",
                  mute=(not meta.verbose))
@@ -394,36 +427,57 @@ def read(filename, data, meta, log):
         data.attrs['shdr'] = hdulist[1].header
         meta.nx = data.attrs['shdr']['NAXIS1']
         meta.ny = data.attrs['shdr']['NAXIS2']
-        meta.grism = data.attrs['mhdr']['FILTER']
+        meta.filter = data.attrs['mhdr']['FILTER']
         meta.detector = data.attrs['mhdr']['DETECTOR']
         meta.flatoffset = [[-1*data.attrs['shdr']['LTV2'],
                             -1*data.attrs['shdr']['LTV1']]]
         data.attrs['exptime'] = data.attrs['mhdr']['EXPTIME']
         flux_units = data.attrs['shdr']['BUNIT']
+        temp_scandir = meta.scandir[filename == meta.segment_list]
 
         # Determine if we are using IMA or FLT files
-        if filename.endswith('flt.fits'):
-            # FLT files subtract first from last, 2 reads
-            meta.nreads = 1
+        if not filename.endswith('flt.fits'):
+            meta.nreads_local = data.attrs['shdr']['SAMPNUM']
         else:
-            meta.nreads = data.attrs['shdr']['SAMPNUM']
+            meta.nreads_local = 1
 
-        sci = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flux
-        err = np.zeros((meta.nreads, meta.ny, meta.nx))  # Error
-        dq = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flags
-        jd = []
-        for j, rd in enumerate(range(meta.nreads, 0, -1)):
+        start = 0
+        end = meta.nreads_local
+        if meta.nreads_local != meta.nreads_full:
+            # File had one fewer read, figure out which side to pad with NaN
+            if temp_scandir == 0:
+                start = 0
+                end = meta.nreads_local
+            else:
+                start = 1
+                end = meta.nreads_local+1
+
+        shape = (meta.nreads_full, meta.ny, meta.nx)
+        sci = np.full(shape, np.nan)  # Flux
+        err = np.full(shape, np.nan)  # Error
+        dq = np.full(shape, np.nan)  # Flags
+        jd = np.full(meta.nreads_full, np.nan)  # Time
+        # Important to use nreads_local instead of nreads below
+        for j, rd in zip(range(start, end), range(meta.nreads_local, 0, -1)):
             sci[j] = hdulist['SCI', rd].data
             err[j] = hdulist['ERR', rd].data
             dq[j] = hdulist['DQ', rd].data
-            jd.append(2400000.5+hdulist['SCI', rd].header['ROUTTIME']
-                      - 0.5*hdulist['SCI', rd].header['DELTATIM']/3600/24)
-        jd = np.array(jd)
+            jd[j] = (2400000.5+hdulist['SCI', rd].header['ROUTTIME']
+                     - 0.5*hdulist['SCI', rd].header['DELTATIM']/3600/24)
+
+    # Find the indices where there were actually reads (to use lower down)
+    goodInds = ~np.all(np.isnan(sci), axis=(1, 2))
 
     ra = data.attrs['mhdr']['RA_TARG']*np.pi/180
     dec = data.attrs['mhdr']['DEC_TARG']*np.pi/180
     frametime = (2400000.5+0.5*(data.attrs['mhdr']['EXPSTART']
                                 + data.attrs['mhdr']['EXPEND']))
+
+    # Make sure there aren't any NaN times so that concat works later
+    # Increment by something smaller than t_exp for safety
+    t_exp = np.nanmedian(np.diff(jd))
+    jd[np.where(np.isnan(jd))[0]] = jd[np.where(np.isnan(jd))[0]-1] + t_exp/10
+
     if meta.horizonsfile is not None:
         horizon_path = os.path.join(meta.hst_cal,
                                     *meta.horizonsfile.split(os.sep))
@@ -434,20 +488,16 @@ def read(filename, data, meta, log):
         bjdutc = jd + bjd_corr/86400.
         # FINDME: this was utc_tt, but I believe it should have
         # been utc_tdb instead
-        if not hasattr(meta, 'leapdir') or meta.leapdir is None:
-            meta.leapdir = 'leapdir'
         leapdir_path = os.path.join(meta.hst_cal,
                                     *meta.leapdir.split(os.sep))
-        if leapdir_path[-1] != os.sep:
-            leapdir_path += os.sep
         time = utc_tt.utc_tdb(bjdutc, leapdir_path, log)
         frametime = utc_tt.utc_tdb(frametime+bjd_corr/86400., leapdir_path,
                                    log)
         time_units = 'BJD_TDB'
     else:
         if meta.firstFile:
-            print("WARNING: No Horizons file found. Using JD rather than "
-                  "BJD_TDB.")
+            log.writelog("WARNING: No Horizons file found. Using HJD_UTC "
+                         "rather than BJD_TDB.")
         time = jd
         time_units = 'HJD_UTC'
     data.attrs['frametime'] = frametime
@@ -461,22 +511,23 @@ def read(filename, data, meta, log):
                                      name='dq')
 
     # Calculate centroids for each frame
-    centroids = np.zeros((meta.nreads, 2))
+    centroids = np.full((meta.nreads_full, 2), np.nan)
     # Figure out which direct image is the relevant one for this observation
     image_number = np.where(meta.segment_list == filename)[0][0]
     centroid_index = meta.direct_index[image_number]
     # Use the same centroid for each read
-    centroids[:, 0] = meta.centroid[centroid_index][0]
-    centroids[:, 1] = meta.centroid[centroid_index][1]
+    # Only set the centroids of non-NaN reads
+    centroids[goodInds, 0] = meta.centroid[centroid_index][0]
+    centroids[goodInds, 1] = meta.centroid[centroid_index][1]
     meta.centroids.append(centroids)
 
     # Calculate trace
     if meta.firstInBatch:
-        log.writelog(f"  Calculating wavelength assuming {meta.grism} "
+        log.writelog(f"\n  Calculating wavelength assuming {meta.filter} "
                      f"filter/grism...", mute=(not meta.verbose))
     xrange = np.arange(0, meta.nx)
     # wavelength in microns
-    wave = hst.calibrateLambda(xrange, centroids[0], meta.grism)/1e4
+    wave = hst.calibrateLambda(xrange, centroids[goodInds][0], meta.filter)/1e4
     # Assume no skew over the detector
     wave_2d = wave*np.ones((meta.ny, 1))
     wave_units = 'microns'
@@ -519,9 +570,7 @@ def read(filename, data, meta, log):
     diffdata.attrs['mhdr'] = data.attrs['mhdr']
     diffdata.attrs['filename'] = data.attrs['filename']
 
-    diffdata['scandir'] = (['time'], np.repeat(meta.scandir[filename ==
-                                                            meta.segment_list],
-                                               meta.nreads))
+    diffdata['scandir'] = (['time'], np.repeat(temp_scandir, meta.nreads))
 
     return diffdata, meta, log
 
@@ -570,7 +619,7 @@ def flatfield(data, meta, log):
                                            time_units, name='flatmask')
 
     # Calculate reduced image
-    subflat[np.where(flatmask == 0)] = 1
+    subflat[np.where(flatmask)] = 1
     subflat[np.where(subflat == 0)] = 1
     data['flux'] /= subflat
 
@@ -598,43 +647,49 @@ def difference_frames(data, meta, log):
     log : logedit.Logedit
         The current log.
     '''
-    if meta.nreads > 1 and meta.firstInBatch:
-        log.writelog('  Differencing non-destructive reads...',
-                     mute=(not meta.verbose))
-
-    if meta.nreads > 1:
+    if meta.nreads_full > 1:
         # Subtract pairs of subframes
-        meta.nreads -= 1
+        if meta.firstInBatch:
+            log.writelog('  Differencing non-destructive reads...',
+                         mute=(not meta.verbose))
+
+        difftime = data.time[:-1] + 0.5*np.ediff1d(data.time)
         diffflux = np.zeros((meta.nreads, meta.ny, meta.nx))
         differr = np.zeros((meta.nreads, meta.ny, meta.nx))
         for n in range(meta.nreads):
             diffflux[n] = data.flux[n+1]-data.flux[n]
-            differr[n-1] = np.sqrt(data.err[n]**2+data.err[n-1]**2)
+            differr[n] = np.sqrt(data.err[n+1]**2+data.err[n]**2)
     else:
         # FLT data has already been differenced
+        difftime = data.time
         diffflux = data.flux
         differr = data.err
-    
+
     # Temporarily set this value for now
     meta.n_int = meta.nreads
 
-    diffmask = np.zeros((meta.nreads, meta.ny, meta.nx))
+    diffmask = np.ones((meta.nreads, meta.ny, meta.nx), dtype=bool)
     guess = np.zeros((meta.nreads), dtype=int)
     for n in range(meta.nreads):
+        if np.all(np.isnan(diffflux[n])):
+            # This file had one fewer read, so skip this "filler" read
+            continue
         diffmask[n] = data['flatmask'][0][0]
         if meta.nreads > 1:
             diffmask[n][np.where(differr[n] > meta.diffthresh *
-                        np.median(differr[n], axis=1)[:, np.newaxis])] = 0
+                        np.median(differr[n], axis=1)[:, np.newaxis])] = True
         else:
             # Don't use diffthresh for FLT files
             pass
 
         # Guess spectrum position only using subarray region
-        masked_data = diffflux[n, meta.ywindow[0]:meta.ywindow[1],
-                               meta.xwindow[0]:meta.xwindow[1]] * \
+        masked_data = np.ma.masked_where(
             diffmask[n, meta.ywindow[0]:meta.ywindow[1],
-                     meta.xwindow[0]:meta.xwindow[1]]
-        guess[n] = (np.median(np.where(masked_data > np.mean(masked_data))[0]) 
+                     meta.xwindow[0]:meta.xwindow[1]],
+            diffflux[n, meta.ywindow[0]:meta.ywindow[1],
+                     meta.xwindow[0]:meta.xwindow[1]])
+        guess[n] = (np.median(np.ma.where(masked_data >
+                                          np.ma.mean(masked_data))[0])
                     + meta.ywindow[0]).astype(int)
     # Guess may be skewed if first read is zeros
     if guess[0] < 0 or guess[0] > meta.ny:
@@ -644,9 +699,12 @@ def difference_frames(data, meta, log):
     if meta.firstInBatch:
         log.writelog('  Computing scan height...',
                      mute=(not meta.verbose))
-    scanHeight = []
-    for i in range(meta.n_int):
-        scannedData = np.sum(data.flux[i], axis=1)
+    scanHeight = np.zeros(meta.nreads)
+    for i in range(meta.nreads):
+        if np.all(np.isnan(diffflux[i])):
+            # This file had one fewer read, so skip this "filler" read
+            continue
+        scannedData = np.sum(diffflux[i], axis=1)
         xmin = np.min(guess)
         xmax = np.max(guess)
         scannedData /= np.median(scannedData[xmin:xmax+1])
@@ -654,16 +712,11 @@ def difference_frames(data, meta, log):
         yrng = range(meta.ny)
         spline = spi.UnivariateSpline(yrng, scannedData[yrng], k=3, s=0)
         roots = spline.roots()
-        scanHeight.append(roots[1]-roots[0])
+        scanHeight[i] = roots[1]-roots[0]
 
     # Create Xarray Dataset with updated time axis for differenced frames
     flux_units = data.flux.attrs['flux_units']
     time_units = data.flux.attrs['time_units']
-    if meta.nreads > 1:
-        difftime = data.time[:-1] + 0.5*np.ediff1d(data.time)
-    else:
-        # FLT data has already been differenced
-        difftime = data.time
     diffdata = xrio.makeDataset()
     diffdata['flux'] = xrio.makeFluxLikeDA(diffflux, difftime, flux_units,
                                            time_units, name='flux')
@@ -712,10 +765,10 @@ def flag_bg(data, meta, log):
                 x1 = (data.guess.values[iscan].min()-meta.bg_hw).astype(int)
                 x2 = (data.guess.values[iscan].max()+meta.bg_hw).astype(int)
                 bgdata1 = data.flux[iscan, :x1]
-                bgmask1 = data.flux[iscan, :x1]
+                bgmask1 = data.mask[iscan, :x1]
                 bgdata2 = data.flux[iscan, x2:]
-                bgmask2 = data.flux[iscan, x2:]
-                if hasattr(meta, 'use_estsig') and meta.use_estsig:
+                bgmask2 = data.mask[iscan, x2:]
+                if meta.use_estsig:
                     bgerr1 = np.median(data.err[iscan, :x1])
                     bgerr2 = np.median(data.err[iscan, x2:])
                     estsig1 = [bgerr1 for j in range(len(meta.bg_thresh))]
@@ -743,7 +796,7 @@ def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
     dataim : ndarray (2D)
         The 2D image array.
     datamask : ndarray (2D)
-        An array of which data should be masked.
+        A boolean array of which data (set to True) should be masked.
     datav0 : ndarray (2D)
         readNoise**2.
     datavariance : ndarray (2D)
@@ -760,7 +813,8 @@ def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
     bg : ndarray (2D)
         The fitted background level.
     mask : ndarray (2D)
-        The updated mask after background subtraction.
+        The updated boolean mask after background subtraction, where True
+        values should be masked.
     datav0 : ndarray (2D)
         readNoise**2+np.mean(bgerr**2)
     datavariance : ndarray (2D)
@@ -777,7 +831,7 @@ def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
 
     # Calculate variance assuming background dominated rather than
     # read noise dominated
-    bgerr = np.std(bg, axis=0)/np.sqrt(np.sum(datamask, axis=0))
+    bgerr = np.std(bg, axis=0)/np.sqrt(np.sum(~mask, axis=0))
     bgerr[np.logical_not(np.isfinite(bgerr))] = 0.
     datav0 += np.mean(bgerr**2)
     datavariance = abs(dataim) / meta.gain + datav0
@@ -815,23 +869,29 @@ def correct_drift2D(data, meta, log, m):
         return
 
     log.writelog("  Calculating 2D drift...", mute=(not meta.verbose))
-    drift2D = np.zeros((meta.n_int, 2))
+    drift2D = np.full((meta.n_int, 2), np.nan)
     if meta.ncpu == 1:
         # Only 1 CPU
         for n in range(meta.n_int):
+            if np.all(np.isnan(data.flux[n])):
+                # This file had one fewer read, so skip this "filler" read
+                continue
             # Get read number
             r = n % meta.nreads
             # Get index of reference frame
             # (0 = forward scan, 1 = reverse scan)
             p = data.scandir.values[n]
             writeDrift2D(hst.calcDrift2D((meta.subdata_ref[p][r] *
-                                          meta.subdiffmask_ref[p][r]),
-                                         (data.flux[n]*data.flatmask[n]),
+                                          ~meta.subdiffmask_ref[p][r]),
+                                         (data.flux[n]*~data.flatmask[n]),
                                          n))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
         for n in range(meta.n_int):
+            if np.all(np.isnan(data.flux[n])):
+                # This file had one fewer read, so skip this "filler" read
+                continue
             # Get read number
             r = n % meta.nreads
             # Get index of reference frame
@@ -839,8 +899,8 @@ def correct_drift2D(data, meta, log, m):
             p = data.scandir.values[n]
             res = pool.apply_async(hst.calcDrift2D,
                                    args=((meta.subdata_ref[p][r] *
-                                          meta.subdiffmask_ref[p][r]),
-                                         (data.flux[n]*data.flatmask[n]),
+                                          ~meta.subdiffmask_ref[p][r]),
+                                         (data.flux[n]*~data.flatmask[n]),
                                          n),
                                    callback=writeDrift2D)
         pool.close()
@@ -880,17 +940,13 @@ def correct_drift2D(data, meta, log, m):
         log.writelog("  Performing full-frame outlier rejection...",
                      mute=(not meta.verbose))
         for p in range(2):
-            iscan = np.where(meta.scandir == p)[0]*meta.nreads
-            if len(iscan) > 0:
+            iscans = np.where(data.scandir.values == p)[0]
+            if len(iscans) > 0:
                 for n in range(meta.nreads):
-                    # FINDME: The following commented-out code is outdated
-                    # y1 = data.guess[meta.iref+n] - meta.spec_hw
-                    # y2 = data.guess[meta.iref+n] + meta.spec_hw
-                    # estsig = [data.err[meta.iref+n, y1:y2]
-                    #           for j in range(len(meta.bg_thresh))]
-                    data.mask[iscan+n] = sigrej.sigrej(data.flux[iscan+n],
-                                                       meta.bg_thresh,
-                                                       data.mask[iscan+n])
+                    iscan = iscans[n::meta.nreads]
+                    data.mask[iscan] = sigrej.sigrej(data.flux[iscan],
+                                                     meta.bg_thresh,
+                                                     data.mask[iscan])
 
     log.writelog("  Performing sub-pixel drift correction...",
                  mute=(not meta.verbose))
@@ -901,9 +957,9 @@ def correct_drift2D(data, meta, log, m):
     kx, ky = (1, 1)  # FINDME: should be using (3,3)
     # Correct for drift
     for n in range(meta.n_int):
-        # Get index of reference frame
-        # (0 = forward scan, 1 = reverse scan)
-        p = meta.scandir[m]
+        if np.all(np.isnan(drift2D[n])):
+            # This file had one fewer read, so skip this "filler" read
+            continue
         # Need to swap ix and iy because of numpy
         spline = spi.RectBivariateSpline(iy, ix, data.flux[n], kx=kx,
                                          ky=ky, s=0)
@@ -917,14 +973,14 @@ def correct_drift2D(data, meta, log, m):
                                drift2D_int[n, 0]).flatten())
         # Need to be careful with shifting the mask. Do the shifting, and
         # mask whichever pixel was closest to the one that had been masked
-        spline = spi.RectBivariateSpline(iy, ix, data.mask[n], kx=kx,
-                                         ky=ky, s=0)
-        data.mask[n] = spline((iy-drift2D[n, 1] +
-                               drift2D_int[n, 1]).flatten(),
-                              (ix-drift2D[n, 0] +
-                               drift2D_int[n, 0]).flatten())
-        # Fractional masking won't work - make sure it is all integer
-        data.mask[n] = np.round(data.mask[n]).astype(int)
+        spline = spi.RectBivariateSpline(iy, ix, data.mask[n].data.astype(int),
+                                         kx=kx, ky=ky, s=0)
+        mask_temp = spline((iy-drift2D[n, 1] +
+                            drift2D_int[n, 1]).flatten(),
+                           (ix-drift2D[n, 0] +
+                            drift2D_int[n, 0]).flatten())
+        # Fractional masking won't work - make sure it is all boolean
+        data.mask[n] = np.round(mask_temp).astype(bool)
         spline = spi.RectBivariateSpline(iy, ix, data.variance[n], kx=kx,
                                          ky=ky, s=0)
         data.variance[n] = spline((iy-drift2D[n, 1] +
@@ -960,7 +1016,7 @@ def cut_aperture(data, meta, log):
     aperr : ndarray
         The noise values over the aperture region.
     apmask : ndarray
-        The mask values over the aperture region.
+        The mask values over the aperture region. True values should be masked.
     apbg : ndarray
         The background flux values over the aperture region.
     apv0 : ndarray
@@ -978,7 +1034,7 @@ def cut_aperture(data, meta, log):
 
     apdata = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
     aperr = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
-    apmask = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    apmask = np.ones((meta.n_int, meta.spec_hw*2+1, meta.subnx), dtype=bool)
     apbg = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
     apv0 = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
 
@@ -999,7 +1055,7 @@ def cut_aperture(data, meta, log):
             if ap_y1 < 0:
                 ap_y1 = 0
                 ap_y2 = 2*meta.spec_hw + 1
-        
+
             if ap_y2 > len(data.flux.values[n]):
                 ap_y2 = len(data.flux.values[n])
                 ap_y1 = len(data.flux.values[n]) - (2*meta.spec_hw + 1)

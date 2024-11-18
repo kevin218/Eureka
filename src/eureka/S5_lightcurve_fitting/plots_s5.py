@@ -1,19 +1,27 @@
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
-from mc3.stats import time_avg
+try:
+    from mc3.stats import time_avg
+except:
+    print("Could not import MC3. No Allan variance plots will be produced.")
 import corner
 from scipy import stats
+import fleck
+import astropy.units as unit
 try:
     import arviz as az
     from arviz.rcparams import rcParams as az_rcParams
+    import starry
 except:
     # PyMC3 hasn't been installed
     pass
 
 from ..lib import plots, util
 from ..lib.split_channels import split
+from .models.AstroModel import PlanetParams
 
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
@@ -92,47 +100,20 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         residuals = flux - model_lc
 
         # Get binned data and times
-        if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
-           meta.nbin_plot > len(time):
-            nbin_plot = len(time)
+        if not meta.nbin_plot or meta.nbin_plot > len(time):
+            binned_time = time
+            binned_flux = flux
+            binned_unc = unc
+            binned_normflux = flux/model_sys - gp
+            binned_res = residuals
         else:
             nbin_plot = meta.nbin_plot
-
-        binned_time = util.binData_time(time, time, nbin_plot)
-        binned_flux = util.binData_time(flux, time, nbin_plot)
-        binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
-        binned_normflux = util.binData_time(flux/model_sys-gp, time, nbin_plot)
-        binned_res = util.binData_time(residuals, time, nbin_plot)
-        binned_model_phys = util.binData_time(model_phys, time, nbin_plot)
-
-        if hasattr(meta, 'record_plot_data'):
-            if meta.record_plot_data:
-                np.savez_compressed(meta.outputdir+'time.npz',
-                                    data=time.data, mask=time.mask)
-                np.savez_compressed(meta.outputdir+'flux.npz',
-                                    data=flux.data, mask=flux.mask)
-                np.savez_compressed(meta.outputdir+'unc.npz',
-                                    data=unc.data, mask=unc.mask)
-                np.savez_compressed(meta.outputdir+'model_phys.npz',
-                                    data=model_phys.data)
-                np.savez_compressed(meta.outputdir+'model_sys.npz',
-                                    data=model_sys.data)
-        
-                np.savez_compressed(meta.outputdir+'binned_time.npz',
-                                    data=binned_time.data,
-                                    mask=binned_time.mask)
-                np.savez_compressed(meta.outputdir+'binned_flux.npz',
-                                    data=binned_flux.data,
-                                    mask=binned_flux.mask)
-                np.savez_compressed(meta.outputdir+'binned_unc.npz',
-                                    data=binned_unc.data,
-                                    mask=binned_unc.mask)
-                np.savez_compressed(meta.outputdir+'binned_normflux.npz',
-                                    data=binned_normflux.data)
-                np.savez_compressed(meta.outputdir+'binned_res.npz',
-                                    data=binned_res.data)
-                np.savez_compressed(meta.outputdir+'binned_model_phys.npz',
-                                    data=binned_model_phys.data)
+            binned_time = util.binData_time(time, time, nbin_plot)
+            binned_flux = util.binData_time(flux, time, nbin_plot)
+            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+            binned_normflux = util.binData_time(flux/model_sys - gp, time,
+                                                nbin_plot)
+            binned_res = util.binData_time(residuals, time, nbin_plot)
 
         fig = plt.figure(5101, figsize=(8, 6))
         plt.clf()
@@ -155,7 +136,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
 
         ax[2].errorbar(binned_time, binned_res*1e6, yerr=binned_unc*1e6,
                        fmt='.', color='w', ecolor=color, mec=color)
-        ax[2].plot(time, np.zeros_like(time), color='0.3', zorder=10)
+        ax[2].axhline(0, color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
@@ -251,15 +232,15 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             new_timet = new_time
 
         # Get binned data and times
-        if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None:
-            nbin_plot = 100
-        elif meta.nbin_plot > len(time):
-            nbin_plot = len(time)
+        if not meta.nbin_plot or meta.nbin_plot > len(time):
+            binned_time = time
+            binned_flux = flux
+            binned_unc = unc
         else:
             nbin_plot = meta.nbin_plot
-        binned_time = util.binData_time(time, time, nbin_plot)
-        binned_flux = util.binData_time(flux, time, nbin_plot)
-        binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+            binned_time = util.binData_time(time, time, nbin_plot)
+            binned_flux = util.binData_time(flux, time, nbin_plot)
+            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
 
         # Setup the figure
         fig = plt.figure(5104, figsize=(8, 6))
@@ -283,7 +264,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         sigma = np.ma.mean(binned_unc)
         max_astro = np.ma.max((model_phys-1))
         ax.set_ylim(-6*sigma, max_astro+6*sigma)
-        ax.set_xlim(np.min(time), np.max(time))
+        ax.set_xlim(np.ma.min(time), np.ma.max(time))
 
         # Save/show the figure
         if lc.white:
@@ -319,10 +300,8 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
                     zorder=10)
 
             # Set nice axis limits
-            sigma = np.ma.std(flux-model_phys)
-            max_astro = np.ma.max(model_phys)
             ax.set_ylim(-3*sigma, max_astro+3*sigma)
-            ax.set_xlim(np.min(time), np.max(time))
+            ax.set_xlim(np.ma.min(time), np.ma.max(time))
             # Save/show the figure
             if lc.white:
                 fname_tag = 'white'
@@ -337,7 +316,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
 
 
 def plot_rms(lc, model, meta, fitter):
-    """Plot an Allan plot to look for red noise. (Figs 5301)
+    """Create an Allan variance plot to look for red noise. (Figs 5301)
 
     Parameters
     ----------
@@ -366,6 +345,9 @@ def plot_rms(lc, model, meta, fitter):
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
+        if 'mc3.stats' not in sys.modules:
+            # If MC3 failed to load, exit for loop
+            break
         flux = np.ma.copy(lc.flux)
         model_lc = np.ma.copy(model_eval)
 
@@ -381,13 +363,17 @@ def plot_rms(lc, model, meta, fitter):
         else:
             time = lc.time
 
-        residuals = flux - model_lc
-        residuals = residuals[np.argsort(time)]
+        residuals = np.ma.masked_invalid(flux-model_lc)
+        residuals = residuals[np.ma.argsort(time)]
 
+        # Remove masked values
+        residuals = residuals[~np.ma.getmaskarray(residuals)]
+        # Compute RMS range
         maxbins = residuals.size//10
         if maxbins < 2:
             maxbins = residuals.size//2
-        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals, maxbins=maxbins,
+        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals,
+                                                    maxbins=maxbins,
                                                     binstep=1)
         normfactor = 1e-6
         fig = plt.figure(
@@ -409,15 +395,13 @@ def plot_rms(lc, model, meta, fitter):
                 label='Gaussian Std. Err.', zorder=1)
 
         # Format the main axes
-        ax.set_xlim(0.95, binsz[-1] * 2)
-        ax.set_ylim(stderr[-1] / normfactor / 2., stderr[0] / normfactor * 2.)
         ax.set_xlabel("Bin Size (N frames)", fontsize=14)
         ax.set_ylabel("RMS (ppm)", fontsize=14)
         ax.tick_params(axis='both', labelsize=12)
         ax.legend(loc=1)
 
         # Add second x-axis using time instead of N-binned
-        dt = (time[1]-time[0])*24*3600
+        dt = np.ma.min(np.ma.diff(time))*24*3600
 
         def t_N(N):
             return N*dt
@@ -465,7 +449,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         Moved plotting code to a separate function.
     """
     ndim = len(freenames)+1  # One extra for the 1D histogram
-    
+
     # Don't allow offsets or scientific notation in tick labels
     old_useOffset = rcParams['axes.formatter.useoffset']
     old_xtick_labelsize = rcParams['xtick.labelsize']
@@ -577,7 +561,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
                 if add_legend:
                     axes[i][j].legend(loc=6, bbox_to_anchor=(1.01, 0.5))
                 k += 1
-        fig.tight_layout(h_pad=0.0)
+        fig.get_layout_engine().set(h_pad=0)
 
         if lc.white:
             fname_tag = 'white'
@@ -691,7 +675,7 @@ def plot_res_distr(lc, model, meta, fitter):
         plt.clf()
 
         flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(np.array(lc.unc_fit))
+        unc = np.ma.copy(lc.unc_fit)
         model_lc = np.ma.copy(model_eval)
 
         if lc.share or meta.multwhite:
@@ -701,7 +685,8 @@ def plot_res_distr(lc, model, meta, fitter):
 
         residuals = flux - model_lc
         hist_vals = residuals/unc
-        hist_vals[~np.isfinite(hist_vals)] = np.nan  # Mask out any infinities
+        # Mask out any infinities or nans
+        hist_vals = np.ma.masked_invalid(hist_vals)
 
         n, bins, patches = plt.hist(hist_vals, alpha=0.5, color='b',
                                     edgecolor='b', lw=1)
@@ -795,7 +780,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
 
         ax[2].errorbar(time, residuals*1e6, yerr=unc*1e6, fmt='.',
                        color='w', ecolor=color, mec=color)
-        ax[2].plot(time, np.zeros_like(time), color='0.3', zorder=10)
+        ax[2].axhline(0, color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
@@ -825,13 +810,6 @@ def plot_eclipse_map(lc, flux_maps, meta):
         The posterior distribution of the fitted maps
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - August 14, 2023 Mark Hammond
-        Initial version.
     """
     for i, channel in enumerate(lc.fitted_channels):
         fig = plt.figure(5105, figsize=(12, 3))
@@ -914,14 +892,155 @@ def plot_eclipse_map(lc, flux_maps, meta):
                             wspace=0.38,
                             hspace=0.22)
 
+        fname = (f'figs{os.sep}fig5105_{fname_tag}_eclipse_map' +
+                 plots.figure_filetype)
+
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
+
+def plot_fleck_star(lc, model, meta, fitter):
+    """Plot the location and contrast of the fleck star spots (Figs 5307)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    """
+    for c in range(lc.nchannel_fitted):
+        channel = lc.fitted_channels[c]
+        if lc.nchannel_fitted > 1:
+            chan = channel
+        else:
+            chan = 0
+
+        # Initialize PlanetParams object
+        pl_params = PlanetParams(model, 0, chan)
+
+        # create arrays to hold values
+        spotrad = np.zeros(0)
+        spotlat = np.zeros(0)
+        spotlon = np.zeros(0)
+
+        for n in range(pl_params.nspots):
+            # read radii, latitudes, longitudes, and contrasts
+            if n > 0:
+                spot_id = f'{n}'
+            else:
+                spot_id = ''
+            spotrad = np.concatenate([
+                spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
+            spotlat = np.concatenate([
+                spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
+            spotlon = np.concatenate([
+                spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
+
+        if pl_params.spotnpts is None:
+            # Have a default spotnpts for fleck
+            pl_params.spotnpts = 300
+
+        fig = plt.figure(5307, figsize=(8, 6))
+        plt.clf()
+        ax = fig.gca()
+        star = fleck.Star(spot_contrast=pl_params.spotcon,
+                          u_ld=pl_params.u,
+                          rotation_period=pl_params.spotrot)
+        ax = star.plot(spotlon[:, None]*unit.deg,
+                       spotlat[:, None]*unit.deg,
+                       spotrad[:, None],
+                       pl_params.spotstari*unit.deg,
+                       planet=pl_params, time=pl_params.t0, ax=ax)
+
         if lc.white:
             fname_tag = 'white'
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5307_{fname_tag}_fleck_star_{fitter}'
+                 + plots.figure_filetype)
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
 
-        fname = (f'figs{os.sep}fig5105_{fname_tag}_eclipse_map' +
-                 plots.figure_filetype)
+
+def plot_starry_star(lc, model, meta, fitter):
+    """Plot the location and contrast of the starry star spots (Figs 5308)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.differentiable_models.CompositePyMC3Model  # noqa: E501
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    """
+    for c in range(lc.nchannel_fitted):
+        channel = lc.fitted_channels[c]
+        if lc.nchannel_fitted > 1:
+            chan = channel
+        else:
+            chan = 0
+
+        # Initialize PlanetParams object
+        pl_params = PlanetParams(model, 0, chan, eval=True)
+
+        # create arrays to hold values
+        spotrad = np.zeros(0)
+        spotlat = np.zeros(0)
+        spotlon = np.zeros(0)
+        spotcon = np.zeros(0)
+
+        for n in range(pl_params.nspots):
+            # read radii, latitudes, longitudes, and contrasts
+            if n > 0:
+                spot_id = f'{n}'
+            else:
+                spot_id = ''
+            spotrad = np.concatenate([
+                spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
+            spotlat = np.concatenate([
+                spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
+            spotlon = np.concatenate([
+                spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
+            spotcon = np.concatenate([
+                spotcon, [getattr(pl_params, f'spotcon{spot_id}'),]])
+
+        # Apply some conversions since inputs are in fleck units
+        spotrad *= 90
+        spotcon = 1-spotcon
+
+        if pl_params.spotnpts is None:
+            # Have a default spotnpts for starry
+            pl_params.spotnpts = 30
+
+        # Initialize map object and add spots
+        map = starry.Map(ydeg=pl_params.spotnpts,
+                         inc=pl_params.spotstari)
+        for n in range(pl_params.nspots):
+            map.spot(contrast=spotcon[n], radius=spotrad[n],
+                     lat=spotlat[n], lon=spotlon[n])
+
+        fig = plt.figure(5308, figsize=(8, 6))
+        plt.clf()
+        ax = fig.gca()
+        map.show(ax=ax)
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5308_{fname_tag}_starry_star_{fitter}'
+                 + plots.figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)

@@ -43,7 +43,7 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
         source positions in parallel.
     '''
     # Mask any clipped values
-    flux = np.ma.masked_where(~data.mask.values, data.flux.values)
+    flux = np.ma.masked_where(data.mask.values, data.flux.values)
 
     if meta.src_pos_type == 'hst':
         guess = data.guess.values[0]
@@ -156,7 +156,7 @@ def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
         src_ypos = shdr['SRCYPOS'] - meta.ywindow[0]
     elif meta.src_pos_type == 'weighted':
         # find the source location using a flux-weighted mean approach
-        src_ypos = source_pos_FWM(flux, meta, m, n, plot)
+        src_ypos, src_ywidth = source_pos_FWM(flux, meta, m, n, plot)
     elif meta.src_pos_type == 'gaussian':
         # find the source location using a gaussian fit
         src_ypos, src_ywidth = source_pos_gauss(flux, meta, m, n, plot)
@@ -174,7 +174,7 @@ def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
                         'position type. Options: header, gaussian, weighted,' +
                         ' max, hst, or a numeric value.')
 
-    if meta.src_pos_type == 'gaussian':
+    if meta.src_pos_type in ['weighted', 'gaussian']:
         return int(round(src_ypos)), src_ypos, src_ywidth, n
     else:
         return int(round(src_ypos)), src_ypos, np.zeros_like(src_ypos), n
@@ -185,8 +185,8 @@ def source_pos_median(flux, meta, m, n=0, plot=True):
 
     Parameters
     ----------
-    flux : ndarray
-        The 2D array of flux values.
+    flux : np.ma.masked_array (2D)
+        The 2D image from which to get the source position.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
@@ -228,8 +228,8 @@ def source_pos_max(flux, meta, m, n=0, plot=True):
 
     Parameters
     ----------
-    flux : ndarray
-        The 2D array of flux values.
+    flux : np.ma.masked_array (2D)
+        The 2D image from which to get the source position.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
@@ -276,8 +276,8 @@ def source_pos_FWM(flux, meta, m, n=0, plot=True):
 
     Parameters
     ----------
-    flux : ndarray
-        The 2D array of flux values.
+    flux : np.ma.masked_array (2D)
+        The 2D image from which to get the source position.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
@@ -292,37 +292,37 @@ def source_pos_FWM(flux, meta, m, n=0, plot=True):
     -------
     y_pos : float
         The central position of the star.
-
-    Notes
-    -----
-    History:
-
-    - 2021-06-24 Taylor Bell
-        Initial version
-    - 2021-07-14 Sebastian Zieba
-        Modified
-    - 2022-07-11 Caroline Piaulet
-        Add option to fit any integration (not hardcoded to be the first)
+    y_width : float
+        The estimated PSF-width of the star.
     '''
     x_dim = flux.shape[0]
 
+    # Get the brightest row for later comparison
     pos_max = source_pos_median(flux, meta, m, n=n, plot=False)
 
-    y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
+    ymin = pos_max-meta.spec_hw
+    if ymin < 0:
+        ymin = None
+    ymax = min(flux.shape[0], pos_max+meta.spec_hw+1)
+    y_pixels = np.arange(0, x_dim)[ymin:ymax]
 
-    sum_row = np.ma.sum(flux, axis=1)[pos_max-meta.spec_hw:
-                                      pos_max+meta.spec_hw]
-    sum_row -= (sum_row[0]+sum_row[-1])/2
+    # Take the median along each row to get a collapsed, 1D profile
+    med_row = np.ma.median(flux, axis=1)[ymin:ymax]
+    # Get the FWM-based position
+    y_pos = np.ma.sum(med_row*y_pixels)/np.ma.sum(med_row)
 
-    y_pos = np.ma.sum(sum_row*y_pixels)/np.ma.sum(sum_row)
+    # Compute squared pixel indices w.r.t. the centroid
+    y_pixels2 = (y_pixels - y_pos)**2
+    # Get FWM-based PSF width estimates
+    y_width = np.sqrt(np.ma.sum(med_row*y_pixels2)/np.ma.sum(med_row))
 
     # Diagnostic plot
     if meta.isplots_S3 >= 1 and plot:
         plots_s3.source_position(meta, x_dim, pos_max, m, n, isFWM=True,
-                                 y_pixels=y_pixels, sum_row=sum_row,
+                                 y_pixels=y_pixels, sum_row=med_row,
                                  y_pos=y_pos)
 
-    return y_pos
+    return y_pos, y_width
 
 
 def gauss(x, a, x0, sigma, off):
@@ -363,8 +363,8 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
 
     Parameters
     ----------
-    flux : ndarray
-        The 3D array of flux values.
+    flux : np.ma.masked_array (2D)
+        The 2D image from which to get the source position.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
@@ -380,7 +380,7 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
     -------
     y_pos : float
         The central position of the star.
-    y_width : int
+    y_width : float
         The std of the fitted Gaussian.
 
     Notes
@@ -399,9 +399,12 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
 
     # Data cutout around the maximum row
     pos_max = source_pos_median(flux, meta, m, n=n, plot=False)
-    y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
-    med_row = np.ma.median(flux, axis=1)[pos_max-meta.spec_hw:
-                                         pos_max+meta.spec_hw]
+    ymin = pos_max-meta.spec_hw
+    if ymin < 0:
+        ymin = None
+    ymax = min(flux.shape[0], pos_max+meta.spec_hw+1)
+    y_pixels = np.arange(0, x_dim)[ymin:ymax]
+    med_row = np.ma.median(flux, axis=1)[ymin:ymax]
 
     # Initial Guesses
     sigma0 = np.ma.sqrt(np.ma.sum(med_row*(y_pixels-pos_max)**2) /
@@ -410,7 +413,7 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
     p0 = [np.ma.max(med_row), pos_max, sigma0, np.ma.median(med_row)]
 
     # Fit
-    popt, pcov = curve_fit(gauss, y_pixels, med_row, p0, maxfev=10000)
+    popt, _ = curve_fit(gauss, y_pixels, med_row, p0, maxfev=10000)
 
     # Diagnostic plot
     if meta.isplots_S3 >= 1 and plot:
