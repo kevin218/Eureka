@@ -2,6 +2,7 @@ import numpy as np
 try:
     import pymc3 as pm
     import pymc3_ext as pmx
+    import arviz
 except:
     # PyMC3 hasn't been installed
     pass
@@ -11,7 +12,6 @@ from .likelihood import computeRedChiSq, update_uncertainty
 from . import plots_s5 as plots
 from .fitters import group_variables, load_old_fitparams, save_fit
 from ..lib.split_channels import get_trim
-import arviz as az
 
 
 def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
@@ -252,7 +252,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     # If pixel sampling, append best fit pixels to fit_params
     if "pixel_ydeg" in indep_vars:
-        trace_az = az.from_pymc3(trace, model=model.model)
+        trace_az = arviz.from_pymc3(trace, model=model.model)
         trace_fname = meta.outputdir+"S5_trace_map.nc"
         log.writelog(f'Saving map trace to {trace_fname}...')
         trace_az.to_netcdf(trace_fname)
