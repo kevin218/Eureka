@@ -48,7 +48,7 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     """
     # Group the different variable types
     freenames = lc.freenames
-    freepars = group_variables(model)[0]
+    freepars, _, _, _, indep_vars = group_variables(model)
     if meta.old_fitparams is not None:
         freepars = load_old_fitparams(lc, meta, log, freenames, 'exoplanet')
 
@@ -174,7 +174,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     """
     # Group the different variable types
     freenames = lc.freenames
-    freepars = group_variables(model)[0]
+    freepars, _, _, _, indep_vars = group_variables(model)
     if meta.old_fitparams is not None:
         freepars = load_old_fitparams(lc, meta, log, freenames, 'nuts')
     ndim = len(freenames)

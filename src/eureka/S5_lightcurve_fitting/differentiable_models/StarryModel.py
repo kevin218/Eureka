@@ -280,7 +280,6 @@ class StarryModel(PyMC3Model):
                                  np.pi*map_plot.render(projection="rect",
                                                        res=100))
 
-
         self.update(newparams)
 
     def eval(self, eval=True, channel=None, piecewise=False, **kwargs):
@@ -544,4 +543,3 @@ class StarryModel(PyMC3Model):
                 p_fit = newparams[-self.npix:]
                 self.starry_x = tt.dot(A, p_fit)
                 self.starry_X = system.design_matrix(self.time)
-
