@@ -35,6 +35,7 @@ def standard_spectrum(apdata, apmask, aperr):
     # Replace masked pixels with spectral neighbors
     apdata_cleaned = np.copy(apdata)
     aperr_cleaned = np.copy(aperr)
+
     for t, y, x in np.array(np.where(apmask)).T:
         # Do not extend to negative indices (short and long wavelengths
         # do not have similar profiles)
@@ -510,8 +511,8 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
 
     return profile
 
-
-def clean_median_flux(data, meta, log, m):
+    
+def get_clean(data, meta, log, medflux, mederr):
     """Computes a median flux frame that is free of bad pixels.
 
     Parameters
@@ -522,43 +523,16 @@ def clean_median_flux(data, meta, log, m):
         The metadata object.
     log : logedit.Logedit
         The current log.
-    m : int
-        The file number.
+    medflux : array
+        2D array of median flux
+    mederr : array
+        2D array of median flux uncertainties
 
     Returns
     -------
     data : Xarray Dataset
         The updated Dataset object.
     """
-    log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
-
-    if meta.inst == 'niriss':
-        return niriss.clean_median_flux(data, meta, log, m)
-    else:
-        # Compute median flux using masked arrays
-        flux_ma = np.ma.masked_where(data.mask.values, data.flux.values)
-        medflux = np.ma.median(flux_ma, axis=0)
-        # Compute median error array
-        err_ma = np.ma.masked_where(data.mask.values, data.err.values)
-        mederr = np.ma.median(err_ma, axis=0)
-
-        # Call subroutine
-        clean_flux = get_clean(data, meta, log, medflux, mederr)
-
-        # Assign (un)cleaned median frame to data object
-        data['medflux'] = (['y', 'x'], clean_flux)
-        data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
-
-        if meta.isplots_S3 >= 3:
-            plots_s3.median_frame(data, meta, m, clean_flux)
-
-    return data
-
-    
-def get_clean(data, meta, log, medflux, mederr):
-    """
-    """
-    # iy = data.flux.get_axis_num('y')
     nx = len(data.x)
     ny = len(data.y)
 
@@ -571,7 +545,6 @@ def get_clean(data, meta, log, medflux, mederr):
         if len(goodrow) > 0:
             f = spi.interp1d(x1, goodrow, 'linear',
                              fill_value='extrapolate')
-            # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
             interp_med[j] = f(xx)
         else:
             log.writelog(f'    Row {j}: Interpolation failed. No good pixels.')
@@ -648,13 +621,6 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
         The updated metadata object.
     log : logedit.Logedit
         The updated log.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-18, Taylor J Bell
-        Added optimize_wrapper to iterate over each frame.
     '''
     # Extract optimal spectrum with uncertainties
     log.writelog("  Performing optimal spectral extraction...",
@@ -664,9 +630,6 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
     data['optspec'] = (coords, np.zeros_like(data.stdspec))
     data['opterr'] = (coords, np.zeros_like(data.stdspec))
     data['optmask'] = (coords, np.zeros_like(data.stdspec, dtype=bool))
-    # data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
-    # data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
-    # data['optmask'] = (['time', 'x'], np.zeros(data.stdspec.shape, dtype=bool))
     data['optspec'].attrs['flux_units'] = data.flux.attrs['flux_units']
     data['optspec'].attrs['time_units'] = data.flux.attrs['time_units']
     data['optspec'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
@@ -676,11 +639,6 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
     data['optmask'].attrs['flux_units'] = 'None'
     data['optmask'].attrs['time_units'] = data.flux.attrs['time_units']
     data['optmask'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
-
-    # Select median frame over aperture region
-    # ap_y1 = int(meta.src_ypos-meta.spec_hw)
-    # ap_y2 = int(meta.src_ypos+meta.spec_hw+1)
-    # apmedflux = data.medflux[ap_y1:ap_y2].values
 
     # Perform optimal extraction on each of the frames
     iterfn = range(meta.int_start, meta.n_int)
@@ -700,18 +658,18 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
     else:
         norders = len(meta.orders)
         for n in iterfn:
-            for i in range(norders):
-                data['optspec'][n,:,i], data['opterr'][n,:,i], _ = \
-                    optimize(meta, apdata[n,:,:,i], apmask[n,:,:,i], 
-                             apbg[n,:,:,i], data.stdspec[n,:,i].values, 
-                             gain, apv0[n,:,:,i],
+            for k in range(norders):
+                data['optspec'][n, :, k], data['opterr'][n, :, k], _ = \
+                    optimize(meta, apdata[n, :, :, k], apmask[n, :, :, k], 
+                             apbg[n, :, :, k], data.stdspec[n,:,k].values, 
+                             gain, apv0[n, :, :, k],
                              p5thresh=meta.p5thresh,
                              p7thresh=meta.p7thresh,
                              fittype=meta.fittype,
                              window_len=meta.window_len,
                              deg=meta.prof_deg, windowtype=windowtype,
-                             n=n, m=m, meddata=apmedflux[:,:,i], 
-                             order=meta.orders[i])
+                             n=n, m=m, meddata=apmedflux[:, :, k], 
+                             order=meta.orders[k])
 
     # Mask out NaNs and Infs
     optspec_ma = np.ma.masked_invalid(data.optspec.values)

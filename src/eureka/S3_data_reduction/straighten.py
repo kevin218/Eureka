@@ -142,43 +142,40 @@ def straighten_trace(data, meta, log, m):
         raise Exception('Must use meddata as the optimal ' +
                         'extraction profile')
     
-    if meta.inst == 'niriss':
-        return niriss.straighten_trace(data, meta, log, m)
-    else:
-        log.writelog('  Correcting curvature and bringing the trace to the '
-                    'center of the detector...', mute=(not meta.verbose))
-        # compute the correction needed from this median frame
-        shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
+    log.writelog('  Correcting curvature and bringing the trace to the '
+                'center of the detector...', mute=(not meta.verbose))
+    # compute the correction needed from this median frame
+    shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
 
-        # Correct wavelength (only one frame)
-        log.writelog('    Correcting the wavelength solution...',
-                    mute=(not meta.verbose))
-        # broadcast to (1, detector.shape) which is the expected shape of
-        # the function
-        single_shift = np.expand_dims(shifts, axis=0)
-        wave_data = np.expand_dims(data.wave_2d.values, axis=0)
-        # apply the correction and update wave_1d accordingly
-        data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
-        data.wave_1d.values = data.wave_2d[new_center].values
-        # broadcast the shifts to the number of integrations
-        shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
-                            (data.flux.shape[0], data.flux.shape[2]), order='F')
+    # Correct wavelength (only one frame)
+    log.writelog('    Correcting the wavelength solution...',
+                mute=(not meta.verbose))
+    # broadcast to (1, detector.shape) which is the expected shape of
+    # the function
+    single_shift = np.expand_dims(shifts, axis=0)
+    wave_data = np.expand_dims(data.wave_2d.values, axis=0)
+    # apply the correction and update wave_1d accordingly
+    data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
+    data.wave_1d.values = data.wave_2d[new_center].values
+    # broadcast the shifts to the number of integrations
+    shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
+                        (data.flux.shape[0], data.flux.shape[2]), order='F')
 
-        log.writelog('    Correcting the curvature over all integrations...',
-                    mute=(not meta.verbose))
+    log.writelog('    Correcting the curvature over all integrations...',
+                mute=(not meta.verbose))
 
-        # apply the shifts to the data
-        data.flux.values = roll_columns(data.flux.values, shifts)
-        data.mask.values = roll_columns(data.mask.values, shifts)
-        data.err.values = roll_columns(data.err.values, shifts)
-        data.dq.values = roll_columns(data.dq.values, shifts)
-        data.v0.values = roll_columns(data.v0.values, shifts)
-        data.medflux.values = roll_columns(np.expand_dims(data.medflux.values,
-                                        axis=0), shifts).squeeze()
+    # apply the shifts to the data
+    data.flux.values = roll_columns(data.flux.values, shifts)
+    data.mask.values = roll_columns(data.mask.values, shifts)
+    data.err.values = roll_columns(data.err.values, shifts)
+    data.dq.values = roll_columns(data.dq.values, shifts)
+    data.v0.values = roll_columns(data.v0.values, shifts)
+    data.medflux.values = roll_columns(np.expand_dims(data.medflux.values,
+                                    axis=0), shifts).squeeze()
 
-        # update the new src_ypos
-        log.writelog(f'    Updating src_ypos to new center, row {new_center}...',
-                    mute=(not meta.verbose))
-        meta.src_ypos = new_center
+    # update the new src_ypos
+    log.writelog(f'    Updating src_ypos to new center, row {new_center}...',
+                mute=(not meta.verbose))
+    meta.src_ypos = new_center
 
     return data, meta

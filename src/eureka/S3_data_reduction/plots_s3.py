@@ -15,7 +15,8 @@ from .source_pos import gauss
 from ..lib import util, plots
 
 
-def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
+def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None, 
+                   mad=None, order=None):
     '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
 
     Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
@@ -38,6 +39,10 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
         For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
         Defaults to None which is fine for JWST data, but must be provided
         for HST data (can be all zero values if not spatial scanning mode).
+    mad : float; optional
+        Median absolution deviation. Default is None.
+    order : int; optional
+        Spectral order. Default is None
     '''
     normspec = util.normalize_spectrum(meta, optspec.values,
                                        optmask=optmask.values,
@@ -110,13 +115,18 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
 
     ax1.minorticks_on()
     ax2.minorticks_on()
-    ax1.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
-    ax2.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
+    if mad != None:
+        ax1.set_title(f"MAD = {mad:.0f} ppm")
+        ax2.set_title(f"MAD = {mad:.0f} ppm")
     fig1.colorbar(im1, ax=ax1, label='Normalized Flux')
     fig2.colorbar(im2, ax=ax2, label='Normalized Flux')
 
-    fname1 = f'figs{os.sep}fig3101-2D_LC'+plots.figure_filetype
-    fname2 = f'figs{os.sep}fig3102-2D_LC'+plots.figure_filetype
+    if order is None:
+        fname1 = f'figs{os.sep}fig3101_2D_LC'+plots.figure_filetype
+        fname2 = f'figs{os.sep}fig3102_2D_LC'+plots.figure_filetype
+    else:
+        fname1 = f'figs{os.sep}fig3101_order{order}_2D_LC'+plots.figure_filetype
+        fname2 = f'figs{os.sep}fig3102_order{order}_2D_LC'+plots.figure_filetype
     fig1.savefig(meta.outputdir+fname1, dpi=300)
     fig2.savefig(meta.outputdir+fname2, dpi=300)
     if not meta.hide_plots:
@@ -189,7 +199,8 @@ def image_and_background(data, meta, log, m, order=None):
 
         file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))
                                        + 1))
-        int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+        int_number = str(intstart + n).zfill(int(np.floor(
+            np.log10(meta.n_int))+1))
         if order is None:
             fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}_' +
                      meta.bg_dir + '_ImageAndBackground'+plots.figure_filetype)
@@ -288,7 +299,8 @@ def optimal_spectrum(data, meta, n, m):
     plt.legend(loc='best')
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    int_number = str(intstart + n).zfill(int(np.floor(
+            np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3302_file{file_number}_int{int_number}' +
              '_Spectrum'+plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
@@ -521,7 +533,8 @@ def driftywidth(data, meta, m):
         plt.pause(0.2)
 
 
-def residualBackground(data, meta, m, vmin=None, vmax=None):
+def residualBackground(data, meta, m, vmin=None, vmax=None, 
+                       flux=None, order=None, ap_y=None, bg_y=None):
     '''Plot the median, BG-subtracted frame to study the residual BG region and
     aperture/BG sizes. (Fig 3304)
 
@@ -537,26 +550,32 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
         Minimum value of colormap. Default is None.
     vmax : int; optional
         Maximum value of colormap. Default is None.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-29 KBS
-        Initial version
+    flux : 2D array; optional
+        Median flux array. Default is None
+    order : int; optional
+        Spectral order. Default is None
+    ap_y : list; options
+        Two-element list indicating the outer edges of the aperture region
+    bg_y : list; options
+        Two-element list indicating the inner edges of the background region
     '''
-    xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
+    xmin, xmax, ymin, ymax = get_bounds(data.x.values, data.y.values)
 
-    # Median flux of segment
-    subdata = np.ma.masked_where(data.mask.values, data.flux.values)
-    flux = np.ma.median(subdata, axis=0)
+    if flux is None:
+        # Median flux of segment
+        flux = data.medflux.values
+    if ap_y is None:
+        ap_y = [meta.src_ypos - meta.spec_hw, 
+                meta.src_ypos + meta.spec_hw + 1]
+    if bg_y is None:
+        bg_y = [meta.bg_y1, meta.bg_y2]
     # Compute vertical slice of width 10 columns
     flux_slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
     # Replace NaNs with zeros to enable interpolation
     flux_slice = np.nan_to_num(flux_slice, copy=False, nan=0.0)
     # Interpolate to 0.01-pixel resolution
     f = spi.interp1d(np.arange(ymin+0.5, ymax), flux_slice, 'cubic',
-                     fill_value="extrapolate")
+                     fill_value="extrapolate", axis=0)
     ny_hr = np.arange(ymin, ymax, 0.01)
     flux_hr = f(ny_hr)
     # Set vmin and vmax
@@ -566,29 +585,26 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
         vmax = np.nanmax(flux_hr)/3
     # Set bad pixels to plot as black
     cmap = plt.cm.plasma.copy()
-    cmap.set_bad('k', 1.)
+    cmap.set_bad('k', 1.) 
 
     plt.figure(3304, figsize=(8, 4))
     plt.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
-                                 num=3304, figsize=(8, 3.5))
-
+                                 num=3304)
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
               extent=[xmin, xmax, ymin, ymax])
-    a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], xmin, xmax, color='orange')
-    a0.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
-              ymin+meta.src_ypos-meta.spec_hw], xmin,
+    a0.hlines([ymin+bg_y[0], ymin+bg_y[1]], xmin, xmax, color='orange')
+    a0.hlines([ymin+ap_y[0], ymin+ap_y[1]], xmin,
               xmax, color='mediumseagreen', linestyle='dashed')
     a0.axes.set_ylabel("Detector Pixel Position")
     a0.axes.set_xlabel("Detector Pixel Position")
     a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap=cmap,
                norm=plt.Normalize(vmin, vmax))
     a1.vlines([0], ymin, ymax, color='0.5', linestyle='dotted')
-    a1.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], vmin, vmax, color='orange',
+    a1.hlines([ymin+bg_y[0], ymin+bg_y[1]], vmin, vmax, color='orange',
               linestyle='solid', label='bg'+str(meta.bg_hw))
-    a1.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
-              ymin+meta.src_ypos-meta.spec_hw], vmin,
+    a1.hlines([ymin+ap_y[0], ymin+ap_y[1]], vmin,
               vmax, color='mediumseagreen', linestyle='dashed',
               label='ap'+str(meta.spec_hw))
     a1.legend(loc='upper right', fontsize=8)
@@ -601,8 +617,12 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
                  cmap=cmap), ax=a1)
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    fname = (f'figs{os.sep}fig3304_file{file_number}' +
-             '_ResidualBG'+plots.figure_filetype)
+    if order is None:
+        fname = (f'figs{os.sep}fig3304_file{file_number}' +
+                 '_ResidualBG'+plots.figure_filetype)
+    else:
+        fname = (f'figs{os.sep}fig3304_file{file_number}_Order{order}' +
+                 '_ResidualBG'+plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)

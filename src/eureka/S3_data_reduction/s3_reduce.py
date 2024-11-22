@@ -276,9 +276,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 if meta.files_per_batch > 1:
                     log.writelog('  Concatenating files...',
                                  mute=(not meta.verbose))
-                data = xrio.concat(batch)
-                data.attrs['intstart'] = batch[0].attrs['intstart']
-                data.attrs['intend'] = batch[-1].attrs['intend']
+                    data = xrio.concat(batch)
+                    data.attrs['intstart'] = batch[0].attrs['intstart']
+                    data.attrs['intend'] = batch[-1].attrs['intend']
 
                 # Get number of integrations and frame dimensions
                 meta.n_int = len(data.time)
@@ -377,17 +377,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                     if saved_ref_median_frame is None:
                         # Compute clean median frame
-                        data = optspex.clean_median_flux(data, meta, log, m)
+                        data = inst.clean_median_flux(data, meta, log, m)
                         # Save the original median frame
                         saved_ref_median_frame = deepcopy(data.medflux)
                     else:
                         # Load the original median frame
-                        data['medflux'] = saved_ref_median_frame
-
+                        data['medflux'] = deepcopy(saved_ref_median_frame)
+                    
                     # correct spectral curvature
                     if meta.curvature == 'correct':
-                        data, meta = straighten.straighten_trace(data, meta,
-                                                                 log, m)
+                        data, meta = inst.straighten_trace(data, meta,
+                                                           log, m)
                     elif meta.inst == 'nirspec' and meta.filter != 'PRISM':
                         log.writelog('WARNING: NIRSpec GRISM spectra is '
                                      'significantly curved and will very '
@@ -439,7 +439,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                                                apbg, apv0, 
                                                                apmedflux, m=m)
 
-                    # return data, meta # FINDME
                     # Plot results
                     if meta.isplots_S3 >= 3:
                         log.writelog('  Creating figures for optimal spectral '
@@ -451,7 +450,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             # make optimal spectrum plot
                             plots_s3.optimal_spectrum(data, meta, n, m)
                         if meta.inst != 'wfc3':
-                            plots_s3.residualBackground(data, meta, m)
+                            inst.residualBackground(data, meta, m)
 
                 else:  # Do Photometry reduction
                     meta.photap = meta.spec_hw
@@ -618,7 +617,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                      data['mask'], data.attrs['intstart'],
                      data.attrs['intend'])
                 if not meta.photometry:
-                    del (data['flux'], data['bg'], data['wave_2d'])
+                    del (data['flux'], data['bg'])
+                    if meta.inst != 'niriss':
+                        del (data['wave_2d'])
                 elif meta.inst == 'wfc3':
                     del (data['flatmask'], data['variance'])
 
@@ -672,30 +673,40 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     raise OSError('Failed to write S3_SpecData.')
 
             # Compute MAD value
+            scandir = getattr(spec, 'scandir', None)
             if not meta.photometry:
-                meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d.values,
-                                           spec.optspec.values,
-                                           spec.optmask.values,
-                                           scandir=getattr(spec, 'scandir',
-                                                           None))
+                if meta.orders is None:
+                    meta.mad_s3 = [util.get_mad(meta, log, spec.wave_1d.values,
+                                            spec.optspec.values,
+                                            spec.optmask.values,
+                                            scandir=scandir)]
+                else:
+                    meta.mad_s3 = []
+                    for j, order in enumerate(meta.orders):
+                        meta.mad_s3.append(util.get_mad(meta, log,
+                            spec.wave_1d.sel(order=order).values,
+                            spec.optspec.sel(order=order).values,
+                            spec.optmask.sel(order=order).values,
+                            np.nanmin(spec.wave_1d.sel(order=order)),
+                            np.nanmax(spec.wave_1d.sel(order=order)),
+                            scandir=scandir))
             else:
                 normspec = util.normalize_spectrum(
                     meta, spec.aplev.values,
-                    scandir=getattr(spec, 'scandir', None))
-                meta.mad_s3 = util.get_mad_1d(normspec)
-            try:
-                log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
-            except:
-                log.writelog("Could not compute Stage 3 MAD")
-                meta.mad_s3 = 0
+                    scandir=scandir)
+                meta.mad_s3 = [util.get_mad_1d(normspec)]
+            for i, mad in enumerate(meta.mad_s3):
+                try:
+                    log.writelog(f"Stage 3 MAD = {mad:.0f} ppm")
+                except:
+                    log.writelog("Could not compute Stage 3 MAD")
+                    meta.mad_s3[i] = 0
 
             if meta.isplots_S3 >= 1 and not meta.photometry:
                 log.writelog('Generating figures')
                 # 2D light curve without drift correction
-                plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
-                                        optmask=spec.optmask,
-                                        scandir=getattr(spec, 'scandir',
-                                                        None))
+                inst.lc_nodriftcorr(spec, meta)
+            # return spec, meta # FINDME
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.

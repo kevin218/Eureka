@@ -2,8 +2,12 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
-from . import nircam, sigrej, optspex
+from . import nircam, sigrej, straighten, plots_s3
 from ..lib.util import read_time, supersample
+
+__all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg',
+           'fit_bg', 'cut_aperture', 'standard_spectrum', 'clean_median_flux',
+           'calibrated_spectra', 'residualBackground', 'lc_nodriftcorr']
 
 
 def read(filename, data, meta, log):
@@ -266,26 +270,31 @@ def standard_spectrum(data, meta, apdata, apmask, aperr):
     data : Xarray Dataset
         The updated Dataset object in which the spectrum data will stored.
     """
-    # # Compute standard box spectrum and variance
-    # stdspec, stdvar = optspex.standard_spectrum(apdata, 
-    #                                             apmask, 
-    #                                             aperr)
-    
-    # # Store results in data xarray
-    # coords = list(data.coords.keys())
-    # coords.remove('y')
-    # data['stdspec'] = (coords, stdspec)
-    # data['stdvar'] = (coords, stdvar)
-    # data['stdspec'].attrs['flux_units'] = \
-    #     data.flux.attrs['flux_units']
-    # data['stdspec'].attrs['time_units'] = \
-    #     data.flux.attrs['time_units']
-    # data['stdvar'].attrs['flux_units'] = \
-    #     data.flux.attrs['flux_units']
-    # data['stdvar'].attrs['time_units'] = \
-    #     data.flux.attrs['time_units']
-    
     return nircam.standard_spectrum(data, meta, apdata, apmask, aperr)
+
+
+def clean_median_flux(data, meta, log, m):
+    """Instrument wrapper for computing a median flux frame that is 
+    free of bad pixels.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object.
+    """
+
+    return nircam.clean_median_flux(data, meta, log, m)
 
 
 def calibrated_spectra(data, meta, log, cutoff=1e-4):
@@ -335,3 +344,69 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
     data['v0'].attrs["flux_units"] = 'mJy'
 
     return data
+
+
+def straighten_trace(data, meta, log, m):
+    """Instrument-specific wrapper for straighten.straighten_trace
+    """
+    return straighten.straighten_trace(data, meta, log, m)
+
+
+def residualBackground(data, meta, m, vmin=None, vmax=None):
+    """Plot the median, BG-subtracted frame to study the residual BG region and
+    aperture/BG sizes. (Fig 3304)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    m : int
+        The file number.
+    vmin : int; optional
+        Minimum value of colormap. Default is None.
+    vmax : int; optional
+        Maximum value of colormap. Default is None.
+    """
+    plots_s3.residualBackground(data, meta, m, vmin=None, vmax=None)
+
+
+def lc_nodriftcorr(spec, meta, scandir=None):
+    '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
+
+    Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
+    detector pixel x-axis.
+
+    Parameters
+    ----------
+    spec : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    scandir : ndarray; optional
+        For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
+        Defaults to None which is fine for JWST data, but must be provided
+        for HST data (can be all zero values if not spatial scanning mode).
+    '''
+    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
+                            optmask=spec.optmask,
+                            scandir=scandir)
+    
+
+def lc_nodriftcorr(spec, meta):
+    '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
+
+    Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
+    detector pixel x-axis.
+
+    Parameters
+    ----------
+    spec : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    '''
+    mad = meta.mad_s3[0]
+    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec, 
+                            optmask=spec.optmask, mad=mad)

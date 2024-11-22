@@ -8,31 +8,14 @@ from pastasoss import get_soss_traces
 from .straighten import roll_columns
 from .background import fitbg
 
-# import itertools
-# import ccdproc as ccdp
-# from astropy import units
-# import scipy.optimize as so
-# import matplotlib.pyplot as plt
-# from astropy.table import Table
-# from astropy.nddata import CCDData
-# from scipy.signal import find_peaks
-# from skimage.morphology import disk
-# from skimage import filters, feature
-# from scipy.ndimage import gaussian_filter
-
-from . import niriss_python
-
-# FINDME: update list
 __all__ = ['read', 'get_wave', 'straighten_trace', 'flag_ff', 'flag_bg',
-           'clean_median_flux', 'fit_bg', 'cut_aperture']
+           'clean_median_flux', 'fit_bg', 'cut_aperture', 'standard_spectrum',
+           'residualBackground', 'lc_nodriftcorr']
 
 '''
-Thoughts as I work through S3_reduce:
-    Don't need to run source_pos.source_pos_wrapper(), should call PASTASOSS instead
-    Will need to implement inst.calibrated_spectra()
-    inst.flag_ff() should work the same as NIRCam
-    Do we want to correct the curvature using straighten.straighten_trace()?
-
+TODO:
+    Implement niriss.calibrated_spectra()
+    0th-order masking using F277W filter
 '''
 
 def read(filename, data, meta, log):
@@ -65,26 +48,14 @@ def read(filename, data, meta, log):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    # try:
     data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
     data.attrs['intend'] = data.attrs['mhdr']['INTEND']
-    # except:
-    #     # FINDME: Need to only catch the particular exception we expect
-    #     print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
-    #     data.attrs['intstart'] = 0
-    #     data.attrs['intend'] = data.attrs['mhdr']['NINTS']
-    # meta.filter = data.attrs['mhdr']['FILTER']
-    # meta.pupil_position = data.attrs['mhdr']['PWCPOS']
 
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
-    # wave_2d = hdulist['WAVELENGTH', 1].data
-    wave_2d = np.zeros_like(sci[0])
     int_times = hdulist['INT_TIMES', 1].data
-
-    # meta.photometry = False  # Photometry for NIRSpec not implemented yet.
 
     # Increase pixel resolution along cross-dispersion direction
     if meta.expand > 1:
@@ -95,7 +66,6 @@ def read(filename, data, meta, log):
         err = supersample(err, meta.expand, 'err', axis=1)
         dq = supersample(dq, meta.expand, 'cal', axis=1)
         v0 = supersample(v0, meta.expand, 'flux', axis=1)
-        wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=0)
 
     # Record integration mid-times in BMJD_TDB
     if meta.time_file is not None:
@@ -106,7 +76,6 @@ def read(filename, data, meta, log):
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']
     time_units = 'BMJD_TDB'
-    # wave_units = 'microns'
 
     # Duplicate science arrays for each order to be analyzed
     if isinstance(meta.orders, int):
@@ -131,7 +100,7 @@ def read(filename, data, meta, log):
                                      name='dq', order=meta.orders)
     data['v0'] = xrio.makeFluxLikeDA(v0, time, flux_units, time_units,
                                      name='v0', order=meta.orders)
-    # data = data.assign_coords(order=('order', [1,2]))
+
     # Initialize bad pixel mask (False = good, True = bad)
     data['mask'] = (['time', 'y', 'x', 'order'], np.zeros(data.flux.shape, 
                                                           dtype=bool))
@@ -173,7 +142,6 @@ def get_wave(data, meta, log):
     for order in meta.orders:
         # Get trace for the given order and pupil position
         trace = get_soss_traces(pwcpos=pwcpos, order=str(order), interp=True)
-
         # Assign trace and wavelength for given order
         ind1 = np.nonzero(np.in1d(trace.x, data.x.values))[0]
         ind2 = np.nonzero(np.in1d(data.x.values, trace.x))[0]
@@ -217,21 +185,19 @@ def straighten_trace(data, meta, log, m):
         other_orders = list.copy(meta.orders)
         other_orders.remove(order)
         for j in np.where(~np.isnan(wave))[0]:
-            ymin = np.max((0, trace[j] - meta.bg_hw))
-            ymax = np.min((trace[j] + meta.bg_hw + 1, len(data.y) + 1))
+            ymin = np.max((0, trace[j] - meta.spec_hw))
+            ymax = np.min((trace[j] + meta.spec_hw + 1, len(data.y) + 1))
             for other_order in other_orders:
                 data['mask'].sel(order=other_order)[:, ymin:ymax, j] = True
 
-    for j, order in enumerate(meta.orders):
+    for k, order in enumerate(meta.orders):
         log.writelog(f'  Correcting curvature for order {order} and ' +
-                        f'bringing the trace to row {meta.src_ypos[j]}... ',
+                        f'bringing the trace to row {meta.src_ypos[k]}... ',
                         mute=(not meta.verbose))
         shifts = np.round(data.trace.sel(order=order).values).astype(int)
-        new_center = meta.src_ypos[j]
+        new_center = meta.src_ypos[k]
         new_shifts = new_center - shifts
-        data.trace.sel(order=order).values += new_shifts
-        # FINDME: May need to mod the trace positions 
-        # data.trace.values = data.trace.values % 
+
         # broadcast the shifts to the number of integrations
         new_shifts = np.reshape(np.repeat(new_shifts, 
                                 data.flux.shape[0]),
@@ -298,25 +264,18 @@ def flag_bg(data, meta, log):
     log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
-    # FINDME: This code should work once the rolled trace is computed correctly
-    for j, order in enumerate(meta.orders):
-        bgdata1 = data.flux.sel(order=order)[:, :meta.bg_y1[j]]
-        bgmask1 = data.mask.sel(order=order)[:, :meta.bg_y1[j]]
-        bgdata2 = data.flux.sel(order=order)[:, meta.bg_y2[j]:]
-        bgmask2 = data.mask.sel(order=order)[:, meta.bg_y2[j]:]
+    # Look for outliers above and below the curvature-corrected trace
+    for k, order in enumerate(meta.orders):
+        bgdata1 = data.flux.sel(order=order)[:, :meta.bg_y1[k]]
+        bgmask1 = data.mask.sel(order=order)[:, :meta.bg_y1[k]]
+        bgdata2 = data.flux.sel(order=order)[:, meta.bg_y2[k]:]
+        bgmask2 = data.mask.sel(order=order)[:, meta.bg_y2[k]:]
         
-        data['mask'].sel(order=order)[:, :meta.bg_y1[j]] = sigrej.sigrej(
+        data['mask'].sel(order=order)[:, :meta.bg_y1[k]] = sigrej.sigrej(
             bgdata1, meta.bg_thresh, bgmask1, None)
-        data['mask'].sel(order=order)[:, meta.bg_y2[j]:] = sigrej.sigrej(
+        data['mask'].sel(order=order)[:, meta.bg_y2[k]:] = sigrej.sigrej(
             bgdata2, meta.bg_thresh, bgmask2, None)
 
-    # FINDME: Remove figure once code is fully tested
-    # import matplotlib.pyplot as plt
-    # plt.figure(1)
-    # plt.subplot(211)
-    # plt.imshow(data['mask'][0,:,:,0], origin='lower', aspect='auto')
-    # plt.subplot(212)
-    # plt.imshow(data['mask'][0,:,:,1], origin='lower', aspect='auto')
     return data
 
 
@@ -341,10 +300,12 @@ def clean_median_flux(data, meta, log, m):
     data : Xarray Dataset
         The updated Dataset object.
     """
+    log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
+    
     data['medflux'] = (['y', 'x', 'order'], np.zeros_like(data.flux[0]))
     data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
 
-    # FINDME: Currently, the median frame is identical for each order,
+    # Currently, the median frame is identical for each order,
     # so looping over the orders feels unnecesary; however, when only
     # a single order is specified in the ECF, the following code will
     # work on the correct order.
@@ -371,7 +332,7 @@ def clean_median_flux(data, meta, log, m):
     
 
 def fit_bg(dataim, datamask, n, meta, isplots=0):
-    """Fit for a non-uniform background.
+    """Instrument wrapper for fitting the background.
 
     Parameters
     ----------
@@ -437,29 +398,23 @@ def cut_aperture(data, meta, log):
 
     apdata = np.zeros((len(data.time), 2*meta.spec_hw+1, 
                        len(data.x), len(data.order)))
-    aperr = np.zeros((len(data.time), 2*meta.spec_hw+1, 
-                      len(data.x), len(data.order)))
-    apmask = np.zeros((len(data.time), 2*meta.spec_hw+1, 
-                       len(data.x), len(data.order)), dtype=bool)
-    apbg = np.zeros((len(data.time), 2*meta.spec_hw+1, 
-                     len(data.x), len(data.order)))
-    apv0 = np.zeros((len(data.time), 2*meta.spec_hw+1, 
-                     len(data.x), len(data.order)))
-    apmedflux = np.zeros((2*meta.spec_hw+1, len(data.x), len(data.order)))
-    for j in range(len(data.order)):
-        ap_y1 = int(meta.src_ypos[j]-meta.spec_hw)
-        ap_y2 = int(meta.src_ypos[j]+meta.spec_hw+1)
-        apdata[:, :, :, j] = data.flux.values[:, ap_y1:ap_y2, :, j]
-        aperr[:, :, :, j] = data.err.values[:, ap_y1:ap_y2, :, j]
-        apmask[:, :, :, j] = data.mask.values[:, ap_y1:ap_y2, :, j]
-        apbg[:, :, :, j] = data.bg.values[:, ap_y1:ap_y2, :, j]
-        apv0[:, :, :, j] = data.v0.values[:, ap_y1:ap_y2, :, j]
-        apmedflux[:, :, j] = data.medflux.values[ap_y1:ap_y2, :, j]
+    aperr = np.zeros_like(apdata)
+    apmask = np.zeros_like(apdata, dtype=bool)
+    apbg = np.zeros_like(apdata)
+    apv0 = np.zeros_like(apdata)
+    apmedflux = np.zeros_like(apdata[0])
+    for k in range(len(data.order)):
+        ap_y1 = int(meta.src_ypos[k] - meta.spec_hw)
+        ap_y2 = int(meta.src_ypos[k] + meta.spec_hw + 1)
+        apdata[:, :, :, k] = data.flux.values[:, ap_y1:ap_y2, :, k]
+        aperr[:, :, :, k] = data.err.values[:, ap_y1:ap_y2, :, k]
+        apmask[:, :, :, k] = data.mask.values[:, ap_y1:ap_y2, :, k]
+        apbg[:, :, :, k] = data.bg.values[:, ap_y1:ap_y2, :, k]
+        apv0[:, :, :, k] = data.v0.values[:, ap_y1:ap_y2, :, k]
+        apmedflux[:, :, k] = data.medflux.values[ap_y1:ap_y2, :, k]
         # Mask invalid regions
-        inan = np.where(np.isnan(data.wave_1d[:, j]))
-        apmask[:, :, inan, j] = True
-        # FINDME: using lists would likely be faster since
-        # standard_spectrum() tries to fix each masked pixel
+        inan = np.where(np.isnan(data.wave_1d[:, k]))
+        apmask[:, :, inan, k] = True
 
     return apdata, aperr, apmask, apbg, apv0, apmedflux
 
@@ -487,30 +442,60 @@ def standard_spectrum(data, meta, apdata, apmask, aperr):
         The updated Dataset object in which the spectrum data will stored.
     """
 
-    # Create xarray
-    # coords = list(data.coords.keys())
-    # coords.remove('y')
-    # data['stdspec'] = (coords, np.zeros_like(data.flux[:, 0]))
-    # data['stdvar'] = (coords, np.zeros_like(data.flux[:, 0]))
-    # data['stdspec'].attrs['flux_units'] = \
-    #     data.flux.attrs['flux_units']
-    # data['stdspec'].attrs['time_units'] = \
-    #     data.flux.attrs['time_units']
-    # data['stdvar'].attrs['flux_units'] = \
-    #     data.flux.attrs['flux_units']
-    # data['stdvar'].attrs['time_units'] = \
-    #     data.flux.attrs['time_units']
-    
-    # for j, order in enumerate(meta.orders):
-    #     # Compute standard box spectrum and variance
-    #     stdspec, stdvar = optspex.standard_spectrum(apdata[:, :, :, j], 
-    #                                                 apmask[:, :, :, j], 
-    #                                                 aperr[:, :, :, j])
-    #     # Store results in data xarray
-    #     data['stdspec'].sel(order=order)[:] = stdspec
-    #     data['stdvar'].sel(order=order)[:] = stdvar
-    
     return nircam.standard_spectrum(data, meta, apdata, apmask, aperr)
+
+
+def residualBackground(data, meta, m, vmin=None, vmax=None):
+    """Plot the median, BG-subtracted frame to study the residual BG region and
+    aperture/BG sizes. (Fig 3304)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    m : int
+        The file number.
+    vmin : int; optional
+        Minimum value of colormap. Default is None.
+    vmax : int; optional
+        Maximum value of colormap. Default is None.
+    """
+    for k, order in enumerate(meta.orders):
+        # Specify aperture region for given order
+        ap_y = [meta.src_ypos[k] - meta.spec_hw, 
+                meta.src_ypos[k] + meta.spec_hw + 1]
+        # Specify bg region for given order
+        bg_y = [meta.bg_y1[k], meta.bg_y2[k]]
+        # Median flux of segment
+        flux = data.medflux.sel(order=order).values
+        plots_s3.residualBackground(data, meta, m, flux=flux, order=order,
+                                    ap_y=ap_y, bg_y=bg_y,
+                                    vmin=None, vmax=None)
+
+
+def lc_nodriftcorr(spec, meta):
+    '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
+
+    Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
+    detector pixel x-axis.
+
+    Parameters
+    ----------
+    spec : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    '''
+    for k, order in enumerate(meta.orders):
+        wave_1d = spec.wave_1d.sel(order=order)
+        optspec = spec.optspec.sel(order=order)
+        optmask = spec.optmask.sel(order=order)
+        mad = meta.mad_s3[k]
+        plots_s3.lc_nodriftcorr(meta, wave_1d, optspec, optmask=optmask,
+                                mad=mad, order=order)
+
 
 
 # def optimize():
@@ -526,207 +511,3 @@ def standard_spectrum(data, meta, apdata, apmask, aperr):
 #                      window_len=meta.window_len,
 #                      deg=meta.prof_deg, windowtype=windowtype,
 #                      n=n, m=m, meddata=apmedflux)
-
-############################################################
-# OLD ROUTINES
-############################################################
-def fit_bg_old(data, meta, readnoise=11, sigclip=[4, 4, 4]):
-    """
-    Subtracts background from non-spectral regions.
-
-    Parameters
-    ----------
-    data : Xarray Dataset
-        The Dataset object.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    readnoise : float; optional
-       An estimation of the readnoise of the detector.
-       Default is 11.
-    sigclip : interable; optional
-       A list or array corresponding to the
-       sigma-level which should be clipped in the cosmic
-       ray removal routine. Default is [4, 4, 4].
-
-    Returns
-    -------
-    data : Xarray Dataset
-        The updated Dataset object now contains new attribute `bkg_removed`.
-    """
-    box_mask = dirty_mask(data.median, meta)
-    data = fitbg3(data, box_mask, readnoise, sigclip)
-    return data
-
-
-def dirty_mask(img, meta, boxsize1=70, boxsize2=60):
-    """Really dirty box mask for background purposes."""
-    mask = np.zeros(img.shape, dtype=bool)
-
-    for i in range(img.shape[1]):
-        s = int(meta.tab2['order_1'][i]-boxsize1/2)
-        e = int(meta.tab2['order_1'][i]+boxsize1/2)
-        mask[s:e, i] = True
-
-        s = int(meta.tab2['order_2'][i]-boxsize2/2)
-        e = int(meta.tab2['order_2'][i]+boxsize2/2)
-        try:
-            mask[s:e, i] = True
-        except:
-            # FINDME: Need to change this except to only catch the
-            # specific type of exception we expect
-            pass
-
-    return mask
-
-
-
-def set_which_table(i, meta):
-    """
-    A little routine to return which table to
-    use for the positions of the orders.
-
-    Parameters
-    ----------
-    i : int
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-
-    Returns
-    -------
-    pos1 : np.array
-       Array of locations for first order.
-    pos2 : np.array
-       Array of locations for second order.
-    """
-    if i == 2:
-        pos1, pos2 = meta.tab2['order_1'], meta.tab2['order_2']
-    elif i == 1:
-        pos1, pos2 = meta.tab1['order_1'], meta.tab1['order_2']
-    return pos1, pos2
-
-
-def fit_orders(data, meta, which_table=2):
-    """
-    Creates a 2D image optimized to fit the data. Currently
-    runs with a Gaussian profile, but will look into other
-    more realistic profiles at some point. This routine
-    is a bit slow, but fortunately, you only need to run it
-    once per observations.
-
-    Parameters
-    ----------
-    data : Xarray Dataset
-        The Dataset object.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    which_table : int; optional
-       Sets with table of initial y-positions for the
-       orders to use. Default is 2.
-
-    Returns
-    -------
-    meta : eureka.lib.readECF.MetaClass
-        The updated metadata object with two new attributes:
-        `order1_mask` and `order2_mask`.
-    """
-    print("Go grab some food. This routing could take up to 30 minutes.")
-
-    def construct_guesses(A, B, sig, length=10):
-        # amplitude of gaussian for first order
-        As = np.linspace(A[0], A[1], length)
-        # amplitude of gaussian for second order
-        Bs = np.linspace(B[0], B[1], length)
-        # std of gaussian profile
-        sigs = np.linspace(sig[0], sig[1], length)
-        # generates all possible combos
-        combos = np.array(list(itertools.product(*[As, Bs, sigs])))
-        return combos
-
-    pos1, pos2 = set_which_table(which_table, meta)
-
-    # Good initial guesses
-    combos = construct_guesses([0.1, 30], [0.1, 30], [1, 40])
-
-    # generates length x length x length number of images and fits to the data
-    img1, sigout1 = niriss_python.build_image_models(data.median,
-                                                     combos[:, 0],
-                                                     combos[:, 1],
-                                                     combos[:, 2],
-                                                     pos1, pos2)
-
-    # Iterates on a smaller region around the best guess
-    best_guess = combos[np.argmin(sigout1)]
-    combos = construct_guesses([best_guess[0]-0.5, best_guess[0]+0.5],
-                               [best_guess[1]-0.5, best_guess[1]+0.5],
-                               [best_guess[2]-0.5, best_guess[2]+0.5])
-
-    # generates length x length x length number of images centered around the
-    # previous guess to optimize the image fit
-    img2, sigout2 = niriss_python.build_image_models(data.median,
-                                                     combos[:, 0],
-                                                     combos[:, 1],
-                                                     combos[:, 2],
-                                                     pos1, pos2)
-
-    # creates a 2D image for the first and second orders with the best-fit
-    # gaussian profiles
-    final_guess = combos[np.argmin(sigout2)]
-    ord1, ord2, _ = niriss_python.build_image_models(data.median,
-                                                     [final_guess[0]],
-                                                     [final_guess[1]],
-                                                     [final_guess[2]],
-                                                     pos1, pos2,
-                                                     return_together=False)
-    meta.order1_mask = ord1[0]
-    meta.order2_mask = ord2[0]
-
-    return meta
-
-
-def fit_orders_fast(data, meta, which_table=2):
-    """
-    A faster method to fit a 2D mask to the NIRISS data.
-    Very similar to `fit_orders`, but works with
-    `scipy.optimize.leastsq`.
-
-    Parameters
-    ----------
-    data : Xarray Dataset
-        The Dataset object.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    which_table : int; optional
-       Sets with table of initial y-positions for the
-       orders to use. Default is 2.
-
-    Returns
-    -------
-    meta : eureka.lib.readECF.MetaClass
-        The updated metadata object.
-    """
-    def residuals(params, data, y1_pos, y2_pos):
-        """ Calcualtes residuals for best-fit profile. """
-        A, B, sig1 = params
-        # Produce the model:
-        model, _ = niriss_python.build_image_models(data, [A], [B], [sig1],
-                                                    y1_pos, y2_pos)
-        # Calculate residuals:
-        res = (model[0] - data)
-        return res.flatten()
-
-    pos1, pos2 = set_which_table(which_table, meta)
-
-    # fits the mask
-    results = so.least_squares(residuals,
-                               x0=np.array([2, 3, 30]),
-                               args=(data.median, pos1, pos2),
-                               xtol=1e-11, ftol=1e-11, max_nfev=1e3)
-
-    # creates the final mask
-    out_img1, out_img2, _ = niriss_python.build_image_models(
-        data.median, results.x[0:1], results.x[1:2], results.x[2:3],
-        pos1, pos2, return_together=False)
-    meta.order1_mask_fast = out_img1[0]
-    meta.order2_mask_fast = out_img2[0]
-
-    return meta
