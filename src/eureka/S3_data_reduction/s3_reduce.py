@@ -63,23 +63,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S3.
-
-    Notes
-    -----
-    History:
-
-    - May 2021 Kevin Stevenson
-        Initial version
-    - October 2021 Taylor Bell
-        Updated to allow for inputs from S2
-    - July 2022 Caroline Piaulet
-        Now computing the y pos and width for each integration
-        + stored in Spec and add diagnostics plots
-    - July 2022 Sebastian Zieba
-        Added photometry S3
-    - Feb 2023 Isaac Edelman
-        Added new centroiding method (mgmc_pri, mgmc_sec) to
-        correct for shortwave photometry data processing issues
     '''
     s2_meta = deepcopy(s2_meta)
     input_meta = deepcopy(input_meta)

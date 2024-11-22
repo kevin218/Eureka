@@ -57,22 +57,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         Data object of time-like arrrays (light curve).
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
-
-    Notes
-    -----
-    History:
-
-    - June 2021 Kevin Stevenson
-        Initial version
-    - October 2021 Taylor Bell
-        Updated to allow for inputs from new S3
-    - April 2022 Kevin Stevenson
-        Enabled Astraeus
-    - July 2022 Caroline Piaulet
-        Recording of x (computed in S4) and y (computed in S3) pos drifts and
-        widths in Spec and LC objects
-    - July 2022 Sebastian Zieba
-         Added photometry S4
     '''
     s3_meta = deepcopy(s3_meta)
     input_meta = deepcopy(input_meta)

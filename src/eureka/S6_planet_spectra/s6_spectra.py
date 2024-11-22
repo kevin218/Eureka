@@ -47,13 +47,6 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S6.
-
-    Notes
-    -----
-    History:
-
-    - Feb 14, 2022 Taylor Bell
-        Original version
     '''
     s5_meta = deepcopy(s5_meta)
     input_meta = deepcopy(input_meta)
