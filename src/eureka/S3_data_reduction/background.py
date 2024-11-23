@@ -4,7 +4,6 @@ import multiprocessing as mp
 import matplotlib.pyplot as plt
 import os
 
-from ..lib import clipping
 from ..lib import plots
 from . import plots_s3
 

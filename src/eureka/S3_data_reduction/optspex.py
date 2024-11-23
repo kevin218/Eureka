@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from ..lib import gaussian as g
 from ..lib import smooth
-from . import plots_s3, niriss
+from . import plots_s3
 
 
 def standard_spectrum(apdata, apmask, aperr):
@@ -644,24 +644,24 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
     iterfn = range(meta.int_start, meta.n_int)
     if meta.verbose:
         iterfn = tqdm(iterfn)
-    if meta.orders == None:
+    if meta.orders is None:
         for n in iterfn:
             data['optspec'][n], data['opterr'][n], _ = \
                 optimize(meta, apdata[n], apmask[n], apbg[n],
-                        data.stdspec[n].values, gain, apv0[n],
-                        p5thresh=meta.p5thresh,
-                        p7thresh=meta.p7thresh,
-                        fittype=meta.fittype,
-                        window_len=meta.window_len,
-                        deg=meta.prof_deg, windowtype=windowtype,
-                        n=n, m=m, meddata=apmedflux)
+                         data.stdspec[n].values, gain, apv0[n],
+                         p5thresh=meta.p5thresh,
+                         p7thresh=meta.p7thresh,
+                         fittype=meta.fittype,
+                         window_len=meta.window_len,
+                         deg=meta.prof_deg, windowtype=windowtype,
+                         n=n, m=m, meddata=apmedflux)
     else:
         norders = len(meta.orders)
         for n in iterfn:
             for k in range(norders):
                 data['optspec'][n, :, k], data['opterr'][n, :, k], _ = \
                     optimize(meta, apdata[n, :, :, k], apmask[n, :, :, k], 
-                             apbg[n, :, :, k], data.stdspec[n,:,k].values, 
+                             apbg[n, :, :, k], data.stdspec[n, :, k].values, 
                              gain, apv0[n, :, :, k],
                              p5thresh=meta.p5thresh,
                              p7thresh=meta.p7thresh,

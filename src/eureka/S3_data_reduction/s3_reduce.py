@@ -31,7 +31,7 @@ from tqdm import tqdm
 import psutil
 
 from . import optspex
-from . import plots_s3, source_pos, straighten
+from . import plots_s3, source_pos
 from . import background as bg
 from . import bright2flux as b2f
 
@@ -412,7 +412,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                     # Extract standard spectrum and its variance
                     log.writelog('  Computing standard spectrum...',
-                        mute=(not meta.verbose))
+                                 mute=(not meta.verbose))
                     data = inst.standard_spectrum(data, meta, apdata, apmask,
                                                   aperr)
 
@@ -660,9 +660,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             if not meta.photometry:
                 if meta.orders is None:
                     meta.mad_s3 = [util.get_mad(meta, log, spec.wave_1d.values,
-                                            spec.optspec.values,
-                                            spec.optmask.values,
-                                            scandir=scandir)]
+                                                spec.optspec.values,
+                                                spec.optmask.values,
+                                                scandir=scandir)]
                 else:
                     meta.mad_s3 = []
                     for j, order in enumerate(meta.orders):

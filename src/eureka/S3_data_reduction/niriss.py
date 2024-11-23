@@ -18,6 +18,7 @@ TODO:
     0th-order masking using F277W filter
 '''
 
+
 def read(filename, data, meta, log):
     '''Reads single FITS file from JWST's NIRISS instrument.
 
@@ -81,10 +82,10 @@ def read(filename, data, meta, log):
     if isinstance(meta.orders, int):
         meta.orders = [meta.orders]
     norders = len(meta.orders)
-    sci = np.repeat(sci[:,:,:,np.newaxis], norders, axis=3)
-    err = np.repeat(err[:,:,:,np.newaxis], norders, axis=3)
-    dq = np.repeat(dq[:,:,:,np.newaxis], norders, axis=3)
-    v0 = np.repeat(v0[:,:,:,np.newaxis], norders, axis=3)
+    sci = np.repeat(sci[:, :, :, np.newaxis], norders, axis=3)
+    err = np.repeat(err[:, :, :, np.newaxis], norders, axis=3)
+    dq = np.repeat(dq[:, :, :, np.newaxis], norders, axis=3)
+    v0 = np.repeat(v0[:, :, :, np.newaxis], norders, axis=3)
 
     if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
             meta.bg_hw == meta.bg_hw_range[0]):
@@ -192,8 +193,8 @@ def straighten_trace(data, meta, log, m):
 
     for k, order in enumerate(meta.orders):
         log.writelog(f'  Correcting curvature for order {order} and ' +
-                        f'bringing the trace to row {meta.src_ypos[k]}... ',
-                        mute=(not meta.verbose))
+                     f'bringing the trace to row {meta.src_ypos[k]}... ',
+                     mute=(not meta.verbose))
         shifts = np.round(data.trace.sel(order=order).values).astype(int)
         new_center = meta.src_ypos[k]
         new_shifts = new_center - shifts
@@ -217,7 +218,8 @@ def straighten_trace(data, meta, log, m):
         data['v0'].sel(order=order)[:] = roll_columns(
             data.v0.sel(order=order).values, new_shifts)
         data['medflux'].sel(order=order)[:] = roll_columns(
-            np.expand_dims(data.medflux.sel(order=order).values, axis=0), new_shifts).squeeze()
+            np.expand_dims(data.medflux.sel(order=order).values, axis=0), 
+            new_shifts).squeeze()
         
     return data, meta
 
@@ -301,7 +303,7 @@ def clean_median_flux(data, meta, log, m):
         The updated Dataset object.
     """
     log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
-    
+
     data['medflux'] = (['y', 'x', 'order'], np.zeros_like(data.flux[0]))
     data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
 
@@ -361,8 +363,8 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     bg = np.zeros_like(dataim)
     mask = np.zeros_like(dataim, dtype=bool)
     for i in range(norders):
-        bg[:,:,i], mask[:,:,i] = fitbg(dataim[:,:,i], meta, 
-            datamask[:,:,i], meta.bg_y1[i], meta.bg_y2[i], deg=meta.bg_deg,
+        bg[:, :, i], mask[:, :, i] = fitbg(dataim[:, :, i], meta, 
+            datamask[:, :, i], meta.bg_y1[i], meta.bg_y2[i], deg=meta.bg_deg,
             threshold=meta.p3thresh, isrotate=2, isplots=isplots)
 
     return bg, mask, n
@@ -495,19 +497,3 @@ def lc_nodriftcorr(spec, meta):
         mad = meta.mad_s3[k]
         plots_s3.lc_nodriftcorr(meta, wave_1d, optspec, optmask=optmask,
                                 mad=mad, order=order)
-
-
-
-# def optimize():
-#     """
-#     """
-
-#     data['optspec'][n], data['opterr'][n], _ = \
-#             optimize(meta, apdata[n], apmask[n], apbg[n],
-#                      data.stdspec[n].values, gain, apv0[n],
-#                      p5thresh=meta.p5thresh,
-#                      p7thresh=meta.p7thresh,
-#                      fittype=meta.fittype,
-#                      window_len=meta.window_len,
-#                      deg=meta.prof_deg, windowtype=windowtype,
-#                      n=n, m=m, meddata=apmedflux)

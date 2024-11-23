@@ -406,7 +406,7 @@ def standard_spectrum(data, meta, apdata, apmask, aperr):
     else:
         for k, order in enumerate(meta.orders):
             # Compute standard box spectrum and variance with orders
-            stdspec, stdvar = optspex.standard_spectrum(apdata[:, :, : , k], 
+            stdspec, stdvar = optspex.standard_spectrum(apdata[:, :, :, k], 
                                                         apmask[:, :, :, k], 
                                                         aperr[:, :, :, k])
             # Store results in data xarray

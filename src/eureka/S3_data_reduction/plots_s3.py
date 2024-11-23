@@ -115,7 +115,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
 
     ax1.minorticks_on()
     ax2.minorticks_on()
-    if mad != None:
+    if mad is not None:
         ax1.set_title(f"MAD = {mad:.0f} ppm")
         ax2.set_title(f"MAD = {mad:.0f} ppm")
     fig1.colorbar(im1, ax=ax1, label='Normalized Flux')
@@ -206,8 +206,8 @@ def image_and_background(data, meta, log, m, order=None):
                      meta.bg_dir + '_ImageAndBackground'+plots.figure_filetype)
         else:
             fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}_' +
-                    f'_order{order}_' + meta.bg_dir + '_ImageAndBackground' +
-                    plots.figure_filetype)
+                     f'_order{order}_' + meta.bg_dir + '_ImageAndBackground' +
+                     plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -289,8 +289,8 @@ def optimal_spectrum(data, meta, n, m):
             inotnan = np.where(~np.isnan(data.wave_1d[:, j]))[0]
             plt.semilogy(data.x.values[inotnan], stdspec[n, inotnan, j], '-',
                          label=f'Standard Spec - Order {order}')
-            plt.errorbar(data.stdspec.x.values, optspec[n,:,j], 
-                         yerr=opterr[n,:,j], fmt='-',
+            plt.errorbar(data.stdspec.x.values, optspec[n, :, j], 
+                         yerr=opterr[n, :, j], fmt='-',
                          label=f'Optimal Spec - Order {order}')
     plt.xlim(xmin, xmax)
     plt.ylim(np.nanmin(optspec[n])/2, np.nanmax(optspec[n])*2)
@@ -300,7 +300,7 @@ def optimal_spectrum(data, meta, n, m):
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(intstart + n).zfill(int(np.floor(
-            np.log10(meta.n_int))+1))
+        np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3302_file{file_number}_int{int_number}' +
              '_Spectrum'+plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
@@ -706,7 +706,7 @@ def median_frame(data, meta, m, medflux, order=None):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     if order is None:
         fname = (f'figs{os.sep}fig3308_file{file_number}_MedianFrame' +
-                plots.figure_filetype)
+                 plots.figure_filetype)
     else:
         fname = (f'figs{os.sep}fig3308_file{file_number}' +
                  f'_order{order}_MedianFrame' + plots.figure_filetype)

@@ -1,6 +1,6 @@
 import numpy as np
 from ..lib import smooth
-from . import plots_s3, niriss
+from . import plots_s3
 
 
 def find_column_median_shifts(data, meta, m):
@@ -138,18 +138,18 @@ def straighten_trace(data, meta, log, m):
     if meta.fittype != 'meddata':
         # This method only works with the median profile for the extraction
         log.writelog('  !!! Must use meddata as the optimal '
-                        'extraction profile !!!', mute=(not meta.verbose))
+                     'extraction profile !!!', mute=(not meta.verbose))
         raise Exception('Must use meddata as the optimal ' +
                         'extraction profile')
     
     log.writelog('  Correcting curvature and bringing the trace to the '
-                'center of the detector...', mute=(not meta.verbose))
+                 'center of the detector...', mute=(not meta.verbose))
     # compute the correction needed from this median frame
     shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
 
     # Correct wavelength (only one frame)
     log.writelog('    Correcting the wavelength solution...',
-                mute=(not meta.verbose))
+                 mute=(not meta.verbose))
     # broadcast to (1, detector.shape) which is the expected shape of
     # the function
     single_shift = np.expand_dims(shifts, axis=0)
@@ -162,7 +162,7 @@ def straighten_trace(data, meta, log, m):
                         (data.flux.shape[0], data.flux.shape[2]), order='F')
 
     log.writelog('    Correcting the curvature over all integrations...',
-                mute=(not meta.verbose))
+                 mute=(not meta.verbose))
 
     # apply the shifts to the data
     data.flux.values = roll_columns(data.flux.values, shifts)
@@ -171,11 +171,11 @@ def straighten_trace(data, meta, log, m):
     data.dq.values = roll_columns(data.dq.values, shifts)
     data.v0.values = roll_columns(data.v0.values, shifts)
     data.medflux.values = roll_columns(np.expand_dims(data.medflux.values,
-                                    axis=0), shifts).squeeze()
+                                       axis=0), shifts).squeeze()
 
     # update the new src_ypos
     log.writelog(f'    Updating src_ypos to new center, row {new_center}...',
-                mute=(not meta.verbose))
+                 mute=(not meta.verbose))
     meta.src_ypos = new_center
 
     return data, meta

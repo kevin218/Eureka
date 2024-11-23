@@ -1093,28 +1093,6 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
     plots_s3.residualBackground(data, meta, m, vmin=None, vmax=None)
 
 
-def lc_nodriftcorr(spec, meta, scandir=None):
-    '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
-
-    Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
-    detector pixel x-axis.
-
-    Parameters
-    ----------
-    spec : Xarray Dataset
-        The Dataset object.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    scandir : ndarray; optional
-        For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
-        Defaults to None which is fine for JWST data, but must be provided
-        for HST data (can be all zero values if not spatial scanning mode).
-    '''
-    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
-                            optmask=spec.optmask,
-                            scandir=scandir)
-    
-
 def lc_nodriftcorr(spec, meta):
     '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
 
