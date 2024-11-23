@@ -509,6 +509,8 @@ def read(filename, data, meta, log):
                                       name='err')
     data['dq'] = xrio.makeFluxLikeDA(dq, time, "None", time_units,
                                      name='dq')
+    # Initialize bad pixel mask (False = good, True = bad)
+    data['mask'] = (['time', 'y', 'x'], np.zeros(data.flux.shape, dtype=bool))
 
     # Calculate centroids for each frame
     centroids = np.full((meta.nreads_full, 2), np.nan)
