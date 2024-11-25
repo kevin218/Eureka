@@ -1024,6 +1024,8 @@ def cut_aperture(data, meta, log):
         The background flux values over the aperture region.
     apv0 : ndarray
         The v0 values over the aperture region.
+    apmedflux : ndarray
+        The median flux over the aperture region. Currently None.
 
     Notes
     -----
