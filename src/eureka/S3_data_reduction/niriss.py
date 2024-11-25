@@ -16,6 +16,7 @@ __all__ = ['read', 'get_wave', 'straighten_trace', 'flag_ff', 'flag_bg',
 TODO:
     Implement niriss.calibrated_spectra()
     0th-order masking using F277W filter
+    Get 2D MAD calculation working
 '''
 
 
@@ -363,8 +364,9 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     bg = np.zeros_like(dataim)
     mask = np.zeros_like(dataim, dtype=bool)
     for i in range(norders):
-        bg[:, :, i], mask[:, :, i] = fitbg(dataim[:, :, i], meta, 
-            datamask[:, :, i], meta.bg_y1[i], meta.bg_y2[i], deg=meta.bg_deg,
+        bg[:, :, i], mask[:, :, i] = fitbg(
+            dataim[:, :, i], meta, datamask[:, :, i], 
+            meta.bg_y1[i], meta.bg_y2[i], deg=meta.bg_deg,
             threshold=meta.p3thresh, isrotate=2, isplots=isplots)
 
     return bg, mask, n

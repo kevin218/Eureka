@@ -666,7 +666,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 else:
                     meta.mad_s3 = []
                     for j, order in enumerate(meta.orders):
-                        meta.mad_s3.append(util.get_mad(meta, log,
+                        meta.mad_s3.append(
+                            util.get_mad(meta, log,
                             spec.wave_1d.sel(order=order).values,
                             spec.optspec.sel(order=order).values,
                             spec.optmask.sel(order=order).values,
