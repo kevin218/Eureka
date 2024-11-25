@@ -5,6 +5,7 @@
 # Number of spectroscopic channels spread evenly over given wavelength range
 nspecchan       2           # Number of spectroscopic channels spread evenly over given wavelength range. Set to None to leave the spectrum unbinned.
 compute_white   True        # Also compute the white-light lightcurve
+s4_order        None        # For NIRISS, specify spectral order
 wave_min        1.5         # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.
 wave_max        4.5         # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
 wave_input      None        # Full path to a txt file with pre-defined wavelength bins in two columns separated by whitespace.
