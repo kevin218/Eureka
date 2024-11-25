@@ -7,7 +7,7 @@ from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
-from . import sigrej, source_pos, background, plots_s3
+from . import sigrej, source_pos, background, plots_s3, nircam
 from . import hst_scan as hst
 from . import bright2flux as b2f
 from ..lib import suntimecorr, utc_tt, util
@@ -1070,7 +1070,56 @@ def cut_aperture(data, meta, log):
             apbg[n] = data.bg.values[n, ap_y1:ap_y2]
             apv0[n] = data.v0.values[n, ap_y1:ap_y2]
 
-    return apdata, aperr, apmask, apbg, apv0
+    return apdata, aperr, apmask, apbg, apv0, None
+
+
+def standard_spectrum(data, meta, apdata, apmask, aperr):
+    """Instrument wrapper for computing the standard box spectrum.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    apdata : ndarray
+        The pixel values in the aperture region.
+    apmask : ndarray
+        The outlier mask in the aperture region. True where pixels should be
+        masked.
+    aperr : ndarray
+        The noise values in the aperture region.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object in which the spectrum data will stored.
+    """
+    return nircam.standard_spectrum(data, meta, apdata, apmask, aperr)
+
+
+def clean_median_flux(data, meta, log, m):
+    """Instrument wrapper for computing a median flux frame that is 
+    free of bad pixels.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object.
+    """
+
+    return nircam.clean_median_flux(data, meta, log, m)
 
 
 def residualBackground(data, meta, m, vmin=None, vmax=None):
