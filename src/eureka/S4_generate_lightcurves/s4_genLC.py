@@ -249,7 +249,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             else:
                 flux_units = spec.optspec.attrs['flux_units']
                 time_units = spec.optspec.attrs['time_units']
-                wave_units = spec.wave_1d.attrs['wave_units']
+            wave_units = spec.wave_1d.attrs['wave_units']
 
             lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
                                    meta.wave, spec.time.values,
