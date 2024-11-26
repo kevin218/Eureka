@@ -667,13 +667,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.mad_s3 = []
                     for j, order in enumerate(meta.orders):
                         meta.mad_s3.append(
-                            util.get_mad(meta, log,
-                            spec.wave_1d.sel(order=order).values,
-                            spec.optspec.sel(order=order).values,
-                            spec.optmask.sel(order=order).values,
-                            np.nanmin(spec.wave_1d.sel(order=order)),
-                            np.nanmax(spec.wave_1d.sel(order=order)),
-                            scandir=scandir))
+                            util.get_mad(
+                                meta, log,
+                                spec.wave_1d.sel(order=order).values,
+                                spec.optspec.sel(order=order).values,
+                                spec.optmask.sel(order=order).values,
+                                np.nanmin(spec.wave_1d.sel(order=order)),
+                                np.nanmax(spec.wave_1d.sel(order=order)),
+                                scandir=scandir))
             else:
                 normspec = util.normalize_spectrum(
                     meta, spec.aplev.values,
