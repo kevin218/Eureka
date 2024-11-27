@@ -48,7 +48,7 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     """
     # Group the different variable types
     freenames = lc.freenames
-    freepars, _, _, _, indep_vars = group_variables(model)
+    freepars = group_variables(model)[0]
     if meta.old_fitparams is not None:
         freepars = load_old_fitparams(lc, meta, log, freenames, 'exoplanet')
 
@@ -106,6 +106,20 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
             log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
         else:
             log.writelog(f'{freenames[i]}: {fit_params[i]}')
+    if meta.pixelsampling:
+        log.writelog('\nSpherical Harmonic Basis:')
+
+        for chan in range(model.nchannel_fitted):
+            if chan == 0:
+                chankey = ''
+            else:
+                chankey = f'_ch{chan}'
+            log.writelog(f'  Channel {chan+1}:')
+            log.writelog(f'    fp: {map_soln["fp"+chankey]}')
+            for ell in range(1, meta.ydeg+1):
+                for m in range(-ell, ell+1):
+                    name = f'Y{ell}{m}'
+                    log.writelog(f'    {name}: {map_soln[name+chankey][0]}')
     log.writelog('')
 
     # Plot fit
@@ -126,6 +140,10 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
                                  or 'poet_pc' in meta.run_myfuncs
                                  or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
+
+    if meta.pixelsampling and meta.isplots_S5 >= 1:
+        eclipse_maps = map_soln['map'][np.newaxis]
+        plots.plot_eclipse_map(lc, eclipse_maps, meta, fitter=calling_function)
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3 and calling_function == 'exoplanet':
@@ -174,7 +192,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     """
     # Group the different variable types
     freenames = lc.freenames
-    freepars, _, _, _, indep_vars = group_variables(model)
+    freepars = group_variables(model)[0]
     if meta.old_fitparams is not None:
         freepars = load_old_fitparams(lc, meta, log, freenames, 'nuts')
     ndim = len(freenames)
@@ -233,6 +251,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                      mute=(not meta.verbose))
         log.writelog('', mute=(not meta.verbose))
 
+    trace_az = arviz.from_pymc3(trace, model=model.model)
     samples = np.hstack([trace[name].reshape(-1, 1) for name in freenames])
 
     # Record median + percentiles
@@ -249,16 +268,6 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     upper_errs = q[2]-q[1]
     lower_errs = q[1]-q[0]
-
-    # If pixel sampling, append best fit pixels to fit_params
-    if "pixel_ydeg" in indep_vars:
-        trace_az = arviz.from_pymc3(trace, model=model.model)
-        trace_fname = meta.outputdir+"S5_trace_map.nc"
-        log.writelog(f'Saving map trace to {trace_fname}...')
-        trace_az.to_netcdf(trace_fname)
-
-        fit_params = np.append(fit_params,
-                               trace_az['posterior']['p'][0, 0])
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
@@ -290,6 +299,30 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         else:
             log.writelog(f'{freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
                          f' -{lower_errs[i]})')
+    if meta.pixelsampling:
+        log.writelog('\nSpherical Harmonic Basis:')
+
+        for chan in range(model.nchannel_fitted):
+            if chan == 0:
+                chankey = ''
+            else:
+                chankey = f'_ch{chan}'
+            log.writelog(f'  Channel {chan+1}:')
+
+            othernames = ['fp', ]
+            for ell in range(1, meta.ydeg+1):
+                for m in range(-ell, ell+1):
+                    othernames.append(f'Y{ell}{m}')
+
+            for name in othernames:
+                values = trace_az.posterior.stack(sample=("chain", "draw")
+                                                  )[name+chankey][:]
+                q = np.percentile(values, [16, 50, 84])
+                medval = q[1]  # median
+                uppererr = q[2]-q[1]
+                lowererr = q[1]-q[0]
+                log.writelog(f'    {name}: {medval} (+{uppererr},'
+                            f' -{lowererr})')
     log.writelog('')
 
     # Plot fit
@@ -312,10 +345,10 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         plots.plot_phase_variations(lc, model, meta, fitter='nuts')
 
     # Show the inferred planetary brightness map
-    if meta.isplots_S5 >= 1 and "pixel_ydeg" in indep_vars:
+    if meta.pixelsampling and meta.isplots_S5 >= 1:
         eclipse_maps = np.transpose(trace_az.posterior.stack(
-            sample=("chain", "draw"))['map_grid'][:], [2, 0, 1])
-        plots.plot_eclipse_map(lc, eclipse_maps, meta)
+            sample=("chain", "draw"))['map'][:], [2, 0, 1])
+        plots.plot_eclipse_map(lc, eclipse_maps, meta, fitter='nuts')
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
