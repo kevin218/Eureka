@@ -799,7 +799,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             plt.pause(0.2)
 
 
-def plot_eclipse_map(lc, flux_maps, meta):
+def plot_eclipse_map(lc, flux_maps, meta, fitter):
     """Plot fitted eclipse map and lat-lon slices (Figs 5105)
 
     Parameters
@@ -810,6 +810,8 @@ def plot_eclipse_map(lc, flux_maps, meta):
         The posterior distribution of the fitted maps
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
     """
     for i, channel in enumerate(lc.fitted_channels):
         fig = plt.figure(5105, figsize=(12, 3))
@@ -834,7 +836,8 @@ def plot_eclipse_map(lc, flux_maps, meta):
         axs[0].set_yticks([-90, -45, 0, 45, 90])
         axs[0].set_xlim([-180, 180])
         axs[0].set_ylim([-90, 90])
-        plt.colorbar(ca, ax=axs[0], pad=0.02)
+        fig.colorbar(ca, ax=axs[0], pad=-0.04,
+                     label=r'$F_{\rm p}/F_{\rm s}$ (ppm)')
 
         # Plot slice along equator
         lat0 = int(np.shape(flux_maps)[2]/2)
@@ -873,31 +876,24 @@ def plot_eclipse_map(lc, flux_maps, meta):
         axs[2].set_xlim([-90, 90])
         axs[2].set_xticks([-90, -45, 0, 45, 90])
 
-        axs[0].set_title('Median Map', fontsize=12)
-        axs[1].set_title('Fit Along Equator', fontsize=12)
-        axs[2].set_title(r'Fit Along 0$^{\circ}$ Longitude', fontsize=12)
+        axs[0].set_title('Median Map')
+        axs[1].set_title('Flux Along Equator')
+        axs[2].set_title(r'Flux Along 0$^{\circ}$ Longitude')
         axs[0].set_ylabel('Latitude', labelpad=-10)
         axs[0].set_xlabel('Longitude')
         axs[1].set_xlabel('Longitude')
         axs[2].set_xlabel('Latitude')
-        axs[1].set_ylabel(r'$F_{\rm p}/F_{\rm s}$ (ppm)', fontsize=11,
-                          labelpad=-4)
-        axs[2].set_ylabel(r'$F_{\rm p}/F_{\rm s}$ (ppm)', fontsize=11,
-                          labelpad=-4)
+        axs[1].set_ylabel(r'$F_{\rm p}/F_{\rm s}$ (ppm)')
+        axs[2].set_ylabel(r'$F_{\rm p}/F_{\rm s}$ (ppm)')
 
-        plt.subplots_adjust(left=0.07,
-                            bottom=0.17,
-                            right=0.98,
-                            top=0.81,
-                            wspace=0.38,
-                            hspace=0.22)
+        fig.get_layout_engine().set(wspace=0.05, w_pad=0)
 
         if lc.white:
             fname_tag = 'white'
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
-        fname = (f'figs{os.sep}fig5105_{fname_tag}_eclipse_map' +
+        fname = (f'figs{os.sep}fig5105_{fname_tag}_eclipseMap_{fitter}' +
                  plots.figure_filetype)
 
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
