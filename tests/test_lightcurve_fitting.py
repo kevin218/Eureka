@@ -7,12 +7,31 @@ import sys
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.S5_lightcurve_fitting import models, simulations
 from eureka.lib.readEPF import Parameters, Parameter
-from eureka.lib.readECF import MetaClass
+from eureka.S5_lightcurve_fitting.s5_meta import S5MetaClass
 from eureka.lib import logedit
 from eureka.S5_lightcurve_fitting import s5_fit
 
-meta = MetaClass()
-meta.eventlabel = 'NIRCam'
+class testingMetaClass(S5MetaClass):
+    """Apply testing-relevant defaults to S5MetaClass objects.
+
+    Parameters
+    ----------
+    meta : eureka.S5_lightcurve_fitting.s5_meta.S5MetaClass
+        The meta object to prepare.
+    """
+    def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
+        super().__init__(folder, file, eventlabel, **kwargs)
+        self.spec_hw = 1
+        self.bg_hw = 2
+        self.fit_par = ''
+        self.fit_method = 'lsq'
+        self.run_myfuncs = []
+        self.topdir = './'
+        self.inputdir = ''
+        self.outputdir = ''
+        self.sharedp = False
+        self.whitep = False
+        self.set_defaults()
 
 
 class TestModels(unittest.TestCase):
@@ -74,12 +93,7 @@ class TestModels(unittest.TestCase):
         params.u4 = 0.1, 'free', 0., 1., 'U'
 
         # Make the transit model
-        meta = MetaClass()
-        meta.sharedp = False
-        meta.multwhite = False
-        meta.num_planets = 1
-        meta.ld_from_S4 = False
-        meta.ld_file = None
+        meta = testingMetaClass()
         longparamlist, paramtitles, freenames, params = \
             s5_fit.make_longparamlist(meta, params, 1)
         self.t_model = models.BatmanTransitModel(parameters=params,
@@ -88,7 +102,7 @@ class TestModels(unittest.TestCase):
                                                  longparamlist=longparamlist,
                                                  nchan=1,
                                                  paramtitles=paramtitles,
-                                                 ld_from_S4=meta.ld_from_S4,
+                                                 ld_from_S4=meta.use_generate_ld,
                                                  ld_from_file=meta.ld_file,
                                                  num_planets=meta.num_planets)
 
@@ -112,10 +126,7 @@ class TestModels(unittest.TestCase):
         params.Rs = 1., 'independent'
 
         # Make the eclipse model
-        meta = MetaClass()
-        meta.sharedp = False
-        meta.multwhite = False
-        meta.num_planets = 1
+        meta = testingMetaClass()
         longparamlist, paramtitles, freenames, params = \
             s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
@@ -160,12 +171,7 @@ class TestModels(unittest.TestCase):
         params.Rs = 1., 'independent'
 
         # Create the model
-        meta = MetaClass()
-        meta.sharedp = False
-        meta.multwhite = False
-        meta.num_planets = 1
-        meta.ld_from_S4 = False
-        meta.ld_file = None
+        meta = testingMetaClass()
         longparamlist, paramtitles, freenames, params = \
             s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
@@ -175,7 +181,7 @@ class TestModels(unittest.TestCase):
                                                  longparamlist=longparamlist,
                                                  nchan=1,
                                                  paramtitles=paramtitles,
-                                                 ld_from_S4=meta.ld_from_S4,
+                                                 ld_from_S4=meta.use_generate_ld,
                                                  ld_from_file=meta.ld_file,
                                                  num_planets=meta.num_planets)
         self.e_model = models.BatmanEclipseModel(parameters=params,
@@ -226,12 +232,7 @@ class TestModels(unittest.TestCase):
         params.u1 = 0.2, 'free', 0., 1., 'U'
 
         # Make the transit model
-        meta = MetaClass()
-        meta.sharedp = False
-        meta.multwhite = False
-        meta.num_planets = 1
-        meta.ld_from_S4 = False
-        meta.ld_file = None
+        meta = testingMetaClass()
         longparamlist, paramtitles, freenames, params = \
             s5_fit.make_longparamlist(meta, params, 1)
         self.t_poet_tr = models.PoetTransitModel(parameters=params,
@@ -240,7 +241,7 @@ class TestModels(unittest.TestCase):
                                                  longparamlist=longparamlist,
                                                  nchan=1,
                                                  paramtitles=paramtitles,
-                                                 ld_from_S4=meta.ld_from_S4,
+                                                 ld_from_S4=meta.use_generate_ld,
                                                  ld_from_file=meta.ld_file,
                                                  num_planets=meta.num_planets)
 
@@ -264,10 +265,7 @@ class TestModels(unittest.TestCase):
         params.Rs = 1., 'independent'
 
         # Make the eclipse model
-        meta = MetaClass()
-        meta.sharedp = False
-        meta.multwhite = False
-        meta.num_planets = 1
+        meta = testingMetaClass()
         longparamlist, paramtitles, freenames, params = \
             s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
@@ -310,12 +308,7 @@ class TestModels(unittest.TestCase):
         params.Rs = 1., 'independent'
 
         # Create the model
-        meta = MetaClass()
-        meta.sharedp = False
-        meta.multwhite = False
-        meta.num_planets = 1
-        meta.ld_from_S4 = False
-        meta.ld_file = None
+        meta = testingMetaClass()
         longparamlist, paramtitles, freenames, params = \
             s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
@@ -325,7 +318,7 @@ class TestModels(unittest.TestCase):
                                                longparamlist=longparamlist,
                                                nchan=1,
                                                paramtitles=paramtitles,
-                                               ld_from_S4=meta.ld_from_S4,
+                                               ld_from_S4=meta.use_generate_ld,
                                                ld_from_file=meta.ld_file,
                                                num_planets=meta.num_planets)
         self.e_model = models.PoetEclipseModel(parameters=params,
@@ -366,9 +359,7 @@ class TestModels(unittest.TestCase):
         params.lor_power = 2., 'fixed'
 
         # Make the eclipse model
-        meta = MetaClass()
-        meta.sharedp = False
-        meta.multwhite = False
+        meta = testingMetaClass()
         longparamlist, paramtitles, freenames, params = \
             s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
