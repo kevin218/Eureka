@@ -64,6 +64,24 @@ class AstroModel(PyMC3Model):
             else:
                 self.stellar_models.append(component)
 
+    @property
+    def fit(self):
+        """A getter for the fit object."""
+        return self._fit
+
+    @fit.setter
+    def fit(self, fit):
+        """A setter for the fit object.
+
+        Parameters
+        ----------
+        fit : object
+            The fit object
+        """
+        self._fit = fit
+        for component in self.components:
+            component.fit = fit
+
     def eval(self, channel=None, eval=True, **kwargs):
         """Evaluate the function with the given values.
 
