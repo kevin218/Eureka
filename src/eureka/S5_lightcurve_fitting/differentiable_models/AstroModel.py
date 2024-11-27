@@ -40,17 +40,17 @@ class AstroModel(PyMC3Model):
 
     @property
     def components(self):
-        """A getter for the flux."""
+        """A getter for the components."""
         return self._components
 
     @components.setter
     def components(self, components):
-        """A setter for the flux
+        """A setter for the components
 
         Parameters
         ----------
-        flux_array : sequence
-            The flux array
+        components : sequence
+            The collection of astrophysical model components.
         """
         self._components = components
         self.starry_model = None
