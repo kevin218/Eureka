@@ -2,12 +2,12 @@
 def pytest_collection_modifyitems(session, config, items):
     """Modifies test items to ensure test functions run in a given order"""
     function_order = ["test_trim", "test_medstddev",
-                      "test_parameter",  "test_parameters",  "test_model",
+                      "test_parameter", "test_parameters", "test_model",
                       "test_compositemodel", "test_polynomialmodel",
                       "test_transitmodel", "test_eclipsemodel",
                       "test_sinsoidalmodel", "test_poettr_model",
-                      "test_poetecl_model",  "test_poetpc_model",
-                      "test_lorentzian_model",  "test_exponentialmodel",
+                      "test_poetecl_model", "test_poetpc_model",
+                      "test_lorentzian_model", "test_exponentialmodel",
                       "test_simulation",
                       "test_MIRI", "test_NIRCam", "test_NIRSpec",
                       "test_NIRCamPhotometry", "test_NIRCamPhotometry_hex",
