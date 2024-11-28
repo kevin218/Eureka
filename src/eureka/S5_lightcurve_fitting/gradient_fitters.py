@@ -322,7 +322,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                 uppererr = q[2]-q[1]
                 lowererr = q[1]-q[0]
                 log.writelog(f'    {name}: {medval} (+{uppererr},'
-                            f' -{lowererr})')
+                             f' -{lowererr})')
     log.writelog('')
 
     # Plot fit

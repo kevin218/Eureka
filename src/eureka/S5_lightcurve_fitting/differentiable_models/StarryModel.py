@@ -195,12 +195,12 @@ class StarryModel(PyMC3Model):
                     # Transform pixels to spherical harmonics
                     ylms = tt.dot(P2Y, p)
                     planet_map_temp.amp = ylms[0]
-                    planet_map_temp[1:,:] = ylms[1:]/ylms[0]
+                    planet_map_temp[1:, :] = ylms[1:]/ylms[0]
 
                     amp = pl_params.fp/tt.abs_(
                         planet_map_temp.flux(theta=0)[0])
                     planet_map.amp = amp*ylms[0]
-                    planet_map[1:,:] = ylms[1:]/ylms[0]
+                    planet_map[1:, :] = ylms[1:]/ylms[0]
 
                     # Store the fp, Ylm, and map for convenient access later
                     if f'fp{chankey}' not in self.freenames:
@@ -213,7 +213,7 @@ class StarryModel(PyMC3Model):
                                                      planet_map[ell, m]))
                     setattr(self.model, f'map{chankey}', pm.Deterministic(
                         f'map{chankey}',
-                        planet_map.render(projection="rect",res=100)))
+                        planet_map.render(projection="rect", res=100)))
                 elif not hasattr(pl_params, 'fp'):
                     planet_map = starry.Map(ydeg=pl_params.ydeg, amp=0)
                 else:
@@ -491,11 +491,11 @@ class StarryModel(PyMC3Model):
                     # Transform pixels to spherical harmonics
                     ylms = np.dot(P2Y, p)
                     planet_map_temp.amp = ylms[0]
-                    planet_map_temp[1:,:] = ylms[1:]/ylms[0]
+                    planet_map_temp[1:, :] = ylms[1:]/ylms[0]
 
                     amp = pl_params.fp/np.abs(planet_map_temp.flux(theta=0)[0])
                     planet_map.amp = amp*ylms[0]
-                    planet_map[1:,:] = ylms[1:]/ylms[0]
+                    planet_map[1:, :] = ylms[1:]/ylms[0]
 
                     # Store the fp, Ylm, and map for convenient access later
                     if f'fp{chankey}' not in self.freenames:
@@ -505,7 +505,8 @@ class StarryModel(PyMC3Model):
                             setattr(self.fit, f'Y{ell}{m}{chankey}',
                                     planet_map[ell, m])
                     setattr(self.fit, f'map{chankey}',
-                            planet_map.render(projection="rect",res=100).eval())
+                            planet_map.render(projection="rect",
+                                              res=100).eval())
                 elif not hasattr(pl_params, 'fp'):
                     planet_map = starry.Map(ydeg=pl_params.ydeg, amp=0)
                 else:

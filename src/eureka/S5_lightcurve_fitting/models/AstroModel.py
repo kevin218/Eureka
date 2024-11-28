@@ -131,7 +131,8 @@ class PlanetParams():
 
         # Figure out how many planet Ylm spherical harmonics
         ylm_params = np.where(['Y' == par[0] and par[1].isnumeric()
-                               for par in list(model.parameters.dict.keys())])[0]
+                               for par in list(model.parameters.dict.keys())
+                               ])[0]
         if len(ylm_params) > 0:
             l_vals = [int(list(model.parameters.dict.keys())[ind][1])
                       for ind in ylm_params]
