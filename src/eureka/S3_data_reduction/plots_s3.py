@@ -612,12 +612,12 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
     plt.figure(3107)
     plt.clf()
     plt.title("Trace Curvature")
-    plt.plot(column_coms, '.', label='Measured', color=cmap(0.25))
-    plt.plot(smooth_coms, '-', label='Smoothed', color=cmap(0.98))
-    plt.plot(int_coms, 's', label='Integer', color=cmap(0.7), ms=2)
+    plt.plot(column_coms+meta.ywindow[0], '.', label='Measured', color=cmap(0.25))
+    plt.plot(smooth_coms+meta.ywindow[0], '-', label='Smoothed', color=cmap(0.98))
+    plt.plot(int_coms+meta.ywindow[0], 's', label='Integer', color=cmap(0.7), ms=2)
     plt.legend()
-    plt.ylabel('Relative Pixel Position')
-    plt.xlabel('Relative Pixel Position')
+    plt.ylabel('Detector Pixel Position')
+    plt.xlabel('Detector Pixel Position')
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3107_file{file_number}_Curvature' +
@@ -847,7 +847,7 @@ def phot_npix(data, meta):
 
 def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
     """
-    Plot of the gaussian fit to the centroid cutout. (Fig 3503)
+    Plot of the gaussian fit to the centroid cutout. (Fig 3309)
 
     Parameters
     ----------
@@ -871,23 +871,13 @@ def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
         The file number.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
-    - 2023-04-19 Isaac Edelman
-        Cleaned up plot &
-        corrected plotting feature
     """
     img = np.ma.copy(img)
     img = np.ma.masked_where(mask, img)
 
-    plt.figure(3503)
+    plt.figure(3309)
     plt.clf()
-    fig, ax = plt.subplots(2, 2, num=3503, figsize=(8, 8))
+    fig, ax = plt.subplots(2, 2, num=3309, figsize=(8, 8))
 
     # Title
     plt.suptitle('Centroid gaussian fit')
@@ -927,7 +917,7 @@ def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
     # Naming figure
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    fname = (f'figs{os.sep}fig3503_file{file_number}_int{int_number}'
+    fname = (f'figs{os.sep}fig3309_file{file_number}_int{int_number}'
              f'_Centroid_Fit' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
