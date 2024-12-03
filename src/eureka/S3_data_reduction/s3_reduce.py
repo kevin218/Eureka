@@ -388,6 +388,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         # Load the original median frame
                         data['medflux'] = saved_ref_median_frame
 
+                    # Calulate and correct for 2D drift
+                    if hasattr(inst, 'correct_drift2D'):
+                        data, meta, log = inst.correct_drift2D(data, meta, log,
+                                                               m)
+                        plots_s3.drift_2D(data, meta)
+
                     # correct spectral curvature
                     if meta.curvature == 'correct':
                         data, meta = straighten.straighten_trace(data, meta,
@@ -413,11 +419,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     data = bg.BGsubtraction(data, meta, log,
                                             m, meta.isplots_S3)
 
-                    # Calulate and correct for 2D drift
-                    if hasattr(inst, 'correct_drift2D'):
-                        data, meta, log = inst.correct_drift2D(data, meta, log,
-                                                               m)
-                    elif meta.record_ypos:
+                    if not hasattr(inst, 'correct_drift2D') and meta.record_ypos:
                         # Record y position and width for all integrations
                         data, meta, log = \
                             source_pos.source_pos_wrapper(data, meta, log,
@@ -450,8 +452,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         for n in iterfn:
                             # make optimal spectrum plot
                             plots_s3.optimal_spectrum(data, meta, n, m)
-                        if meta.inst != 'wfc3':
-                            plots_s3.residualBackground(data, meta, m)
+                        plots_s3.residualBackground(data, meta, m)
 
                 else:  # Do Photometry reduction
                     meta.photap = meta.spec_hw

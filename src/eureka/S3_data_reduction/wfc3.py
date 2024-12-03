@@ -8,9 +8,10 @@ from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
-from . import sigrej, source_pos, background, straighten
+from . import sigrej, source_pos, background, straighten, optspex
 from . import hst_scan as hst
 from . import bright2flux as b2f
+from . import nircam
 from ..lib import suntimecorr, utc_tt, util
 from ..lib.util import supersample
 
@@ -152,11 +153,12 @@ def get_reference_frames(meta, log):
         meta.guess.append(data.guess)
         data, meta, log = source_pos.source_pos_wrapper(data, meta, log, i)
         data, meta = b2f.convert_to_e(data, meta, log)
-        if meta.curvature == 'correct':
-            data, meta = straighten.straighten_trace(data, meta, log, i)
-        data = flag_bg(data, meta, log)
-        data = background.BGsubtraction(data, meta, log, i)
-        cut_aperture(data, meta, log)
+
+        new_center = data.flux.shape[1]//2 - 1
+        shifts = new_center - data.guess.values
+        shifts = np.reshape(np.repeat(shifts, data.flux.shape[2]),
+                            (data.flux.shape[0], data.flux.shape[2]))
+        data.flux.values = straighten.roll_columns(data.flux.values, shifts)
 
         # Save the reference values
         meta.subdata_ref.append(data.flux)
@@ -544,8 +546,8 @@ def read(filename, data, meta, log):
     # Calculate centroids for each frame
     centroids = np.full((meta.nreads_full, 2), np.nan)
     # Figure out which direct image is the relevant one for this observation
-    image_number = np.where(meta.segment_list == filename)[0][0]
-    centroid_index = meta.direct_index[image_number]
+    meta.image_number = np.where(meta.segment_list == filename)[0][0]
+    centroid_index = meta.direct_index[meta.image_number]
     # Use the same centroid for each read
     # Only set the centroids of non-NaN reads
     centroids[goodInds, 0] = meta.centroid[centroid_index][0]
@@ -563,10 +565,13 @@ def read(filename, data, meta, log):
                      f" filter/grism...", mute=(not meta.verbose))
     xrange = np.arange(0, meta.nx)
     # wavelength in microns
-    wave = hst.calibrateLambda(xrange, centroids[goodInds][0], meta.filter)/1e4
+    wave_1d = hst.calibrateLambda(xrange, centroids[goodInds][0],
+                                  meta.filter)/1e4
     # Assume no skew over the detector
-    wave_2d = wave*np.ones((meta.ny, 1))
     wave_units = 'microns'
+    data['wave_1d'] = (['x'], wave_1d)
+    data['wave_1d'].attrs['wave_units'] = wave_units
+    wave_2d = wave_1d*np.ones((meta.ny, 1))
     data['wave_2d'] = (['y', 'x'], wave_2d)
     data['wave_2d'].attrs['wave_units'] = wave_units
 
@@ -578,33 +583,6 @@ def read(filename, data, meta, log):
 
     # Compute differences between non-destructive reads
     diffdata, meta, log = difference_frames(data, meta, log)
-
-    # Determine read noise and gain
-    readNoise = np.mean((data.attrs['mhdr']['READNSEA'],
-                         data.attrs['mhdr']['READNSEB'],
-                         data.attrs['mhdr']['READNSEC'],
-                         data.attrs['mhdr']['READNSED']))
-    v0 = readNoise**2*np.ones_like(diffdata.flux.values)  # Units of electrons
-    diffdata['v0'] = (['time', 'y', 'x'], v0)
-
-    # Assign dq to diffdata
-    # This is a bit of a hack, but dq is not currently being used
-    diffdata['dq'] = data.dq[:-1]
-
-    # Assign wavelength to diffdata
-    diffdata['wave'] = (['x'], wave)
-    diffdata['wave'].attrs['wave_units'] = wave_units
-    diffdata['wave_2d'] = (['y', 'x'], wave_2d)
-    diffdata['wave_2d'].attrs['wave_units'] = wave_units
-
-    # Figure out which read this file starts and ends with
-    diffdata.attrs['intstart'] = image_number*(meta.nreads-1)
-    diffdata.attrs['intend'] = (image_number+1)*(meta.nreads-1)
-
-    # Copy science and master headers
-    diffdata.attrs['shdr'] = data.attrs['shdr']
-    diffdata.attrs['mhdr'] = data.attrs['mhdr']
-    diffdata.attrs['filename'] = data.attrs['filename']
 
     diffdata['scandir'] = (['time'], np.repeat(temp_scandir, meta.nreads))
 
@@ -704,7 +682,6 @@ def difference_frames(data, meta, log):
     meta.n_int = meta.nreads
 
     diffmask = np.ones((meta.nreads, meta.ny, meta.nx), dtype=bool)
-    guess = np.zeros((meta.nreads), dtype=int)
     for n in range(meta.nreads):
         if np.all(np.isnan(diffflux[n])):
             # This file had one fewer read, so skip this "filler" read
@@ -722,12 +699,57 @@ def difference_frames(data, meta, log):
                      meta.xwindow[0]:meta.xwindow[1]],
             diffflux[n, meta.ywindow[0]:meta.ywindow[1],
                      meta.xwindow[0]:meta.xwindow[1]])
-        guess[n] = (np.median(np.ma.where(masked_data >
-                                          np.ma.mean(masked_data))[0])
-                    + meta.ywindow[0]).astype(int)
-    # Guess may be skewed if first read is zeros
-    if guess[0] < 0 or guess[0] > meta.ny:
-        guess[0] = guess[1]
+
+    # Create Xarray Dataset with updated time axis for differenced frames
+    flux_units = data.flux.attrs['flux_units']
+    time_units = data.flux.attrs['time_units']
+    diffdata = xrio.makeDataset()
+    diffdata['flux'] = xrio.makeFluxLikeDA(diffflux, difftime, flux_units,
+                                           time_units, name='flux')
+    diffdata['err'] = xrio.makeFluxLikeDA(differr, difftime, flux_units,
+                                          time_units, name='err')
+    diffdata['flatmask'] = xrio.makeFluxLikeDA(diffmask, difftime, "None",
+                                               time_units, name='mask')
+    variance = np.zeros_like(diffdata.flux.values)
+    diffdata['variance'] = xrio.makeFluxLikeDA(variance, difftime, flux_units,
+                                               time_units, name='variance')
+
+    # Determine read noise and gain
+    readNoise = np.mean((data.attrs['mhdr']['READNSEA'],
+                         data.attrs['mhdr']['READNSEB'],
+                         data.attrs['mhdr']['READNSEC'],
+                         data.attrs['mhdr']['READNSED']))
+    v0 = readNoise**2*np.ones_like(diffdata.flux.values)  # Units of electrons
+    diffdata['v0'] = (['time', 'y', 'x'], v0)
+
+    # Assign dq to diffdata
+    # This is a bit of a hack, but dq is not currently being used
+    diffdata['dq'] = data.dq[:-1]
+
+    # Assign wavelength to diffdata
+    diffdata['wave_1d'] = (['x'], data.wave_1d.values)
+    diffdata['wave_1d'].attrs['wave_units'] = data.wave_1d.wave_units
+    diffdata['wave_2d'] = (['y', 'x'], data.wave_2d.values)
+    diffdata['wave_2d'].attrs['wave_units'] = data.wave_2d.wave_units
+
+    # Figure out which read this file starts and ends with
+    diffdata.attrs['intstart'] = meta.image_number*(meta.nreads-1)
+    diffdata.attrs['intend'] = (meta.image_number+1)*(meta.nreads-1)
+
+    # Copy science and master headers
+    diffdata.attrs['shdr'] = data.attrs['shdr']
+    diffdata.attrs['mhdr'] = data.attrs['mhdr']
+    diffdata.attrs['filename'] = data.attrs['filename']
+
+    diffdata['mask'] = diffdata['flatmask']
+    verbose = meta.verbose
+    meta.verbose = False
+    diffdata, meta, log = source_pos.source_pos_wrapper(diffdata, meta, log, 0,
+                                                        integ=None)
+    meta.verbose = verbose
+    guess = np.round(diffdata.centroid_y.values).astype(int)
+    diffdata['guess'] = xrio.makeTimeLikeDA(guess, difftime, 'pixels',
+                                            time_units, 'guess')
 
     # Compute full scan length
     if meta.firstInBatch:
@@ -750,25 +772,8 @@ def difference_frames(data, meta, log):
         spline = spi.UnivariateSpline(yrng, scannedData[yrng], k=3, s=0)
         roots = spline.roots()
         scanHeight[i] = roots[1]-roots[0]
-
-    # Create Xarray Dataset with updated time axis for differenced frames
-    flux_units = data.flux.attrs['flux_units']
-    time_units = data.flux.attrs['time_units']
-    diffdata = xrio.makeDataset()
-    diffdata['flux'] = xrio.makeFluxLikeDA(diffflux, difftime, flux_units,
-                                           time_units, name='flux')
-    diffdata['err'] = xrio.makeFluxLikeDA(differr, difftime, flux_units,
-                                          time_units, name='err')
-    diffdata['flatmask'] = xrio.makeFluxLikeDA(diffmask, difftime, "None",
-                                               time_units, name='mask')
-    variance = np.zeros_like(diffdata.flux.values)
-    diffdata['variance'] = xrio.makeFluxLikeDA(variance, difftime, flux_units,
-                                               time_units, name='variance')
-    diffdata['guess'] = xrio.makeTimeLikeDA(guess, difftime, 'pixels',
-                                            time_units, 'guess')
-    diffdata['scanHeight'] = xrio.makeTimeLikeDA(scanHeight, difftime,
-                                                 'pixels', time_units,
-                                                 'scanHeight')
+    diffdata['scanHeight'] = xrio.makeTimeLikeDA(
+        scanHeight, difftime, 'pixels', time_units, 'scanHeight')
 
     return diffdata, meta, log
 
@@ -790,37 +795,38 @@ def flag_bg(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with outlier background pixels flagged.
     '''
-    log.writelog('  Performing background outlier rejection...',
-                 mute=(not meta.verbose))
+    # log.writelog('  Performing background outlier rejection...',
+    #              mute=(not meta.verbose))
 
-    for p in range(2):
-        iscans = np.where(data.scandir.values == p)[0]
-        if len(iscans) > 0:
-            for n in range(meta.nreads):
-                iscan = iscans[n::meta.nreads]
-                # Set limits on the sky background
-                x1 = (data.guess.values[iscan].min()-meta.bg_hw).astype(int)
-                x2 = (data.guess.values[iscan].max()+meta.bg_hw).astype(int)
-                bgdata1 = data.flux[iscan, :x1]
-                bgmask1 = data.mask[iscan, :x1]
-                bgdata2 = data.flux[iscan, x2:]
-                bgmask2 = data.mask[iscan, x2:]
-                if meta.use_estsig:
-                    bgerr1 = np.median(data.err[iscan, :x1])
-                    bgerr2 = np.median(data.err[iscan, x2:])
-                    estsig1 = [bgerr1 for j in range(len(meta.bg_thresh))]
-                    estsig2 = [bgerr2 for j in range(len(meta.bg_thresh))]
-                else:
-                    estsig1 = None
-                    estsig2 = None
-                data['mask'][iscan, :x1] = sigrej.sigrej(bgdata1,
-                                                         meta.bg_thresh,
-                                                         bgmask1, estsig1)
-                data['mask'][iscan, x2:] = sigrej.sigrej(bgdata2,
-                                                         meta.bg_thresh,
-                                                         bgmask2, estsig2)
+    # for p in range(2):
+    #     iscans = np.where(data.scandir.values == p)[0]
+    #     if len(iscans) > 0:
+    #         for n in range(meta.nreads):
+    #             iscan = iscans[n::meta.nreads]
+    #             # Set limits on the sky background
+    #             x1 = (data.guess.values[iscan].min()-meta.bg_hw).astype(int)
+    #             x2 = (data.guess.values[iscan].max()+meta.bg_hw).astype(int)
+    #             bgdata1 = data.flux[iscan, :x1]
+    #             bgmask1 = data.mask[iscan, :x1]
+    #             bgdata2 = data.flux[iscan, x2:]
+    #             bgmask2 = data.mask[iscan, x2:]
+    #             if meta.use_estsig:
+    #                 bgerr1 = np.median(data.err[iscan, :x1])
+    #                 bgerr2 = np.median(data.err[iscan, x2:])
+    #                 estsig1 = [bgerr1 for j in range(len(meta.bg_thresh))]
+    #                 estsig2 = [bgerr2 for j in range(len(meta.bg_thresh))]
+    #             else:
+    #                 estsig1 = None
+    #                 estsig2 = None
+    #             data['mask'][iscan, :x1] = sigrej.sigrej(bgdata1,
+    #                                                      meta.bg_thresh,
+    #                                                      bgmask1, estsig1)
+    #             data['mask'][iscan, x2:] = sigrej.sigrej(bgdata2,
+    #                                                      meta.bg_thresh,
+    #                                                      bgmask2, estsig2)
 
-    return data
+    # return data
+    return nircam.flag_bg(data, meta, log)
 
 
 def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
@@ -859,12 +865,14 @@ def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    y2 = guess + meta.bg_hw
-    y1 = guess - meta.bg_hw
+    # y2 = guess + meta.bg_hw
+    # y1 = guess - meta.bg_hw
 
-    bg, mask = background.fitbg(dataim, meta, datamask, y1, y2,
-                                deg=meta.bg_deg, threshold=meta.p3thresh,
-                                isrotate=2, isplots=isplots)
+    # bg, mask = background.fitbg(dataim, meta, datamask, y1, y2,
+    #                             deg=meta.bg_deg, threshold=meta.p3thresh,
+    #                             isrotate=2, isplots=isplots)
+
+    bg, mask, n = nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
 
     # Calculate variance assuming background dominated rather than
     # read noise dominated
@@ -899,6 +907,18 @@ def correct_drift2D(data, meta, log, m):
     log : logedit.Logedit
         The current log.
     """
+    new_center = data.flux.shape[1]//2 - 1
+    shifts = new_center - data.guess.values
+    shifts = np.reshape(np.repeat(shifts, data.flux.shape[2]),
+                        (data.flux.shape[0], data.flux.shape[2]))
+    data.flux.values = straighten.roll_columns(data.flux.values, shifts)
+    data.mask.values = straighten.roll_columns(data.mask.values, shifts)
+    data.err.values = straighten.roll_columns(data.err.values, shifts)
+    data.dq.values = straighten.roll_columns(data.dq.values, shifts)
+    data.v0.values = straighten.roll_columns(data.v0.values, shifts)
+    meta.src_ypos = new_center
+    data = optspex.clean_median_flux(data, meta, log, m)
+
     def writeDrift2D(arg):
         value, n = arg
         # Assign to array of spectra and uncertainties
@@ -964,9 +984,9 @@ def correct_drift2D(data, meta, log, m):
         data.variance[n] = spni.shift(data.variance[n],
                                       -1*drift2D_int[n, ::-1],
                                       order=0, mode='constant', cval=0)
-        data.bg[n] = spni.shift(data.bg[n],
-                                -1*drift2D_int[n, ::-1], order=0,
-                                mode='constant', cval=0)
+        # data.bg[n] = spni.shift(data.bg[n],
+        #                         -1*drift2D_int[n, ::-1], order=0,
+        #                         mode='constant', cval=0)
 
     # Outlier rejection of full frame along time axis
     if meta.files_per_batch == 1 and meta.firstFile:
@@ -1024,12 +1044,12 @@ def correct_drift2D(data, meta, log, m):
                                    drift2D_int[n, 1]).flatten(),
                                   (ix-drift2D[n, 0] +
                                    drift2D_int[n, 0]).flatten())
-        spline = spi.RectBivariateSpline(iy, ix, data.bg[n], kx=kx,
-                                         ky=ky, s=0)
-        data.bg[n] = spline((iy-drift2D[n, 1] +
-                             drift2D_int[n, 1]).flatten(),
-                            (ix-drift2D[n, 0] +
-                             drift2D_int[n, 0]).flatten())
+        # spline = spi.RectBivariateSpline(iy, ix, data.bg[n], kx=kx,
+        #                                  ky=ky, s=0)
+        # data.bg[n] = spline((iy-drift2D[n, 1] +
+        #                      drift2D_int[n, 1]).flatten(),
+        #                     (ix-drift2D[n, 0] +
+        #                      drift2D_int[n, 0]).flatten())
 
     return data, meta, log
 
@@ -1066,42 +1086,43 @@ def cut_aperture(data, meta, log):
     - 2022-06-17, Taylor J Bell
         Initial version, edited to work for HST scanned observations.
     """
-    log.writelog('  Extracting aperture region...',
-                 mute=(not meta.verbose))
+    # log.writelog('  Extracting aperture region...',
+    #              mute=(not meta.verbose))
 
-    apdata = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
-    aperr = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
-    apmask = np.ones((meta.n_int, meta.spec_hw*2+1, meta.subnx), dtype=bool)
-    apbg = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
-    apv0 = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    # apdata = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    # aperr = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    # apmask = np.ones((meta.n_int, meta.spec_hw*2+1, meta.subnx), dtype=bool)
+    # apbg = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    # apv0 = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
 
-    for f in range(int(meta.n_int/meta.nreads)):
-        # Get index of reference frame
-        # (0 = forward scan, 1 = reverse scan)
-        p = data.scandir[f*meta.nreads].values
-        for r in range(meta.nreads):
-            # Figure out the index currently being cut out
-            n = f*meta.nreads + r
+    # for f in range(int(meta.n_int/meta.nreads)):
+    #     # Get index of reference frame
+    #     # (0 = forward scan, 1 = reverse scan)
+    #     p = data.scandir[f*meta.nreads].values
+    #     for r in range(meta.nreads):
+    #         # Figure out the index currently being cut out
+    #         n = f*meta.nreads + r
 
-            # Use the centroid from the relevant reference frame
-            guess = meta.guess[p].values[r]
+    #         # Use the centroid from the relevant reference frame
+    #         guess = meta.guess[p].values[r]
 
-            ap_y1 = (guess-meta.spec_hw).astype(int)
-            ap_y2 = (guess+meta.spec_hw+1).astype(int)
+    #         ap_y1 = (guess-meta.spec_hw).astype(int)
+    #         ap_y2 = (guess+meta.spec_hw+1).astype(int)
 
-            if ap_y1 < 0:
-                ap_y1 = 0
-                ap_y2 = 2*meta.spec_hw + 1
+    #         if ap_y1 < 0:
+    #             ap_y1 = 0
+    #             ap_y2 = 2*meta.spec_hw + 1
 
-            if ap_y2 > len(data.flux.values[n]):
-                ap_y2 = len(data.flux.values[n])
-                ap_y1 = len(data.flux.values[n]) - (2*meta.spec_hw + 1)
+    #         if ap_y2 > len(data.flux.values[n]):
+    #             ap_y2 = len(data.flux.values[n])
+    #             ap_y1 = len(data.flux.values[n]) - (2*meta.spec_hw + 1)
 
-            # Cut out this particular read
-            apdata[n] = data.flux.values[n, ap_y1:ap_y2]
-            aperr[n] = data.err.values[n, ap_y1:ap_y2]
-            apmask[n] = data.mask.values[n, ap_y1:ap_y2]
-            apbg[n] = data.bg.values[n, ap_y1:ap_y2]
-            apv0[n] = data.v0.values[n, ap_y1:ap_y2]
+    #         # Cut out this particular read
+    #         apdata[n] = data.flux.values[n, ap_y1:ap_y2]
+    #         aperr[n] = data.err.values[n, ap_y1:ap_y2]
+    #         apmask[n] = data.mask.values[n, ap_y1:ap_y2]
+    #         apbg[n] = data.bg.values[n, ap_y1:ap_y2]
+    #         apv0[n] = data.v0.values[n, ap_y1:ap_y2]
 
-    return apdata, aperr, apmask, apbg, apv0
+    # return apdata, aperr, apmask, apbg, apv0
+    return nircam.cut_aperture(data, meta, log)
