@@ -85,6 +85,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
     if not meta.hide_plots:
         plt.pause(0.2)
         
+
 def binned_background(meta, log, lc, i, white=False):
     '''Plot each spectroscopic light curve. (Figs 4102)
 
@@ -113,7 +114,6 @@ def binned_background(meta, log, lc, i, white=False):
             scandir=getattr(lc, 'scandir', None))
         i = 0
         fname_tag = 'white'
-        print(lc.time.shape, norm_bgdata.shape, norm_bgerr.shape, lc.skylev_white.shape, lc.skyerr_white.shape)
     elif meta.photometry:
         fig.suptitle(f'Photometric Lightcurve at {meta.phot_wave} microns')
         # Normalize the light curve
@@ -154,7 +154,7 @@ def binned_background(meta, log, lc, i, white=False):
                      fmt='o', color=f'C{i}', mec=f'C{i}', alpha=0.2)
         mad = util.get_mad_1d(norm_bgdata)
         meta.mad_s4_binned.append(mad)
-        #log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+        # log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
         plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
                  transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Background')
