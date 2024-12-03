@@ -152,7 +152,19 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     data['flux'] -= data.bg
     if hasattr(data, 'medflux'):
         data['medflux'] -= np.median(data.bg, axis=0)
-
+        
+    # Save BG value at source position and BG stddev (no outlier rejection)
+    data['skylev'] = (['time', 'x'], np.zeros([data.flux.shape[0],data.flux.shape[2]]))
+    data['skylev'].attrs['flux_units'] = data['flux'].attrs['flux_units']
+    data['skylev'] = data.bg[:, meta.src_ypos, :]
+    
+    data['skyerr'] = (['time', 'x'], np.zeros([data.flux.shape[0],data.flux.shape[2]]))
+    data['skyerr'].attrs['flux_units'] = data['flux'].attrs['flux_units']
+    y_inds = np.zeros([data.flux.shape[1]], dtype = bool)
+    y_inds[:meta.bg_y1] = True
+    y_inds[meta.bg_y2:] = True
+    data['skyerr'] = np.std(data.flux[:,y_inds,:], axis = 1)
+    
     # Make image+background plots
     if isplots >= 3:
         plots_s3.image_and_background(data, meta, log, m)
