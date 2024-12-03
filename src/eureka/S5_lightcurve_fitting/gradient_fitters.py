@@ -114,12 +114,17 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
                 chankey = ''
             else:
                 chankey = f'_ch{chan}'
-            log.writelog(f'  Channel {chan+1}:')
-            log.writelog(f'    fp: {map_soln["fp"+chankey]}')
+            if model.nchannel_fitted > 1:
+                log.writelog(f'  Channel {chan+1}:')
+                padding = '    '
+            else:
+                padding = '  '
+            log.writelog(f'{padding}fp: {map_soln["fp"+chankey]}')
             for ell in range(1, meta.ydeg+1):
                 for m in range(-ell, ell+1):
                     name = f'Y{ell}{m}'
-                    log.writelog(f'    {name}: {map_soln[name+chankey][0]}')
+                    log.writelog(f'{padding}{name}: '
+                                 f'{map_soln[name+chankey][0]}')
     log.writelog('')
 
     # Plot fit
@@ -307,7 +312,11 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                 chankey = ''
             else:
                 chankey = f'_ch{chan}'
-            log.writelog(f'  Channel {chan+1}:')
+            if model.nchannel_fitted > 1:
+                log.writelog(f'  Channel {chan+1}:')
+                padding = '    '
+            else:
+                padding = '  '
 
             othernames = ['fp', ]
             for ell in range(1, meta.ydeg+1):
@@ -321,7 +330,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                 medval = q[1]  # median
                 uppererr = q[2]-q[1]
                 lowererr = q[1]-q[0]
-                log.writelog(f'    {name}: {medval} (+{uppererr},'
+                log.writelog(f'{padding}{name}: {medval} (+{uppererr},'
                              f' -{lowererr})')
     log.writelog('')
 
