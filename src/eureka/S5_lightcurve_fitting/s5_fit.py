@@ -380,7 +380,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                         xpos_temp = np.ma.masked_where(mask, xpos_temp)
                     else:
                         xpos_temp = None
-                    if hasattr(lc_whites[pi], 'centroid_x'):
+                    if hasattr(lc_whites[pi], 'centroid_sx'):
                         xwidth_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_sx.values)
                         xwidth_temp = np.ma.masked_where(mask, xwidth_temp)
@@ -392,7 +392,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                         ypos_temp = np.ma.masked_where(mask, ypos_temp)
                     else:
                         ypos_temp = None
-                    if hasattr(lc_whites[pi], 'centroid_y'):
+                    if hasattr(lc_whites[pi], 'centroid_sy'):
                         ywidth_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_sy.values)
                         ywidth_temp = np.ma.masked_where(mask, ywidth_temp)
