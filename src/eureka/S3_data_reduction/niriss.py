@@ -363,10 +363,10 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     norders = len(meta.orders)
     bg = np.zeros_like(dataim)
     mask = np.zeros_like(dataim, dtype=bool)
-    for i in range(norders):
-        bg[:, :, i], mask[:, :, i] = fitbg(
-            dataim[:, :, i], meta, datamask[:, :, i], 
-            meta.bg_y1[i], meta.bg_y2[i], deg=meta.bg_deg,
+    for k in range(norders):
+        bg[:, :, k], mask[:, :, k] = fitbg(
+            dataim[:, :, k], meta, datamask[:, :, k], 
+            meta.bg_y1[k], meta.bg_y2[k], deg=meta.bg_deg,
             threshold=meta.p3thresh, isrotate=2, isplots=isplots)
 
     return bg, mask, n
