@@ -87,7 +87,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
         
 
 def binned_background(meta, log, lc, i, white=False):
-    '''Plot each spectroscopic light curve. (Figs 4102)
+    '''Plot each spectroscopic background light curve. (Figs 4105)
 
     Parameters
     ----------

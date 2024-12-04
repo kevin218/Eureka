@@ -492,7 +492,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                  f' series', mute=(not meta.verbose))
 
                 # Plot each spectroscopic light curve
-                if meta.isplots_S4 >= 3:
+                if meta.isplots_S4 >= 1:
                     plots_s4.binned_lightcurve(meta, log, lc, i)
                     if 'skylev' in list(spec.keys()):
                         plots_s4.binned_background(meta, log, lc, i)
@@ -585,7 +585,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                  f' series')
 
                 # Plot the white-light light curve
-                if meta.isplots_S4 >= 3:
+                if meta.isplots_S4 >= 1:
                     plots_s4.binned_lightcurve(meta, log, lc, 0, white=True)
                     if 'skylev' in list(spec.keys()):
                         plots_s4.binned_background(meta, log, lc, 
