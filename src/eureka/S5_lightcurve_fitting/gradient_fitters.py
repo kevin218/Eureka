@@ -391,14 +391,14 @@ def nutsfitter(lc, model, meta, log, **kwargs):
             freenames_ylm = []
             samples_ylm = []
             for i, freename in enumerate(freenames):
-                if 'pixel'==freename:
+                if 'pixel' == freename:
                     # Replace pixel values with Ylm values
                     freenames_ylm.extend(ylm_names)
                     samples_ylm.extend(ylms)
                 elif 'pixel' not in freename:
                     # Keep non-pixel values as they were
                     freenames_ylm.append(freename)
-                    samples_ylm.append(samples[:,i])
+                    samples_ylm.append(samples[:, i])
             samples_ylm = np.array(samples_ylm).T
             plots.plot_corner(samples_ylm, lc, meta, freenames_ylm,
                               fitter='Ylm_nuts')
