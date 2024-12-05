@@ -392,7 +392,8 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                 for name in ylm_names:
                     # Grab all the Ylm values from the trace
                     ylms.append(trace_az.posterior.stack(
-                        sample=("chain", "draw"))[name][:].to_numpy().flatten())
+                        sample=("chain", "draw")
+                    )[name][:].to_numpy().flatten())
 
                 # Replace pixel values with Ylms for a second corner plot
                 freenames_ylm = []
