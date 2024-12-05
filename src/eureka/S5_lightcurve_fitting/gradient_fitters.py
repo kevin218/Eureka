@@ -373,6 +373,36 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='nuts')
 
+        if meta.pixelsampling:
+            # FINDME: I will need to fix this for multi-channel fits
+
+            # Grab all the Ylm values
+            ylm_names = []
+            for ell in range(1, meta.ydeg+1):
+                for m in range(-ell, ell+1):
+                    ylm_names.append(f'Y{ell}{m}')
+            ylms = []
+            for name in ylm_names:
+                # Grab all the Ylm values from the trace
+                ylms.append(trace_az.posterior.stack(
+                    sample=("chain", "draw"))[name][:].to_numpy().flatten())
+
+            # Replace pixel values with Ylms for a second corner plot
+            freenames_ylm = []
+            samples_ylm = []
+            for i, freename in enumerate(freenames):
+                if 'pixel'==freename:
+                    # Replace pixel values with Ylm values
+                    freenames_ylm.extend(ylm_names)
+                    samples_ylm.extend(ylms)
+                elif 'pixel' not in freename:
+                    # Keep non-pixel values as they were
+                    freenames_ylm.append(freename)
+                    samples_ylm.append(samples[:,i])
+            samples_ylm = np.array(samples_ylm).T
+            plots.plot_corner(samples_ylm, lc, meta, freenames_ylm,
+                              fitter='Ylm_nuts')
+
     # Make a new model instance
     model.chi2red = chi2red
     model.fit_params = fit_params

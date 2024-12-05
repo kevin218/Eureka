@@ -161,9 +161,8 @@ class S5MetaClass(MetaClass):
             # Must be provided in the ECF if relevant
             self.ydeg = getattr(self, 'ydeg')
             # Compute the number of pixels used in sampling
-            map = starry.maps.Map(ydeg=self.ydeg)
+            map = starry.Map(ydeg=self.ydeg)
             A = map.get_pixel_transforms(oversample=self.oversample)[3]
-            # Subtract 1 since we already include fp
             self.npix = A.shape[1]
         else:
             self.ydeg = getattr(self, 'ydeg', None)
