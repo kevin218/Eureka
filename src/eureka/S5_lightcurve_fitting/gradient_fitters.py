@@ -375,31 +375,47 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
         if meta.pixelsampling:
             # FINDME: I will need to fix this for multi-channel fits
+            freenames_temp = np.copy(freenames)
+            samples_temp = np.copy(samples)
+            for chan in range(model.nchannel_fitted):
+                if chan == 0:
+                    chankey = ''
+                else:
+                    chankey = f'_ch{chan}'
 
-            # Grab all the Ylm values
-            ylm_names = []
-            for ell in range(1, meta.ydeg+1):
-                for m in range(-ell, ell+1):
-                    ylm_names.append(f'Y{ell}{m}')
-            ylms = []
-            for name in ylm_names:
-                # Grab all the Ylm values from the trace
-                ylms.append(trace_az.posterior.stack(
-                    sample=("chain", "draw"))[name][:].to_numpy().flatten())
+                # Grab all the Ylm values
+                ylm_names = []
+                for ell in range(1, meta.ydeg+1):
+                    for m in range(-ell, ell+1):
+                        ylm_names.append(f'Y{ell}{m}{chankey}')
+                ylms = []
+                for name in ylm_names:
+                    # Grab all the Ylm values from the trace
+                    ylms.append(trace_az.posterior.stack(
+                        sample=("chain", "draw"))[name][:].to_numpy().flatten())
 
-            # Replace pixel values with Ylms for a second corner plot
-            freenames_ylm = []
-            samples_ylm = []
-            for i, freename in enumerate(freenames):
-                if 'pixel' == freename:
-                    # Replace pixel values with Ylm values
-                    freenames_ylm.extend(ylm_names)
-                    samples_ylm.extend(ylms)
-                elif 'pixel' not in freename:
-                    # Keep non-pixel values as they were
-                    freenames_ylm.append(freename)
-                    samples_ylm.append(samples[:, i])
-            samples_ylm = np.array(samples_ylm).T
+                # Replace pixel values with Ylms for a second corner plot
+                freenames_ylm = []
+                samples_ylm = []
+                for i, freename in enumerate(freenames_temp):
+                    if f'pixel{chankey}' == freename:
+                        # Replace pixel values with Ylm values
+                        freenames_ylm.extend(ylm_names)
+                        samples_ylm.extend(ylms)
+                    elif (f'pixel{chankey}' not in freename or
+                            (chan == 0 and model.nchannel_fitted > 1
+                             and 'pixel_ch' in freename)):
+                        # Keep non-pixel values (or pixel values from
+                        # upcoming channels) as they were
+                        freenames_ylm.append(freename)
+                        samples_ylm.append(samples_temp[:, i])
+                samples_ylm = np.array(samples_ylm).T
+
+                # Update temp variables to prepare for next channel
+                # (if relevant)
+                freenames_temp = np.copy(freenames_ylm)
+                samples_temp = np.copy(samples_ylm)
+
             plots.plot_corner(samples_ylm, lc, meta, freenames_ylm,
                               fitter='Ylm_nuts')
 
