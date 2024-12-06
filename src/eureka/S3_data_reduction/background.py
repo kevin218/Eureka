@@ -8,6 +8,7 @@ from astropy.nddata import CCDData
 from astropy.stats import SigmaClip
 from photutils.background import MMMBackground, MedianBackground, Background2D
 import os
+from copy import deepcopy
 
 from ..lib import clipping
 from ..lib import plots
@@ -152,7 +153,21 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     data['flux'] -= data.bg
     if hasattr(data, 'medflux'):
         data['medflux'] -= np.median(data.bg, axis=0)
-
+        
+    # Save BG value at source position and BG stddev (no outlier rejection)
+    coords = list(data.coords.keys())
+    coords.remove('y')
+    data['skylev'] = (coords, np.zeros_like(data.flux[:, 0]))
+    data['skylev'].attrs['flux_units'] = data['flux'].attrs['flux_units']
+    data['skylev'] = data.bg[:, meta.src_ypos, :]
+    
+    bg_inds = np.ma.getdata(deepcopy(data.mask))
+    bg_inds[:, meta.bg_y1:meta.bg_y2, :] = True
+    bg_data = np.ma.masked_where(bg_inds, data.flux, copy=True)
+    bg_data = (np.ma.std(bg_data, axis=1))/np.sqrt(np.sum(~bg_inds))
+    data['skyerr'] = (coords, bg_data)
+    data['skyerr'].attrs['flux_units'] = data['flux'].attrs['flux_units']
+    
     # Make image+background plots
     if isplots >= 3:
         plots_s3.image_and_background(data, meta, log, m)
