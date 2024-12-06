@@ -350,6 +350,24 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
 
 def straighten_trace(data, meta, log, m):
     """Instrument-specific wrapper for straighten.straighten_trace
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+            The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with the fits data stored inside.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
     """
     return straighten.straighten_trace(data, meta, log, m)
 

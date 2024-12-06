@@ -445,13 +445,6 @@ def calibrated_spectra(data, meta, log):
     -------
     data : ndarray
         The flux values in mJy
-
-    Notes
-    -----
-    History:
-
-    - 2023-07-17, KBS
-        Initial version.
     """
     # Convert from MJy/sr to mJy
     log.writelog("  Converting from MJy/sr to mJy...",
@@ -473,21 +466,20 @@ def straighten_trace(data, meta, log, m):
     Parameters
     ----------
     data : Xarray Dataset
-        The Dataset object.
+            The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    apdata : ndarray
-        The pixel values in the aperture region.
-    apmask : ndarray
-        The outlier mask in the aperture region. True where pixels should be
-        masked.
-    aperr : ndarray
-        The noise values in the aperture region.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    m : int
+        The file number.
 
     Returns
     -------
     data : Xarray Dataset
-        The updated Dataset object in which the spectrum data will stored.
+        The updated Dataset object with the fits data stored inside.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
     """
     return straighten.straighten_trace(data, meta, log, m)
 
