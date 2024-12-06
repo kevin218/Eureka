@@ -17,7 +17,7 @@ import bokeh.plotting as bkp
 from bokeh.models import Range1d
 try:
     from bokeh.models.widgets import Panel, Tabs
-except:
+except ImportError:
     from bokeh.models.layouts import TabPanel as Panel
     from bokeh.models.layouts import Tabs
 
