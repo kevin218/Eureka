@@ -50,21 +50,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Updated documentation and arguments. Reduced repeated code.
-        Also saving covariance matrix for later estimation of sampler
-        step size.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-        Record an astropy table for param values
     """
     # Group the different variable types
     freenames = lc.freenames
@@ -1332,14 +1317,6 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         The list of fitted parameter names.
     samples : ndarray; optional
         The full chain from a sampling method, by default [].
-
-    Notes
-    -----
-    History:
-
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-        Record an astropy table for mean, median, percentiles,
-        +/- 1 sigma, all params
     """
     if lc.white:
         channel_tag = '_white'

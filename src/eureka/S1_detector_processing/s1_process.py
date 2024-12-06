@@ -36,17 +36,6 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - October 2021 Taylor Bell
-        Code fragments
-    - October 2021 Aarynn Carter and Eva-Maria Ahrer
-        Initial version
-    - February 2022 Aarynn Carter and Eva-Maria Ahrer
-        Updated for JWST version 1.3.3, code restructure
     """
     t0 = time_pkg.time()
 

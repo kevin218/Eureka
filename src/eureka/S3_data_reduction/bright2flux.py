@@ -4,6 +4,7 @@ from scipy.constants import arcsec
 from astropy.io import fits
 from ..lib.util import supersample
 import crds
+import xarray as xr
 
 
 def rate2count(data):
@@ -21,15 +22,6 @@ def rate2count(data):
     data : Xarray Dataset
         Dataset object containing data, uncertainty, and variance arrays in
         count units (#).
-
-    Notes
-    -----
-    History:
-
-    - Mar 7, 2022 Taylor J Bell
-        Initial version
-    - Apr 20, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     """
     if "EFFINTTM" in data.attrs['mhdr'].keys():
         int_time = data.attrs['mhdr']['EFFINTTM']
@@ -70,15 +62,6 @@ def dn2electrons(data, meta, log):
     -----
     The gain files can be downloaded from CRDS
     (https://jwst-crds.stsci.edu/browse_db/)
-
-    History:
-
-    - Jun 2021 Kevin Stevenson
-        Initial version
-    - Jul 2021
-        Added gainfile rotation
-    - Apr 20, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     """
     # Subarray parameters
     xstart = data.attrs['mhdr']['SUBSTRT1']
@@ -132,6 +115,7 @@ def dn2electrons(data, meta, log):
                     meta.xwindow[0]:meta.xwindow[1]]
 
     # Convert to electrons
+    gain = xr.DataArray(gain, dims=("y", "x"))
     data['flux'] *= gain
     data['err'] *= gain
     data['v0'] *= (gain)**2  # FINDME: should this really be squared
@@ -163,15 +147,6 @@ def bright2dn(data, meta, log, mjy=False):
     -----
     The photometry files can be downloaded from CRDS
     (https://jwst-crds.stsci.edu/browse_db/)
-
-    History:
-
-    - 2021-05-28 kbs
-        Initial version
-    - 2021-07-21 sz
-        Added functionality for MIRI
-    - Apr 20, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     """
     # Find the required photfile
     if meta.photfile is not None:
@@ -235,6 +210,7 @@ def bright2dn(data, meta, log, mjy=False):
     if mjy:
         scalar *= data.attrs['shdr']['PIXAR_SR']
     # Convert to DN/sec
+    response = xr.DataArray(response, dims="x")
     data['flux'] /= scalar * response
     data['err'] /= scalar * response
     # FINDME: should this really be squared
@@ -264,31 +240,6 @@ def bright2flux(data, pixel_area):
     Notes
     -----
     The input arrays Data and Uncd are changed in place.
-
-    History:
-
-    - 2005-06-20 Statia Luszcz, Cornell (shl35@cornell.edu).
-    - 2005-10-13 jh
-        Renamed, modified doc, removed posmed, fixed
-        nimpos default bug (was float rather than int).
-    - 2005-10-28 jh
-        Updated header to give units being converted
-        from/to, made srperas value a calculation
-        rather than a constant, added Allen reference.
-    - 2005-11-24 jh
-        Eliminated NIMPOS.
-    - 2008-06-28 jh
-        Allow npos=1 case.
-    - 2010-01-29 patricio (pcubillos@fulbrightmail.org)
-        Converted to python.
-    - 2010-11-01 patricio
-        Documented, and incorporated scipy.constants.
-    - 2021-05-28 kbs
-        Updated for JWST
-    - 2021-12-09 TJB
-        Updated to account for the new DataClass object
-    - Apr 20, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     """
     # steradians per square arcsecond
     srperas = arcsec**2.0
@@ -380,15 +331,6 @@ def retrieve_ancil(fitsname, reftype='gain'):
         The full path to the photom calibration file.
     gain_filename : str
         The full path to the gain calibration file.
-
-    Notes
-    -----
-    History:
-
-    - 2022-03-04 Taylor J Bell
-        Initial code version.
-    - 2022-03-28 Taylor J Bell
-        Removed jwst dependency, using crds package now instead.
     '''
     with fits.open(fitsname) as file:
         # Automatically get the best reference files using the information

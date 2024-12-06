@@ -53,13 +53,6 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 03 Nov 2021 Taylor Bell
-        Initial version
     '''
     t0 = time_pkg.time()
 

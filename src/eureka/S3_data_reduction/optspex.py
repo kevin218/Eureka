@@ -10,7 +10,7 @@ from ..lib import smooth
 from . import plots_s3
 
 
-def standard_spectrum(data, apdata, apmask, aperr):
+def standard_spectrum(apdata, apmask, aperr):
     """Compute the standard box spectrum.
 
     Parameters
@@ -27,12 +27,15 @@ def standard_spectrum(data, apdata, apmask, aperr):
 
     Returns
     -------
-    data : Xarray Dataset
-        The updated Dataset object in which the spectrum data will stored.
+    stdspec : 2D array
+        Time-series of stellar spectra
+    stdvar : 2D array
+        Time-series of stellar variances
     """
     # Replace masked pixels with spectral neighbors
     apdata_cleaned = np.copy(apdata)
     aperr_cleaned = np.copy(aperr)
+
     for t, y, x in np.array(np.where(apmask)).T:
         # Do not extend to negative indices (short and long wavelengths
         # do not have similar profiles)
@@ -65,19 +68,7 @@ def standard_spectrum(data, apdata, apmask, aperr):
     stdspec = np.nansum(apdata_cleaned, axis=1)
     stdvar = np.nansum(aperr_cleaned**2, axis=1)
 
-    # Store results in data xarray
-    data['stdspec'] = (['time', 'x'], stdspec)
-    data['stdvar'] = (['time', 'x'], stdvar)
-    data['stdspec'].attrs['flux_units'] = \
-        data.flux.attrs['flux_units']
-    data['stdspec'].attrs['time_units'] = \
-        data.flux.attrs['time_units']
-    data['stdvar'].attrs['flux_units'] = \
-        data.flux.attrs['flux_units']
-    data['stdvar'].attrs['time_units'] = \
-        data.flux.attrs['time_units']
-
-    return data
+    return stdspec, stdvar
 
 
 def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
@@ -521,7 +512,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     return profile
 
 
-def clean_median_flux(data, meta, log, m):
+def get_clean(data, meta, log, medflux, mederr):
     """Computes a median flux frame that is free of bad pixels.
 
     Parameters
@@ -532,27 +523,18 @@ def clean_median_flux(data, meta, log, m):
         The metadata object.
     log : logedit.Logedit
         The current log.
-    m : int
-        The file number.
+    medflux : array
+        2D array of median flux
+    mederr : array
+        2D array of median flux uncertainties
 
     Returns
     -------
     data : Xarray Dataset
         The updated Dataset object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-03, KBS
-        Inital version
     """
-    log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
-
-    # Compute median flux using masked arrays
-    flux_ma = np.ma.masked_where(data.mask.values, data.flux.values)
-    medflux = np.ma.median(flux_ma, axis=0)
-    ny, nx = medflux.shape
+    nx = len(data.x)
+    ny = len(data.y)
 
     # Interpolate over masked regions
     interp_med = np.zeros((ny, nx))
@@ -563,7 +545,6 @@ def clean_median_flux(data, meta, log, m):
         if len(goodrow) > 0:
             f = spi.interp1d(x1, goodrow, 'linear',
                              fill_value='extrapolate')
-            # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
             interp_med[j] = f(xx)
         else:
             log.writelog(f'    Row {j}: Interpolation failed. No good pixels.')
@@ -572,9 +553,6 @@ def clean_median_flux(data, meta, log, m):
     if meta.window_len > 1:
         # Apply smoothing filter along dispersion direction
         smoothflux = spn.median_filter(interp_med, size=(1, meta.window_len))
-        # Compute median error array
-        err_ma = np.ma.masked_where(data.mask.values, data.err.values)
-        mederr = np.ma.median(err_ma, axis=0)
         # Smooth error array along dispersion direction
         # to enable flagging bad points with large uncertainties
         smooth_mederr = spn.median_filter(mederr, size=(1, meta.window_len))
@@ -594,25 +572,17 @@ def clean_median_flux(data, meta, log, m):
             goodrow = medflux[j][~np.ma.getmaskarray(outliers[j]) *
                                  ~np.ma.getmaskarray(medflux[j])]
             if len(goodrow) > 0:
-                f = spi.interp1d(x1, goodrow, 'linear', 
+                f = spi.interp1d(x1, goodrow, 'linear',
                                  fill_value='extrapolate')
                 clean_med[j] = f(xx)
 
-        # Assign cleaned median frame to data object
-        data['medflux'] = (['y', 'x'], clean_med)
+        return clean_med
     else:
-        # Assign uncleaned median frame to data object
-        data['medflux'] = (['y', 'x'], medflux.data)
-    data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
-
-    if meta.isplots_S3 >= 3:
-        plots_s3.median_frame(data, meta, m)
-
-    return data
+        return medflux.data
 
 
-def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
-                     windowtype='hanning', m=0):
+def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
+                     gain=1, windowtype='hanning', m=0):
     '''Extract optimal spectrum with uncertainties for many frames.
 
     Parameters
@@ -631,6 +601,8 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
         Background array.
     apv0 : ndarray
         Variance array for data.
+    apmedflux : ndarray
+        Median flux array.
     gain : float
         The gain factor. Defaults to 1 as the flux should already be in
         electrons.
@@ -649,20 +621,15 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
         The updated metadata object.
     log : logedit.Logedit
         The updated log.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-18, Taylor J Bell
-        Added optimize_wrapper to iterate over each frame.
     '''
     # Extract optimal spectrum with uncertainties
     log.writelog("  Performing optimal spectral extraction...",
                  mute=(not meta.verbose))
-    data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
-    data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
-    data['optmask'] = (['time', 'x'], np.zeros(data.stdspec.shape, dtype=bool))
+
+    coords = list(data.stdspec.coords.keys())
+    data['optspec'] = (coords, np.zeros_like(data.stdspec))
+    data['opterr'] = (coords, np.zeros_like(data.stdspec))
+    data['optmask'] = (coords, np.zeros_like(data.stdspec, dtype=bool))
     data['optspec'].attrs['flux_units'] = data.flux.attrs['flux_units']
     data['optspec'].attrs['time_units'] = data.flux.attrs['time_units']
     data['optspec'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
@@ -673,38 +640,49 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     data['optmask'].attrs['time_units'] = data.flux.attrs['time_units']
     data['optmask'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
 
-    # Select median frame over aperture region
-    ap_y1 = int(meta.src_ypos-meta.spec_hw)
-    ap_y2 = int(meta.src_ypos+meta.spec_hw+1)
-    apmedflux = data.medflux[ap_y1:ap_y2].values
-
     # Perform optimal extraction on each of the frames
     iterfn = range(meta.int_start, meta.n_int)
     if meta.verbose:
         iterfn = tqdm(iterfn)
-    for n in iterfn:
-        data['optspec'][n], data['opterr'][n], _ = \
-            optimize(meta, apdata[n], apmask[n], apbg[n],
-                     data.stdspec[n].values, gain, apv0[n],
-                     p5thresh=meta.p5thresh,
-                     p7thresh=meta.p7thresh,
-                     fittype=meta.fittype,
-                     window_len=meta.window_len,
-                     deg=meta.prof_deg, windowtype=windowtype,
-                     n=n, m=m, meddata=apmedflux)
+    if meta.orders is None:
+        for n in iterfn:
+            data['optspec'][n], data['opterr'][n], _ = \
+                optimize(meta, apdata[n], apmask[n], apbg[n],
+                         data.stdspec[n].values, gain, apv0[n],
+                         p5thresh=meta.p5thresh,
+                         p7thresh=meta.p7thresh,
+                         fittype=meta.fittype,
+                         window_len=meta.window_len,
+                         deg=meta.prof_deg, windowtype=windowtype,
+                         n=n, m=m, meddata=apmedflux)
+    else:
+        norders = len(meta.orders)
+        for n in iterfn:
+            for k in range(norders):
+                data['optspec'][n, :, k], data['opterr'][n, :, k], _ = \
+                    optimize(meta, apdata[n, :, :, k], apmask[n, :, :, k],
+                             apbg[n, :, :, k], data.stdspec[n, :, k].values,
+                             gain, apv0[n, :, :, k],
+                             p5thresh=meta.p5thresh,
+                             p7thresh=meta.p7thresh,
+                             fittype=meta.fittype,
+                             window_len=meta.window_len,
+                             deg=meta.prof_deg, windowtype=windowtype,
+                             n=n, m=m, meddata=apmedflux[:, :, k],
+                             order=meta.orders[k])
 
     # Mask out NaNs and Infs
     optspec_ma = np.ma.masked_invalid(data.optspec.values)
     opterr_ma = np.ma.masked_invalid(data.opterr.values)
     optmask = np.ma.getmaskarray(optspec_ma) + np.ma.getmaskarray(opterr_ma)
-    data.optmask.values = optmask
+    data['optmask'][:] = optmask
 
     return data, meta, log
 
 
 def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
              p7thresh=10, fittype='smooth', window_len=21, deg=3,
-             windowtype='hanning', n=0, m=0, meddata=None):
+             windowtype='hanning', n=0, m=0, meddata=None, order=None):
     '''Extract optimal spectrum with uncertainties for a single frame.
 
     Parameters
@@ -747,6 +725,8 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         File number. Defaults to 0.
     meddata : ndarray; optional
         The median of all data frames. Defaults to None.
+    order : int; optional
+        Spectral order. Default is None
 
     Returns
     -------
@@ -789,7 +769,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
             return
 
         if meta.isplots_S3 >= 3 and n < meta.int_end:
-            plots_s3.profile(meta, profile, submask, n, m)
+            plots_s3.profile(meta, profile, submask, n, m, order=order)
 
         isnewprofile = False
         isoutliers = True

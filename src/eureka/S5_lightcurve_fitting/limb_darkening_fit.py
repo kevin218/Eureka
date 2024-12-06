@@ -15,7 +15,11 @@ from scipy.optimize import curve_fit
 from svo_filters import svo
 import bokeh.plotting as bkp
 from bokeh.models import Range1d
-from bokeh.models.widgets import Panel, Tabs
+try:
+    from bokeh.models.widgets import Panel, Tabs
+except ImportError:
+    from bokeh.models.layouts import TabPanel as Panel
+    from bokeh.models.layouts import Tabs
 
 from . import utils
 # from . import modelgrid

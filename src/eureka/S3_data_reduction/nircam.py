@@ -2,10 +2,15 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
-from . import sigrej, background
+from . import sigrej, background, optspex, straighten, plots_s3
 from ..lib.util import read_time, supersample
 from tqdm import tqdm
 from ..lib import meanerr as me
+
+__all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg',
+           'fit_bg', 'cut_aperture', 'standard_spectrum', 'clean_median_flux',
+           'flag_bg_phot', 'do_oneoverf_corr', 'calibrated_spectra',
+           'residualBackground', 'lc_nodriftcorr']
 
 
 def read(filename, data, meta, log):
@@ -185,6 +190,8 @@ def read(filename, data, meta, log):
     else:
         data['wave_1d'] = (['x'], wave_1d)
         data['wave_1d'].attrs['wave_units'] = wave_units
+    # Initialize bad pixel mask (False = good, True = bad)
+    data['mask'] = (['time', 'y', 'x'], np.zeros(data.flux.shape, dtype=bool))
     return data, meta, log
 
 
@@ -330,6 +337,8 @@ def cut_aperture(data, meta, log):
         The background flux values over the aperture region.
     apv0 : ndarray
         The v0 values over the aperture region.
+    apmedflux : ndarray
+        The median flux over the aperture region.
 
     Notes
     -----
@@ -348,8 +357,106 @@ def cut_aperture(data, meta, log):
     apmask = data.mask[:, ap_y1:ap_y2].values
     apbg = data.bg[:, ap_y1:ap_y2].values
     apv0 = data.v0[:, ap_y1:ap_y2].values
+    apmedflux = data.medflux[ap_y1:ap_y2].values
 
-    return apdata, aperr, apmask, apbg, apv0
+    return apdata, aperr, apmask, apbg, apv0, apmedflux
+
+
+def standard_spectrum(data, meta, apdata, apmask, aperr):
+    """Instrument wrapper for computing the standard box spectrum.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    apdata : ndarray
+        The pixel values in the aperture region.
+    apmask : ndarray
+        The outlier mask in the aperture region. True where pixels should be
+        masked.
+    aperr : ndarray
+        The noise values in the aperture region.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object in which the spectrum data will stored.
+    """
+
+    # Create xarray
+    coords = list(data.coords.keys())
+    coords.remove('y')
+    data['stdspec'] = (coords, np.zeros_like(data.flux[:, 0]))
+    data['stdvar'] = (coords, np.zeros_like(data.flux[:, 0]))
+    data['stdspec'].attrs['flux_units'] = \
+        data.flux.attrs['flux_units']
+    data['stdspec'].attrs['time_units'] = \
+        data.flux.attrs['time_units']
+    data['stdvar'].attrs['flux_units'] = \
+        data.flux.attrs['flux_units']
+    data['stdvar'].attrs['time_units'] = \
+        data.flux.attrs['time_units']
+
+    if meta.orders is None:
+        # Compute standard box spectrum and variance without orders
+        stdspec, stdvar = optspex.standard_spectrum(apdata, apmask, aperr)
+        # Store results in data xarray
+        data['stdspec'][:] = stdspec
+        data['stdvar'][:] = stdvar
+    else:
+        for k, order in enumerate(meta.orders):
+            # Compute standard box spectrum and variance with orders
+            stdspec, stdvar = optspex.standard_spectrum(apdata[:, :, :, k],
+                                                        apmask[:, :, :, k],
+                                                        aperr[:, :, :, k])
+            # Store results in data xarray
+            data['stdspec'].sel(order=order)[:] = stdspec
+            data['stdvar'].sel(order=order)[:] = stdvar
+
+    return data
+
+
+def clean_median_flux(data, meta, log, m):
+    """Computes a median flux frame that is free of bad pixels.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object.
+    """
+    log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
+
+    # Compute median flux using masked arrays
+    flux_ma = np.ma.masked_where(data.mask.values, data.flux.values)
+    medflux = np.ma.median(flux_ma, axis=0)
+    # Compute median error array
+    err_ma = np.ma.masked_where(data.mask.values, data.err.values)
+    mederr = np.ma.median(err_ma, axis=0)
+
+    # Call subroutine
+    clean_flux = optspex.get_clean(data, meta, log, medflux, mederr)
+
+    # Assign (un)cleaned median frame to data object
+    data['medflux'] = (['y', 'x'], clean_flux)
+    data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
+
+    if meta.isplots_S3 >= 3:
+        plots_s3.median_frame(data, meta, m, clean_flux)
+
+    return data
 
 
 def flag_bg_phot(data, meta, log):
@@ -552,3 +659,65 @@ def calibrated_spectra(data, meta, log):
     data['err'].attrs["flux_units"] = 'mJy'
     data['v0'].attrs["flux_units"] = 'mJy'
     return data
+
+
+def straighten_trace(data, meta, log, m):
+    """Instrument-specific wrapper for straighten.straighten_trace
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+            The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with the fits data stored inside.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    """
+    return straighten.straighten_trace(data, meta, log, m)
+
+
+def residualBackground(data, meta, m, vmin=None, vmax=None):
+    """Plot the median, BG-subtracted frame to study the residual BG region and
+    aperture/BG sizes. (Fig 3304)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    m : int
+        The file number.
+    vmin : int; optional
+        Minimum value of colormap. Default is None.
+    vmax : int; optional
+        Maximum value of colormap. Default is None.
+    """
+    plots_s3.residualBackground(data, meta, m, vmin=None, vmax=None)
+
+
+def lc_nodriftcorr(spec, meta):
+    '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
+
+    Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
+    detector pixel x-axis.
+
+    Parameters
+    ----------
+    spec : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    '''
+    mad = meta.mad_s3[0]
+    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
+                            optmask=spec.optmask, mad=mad)

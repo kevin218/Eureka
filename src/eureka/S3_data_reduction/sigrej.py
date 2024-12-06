@@ -66,58 +66,6 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
     the set of 'good' (not masked) points, and uses these new values in
     calculating further outliers. The final mask contains a value of False
     for every 'inlier' and True for every outlying data point.
-
-    History:
-
-    - 2005-01-18 statia Statia Luszcz, Cornell. (shl35@cornell.edu)
-        Initial version
-    - 2005-01-19 statia
-        Changed function to return mask, rather than a
-        list of outlying and inlying points, added final statistics keywords
-    - 2005-01-20 jh Joe Harrington, Cornell, (jh@oobleck.astro.cornell.edu)
-        Header update.  Added example.
-    - 2005-05-26 jh
-        Fixed header typo.
-    - 2006-01-10 jh
-        Moved definition, added test to see if all
-        elements rejected before last iteration (e.g.,
-        dataset is all NaN).  Added input mask, estsig.
-    - 2010-11-01 patricio (pcubillos@fulbrightmail.org)
-        Converted to python.
-
-    Examples
-    --------
-    Define the N-element vector of sample data.
-
-    .. highlight:: python
-    .. code-block:: python
-
-        >>> print(mean(x), stddev(x), median(x), medstddev(x))
-        1438.47      5311.67      67.0000      5498.10
-        >>> sr.sigrej(x, [9,3]), ival=ival, fmean=fmean, fmedian=fmedian)
-
-        >>> x = np.array([65., 667, 84, 968, 62, 70, 66,
-        >>>               78, 47, 71, 56, 65, 60])
-        >>> q,w,e,r,t,y = sr.sigrej(x, [2,1], ival=True, fmean=True,
-        >>>                         fstddev=True, fmedian=True,
-        >>>                         fmedstddev=True)
-
-        >>> print(q)
-        [False True False True False False False False False False False False
-        False]
-        >>> print(w)
-        [[66.          65.5       ]
-        [313.02675604  181.61572819]]
-        >>> print(e)
-        65.8181818182
-        >>> print(r)
-        10.1174916043
-        >>> print(t)
-        65.0
-        >>> print(y)
-        10.1538170163
-        >>> print(fmean, fmedian)
-        67.0000      67.0000
     '''
     # Get sizes
     dims = list(np.shape(data))
