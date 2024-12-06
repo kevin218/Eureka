@@ -572,7 +572,7 @@ def read(filename, data, meta, log):
 
     diffdata['scandir'] = (['time'], np.repeat(temp_scandir, meta.nreads))
     # Initialize bad pixel mask (False = good, True = bad)
-    diffdata['mask'] = (['time', 'y', 'x'], 
+    diffdata['mask'] = (['time', 'y', 'x'],
                         np.zeros_like(diffdata.flux, dtype=bool))
 
     return diffdata, meta, log
@@ -1101,7 +1101,7 @@ def standard_spectrum(data, meta, apdata, apmask, aperr):
 
 
 def clean_median_flux(data, meta, log, m):
-    """Instrument wrapper for computing a median flux frame that is 
+    """Instrument wrapper for computing a median flux frame that is
     free of bad pixels.
 
     Parameters
@@ -1159,5 +1159,5 @@ def lc_nodriftcorr(spec, meta):
     '''
     scandir = getattr(spec, 'scandir', None)
     mad = meta.mad_s3[0]
-    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec, 
+    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
                             optmask=spec.optmask, scandir=scandir, mad=mad)

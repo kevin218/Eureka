@@ -276,7 +276,7 @@ def standard_spectrum(data, meta, apdata, apmask, aperr):
 
 
 def clean_median_flux(data, meta, log, m):
-    """Instrument wrapper for computing a median flux frame that is 
+    """Instrument wrapper for computing a median flux frame that is
     free of bad pixels.
 
     Parameters
@@ -406,5 +406,5 @@ def lc_nodriftcorr(spec, meta):
         The metadata object.
     '''
     mad = meta.mad_s3[0]
-    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec, 
+    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
                             optmask=spec.optmask, mad=mad)

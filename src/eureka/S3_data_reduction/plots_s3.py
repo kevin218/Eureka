@@ -15,7 +15,7 @@ from .source_pos import gauss
 from ..lib import util, plots
 
 
-def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None, 
+def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
                    mad=None, order=None):
     '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
 
@@ -122,11 +122,11 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
     fig2.colorbar(im2, ax=ax2, label='Normalized Flux')
 
     if order is None:
-        fname1 = f'figs{os.sep}fig3101_2D_LC'+plots.figure_filetype
-        fname2 = f'figs{os.sep}fig3102_2D_LC'+plots.figure_filetype
+        orderkey = ''
     else:
-        fname1 = f'figs{os.sep}fig3101_order{order}_2D_LC'+plots.figure_filetype
-        fname2 = f'figs{os.sep}fig3102_order{order}_2D_LC'+plots.figure_filetype
+        orderkey = f'_order{order}'
+    fname1 = f'figs{os.sep}fig3101{orderkey}_2D_LC'+plots.figure_filetype
+    fname2 = f'figs{os.sep}fig3102{orderkey}_2D_LC'+plots.figure_filetype
     fig1.savefig(meta.outputdir+fname1, dpi=300)
     fig2.savefig(meta.outputdir+fname2, dpi=300)
     if not meta.hide_plots:
@@ -202,12 +202,12 @@ def image_and_background(data, meta, log, m, order=None):
         int_number = str(intstart + n).zfill(int(np.floor(
             np.log10(meta.n_int))+1))
         if order is None:
-            fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}_' +
-                     meta.bg_dir + '_ImageAndBackground'+plots.figure_filetype)
+            orderkey = ''
         else:
-            fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}_' +
-                     f'_order{order}_' + meta.bg_dir + '_ImageAndBackground' +
-                     plots.figure_filetype)
+            orderkey = f'_order{order}'
+        fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
+                 f'{orderkey}' + '_' + meta.bg_dir + '_ImageAndBackground' +
+                 plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -289,7 +289,7 @@ def optimal_spectrum(data, meta, n, m):
             inotnan = np.where(~np.isnan(data.wave_1d[:, j]))[0]
             plt.semilogy(data.x.values[inotnan], stdspec[n, inotnan, j], '-',
                          label=f'Standard Spec - Order {order}')
-            plt.errorbar(data.stdspec.x.values, optspec[n, :, j], 
+            plt.errorbar(data.stdspec.x.values, optspec[n, :, j],
                          yerr=opterr[n, :, j], fmt='-',
                          label=f'Optimal Spec - Order {order}')
     plt.xlim(xmin, xmax)
@@ -412,11 +412,11 @@ def profile(meta, profile, submask, n, m, order=None):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     if order is None:
-        fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}' + 
-                 '_Profile' + plots.figure_filetype)
+        orderkey = ''
     else:
-        fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}' + 
-                 f'_Order{order}_Profile' + plots.figure_filetype)
+        orderkey = f'_order{order}'
+    fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}' +
+             f'{orderkey}_Profile' + plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -533,7 +533,7 @@ def driftywidth(data, meta, m):
         plt.pause(0.2)
 
 
-def residualBackground(data, meta, m, vmin=None, vmax=None, 
+def residualBackground(data, meta, m, vmin=None, vmax=None,
                        flux=None, order=None, ap_y=None, bg_y=None):
     '''Plot the median, BG-subtracted frame to study the residual BG region and
     aperture/BG sizes. (Fig 3304)
@@ -565,7 +565,7 @@ def residualBackground(data, meta, m, vmin=None, vmax=None,
         # Median flux of segment
         flux = data.medflux.values
     if ap_y is None:
-        ap_y = [meta.src_ypos - meta.spec_hw, 
+        ap_y = [meta.src_ypos - meta.spec_hw,
                 meta.src_ypos + meta.spec_hw + 1]
     if bg_y is None:
         bg_y = [meta.bg_y1, meta.bg_y2]
@@ -585,7 +585,7 @@ def residualBackground(data, meta, m, vmin=None, vmax=None,
         vmax = np.nanmax(flux_hr)/3
     # Set bad pixels to plot as black
     cmap = plt.cm.plasma.copy()
-    cmap.set_bad('k', 1.) 
+    cmap.set_bad('k', 1.)
 
     plt.figure(3304, figsize=(8, 4))
     plt.clf()
@@ -618,11 +618,11 @@ def residualBackground(data, meta, m, vmin=None, vmax=None,
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     if order is None:
-        fname = (f'figs{os.sep}fig3304_file{file_number}' +
-                 '_ResidualBG'+plots.figure_filetype)
+        orderkey = ''
     else:
-        fname = (f'figs{os.sep}fig3304_file{file_number}_Order{order}' +
-                 '_ResidualBG'+plots.figure_filetype)
+        orderkey = f'_order{order}'
+    fname = (f'figs{os.sep}fig3304_file{file_number}{orderkey}' +
+             '_ResidualBG'+plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
@@ -705,11 +705,11 @@ def median_frame(data, meta, m, medflux, order=None):
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     if order is None:
-        fname = (f'figs{os.sep}fig3308_file{file_number}_MedianFrame' +
-                 plots.figure_filetype)
+        orderkey = ''
     else:
-        fname = (f'figs{os.sep}fig3308_file{file_number}' +
-                 f'_order{order}_MedianFrame' + plots.figure_filetype)
+        orderkey = f'_order{order}'
+    fname = (f'figs{os.sep}fig3308_file{file_number}{orderkey}' +
+             '_MedianFrame' + plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)

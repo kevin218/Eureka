@@ -511,7 +511,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
 
     return profile
 
-    
+
 def get_clean(data, meta, log, medflux, mederr):
     """Computes a median flux frame that is free of bad pixels.
 
@@ -572,7 +572,7 @@ def get_clean(data, meta, log, medflux, mederr):
             goodrow = medflux[j][~np.ma.getmaskarray(outliers[j]) *
                                  ~np.ma.getmaskarray(medflux[j])]
             if len(goodrow) > 0:
-                f = spi.interp1d(x1, goodrow, 'linear', 
+                f = spi.interp1d(x1, goodrow, 'linear',
                                  fill_value='extrapolate')
                 clean_med[j] = f(xx)
 
@@ -581,7 +581,7 @@ def get_clean(data, meta, log, medflux, mederr):
         return medflux.data
 
 
-def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux, 
+def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
                      gain=1, windowtype='hanning', m=0):
     '''Extract optimal spectrum with uncertainties for many frames.
 
@@ -625,7 +625,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
     # Extract optimal spectrum with uncertainties
     log.writelog("  Performing optimal spectral extraction...",
                  mute=(not meta.verbose))
-    
+
     coords = list(data.stdspec.coords.keys())
     data['optspec'] = (coords, np.zeros_like(data.stdspec))
     data['opterr'] = (coords, np.zeros_like(data.stdspec))
@@ -660,15 +660,15 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
         for n in iterfn:
             for k in range(norders):
                 data['optspec'][n, :, k], data['opterr'][n, :, k], _ = \
-                    optimize(meta, apdata[n, :, :, k], apmask[n, :, :, k], 
-                             apbg[n, :, :, k], data.stdspec[n, :, k].values, 
+                    optimize(meta, apdata[n, :, :, k], apmask[n, :, :, k],
+                             apbg[n, :, :, k], data.stdspec[n, :, k].values,
                              gain, apv0[n, :, :, k],
                              p5thresh=meta.p5thresh,
                              p7thresh=meta.p7thresh,
                              fittype=meta.fittype,
                              window_len=meta.window_len,
                              deg=meta.prof_deg, windowtype=windowtype,
-                             n=n, m=m, meddata=apmedflux[:, :, k], 
+                             n=n, m=m, meddata=apmedflux[:, :, k],
                              order=meta.orders[k])
 
     # Mask out NaNs and Infs

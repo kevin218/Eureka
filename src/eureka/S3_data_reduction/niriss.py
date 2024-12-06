@@ -104,14 +104,14 @@ def read(filename, data, meta, log):
                                      name='v0', order=meta.orders)
 
     # Initialize bad pixel mask (False = good, True = bad)
-    data['mask'] = (['time', 'y', 'x', 'order'], np.zeros(data.flux.shape, 
+    data['mask'] = (['time', 'y', 'x', 'order'], np.zeros(data.flux.shape,
                                                           dtype=bool))
 
     return data, meta, log
 
 
 def get_wave(data, meta, log):
-    '''Use NIRISS pupil position to determine location 
+    '''Use NIRISS pupil position to determine location
     of traces and corresponding wavelength solutions.
 
     Parameters
@@ -128,16 +128,16 @@ def get_wave(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with...
     '''
-    # Report pupil position 
+    # Report pupil position
     pwcpos = data.attrs['mhdr']['PWCPOS']
     log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
                  mute=(not meta.verbose))
-    
+
     norders = len(data.order)
-    data['trace'] = (['x', 'order'], 
-                     np.zeros((data.x.shape[0], norders)) + 
+    data['trace'] = (['x', 'order'],
+                     np.zeros((data.x.shape[0], norders)) +
                      np.array(meta.src_ypos)[np.newaxis])
-    data['wave_1d'] = (['x', 'order'], 
+    data['wave_1d'] = (['x', 'order'],
                        np.zeros((data.x.shape[0], norders))*np.nan)
     data['wave_1d'].attrs['wave_units'] = 'microns'
 
@@ -148,7 +148,7 @@ def get_wave(data, meta, log):
         ind1 = np.nonzero(np.in1d(trace.x, data.x.values))[0]
         ind2 = np.nonzero(np.in1d(data.x.values, trace.x))[0]
         data['trace'].sel(order=order)[ind2] = trace.y[ind1]
-        data['wave_1d'].sel(order=order)[ind2] = trace.wavelength[ind1] 
+        data['wave_1d'].sel(order=order)[ind2] = trace.wavelength[ind1]
 
     return data
 
@@ -201,12 +201,12 @@ def straighten_trace(data, meta, log, m):
         new_shifts = new_center - shifts
 
         # broadcast the shifts to the number of integrations
-        new_shifts = np.reshape(np.repeat(new_shifts, 
+        new_shifts = np.reshape(np.repeat(new_shifts,
                                 data.flux.shape[0]),
-                                (data.flux.shape[0], 
+                                (data.flux.shape[0],
                                 data.flux.shape[2]),
                                 order='F')
-        
+
         # Apply the shifts to the data
         data['flux'].sel(order=order)[:] = roll_columns(
             data.flux.sel(order=order).values, new_shifts)
@@ -219,9 +219,9 @@ def straighten_trace(data, meta, log, m):
         data['v0'].sel(order=order)[:] = roll_columns(
             data.v0.sel(order=order).values, new_shifts)
         data['medflux'].sel(order=order)[:] = roll_columns(
-            np.expand_dims(data.medflux.sel(order=order).values, axis=0), 
+            np.expand_dims(data.medflux.sel(order=order).values, axis=0),
             new_shifts).squeeze()
-        
+
     return data, meta
 
 
@@ -273,7 +273,7 @@ def flag_bg(data, meta, log):
         bgmask1 = data.mask.sel(order=order)[:, :meta.bg_y1[k]]
         bgdata2 = data.flux.sel(order=order)[:, meta.bg_y2[k]:]
         bgmask2 = data.mask.sel(order=order)[:, meta.bg_y2[k]:]
-        
+
         data['mask'].sel(order=order)[:, :meta.bg_y1[k]] = sigrej.sigrej(
             bgdata1, meta.bg_thresh, bgmask1, None)
         data['mask'].sel(order=order)[:, meta.bg_y2[k]:] = sigrej.sigrej(
@@ -314,11 +314,11 @@ def clean_median_flux(data, meta, log, m):
     # work on the correct order.
     for order in meta.orders:
         # Compute median flux using masked arrays
-        flux_ma = np.ma.masked_where(data.mask.sel(order=order).values, 
+        flux_ma = np.ma.masked_where(data.mask.sel(order=order).values,
                                      data.flux.sel(order=order).values)
         medflux = np.ma.median(flux_ma, axis=0)
         # Compute median error array
-        err_ma = np.ma.masked_where(data.mask.sel(order=order).values, 
+        err_ma = np.ma.masked_where(data.mask.sel(order=order).values,
                                     data.err.sel(order=order).values)
         mederr = np.ma.median(err_ma, axis=0)
 
@@ -326,13 +326,13 @@ def clean_median_flux(data, meta, log, m):
         clean_flux = optspex.get_clean(data, meta, log, medflux, mederr)
 
         # Assign (un)cleaned median frame to data object
-        data['medflux'].sel(order=order)[:] = clean_flux    
+        data['medflux'].sel(order=order)[:] = clean_flux
 
         if meta.isplots_S3 >= 3:
             plots_s3.median_frame(data, meta, m, clean_flux, order)
 
     return data
-    
+
 
 def fit_bg(dataim, datamask, n, meta, isplots=0):
     """Instrument wrapper for fitting the background.
@@ -365,7 +365,7 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     mask = np.zeros_like(dataim, dtype=bool)
     for k in range(norders):
         bg[:, :, k], mask[:, :, k] = fitbg(
-            dataim[:, :, k], meta, datamask[:, :, k], 
+            dataim[:, :, k], meta, datamask[:, :, k],
             meta.bg_y1[k], meta.bg_y2[k], deg=meta.bg_deg,
             threshold=meta.p3thresh, isrotate=2, isplots=isplots)
 
@@ -402,7 +402,7 @@ def cut_aperture(data, meta, log):
     log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))
 
-    apdata = np.zeros((len(data.time), 2*meta.spec_hw+1, 
+    apdata = np.zeros((len(data.time), 2*meta.spec_hw+1,
                        len(data.x), len(data.order)))
     aperr = np.zeros_like(apdata)
     apmask = np.zeros_like(apdata, dtype=bool)
@@ -470,7 +470,7 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
     """
     for k, order in enumerate(meta.orders):
         # Specify aperture region for given order
-        ap_y = [meta.src_ypos[k] - meta.spec_hw, 
+        ap_y = [meta.src_ypos[k] - meta.spec_hw,
                 meta.src_ypos[k] + meta.spec_hw + 1]
         # Specify bg region for given order
         bg_y = [meta.bg_y1[k], meta.bg_y2[k]]

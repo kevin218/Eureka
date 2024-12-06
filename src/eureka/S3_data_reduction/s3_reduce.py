@@ -337,7 +337,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         data['wave_1d'].attrs['wave_units'] = \
                             data.wave_2d.attrs['wave_units']
                         # Check for bad wavelengths (beyond wavelength solution)
-                        util.check_nans(data.wave_1d.values, 
+                        util.check_nans(data.wave_1d.values,
                                         np.zeros(meta.subnx),
                                         log, name='wavelength')
                     else:
@@ -356,7 +356,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     # Perform outlier rejection of
                     # full frame along time axis
                     if meta.ff_outlier:
-                        data = inst.flag_ff(data, meta, log)                    
+                        data = inst.flag_ff(data, meta, log)
 
                     if saved_ref_median_frame is None:
                         # Compute clean median frame
@@ -366,7 +366,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     else:
                         # Load the original median frame
                         data['medflux'] = deepcopy(saved_ref_median_frame)
-                    
+
                     # correct spectral curvature
                     if meta.curvature == 'correct':
                         data, meta = inst.straighten_trace(data, meta,
@@ -419,7 +419,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     # Perform optimal extraction
                     data, meta, log = optspex.optimize_wrapper(data, meta, log,
                                                                apdata, apmask,
-                                                               apbg, apv0, 
+                                                               apbg, apv0,
                                                                apmedflux, m=m)
 
                     # Plot results

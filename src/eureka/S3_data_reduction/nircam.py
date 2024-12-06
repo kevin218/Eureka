@@ -398,7 +398,7 @@ def standard_spectrum(data, meta, apdata, apmask, aperr):
         data.flux.attrs['flux_units']
     data['stdvar'].attrs['time_units'] = \
         data.flux.attrs['time_units']
-    
+
     if meta.orders is None:
         # Compute standard box spectrum and variance without orders
         stdspec, stdvar = optspex.standard_spectrum(apdata, apmask, aperr)
@@ -408,13 +408,13 @@ def standard_spectrum(data, meta, apdata, apmask, aperr):
     else:
         for k, order in enumerate(meta.orders):
             # Compute standard box spectrum and variance with orders
-            stdspec, stdvar = optspex.standard_spectrum(apdata[:, :, :, k], 
-                                                        apmask[:, :, :, k], 
+            stdspec, stdvar = optspex.standard_spectrum(apdata[:, :, :, k],
+                                                        apmask[:, :, :, k],
                                                         aperr[:, :, :, k])
             # Store results in data xarray
             data['stdspec'].sel(order=order)[:] = stdspec
             data['stdvar'].sel(order=order)[:] = stdvar
-    
+
     return data
 
 
@@ -719,5 +719,5 @@ def lc_nodriftcorr(spec, meta):
         The metadata object.
     '''
     mad = meta.mad_s3[0]
-    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec, 
+    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
                             optmask=spec.optmask, mad=mad)

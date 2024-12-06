@@ -133,7 +133,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
             plots_s3.image_and_background(data, meta, log, m)
         else:
             for order in meta.orders:
-                plots_s3.image_and_background(data.sel(order=order), meta, 
+                plots_s3.image_and_background(data.sel(order=order), meta,
                                               log, m, order=order)
 
     return data

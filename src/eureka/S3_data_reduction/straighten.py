@@ -141,7 +141,7 @@ def straighten_trace(data, meta, log, m):
                      'extraction profile !!!', mute=(not meta.verbose))
         raise Exception('Must use meddata as the optimal ' +
                         'extraction profile')
-    
+
     log.writelog('  Correcting curvature and bringing the trace to the '
                  'center of the detector...', mute=(not meta.verbose))
     # compute the correction needed from this median frame
