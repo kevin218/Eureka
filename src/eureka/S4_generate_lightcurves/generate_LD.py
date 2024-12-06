@@ -13,7 +13,7 @@ def exotic_ld(meta, spec, log, white=False):
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     spec :  Astreaus object
-        Data object of wavelength-like arrrays.
+        Data object of wavelength-like arrays.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
     white : bool; optional

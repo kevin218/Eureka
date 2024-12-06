@@ -52,9 +52,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     Returns
     -------
     spec : Astreaus object
-        Data object of wavelength-like arrrays.
+        Data object of wavelength-like arrays.
     lc : Astreaus object
-        Data object of time-like arrrays (light curve).
+        Data object of time-like arrays (light curve).
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
     '''
@@ -147,12 +147,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             # Select specific spectral order
             if meta.s4_order is not None:
                 spec = spec.sel(order=meta.s4_order)
-            
+
             # Reverse arrays if wavelength is in descending order
             if np.nanargmin(spec.wave_1d) > np.nanargmax(spec.wave_1d):
                 spec = spec.sortby(spec.wave_1d, ascending=True)
 
-            wave_1d = spec.wave_1d.values            
+            wave_1d = spec.wave_1d.values
             if meta.wave_min is None:
                 meta.wave_min = np.nanmin(wave_1d)
                 log.writelog(f'No value was provided for meta.wave_min, so '
