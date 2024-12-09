@@ -363,7 +363,6 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         plots.plot_corner(samples, lc, meta, freenames, fitter='nuts')
 
         if meta.pixelsampling:
-            # FINDME: I will need to fix this for multi-channel fits
             freenames_temp = np.copy(freenames)
             samples_temp = np.copy(samples)
             for chan in range(model.nchannel_fitted):
