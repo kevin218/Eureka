@@ -1,14 +1,17 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
-from . import background
+from . import background, nircam, straighten, plots_s3
 try:
     from jwst import datamodels
 except ImportError:
     print('WARNING: Unable to load the jwst package. As a result, the MIRI '
           'wavelength solution will not be able to be calculated in Stage 3.')
-from . import nircam
 from ..lib.util import read_time, supersample
+
+__all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg',
+           'fit_bg', 'cut_aperture', 'standard_spectrum', 'clean_median_flux',
+           'calibrated_spectra', 'residualBackground', 'lc_nodriftcorr']
 
 
 def read(filename, data, meta, log):
@@ -206,6 +209,8 @@ def read(filename, data, meta, log):
     else:
         data['wave_1d'] = (['x'], wave_1d)
         data['wave_1d'].attrs['wave_units'] = wave_units
+    # Initialize bad pixel mask (False = good, True = bad)
+    data['mask'] = (['time', 'y', 'x'], np.zeros(data.flux.shape, dtype=bool))
 
     return data, meta, log
 
@@ -361,6 +366,8 @@ def cut_aperture(data, meta, log):
         The background flux values over the aperture region.
     apv0 : ndarray
         The v0 values over the aperture region.
+    apmedflux : ndarray
+        The median flux over the aperture region.
 
     Notes
     -----
@@ -370,6 +377,32 @@ def cut_aperture(data, meta, log):
         Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
+
+
+def standard_spectrum(data, meta, apdata, apmask, aperr):
+    """Instrument wrapper for computing the standard box spectrum.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    apdata : ndarray
+        The pixel values in the aperture region.
+    apmask : ndarray
+        The outlier mask in the aperture region. True where pixels should be
+        masked.
+    aperr : ndarray
+        The noise values in the aperture region.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object in which the spectrum data will stored.
+    """
+
+    return nircam.standard_spectrum(data, meta, apdata, apmask, aperr)
 
 
 def flag_bg_phot(data, meta, log):
@@ -412,13 +445,6 @@ def calibrated_spectra(data, meta, log):
     -------
     data : ndarray
         The flux values in mJy
-
-    Notes
-    -----
-    History:
-
-    - 2023-07-17, KBS
-        Initial version.
     """
     # Convert from MJy/sr to mJy
     log.writelog("  Converting from MJy/sr to mJy...",
@@ -432,3 +458,89 @@ def calibrated_spectra(data, meta, log):
     data['err'].attrs["flux_units"] = 'mJy'
     data['v0'].attrs["flux_units"] = 'mJy'
     return data
+
+
+def straighten_trace(data, meta, log, m):
+    """Instrument wrapper for computing the standard box spectrum.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+            The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with the fits data stored inside.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    """
+    return straighten.straighten_trace(data, meta, log, m)
+
+
+def clean_median_flux(data, meta, log, m):
+    """Instrument wrapper for computing a median flux frame that is
+    free of bad pixels.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object.
+    """
+
+    return nircam.clean_median_flux(data, meta, log, m)
+
+
+def residualBackground(data, meta, m, vmin=None, vmax=None):
+    """Plot the median, BG-subtracted frame to study the residual BG region and
+    aperture/BG sizes. (Fig 3304)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    m : int
+        The file number.
+    vmin : int; optional
+        Minimum value of colormap. Default is None.
+    vmax : int; optional
+        Maximum value of colormap. Default is None.
+    """
+    plots_s3.residualBackground(data, meta, m, vmin=None, vmax=None)
+
+
+def lc_nodriftcorr(spec, meta):
+    '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
+
+    Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
+    detector pixel x-axis.
+
+    Parameters
+    ----------
+    spec : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    '''
+    mad = meta.mad_s3[0]
+    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
+                            optmask=spec.optmask, mad=mad)

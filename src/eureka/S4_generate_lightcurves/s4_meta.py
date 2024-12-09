@@ -96,6 +96,8 @@ class S4MetaClass(MetaClass):
         self.wave_max = getattr(self, 'wave_max', None)
         self.wave_hi = getattr(self, 'wave_hi', None)
         self.wave_low = getattr(self, 'wave_low', None)
+        # NIRISS spectral order
+        self.s4_order = getattr(self, 's4_order', None)
 
         # Manually mask pixel columns by index number
         self.mask_columns = getattr(self, 'mask_columns', [])
