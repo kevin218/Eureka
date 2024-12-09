@@ -68,6 +68,9 @@ class PlanetParams():
         self.t0 = None
         self.rprs = None
         self.rp = None
+        self.rprs2 = None
+        self.rp2 = None
+        self.phi = 90.
         self.inc = None
         self.ars = None
         self.a = None
@@ -149,7 +152,7 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'rprs', value)
+            self.rprs = value
         if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
             item0 = 'rprs' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
@@ -157,7 +160,24 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'rp', value)
+            self.rp = value
+        # Allow for rp2 or rprs2
+        if (self.rprs2 is None) and ('rp2' in model.parameters.dict.keys()):
+            item0 = 'rp2' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            self.rprs2 = value
+        if (self.rp2 is None) and ('rprs2' in model.parameters.dict.keys()):
+            item0 = 'rprs2' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            self.rp2 = value
         # Allow for a or ars
         if (self.ars is None) and ('a' in model.parameters.dict.keys()):
             item0 = 'a' + self.pid_id
@@ -166,7 +186,7 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'ars', value)
+            self.ars = value
         if (self.a is None) and ('ars' in model.parameters.dict.keys()):
             item0 = 'ars' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
@@ -174,14 +194,14 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'a', value)
+            self.a = value
         # Allow for (ecc, w) or (ecosw, esinw)
         if (self.ecosw is None) and self.ecc == 0:
             self.ecosw = 0.
             self.esinw = 0.
-        elif (self.ecc is None) and self.ecosw == 0 and self.sinw == 0:
+        elif (self.ecc is None) and self.ecosw == 0 and self.esinw == 0:
             self.ecc = 0.
-            self.w = None
+            self.w = 180.
         if (self.ecosw is None) and ('ecc' in model.parameters.dict.keys()):
             item0 = 'ecc' + self.pid_id
             item1 = 'w' + self.pid_id
@@ -196,10 +216,8 @@ class PlanetParams():
                 value1 = value1.value
             ecc = value0
             w = value1
-            ecosw = ecc*lib.cos(w*np.pi/180)
-            esinw = ecc*lib.sin(w*np.pi/180)
-            setattr(self, 'ecosw', ecosw)
-            setattr(self, 'esinw', esinw)
+            self.ecosw = ecc*lib.cos(w*np.pi/180)
+            self.esinw = ecc*lib.sin(w*np.pi/180)
         elif (self.ecc is None) and ('ecosw' in model.parameters.dict.keys()):
             item0 = 'ecosw' + self.pid_id
             item1 = 'esinw' + self.pid_id
@@ -214,10 +232,8 @@ class PlanetParams():
                 value1 = value1.value
             ecosw = value0
             esinw = value1
-            ecc = lib.sqrt(ecosw**2+esinw**2)
-            w = lib.arctan2(esinw, ecosw)*180/np.pi
-            setattr(self, 'ecc', ecc)
-            setattr(self, 'w', w)
+            self.ecc = lib.sqrt(ecosw**2+esinw**2)
+            self.w = lib.arctan2(esinw, ecosw)*180/np.pi
         # Allow for fp or fpfs
         if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
             item0 = 'fp' + self.pid_id
@@ -226,9 +242,9 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'fpfs', value)
+            self.fpfs = value
         elif self.fpfs is None:
-            setattr(self, 'fpfs', 0.)
+            self.fpfs = 0.
         if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
             item0 = 'fpfs' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
@@ -236,9 +252,9 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'fp', value)
+            self.fp = value
         elif self.fp is None:
-            setattr(self, 'fp', 0.)
+            self.fp = 0.
         # Set stellar radius
         if 'Rs' in model.parameters.dict.keys():
             item0 = 'Rs'
@@ -255,7 +271,7 @@ class PlanetParams():
                 raise AssertionError(message)
             if eval:
                 value = value.value
-            setattr(self, 'Rs', value)
+            self.Rs = value
 
         # Nicely packaging limb-darkening coefficients
         if not hasattr(model.parameters, 'limb_dark'):
@@ -283,7 +299,7 @@ class PlanetParams():
         # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
         if self.ecc is None:
             self.ecc = 0
-            self.w = None
+            self.w = 180.
             self.ecosw = 0
             self.esinw = 0
 
