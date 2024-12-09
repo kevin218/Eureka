@@ -52,27 +52,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     Returns
     -------
     spec : Astreaus object
-        Data object of wavelength-like arrrays.
+        Data object of wavelength-like arrays.
     lc : Astreaus object
-        Data object of time-like arrrays (light curve).
+        Data object of time-like arrays (light curve).
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
-
-    Notes
-    -----
-    History:
-
-    - June 2021 Kevin Stevenson
-        Initial version
-    - October 2021 Taylor Bell
-        Updated to allow for inputs from new S3
-    - April 2022 Kevin Stevenson
-        Enabled Astraeus
-    - July 2022 Caroline Piaulet
-        Recording of x (computed in S4) and y (computed in S3) pos drifts and
-        widths in Spec and LC objects
-    - July 2022 Sebastian Zieba
-         Added photometry S4
     '''
     s3_meta = deepcopy(s3_meta)
     input_meta = deepcopy(input_meta)
@@ -160,44 +144,53 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if hasattr(spec, 'optspec') and not hasattr(spec, 'optmask'):
                 spec['optmask'] = (~np.isfinite(spec.optspec)).astype(int)
 
+            # Select specific spectral order
+            if meta.s4_order is not None:
+                spec = spec.sel(order=meta.s4_order)
+
+            # Reverse arrays if wavelength is in descending order
+            if np.nanargmin(spec.wave_1d) > np.nanargmax(spec.wave_1d):
+                spec = spec.sortby(spec.wave_1d, ascending=True)
+
             wave_1d = spec.wave_1d.values
             if meta.wave_min is None:
-                meta.wave_min = np.min(wave_1d)
+                meta.wave_min = np.nanmin(wave_1d)
                 log.writelog(f'No value was provided for meta.wave_min, so '
                              f'defaulting to {meta.wave_min}.',
                              mute=(not meta.verbose))
-            elif meta.wave_min < np.min(wave_1d):
+            elif meta.wave_min < np.nanmin(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_min '
                              f'({meta.wave_min}) is smaller than the shortest '
-                             f'wavelength ({np.min(wave_1d)})!!')
+                             f'wavelength ({np.nanmin(wave_1d)})!!')
                 if meta.inst == 'miri':
                     axis = 'ywindow'
                 else:
                     axis = 'xwindow'
                 log.writelog('  If you want to use wavelengths shorter than '
-                             f'{np.min(wave_1d)}, you will need to decrease '
+                             f'{np.nanmin(wave_1d)}, you will need to decrease '
                              f'your {axis} lower limit in Stage 3.')
             if meta.wave_max is None:
-                meta.wave_max = np.max(wave_1d)
+                meta.wave_max = np.nanmax(wave_1d)
                 log.writelog(f'No value was provided for meta.wave_max, so '
                              f'defaulting to {meta.wave_max}.',
                              mute=(not meta.verbose))
-            elif meta.wave_max > np.max(wave_1d):
+            elif meta.wave_max > np.nanmax(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_max '
                              f'({meta.wave_max}) is larger than the longest '
-                             f'wavelength ({np.max(wave_1d)})!!')
+                             f'wavelength ({np.nanmax(wave_1d)})!!')
                 if meta.inst == 'miri':
                     axis = 'ywindow'
                 else:
                     axis = 'xwindow'
                 log.writelog('  If you want to use wavelengths longer than '
-                             f'{np.max(wave_1d)}, you will need to increase '
+                             f'{np.nanmax(wave_1d)}, you will need to increase '
                              f'your {axis} upper limit in Stage 3.')
 
+            meta.n_int = len(spec.time)
             if meta.photometry:
-                meta.n_int, meta.subnx = spec.aplev.shape[0], 1
+                meta.subnx = 1
             else:
-                meta.n_int, meta.subnx = spec.optspec.shape
+                meta.subnx = len(spec.x)
 
             # Set the max number of copies of a figure
             if meta.nplots is None:
@@ -256,22 +249,20 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             else:
                 flux_units = spec.optspec.attrs['flux_units']
                 time_units = spec.optspec.attrs['time_units']
+            wave_units = spec.wave_1d.attrs['wave_units']
 
             lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
                                    meta.wave, spec.time.values,
-                                   flux_units,
-                                   spec.wave_1d.attrs['wave_units'],
+                                   flux_units, wave_units,
                                    time_units, name='data')
             lcerr = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
                                   meta.wave, spec.time.values,
-                                  flux_units,
-                                  spec.wave_1d.attrs['wave_units'],
+                                  flux_units, wave_units,
                                   time_units, name='err')
             lcmask = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int),
                                             dtype=bool),
                                    meta.wave, spec.time.values, 'None',
-                                   spec.wave_1d.attrs['wave_units'],
-                                   time_units, name='mask')
+                                   wave_units, time_units, name='mask')
             lc = xrio.makeDataset({'data': lcdata, 'err': lcerr,
                                    'mask': lcmask})
             if 'skylev' in list(spec.keys()):

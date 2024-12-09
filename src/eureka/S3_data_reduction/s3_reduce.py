@@ -31,7 +31,7 @@ from tqdm import tqdm
 import psutil
 
 from . import optspex
-from . import plots_s3, source_pos, straighten
+from . import plots_s3, source_pos
 from . import background as bg
 from . import bright2flux as b2f
 
@@ -63,23 +63,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S3.
-
-    Notes
-    -----
-    History:
-
-    - May 2021 Kevin Stevenson
-        Initial version
-    - October 2021 Taylor Bell
-        Updated to allow for inputs from S2
-    - July 2022 Caroline Piaulet
-        Now computing the y pos and width for each integration
-        + stored in Spec and add diagnostics plots
-    - July 2022 Sebastian Zieba
-        Added photometry S3
-    - Feb 2023 Isaac Edelman
-        Added new centroiding method (mgmc_pri, mgmc_sec) to
-        correct for shortwave photometry data processing issues
     '''
     s2_meta = deepcopy(s2_meta)
     input_meta = deepcopy(input_meta)
@@ -192,8 +175,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             elif meta.inst == 'nirspec':
                 from . import nirspec as inst
             elif meta.inst == 'niriss':
-                raise ValueError('NIRISS observations are currently '
-                                 'unsupported!')
+                from . import niriss as inst
             elif meta.inst == 'wfc3':
                 from . import wfc3 as inst
                 meta.bg_dir = 'CxC'
@@ -277,12 +259,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 if meta.files_per_batch > 1:
                     log.writelog('  Concatenating files...',
                                  mute=(not meta.verbose))
-                data = xrio.concat(batch)
-                data.attrs['intstart'] = batch[0].attrs['intstart']
-                data.attrs['intend'] = batch[-1].attrs['intend']
+                    data = xrio.concat(batch)
+                    data.attrs['intstart'] = batch[0].attrs['intstart']
+                    data.attrs['intend'] = batch[-1].attrs['intend']
 
                 # Get number of integrations and frame dimensions
-                meta.n_int, meta.ny, meta.nx = data.flux.shape
+                meta.n_int = len(data.time)
+                meta.nx = len(data.x)
+                meta.ny = len(data.y)
+
                 if meta.testing_S3:
                     # Only process the last 5 integrations when testing
                     meta.int_start = np.max((0, meta.n_int-5))
@@ -296,10 +281,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.int_end = meta.n_int
                 else:
                     meta.int_end = meta.int_start+meta.nplots
-
-                # Initialize bad pixel mask (False = good, True = bad)
-                data['mask'] = (['time', 'y', 'x'],
-                                np.zeros(data.flux.shape, dtype=bool))
 
                 # Perform BG subtraction along dispersion direction
                 # for untrimmed NIRCam spectroscopic data
@@ -355,10 +336,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                            data.wave_2d[meta.src_ypos].values)
                         data['wave_1d'].attrs['wave_units'] = \
                             data.wave_2d.attrs['wave_units']
-
-                    # Check for bad wavelengths (beyond wavelength solution)
-                    util.check_nans(data.wave_1d.values, np.zeros(meta.subnx),
-                                    log, name='wavelength')
+                        # Check for bad wavelengths (beyond wavelength solution)
+                        util.check_nans(data.wave_1d.values,
+                                        np.zeros(meta.subnx),
+                                        log, name='wavelength')
+                    else:
+                        # Get wavelength solution
+                        data = inst.get_wave(data, meta, log)
 
                     if meta.calibrated_spectra:
                         # Instrument-specific steps for generating
@@ -376,17 +360,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                     if saved_ref_median_frame is None:
                         # Compute clean median frame
-                        data = optspex.clean_median_flux(data, meta, log, m)
+                        data = inst.clean_median_flux(data, meta, log, m)
                         # Save the original median frame
                         saved_ref_median_frame = deepcopy(data.medflux)
                     else:
                         # Load the original median frame
-                        data['medflux'] = saved_ref_median_frame
+                        data['medflux'] = deepcopy(saved_ref_median_frame)
 
                     # correct spectral curvature
                     if meta.curvature == 'correct':
-                        data, meta = straighten.straighten_trace(data, meta,
-                                                                 log, m)
+                        data, meta = inst.straighten_trace(data, meta,
+                                                           log, m)
                     elif meta.inst == 'nirspec' and meta.filter != 'PRISM':
                         log.writelog('WARNING: NIRSpec GRISM spectra is '
                                      'significantly curved and will very '
@@ -423,17 +407,20 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             plots_s3.driftywidth(data, meta, m)
 
                     # Select only aperture region
-                    apdata, aperr, apmask, apbg, apv0 = \
+                    apdata, aperr, apmask, apbg, apv0, apmedflux = \
                         inst.cut_aperture(data, meta, log)
 
                     # Extract standard spectrum and its variance
-                    data = optspex.standard_spectrum(data, apdata, apmask,
-                                                     aperr)
+                    log.writelog('  Computing standard spectrum...',
+                                 mute=(not meta.verbose))
+                    data = inst.standard_spectrum(data, meta, apdata, apmask,
+                                                  aperr)
 
                     # Perform optimal extraction
                     data, meta, log = optspex.optimize_wrapper(data, meta, log,
                                                                apdata, apmask,
-                                                               apbg, apv0, m=m)
+                                                               apbg, apv0,
+                                                               apmedflux, m=m)
 
                     # Plot results
                     if meta.isplots_S3 >= 3:
@@ -446,7 +433,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             # make optimal spectrum plot
                             plots_s3.optimal_spectrum(data, meta, n, m)
                         if meta.inst != 'wfc3':
-                            plots_s3.residualBackground(data, meta, m)
+                            inst.residualBackground(data, meta, m)
 
                 else:  # Do Photometry reduction
                     meta.photap = meta.spec_hw
@@ -613,7 +600,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                      data['mask'], data.attrs['intstart'],
                      data.attrs['intend'])
                 if not meta.photometry:
-                    del (data['flux'], data['bg'], data['wave_2d'])
+                    del (data['flux'], data['bg'])
+                    if meta.inst != 'niriss':
+                        del (data['wave_2d'])
                 elif meta.inst == 'wfc3':
                     del (data['flatmask'], data['variance'])
 
@@ -667,30 +656,42 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     raise OSError('Failed to write S3_SpecData.')
 
             # Compute MAD value
+            scandir = getattr(spec, 'scandir', None)
             if not meta.photometry:
-                meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d.values,
-                                           spec.optspec.values,
-                                           spec.optmask.values,
-                                           scandir=getattr(spec, 'scandir',
-                                                           None))
+                if meta.orders is None:
+                    meta.mad_s3 = [util.get_mad(meta, log, spec.wave_1d.values,
+                                                spec.optspec.values,
+                                                spec.optmask.values,
+                                                scandir=scandir)]
+                else:
+                    meta.mad_s3 = []
+                    for j, order in enumerate(meta.orders):
+                        meta.mad_s3.append(
+                            util.get_mad(
+                                meta, log,
+                                spec.wave_1d.sel(order=order).values,
+                                spec.optspec.sel(order=order).values,
+                                spec.optmask.sel(order=order).values,
+                                np.nanmin(spec.wave_1d.sel(order=order)),
+                                np.nanmax(spec.wave_1d.sel(order=order)),
+                                scandir=scandir))
             else:
                 normspec = util.normalize_spectrum(
                     meta, spec.aplev.values,
-                    scandir=getattr(spec, 'scandir', None))
-                meta.mad_s3 = util.get_mad_1d(normspec)
-            try:
-                log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
-            except:
-                log.writelog("Could not compute Stage 3 MAD")
-                meta.mad_s3 = 0
+                    scandir=scandir)
+                meta.mad_s3 = [util.get_mad_1d(normspec)]
+            for i, mad in enumerate(meta.mad_s3):
+                try:
+                    log.writelog(f"Stage 3 MAD = {mad:.0f} ppm")
+                except:
+                    log.writelog("Could not compute Stage 3 MAD")
+                    meta.mad_s3[i] = 0
 
             if meta.isplots_S3 >= 1 and not meta.photometry:
                 log.writelog('Generating figures')
                 # 2D light curve without drift correction
-                plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
-                                        optmask=spec.optmask,
-                                        scandir=getattr(spec, 'scandir',
-                                                        None))
+                inst.lc_nodriftcorr(spec, meta)
+            # return spec, meta # FINDME
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.

@@ -135,12 +135,13 @@ def straighten_trace(data, meta, log, m):
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
     '''
+    if meta.fittype != 'meddata':
+        # This method only works with the median profile for the extraction
+        log.writelog('  !!! Strongly recommend using meddata as the optimal '
+                     'extraction profile !!!', mute=(not meta.verbose))
+
     log.writelog('  Correcting curvature and bringing the trace to the '
                  'center of the detector...', mute=(not meta.verbose))
-    # This method only works with the median profile for the extraction
-    log.writelog('  !!! Ensure that you are using meddata for the optimal '
-                 'extraction profile !!!', mute=(not meta.verbose))
-
     # compute the correction needed from this median frame
     shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
 
@@ -154,12 +155,12 @@ def straighten_trace(data, meta, log, m):
     # apply the correction and update wave_1d accordingly
     data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
     data.wave_1d.values = data.wave_2d[new_center].values
-
-    log.writelog('    Correcting the curvature over all integrations...',
-                 mute=(not meta.verbose))
     # broadcast the shifts to the number of integrations
     shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
                         (data.flux.shape[0], data.flux.shape[2]), order='F')
+
+    log.writelog('    Correcting the curvature over all integrations...',
+                 mute=(not meta.verbose))
 
     # apply the shifts to the data
     data.flux.values = roll_columns(data.flux.values, shifts)
