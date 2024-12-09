@@ -215,17 +215,6 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         freepars = exo_sol.fit_params
         model.update(freepars)
 
-    if hasattr(meta, 'exoplanet_first') and meta.exoplanet_first:
-        log.writelog('\nCalling exoplanet first...')
-        # RUN LEAST SQUARES
-        opt_sol = exoplanetfitter(lc, model, meta, log,
-                                  calling_function='nuts', **kwargs)
-        freepars = opt_sol.fit_params
-
-        if meta.rescale_err:
-            # Scale uncertainties with reduced chi-squared
-            lc.unc *= np.sqrt(opt_sol.chi2red)
-
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
