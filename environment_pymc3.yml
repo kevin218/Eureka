@@ -26,7 +26,7 @@ dependencies:
     - numpy[version='>=1.20.0,<1.22'] # Upper limit needed for Apple silicon and for theano, starry, and pymc3
     - numpydoc # Needed for documentation
     - pandas
-    - pastasoss --no-deps
+    - pastasoss
     - photutils
     - pip # required for the pip installs below
     - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest, an asdf package, and something in the pymc3 set of installs. Needed for testing
