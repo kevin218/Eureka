@@ -40,23 +40,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S5.
-
-    Notes
-    -----
-    History:
-
-    - November 12-December 15, 2021 Megan Mansfield
-        Original version
-    - December 17-20, 2021 Megan Mansfield
-        Connecting S5 to S4 outputs
-    - December 17-20, 2021 Taylor Bell
-        Increasing connectedness of S5 and S4
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - January - February, 2022 Eva-Maria Ahrer
-        Adding GP functionality
-    - April 2022 Kevin Stevenson
-        Enabled Astraeus
     '''
     s4_meta = deepcopy(s4_meta)
     input_meta = deepcopy(input_meta)
@@ -380,7 +363,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                         xpos_temp = np.ma.masked_where(mask, xpos_temp)
                     else:
                         xpos_temp = None
-                    if hasattr(lc_whites[pi], 'centroid_x'):
+                    if hasattr(lc_whites[pi], 'centroid_sx'):
                         xwidth_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_sx.values)
                         xwidth_temp = np.ma.masked_where(mask, xwidth_temp)
@@ -392,7 +375,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                         ypos_temp = np.ma.masked_where(mask, ypos_temp)
                     else:
                         ypos_temp = None
-                    if hasattr(lc_whites[pi], 'centroid_y'):
+                    if hasattr(lc_whites[pi], 'centroid_sy'):
                         ywidth_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_sy.values)
                         ywidth_temp = np.ma.masked_where(mask, ywidth_temp)

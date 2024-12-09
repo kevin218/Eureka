@@ -158,6 +158,7 @@ class S3MetaClass(MetaClass):
         self.bg_x2 = getattr(self, 'bg_x2', None)
         self.bg_method = getattr(self, 'bg_method', 'mean')
         self.p3thresh = getattr(self, 'p3thresh', 5)
+        self.orders = getattr(self, 'orders', None)
 
     def set_photometric_defaults(self):
         '''Set Stage 3 specific defaults for generic photometric data.
@@ -252,6 +253,9 @@ class S3MetaClass(MetaClass):
             Initial empty version setting defaults for NIRISS.
         '''
         self.curvature = getattr(self, 'curvature', True)
+        self.src_ypos = getattr(self, 'src_ypos', [35, 80])
+        self.orders = getattr(self, 'orders', [1, 2])
+        self.record_ypos = getattr(self, 'record_ypos', False)
 
         self.set_spectral_defaults()
 

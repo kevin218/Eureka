@@ -1,19 +1,14 @@
 import numpy as np
 from tqdm import tqdm
-import ccdproc as ccdp
-from astropy import units
 import multiprocessing as mp
 import matplotlib.pyplot as plt
-from astropy.nddata import CCDData
-from astropy.stats import SigmaClip
-from photutils.background import MMMBackground, MedianBackground, Background2D
 import os
+from copy import deepcopy
 
-from ..lib import clipping
 from ..lib import plots
 from . import plots_s3
 
-__all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
+__all__ = ['BGsubtraction', 'fitbg', 'fitbg2']
 
 
 def BGsubtraction(data, meta, log, m, isplots=0):
@@ -38,21 +33,12 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     -------
     data : Xarray Dataset
         Dataset object containing background subtracted data.
-
-    Notes
-    -----
-    History:
-
-    - Dec 10, 2021 Taylor Bell
-        Edited to pass the full DataClass object into inst.fit_bg
-    - Apr 20, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     """
     if meta.bg_deg is None:
         # Need to skip doing background subtraction
         log.writelog('  Skipping background subtraction...',
                      mute=(not meta.verbose))
-        data['bg'] = (['time', 'y', 'x'], np.zeros(data.flux.shape))
+        data['bg'] = (list(data.coords.keys()), np.zeros_like(data.flux))
         data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']
         return data
 
@@ -64,7 +50,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     elif meta.inst == 'nirspec':
         from . import nirspec as inst
     elif meta.inst == 'niriss':
-        raise ValueError('NIRISS observations are currently unsupported!')
+        from . import niriss as inst
     elif meta.inst == 'wfc3':
         from . import wfc3 as inst
     else:
@@ -88,7 +74,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     # Compute background for each integration
     log.writelog('  Performing ' + meta.bg_dir + ' background subtraction...',
                  mute=(not meta.verbose))
-    data['bg'] = (['time', 'y', 'x'], np.zeros(data.flux.shape))
+    data['bg'] = (list(data.coords.keys()), np.zeros_like(data.flux))
     data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']
     if meta.ncpu == 1:
         # Only 1 CPU
@@ -97,9 +83,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
             iterfn = tqdm(iterfn)
         for n in iterfn:
             # Fit sky background with out-of-spectra data
-            if meta.inst == 'niriss':
-                writeBG(inst.fit_bg(data, meta, n, isplots))
-            elif meta.inst == 'wfc3':
+            if meta.inst == 'wfc3':
                 writeBG_WFC3(inst.fit_bg(data.flux[n].values,
                                          data.mask[n].values,
                                          data.v0[n].values,
@@ -112,16 +96,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
-        args_list = []
-
-        # Todo, convert NIRISS fit_bg to only accept individual frames
-        # (see nircam and below for example)
-        if meta.inst == 'niriss':
-            for n in range(meta.int_start, meta.n_int):
-                args_list.append((data, meta, n, isplots))
-            jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,),
-                                     callback=writeBG) for args in args_list]
-        elif meta.inst == 'wfc3':
+        if meta.inst == 'wfc3':
             # The WFC3 background subtraction needs a few more inputs
             # and outputs
             jobs = [pool.apply_async(func=inst.fit_bg,
@@ -153,9 +128,33 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     if hasattr(data, 'medflux'):
         data['medflux'] -= np.median(data.bg, axis=0)
 
+    if (meta.bg_dir == 'CxC') and (meta.inst != 'wfc3'):
+        # Save BG value at source position and BG stddev (no outlier rejection)
+        coords = list(data.coords.keys())
+        coords.remove('y')
+        data['skylev'] = (coords, np.zeros_like(data.flux[:, 0]))
+        data['skylev'].attrs['flux_units'] = data['flux'].attrs['flux_units']
+        bg_inds = np.ma.getdata(deepcopy(data.mask))
+        if meta.orders is None:
+            data['skylev'] = data.bg[:, meta.src_ypos, :]
+            bg_inds[:, meta.bg_y1:meta.bg_y2, :] = True
+        else:
+            for k in range(len(meta.orders)):
+                data['skylev'][:, :, k] = data.bg[:, meta.src_ypos[k], :, k]
+                bg_inds[:, meta.bg_y1[k]:meta.bg_y2[k], :, k] = True
+        bg_data = np.ma.masked_where(bg_inds, data.flux, copy=True)
+        bg_data = (np.ma.std(bg_data, axis=1))/np.sqrt(np.sum(~bg_inds))
+        data['skyerr'] = (coords, bg_data)
+        data['skyerr'].attrs['flux_units'] = data['flux'].attrs['flux_units']
+
     # Make image+background plots
     if isplots >= 3:
-        plots_s3.image_and_background(data, meta, log, m)
+        if meta.orders is None:
+            plots_s3.image_and_background(data, meta, log, m)
+        else:
+            for order in meta.orders:
+                plots_s3.image_and_background(data.sel(order=order), meta,
+                                              log, m, order=order)
 
     return data
 
@@ -184,15 +183,6 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
         Default is 0 (no rotation).
     isplots : int; optional
         The amount of plots saved; set in ecf. Default is 0.
-
-    Notes
-    -----
-    History:
-
-    - May 2013
-        Removed [::-1] for LDSS3
-    - Feb 2014
-        Modified x1 and x2 to allow for arrays
     '''
     # Assume x is the spatial direction and y is the wavelength direction
     # Otherwise, rotate array
@@ -236,16 +226,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
             if too_few_pix:
                 degs[j] = 0
             while not nobadpixels:
-                try:
-                    goodxvals = xvals[~mask[j, xvals]]
-                except:
-                    # FINDME: Need to change this except to only catch the
-                    # specific type of exception we expect
-                    print("****Warning: Background subtraction failed!****")
-                    print(j)
-                    print(xvals)
-                    print(np.where(~mask[j, xvals]))
-                    return
+                goodxvals = xvals[~mask[j, xvals]]
                 dataslice = dataim[j, goodxvals]
                 # Check for at least 1 good x value
                 if len(goodxvals) == 0:
@@ -380,14 +361,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
             if too_few_pixels:
                 degs[j] = 0
             while not nobadpixels:
-                try:
-                    goodxvals = xvals[~bgmask[j, xvals]]
-                except:
-                    # FINDME: Need to change this except to only catch the
-                    # specific type of exception we expect
-                    print('column: ', j, 'xvals: ', xvals)
-                    print(np.where(~mask[j, xvals]))
-                    return
+                goodxvals = xvals[~bgmask[j, xvals]]
                 dataslice = dataim[j, goodxvals]
                 # Check for at least 1 good x value
                 if len(goodxvals) == 0:
@@ -449,7 +423,6 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
             # to background image
             if len(goodxvals) != 0:
                 bg[j] = np.polyval(coeffs, range(nx))
-                # bg[j] = np.interp(range(nx), goodxvals, model)
 
     if isrotate == 1:
         bg = (bg.T)[::-1]
@@ -460,112 +433,4 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
         mask = (mask.T)
         bgmask = (bgmask.T)
 
-    return bg, bgmask  # , mask # ,variance
-
-
-def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
-            box=(10, 2), filter_size=(1, 1)):
-    """Completes a step for fitting a 2D background model.
-
-    Parameters
-    ----------
-    img : np.ndarray
-       Single exposure frame.
-    mask : np.ndarray
-       A boolean mask to remove the orders, where True values are masked.
-    sigma : float; optional
-       Sigma to remove above. Default is 5.
-    bkg_estimator : str; optional
-       Which type of 2D background model to use.
-       Default is `median`.
-    box : tuple; optional
-       Box size by which to smooth over. Default
-       is (10,2) --> prioritizes smoothing by
-       column.
-    filter_size : tuple; optional
-       The window size of the 2D filter to apply to the
-       low-resolution background map. Default is (1,1).
-
-    Returns
-    -------
-    background : np.ndarray
-       The modeled background image.
-    """
-    sigma_clip = SigmaClip(sigma=sigma)
-
-    if bkg_estimator.lower() == 'mmmbackground':
-        bkg = MMMBackground()
-    elif bkg_estimator.lower() == 'median':
-        bkg = MedianBackground()
-    else:
-        raise ValueError('Unrecognized bkg_estimator setting, '
-                         f'{bkg_estimator.lower()}')
-
-    b = Background2D(img, box,
-                     filter_size=filter_size,
-                     bkg_estimator=bkg,
-                     sigma_clip=sigma_clip, fill_value=0.0,
-                     mask=mask)
-    return b.background
-
-
-def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 4, 4]):
-    """Fit sky background with out-of-spectra data. Optimized to remove
-    the 1/f noise in the NIRISS spectra (works in the y-direction).
-
-    Parameters
-    ----------
-    data : Xarray Dataset
-        The Dataset object.
-    order_mask : np.ndarray
-       A boolean mask to remove the orders, where True values are part of
-       the orders.
-    readnoise : float; optional
-        The read noise level of the image in the same units as the data.
-        Used to generate the noise model of the image. Default value is 11.
-    sigclip : interable; optional
-       A list or array corresponding to the
-       sigma-level which should be clipped in the cosmic
-       ray removal routine. Default is [4, 4, 4].
-
-    Returns
-    -------
-    data : Xarray Dataset
-       The updated Dataset object now contains new attribute `bkg_removed`.
-    """
-    # Removes cosmic rays
-    # Loops through niters cycles to make sure all pesky
-    #    cosmic rays are trashed
-    rm_crs = np.zeros(data.data.shape)
-    bkg_subbed = np.zeros(data.data.shape)
-
-    for i in tqdm(range(len(data.data))):
-
-        ccd = CCDData((data.data[i])*units.electron)
-        mask = np.zeros(data.data[i].shape, dtype=bool)
-
-        for n in range(len(sigclip)):
-            m1 = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise,
-                                         sigclip=sigclip[n])
-            ccd = CCDData(m1.data*units.electron)
-            mask[m1.mask] = True
-
-        rm_crs[i] = m1.data
-        rm_crs[i][mask] = np.nan
-
-        # removal from background
-        rm_crs[i] = clipping.gauss_removal(rm_crs[i], ~order_mask,
-                                           linspace=[-200, 200])
-        # removal from order
-        rm_crs[i] = clipping.gauss_removal(rm_crs[i], order_mask,
-                                           linspace=[-10, 10], where='order')
-
-        b1 = bkg_sub(rm_crs[i], order_mask, bkg_estimator='median', sigma=4,
-                     box=(10, 5), filter_size=(2, 2))
-        b2 = bkg_sub(rm_crs[i]-b1, order_mask, sigma=3, bkg_estimator='median')
-
-        bkg_subbed[i] = (rm_crs[i]-b1)-b2
-
-    data.bkg_removed = bkg_subbed
-
-    return data
+    return bg, bgmask
