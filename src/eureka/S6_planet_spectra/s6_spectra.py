@@ -47,13 +47,6 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S6.
-
-    Notes
-    -----
-    History:
-
-    - Feb 14, 2022 Taylor Bell
-        Original version
     '''
     s5_meta = deepcopy(s5_meta)
     input_meta = deepcopy(input_meta)
@@ -123,7 +116,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
             # Copy existing S5 log file and resume log
             meta.s6_logname = meta.outputdir+'S6_'+meta.eventlabel+'.log'
             log = logedit.Logedit(meta.s6_logname, read=meta.s5_logname)
-            log.writelog("\nStarting Stage 6: Light Curve Fitting\n")
+            log.writelog("\nStarting Stage 6: Plot Spectra\n")
             log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
@@ -224,7 +217,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     continue
 
                 # Manipulate fitted values if needed
-                if meta.y_param_basic in ['rp^2', 'rprs^2']:
+                if (meta.y_param_basic[:2] == 'rp' and
+                        meta.y_param_basic[-2:] == '^2'):
                     meta = compute_transit_depth(meta)
                 elif meta.y_param_basic in ['1/r1', '1/r3']:
                     meta = compute_timescale(meta)
@@ -234,11 +228,12 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
                 if meta.y_label is None:
                     # Provide some default formatting
-                    if meta.y_param_basic in ['rp^2', 'rprs^2']:
+                    if (meta.y_param_basic[:2] == 'rp' and
+                            meta.y_param_basic[-2:] == '^2'):
                         # Transit depth
                         suffix = planetSuffix+channelSuffix
                         meta.y_label = '$(R_{\\rm p'+suffix+'}/R_{\\rm *})^2$'
-                    elif meta.y_param_basic in ['rp', 'rprs']:
+                    elif meta.y_param_basic[:2] == 'rp':
                         # Radius ratio
                         suffix = planetSuffix+channelSuffix
                         meta.y_label = '$R_{\\rm p'+suffix+'}/R_{\\rm *}$'
@@ -361,8 +356,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
                 # Should we also make the scale_height version of the figure?
                 make_fig6301 = (meta.isplots_S6 >= 3 and meta.has_fig6301reqs
-                                and meta.y_param in ['rp', 'rp^2',
-                                                     'rprs', 'rprs^2'])
+                                and meta.y_param[:2] == 'rp')
                 if make_fig6301:
                     # Make spectrum plot with scale height on the 2nd y-axis
                     scale_height = compute_scale_height(meta, log)
@@ -414,7 +408,8 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
     errs
         The uncertainties from a sampling algorithm like dynesty or emcee.
     """
-    if meta.y_param_basic in ['rp^2', 'rprs^2']:
+    if (meta.y_param_basic[:2] == 'rp' and
+            meta.y_param_basic[-2:] == '^2'):
         y_param = meta.y_param[:-2]
     elif meta.y_param_basic in ['1/r1', '1/r3']:
         y_param = meta.y_param[2:]
@@ -1567,7 +1562,8 @@ def compute_scale_height(meta, log):
     """
     if meta.planet_Rad is None:
         meta.planet_Rad = meta.spectrum_median
-        if meta.y_param_basic in ['rp^2', 'rprs^2']:
+        if (meta.y_param_basic[:2] == 'rp' and
+                meta.y_param_basic[-2:] == '^2'):
             meta.planet_Rad = np.sqrt(meta.planet_Rad)
         meta.planet_Rad = np.nanmean(meta.planet_Rad)
         meta.planet_Rad *= (meta.star_Rad*constants.R_sun /
@@ -1829,7 +1825,8 @@ def transit_latex_table(meta, log):
     rows = int(np.ceil(nvals/meta.ncols))
 
     # Figure out the labels for the columns
-    if meta.y_param_basic in ['rp^2', 'rprs^2']:
+    if (meta.y_param_basic[:2] == 'rp' and
+            meta.y_param_basic[-2:] == '^2'):
         suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
         colhead = '\\colhead{Transit Depth'+suffix+'}'
     elif meta.y_param_basic in ['rp', 'rprs']:
@@ -1851,7 +1848,7 @@ def transit_latex_table(meta, log):
         out += "CC|"
     out = out[:-1]+"}\n"
     # Give the table a caption based on the tabulated data
-    if meta.y_param_basic in ['rp', 'rp^2', 'rprs', 'rprs^2']:
+    if meta.y_param_basic[:2] == 'rp':
         out += "\\tablecaption{\\texttt{Eureka!}'s Transit Spectroscopy "
         out += "Results \\label{tab:eureka_transit_spectra}}\n"
     elif meta.y_param_basic in ['fp', 'fpfs']:

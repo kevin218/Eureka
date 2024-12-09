@@ -43,7 +43,8 @@ def readfiles(meta):
 
     # Look for files in the input directory
     for fname in glob.glob(meta.inputdir+'*'+meta.suffix+'.fits'):
-        meta.segment_list.append(fname)
+        if not ignore_nonscience(fname):
+            meta.segment_list.append(fname)
 
     # Need to allow for separated sci and cal directories for WFC3
     if len(meta.segment_list) == 0:
@@ -52,15 +53,15 @@ def readfiles(meta):
             meta.sci_dir = 'sci'
         sci_path = os.path.join(meta.inputdir, meta.sci_dir)+os.sep
         for fname in glob.glob(sci_path+'*'+meta.suffix+'.fits'):
-            meta.segment_list.append(fname)
+            if not ignore_nonscience(fname):
+                meta.segment_list.append(fname)
         # Add files from the cal directory if present
         if not hasattr(meta, 'cal_dir') or meta.cal_dir is None:
             meta.cal_dir = 'cal'
         cal_path = os.path.join(meta.inputdir, meta.cal_dir)+os.sep
         for fname in glob.glob(cal_path+'*'+meta.suffix+'.fits'):
-            meta.segment_list.append(fname)
-
-    meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
+            if not ignore_nonscience(fname):
+                meta.segment_list.append(fname)
 
     meta.num_data_files = len(meta.segment_list)
     if meta.num_data_files == 0:
@@ -70,12 +71,62 @@ def readfiles(meta):
                              f'{meta.filename} to point to the folder '
                              f'containing the "{meta.suffix}.fits" files.')
 
+    meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
+
     meta = get_inst(meta, meta.segment_list[-1])
 
     return meta
 
 
+def ignore_nonscience(filename):
+    """Determine whether a file is a TA-related file that should be ignored.
+
+    Parameters
+    ----------
+    filename : str
+        The fully qualified path to a FITS file.
+
+    Returns
+    -------
+    bool
+        True if the specified file is a TA-related file that should be ignored.
+        False otherwise.
+    """
+    with fits.open(filename) as hdulist:
+        try:
+            nonscience = (hdulist[0].header['EXP_TYPE'] in
+                          ['MIR_TACQ', 'MIR_TACONFIRM',
+                           'NRC_TACQ', 'NRC_TACONFIRM',
+                           'NRS_WATA', 'NRS_MSATA',
+                           'NRS_BOTA', 'NRS_TASLIT',
+                           'NRS_TACQ', 'NRS_CONFIRM',
+                           'NRS_TACONFIRM', 'NRS_VERIFY',
+                           'NIS_TACQ', 'NIS_TACONFIRM'])
+        except KeyError:
+            # HST data doesn't have EXP_TYPE, and we shouldn't need to worry
+            # about removing non-science data for HST anyway
+            nonscience = False
+    return nonscience
+
+
 def get_inst(meta, file):
+    """Get the instrument used to collect a FITS file.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    file : str
+        The filename of a FITS file.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object with meta.inst set (if not previously
+        set) to a lowercase string specifying the utilized instrument and with
+        meta.photometry set (if not previously set) to a boolean specifying
+        whether or not the data is photometric.
+    """
     with fits.open(file) as hdulist:
         # Figure out which instrument we are using
         meta.inst = getattr(meta, 'inst',
@@ -362,7 +413,6 @@ def find_fits(meta):
         # there are in children folders
         fnames = glob.glob(meta.inputdir+'**'+os.sep+'*'+meta.suffix+'.fits',
                            recursive=True)
-        fnames = sn.sort_nicely(fnames)
 
     if len(fnames) == 0:
         # If the code can't find any of the reqested files, raise an error
@@ -396,7 +446,13 @@ def find_fits(meta):
     if meta.inputdir[-1] != os.sep:
         meta.inputdir += os.sep
 
-    relevant_fnames = [fname for fname in fnames if folder in fname]
+    # Only get the relevant files
+    # Now also protecting against nested folders and against non-science files
+    relevant_fnames = [fname for fname in fnames if
+                       # check that the file is in the relevant folder
+                       (folder == os.sep.join(fname.split(os.sep)[:-1])
+                        # check that the file is not a TA-related file
+                        and not ignore_nonscience(fname))]
     meta = get_inst(meta, relevant_fnames[-1])
 
     return meta
@@ -839,6 +895,8 @@ def make_citations(meta, stage=None):
         # check if batman or GP is being used for transit/eclipse modeling
         if "batman_tr" in meta.run_myfuncs or "batman_ecl" in meta.run_myfuncs:
             other_cites.append("batman")
+        if "catwoman_tr" in meta.run_myfuncs:
+            other_cites.append("catwoman")
         if "fleck_tr" in meta.run_myfuncs:
             other_cites.append("fleck")
         if "starry" in meta.run_myfuncs:

@@ -15,7 +15,8 @@ from .source_pos import gauss
 from ..lib import util, plots
 
 
-def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
+def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
+                   mad=None, order=None):
     '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
 
     Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
@@ -38,6 +39,10 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
         For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
         Defaults to None which is fine for JWST data, but must be provided
         for HST data (can be all zero values if not spatial scanning mode).
+    mad : float; optional
+        Median absolution deviation. Default is None.
+    order : int; optional
+        Spectral order. Default is None
     '''
     normspec = util.normalize_spectrum(meta, optspec.values,
                                        optmask=optmask.values,
@@ -110,20 +115,25 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
 
     ax1.minorticks_on()
     ax2.minorticks_on()
-    ax1.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
-    ax2.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
+    if mad is not None:
+        ax1.set_title(f"MAD = {mad:.0f} ppm")
+        ax2.set_title(f"MAD = {mad:.0f} ppm")
     fig1.colorbar(im1, ax=ax1, label='Normalized Flux')
     fig2.colorbar(im2, ax=ax2, label='Normalized Flux')
 
-    fname1 = f'figs{os.sep}fig3101-2D_LC'+plots.figure_filetype
-    fname2 = f'figs{os.sep}fig3102-2D_LC'+plots.figure_filetype
+    if order is None:
+        orderkey = ''
+    else:
+        orderkey = f'_order{order}'
+    fname1 = f'figs{os.sep}fig3101{orderkey}_2D_LC'+plots.figure_filetype
+    fname2 = f'figs{os.sep}fig3102{orderkey}_2D_LC'+plots.figure_filetype
     fig1.savefig(meta.outputdir+fname1, dpi=300)
     fig2.savefig(meta.outputdir+fname2, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
-def image_and_background(data, meta, log, m):
+def image_and_background(data, meta, log, m, order=None):
     '''Make image+background plot. (Figs 3301)
 
     Parameters
@@ -136,12 +146,14 @@ def image_and_background(data, meta, log, m):
         The current log.
     m : int
         The file number.
+    order : int; optional
+        Spectral order. Default is None
     '''
     log.writelog('  Creating figures for background subtraction...',
                  mute=(not meta.verbose))
 
     # If need be, transpose array so that largest dimension is on x axis
-    if len(data.flux.x.values) < len(data.flux.y.values):
+    if len(data.x) < len(data.y):
         data = data.transpose('time', 'x', 'y')
     xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
 
@@ -161,7 +173,7 @@ def image_and_background(data, meta, log, m):
     # Set bad pixels to plot as black
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
-    iterfn = range(meta.int_end-meta.int_start)
+    iterfn = range(meta.int_start, meta.int_end)
     if meta.verbose:
         iterfn = tqdm(iterfn)
     for n in iterfn:
@@ -187,9 +199,15 @@ def image_and_background(data, meta, log, m):
 
         file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))
                                        + 1))
-        int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-        fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}_' +
-                 meta.bg_dir + '_ImageAndBackground'+plots.figure_filetype)
+        int_number = str(intstart + n).zfill(int(np.floor(
+            np.log10(meta.n_int))+1))
+        if order is None:
+            orderkey = ''
+        else:
+            orderkey = f'_order{order}'
+        fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
+                 f'{orderkey}' + '_' + meta.bg_dir + '_ImageAndBackground' +
+                 plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -211,13 +229,22 @@ def drift_2D(data, meta):
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
         if len(iscans) > 0:
-            plt.plot(iscans, data.centroid_y[iscans], '.')
+            if p == 0:
+                label = "Direction 0 (Forward)"
+            else:
+                label = "Direction 1 (Reverse)"
+            plt.plot(iscans, data.centroid_y[iscans], '.', label=label)
     plt.ylabel(f'Drift Along y ({data.centroid_y.units})')
+
     plt.subplot(212)
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
         if len(iscans) > 0:
-            plt.plot(iscans, data.centroid_x[iscans], '.')
+            if p == 0:
+                label = "Direction 0 (Forward)"
+            else:
+                label = "Direction 1 (Reverse)"
+            plt.plot(iscans, data.centroid_x[iscans], '.', label=label)
     plt.ylabel(f'Drift Along x ({data.centroid_x.units})')
     plt.xlabel('Integration Number')
 
@@ -241,7 +268,7 @@ def optimal_spectrum(data, meta, n, m):
     m : int
         The file number.
     '''
-    xmin, xmax = get_bounds(data.stdspec.x.values)
+    xmin, xmax = get_bounds(data.x.values)
     intstart, stdspec, optspec, opterr = (data.attrs['intstart'],
                                           data.stdspec.values,
                                           data.optspec.values,
@@ -250,17 +277,30 @@ def optimal_spectrum(data, meta, n, m):
     plt.figure(3302)
     plt.clf()
     plt.suptitle(f'1D Spectrum - Integration {intstart + n}')
-    plt.semilogy(data.stdspec.x.values, stdspec[n], '-', color='C1',
-                 label='Standard Spec')
-    plt.errorbar(data.stdspec.x.values, optspec[n], yerr=opterr[n], fmt='-',
-                 color='C2', ecolor='C2', label='Optimal Spec')
+    if meta.orders is None:
+        plt.semilogy(data.stdspec.x.values, stdspec[n], '-', color='C1',
+                     label='Standard Spec')
+        plt.errorbar(data.stdspec.x.values, optspec[n], yerr=opterr[n], fmt='-',
+                     color='C2', ecolor='C2', label='Optimal Spec')
+    else:
+        norders = len(meta.orders)
+        for j in range(norders):
+            order = meta.orders[j]
+            inotnan = np.where(~np.isnan(data.wave_1d[:, j]))[0]
+            plt.semilogy(data.x.values[inotnan], stdspec[n, inotnan, j], '-',
+                         label=f'Standard Spec - Order {order}')
+            plt.errorbar(data.stdspec.x.values, optspec[n, :, j],
+                         yerr=opterr[n, :, j], fmt='-',
+                         label=f'Optimal Spec - Order {order}')
     plt.xlim(xmin, xmax)
+    plt.ylim(np.nanmin(optspec[n])/2, np.nanmax(optspec[n])*2)
     plt.ylabel('Flux')
     plt.xlabel('Detector Pixel Position')
     plt.legend(loc='best')
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    int_number = str(intstart + n).zfill(int(np.floor(
+        np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3302_file{file_number}_int{int_number}' +
              '_Spectrum'+plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
@@ -336,7 +376,7 @@ def source_position(meta, x_dim, pos_max, m, n,
         plt.pause(0.2)
 
 
-def profile(meta, profile, submask, n, m):
+def profile(meta, profile, submask, n, m, order=None):
     '''Plot weighting profile from optimal spectral extraction routine.
     (Figs 3303)
 
@@ -352,6 +392,8 @@ def profile(meta, profile, submask, n, m):
         The current integration number.
     m : int
         The file number.
+    order : int; optional
+        Spectral order. Default is None
     '''
     profile = np.ma.masked_invalid(profile)
     profile = np.ma.masked_where(submask, profile)
@@ -369,8 +411,12 @@ def profile(meta, profile, submask, n, m):
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}_Profile' +
-             plots.figure_filetype)
+    if order is None:
+        orderkey = ''
+    else:
+        orderkey = f'_order{order}'
+    fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}' +
+             f'{orderkey}_Profile' + plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -487,7 +533,8 @@ def driftywidth(data, meta, m):
         plt.pause(0.2)
 
 
-def residualBackground(data, meta, m, vmin=None, vmax=None):
+def residualBackground(data, meta, m, vmin=None, vmax=None,
+                       flux=None, order=None, ap_y=None, bg_y=None):
     '''Plot the median, BG-subtracted frame to study the residual BG region and
     aperture/BG sizes. (Fig 3304)
 
@@ -503,26 +550,32 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
         Minimum value of colormap. Default is None.
     vmax : int; optional
         Maximum value of colormap. Default is None.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-29 KBS
-        Initial version
+    flux : 2D array; optional
+        Median flux array. Default is None
+    order : int; optional
+        Spectral order. Default is None
+    ap_y : list; optional
+        Two-element list indicating the outer edges of the aperture region
+    bg_y : list; optional
+        Two-element list indicating the inner edges of the background region
     '''
-    xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
+    xmin, xmax, ymin, ymax = get_bounds(data.x.values, data.y.values)
 
-    # Median flux of segment
-    subdata = np.ma.masked_where(data.mask.values, data.flux.values)
-    flux = np.ma.median(subdata, axis=0)
+    if flux is None:
+        # Median flux of segment
+        flux = data.medflux.values
+    if ap_y is None:
+        ap_y = [meta.src_ypos - meta.spec_hw,
+                meta.src_ypos + meta.spec_hw + 1]
+    if bg_y is None:
+        bg_y = [meta.bg_y1, meta.bg_y2]
     # Compute vertical slice of width 10 columns
     flux_slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
     # Replace NaNs with zeros to enable interpolation
     flux_slice = np.nan_to_num(flux_slice, copy=False, nan=0.0)
     # Interpolate to 0.01-pixel resolution
     f = spi.interp1d(np.arange(ymin+0.5, ymax), flux_slice, 'cubic',
-                     fill_value="extrapolate")
+                     fill_value="extrapolate", axis=0)
     ny_hr = np.arange(ymin, ymax, 0.01)
     flux_hr = f(ny_hr)
     # Set vmin and vmax
@@ -537,24 +590,21 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
     plt.figure(3304, figsize=(8, 4))
     plt.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
-                                 num=3304, figsize=(8, 3.5))
-
+                                 num=3304)
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
               extent=[xmin, xmax, ymin, ymax])
-    a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], xmin, xmax, color='orange')
-    a0.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
-              ymin+meta.src_ypos-meta.spec_hw], xmin,
+    a0.hlines([ymin+bg_y[0], ymin+bg_y[1]], xmin, xmax, color='orange')
+    a0.hlines([ymin+ap_y[0], ymin+ap_y[1]], xmin,
               xmax, color='mediumseagreen', linestyle='dashed')
     a0.axes.set_ylabel("Detector Pixel Position")
     a0.axes.set_xlabel("Detector Pixel Position")
     a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap=cmap,
                norm=plt.Normalize(vmin, vmax))
     a1.vlines([0], ymin, ymax, color='0.5', linestyle='dotted')
-    a1.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], vmin, vmax, color='orange',
+    a1.hlines([ymin+bg_y[0], ymin+bg_y[1]], vmin, vmax, color='orange',
               linestyle='solid', label='bg'+str(meta.bg_hw))
-    a1.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
-              ymin+meta.src_ypos-meta.spec_hw], vmin,
+    a1.hlines([ymin+ap_y[0], ymin+ap_y[1]], vmin,
               vmax, color='mediumseagreen', linestyle='dashed',
               label='ap'+str(meta.spec_hw))
     a1.legend(loc='upper right', fontsize=8)
@@ -567,7 +617,11 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
                  cmap=cmap), ax=a1)
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    fname = (f'figs{os.sep}fig3304_file{file_number}' +
+    if order is None:
+        orderkey = ''
+    else:
+        orderkey = f'_order{order}'
+    fname = (f'figs{os.sep}fig3304_file{file_number}{orderkey}' +
              '_ResidualBG'+plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
@@ -618,7 +672,7 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
         plt.pause(0.1)
 
 
-def median_frame(data, meta, m):
+def median_frame(data, meta, m, medflux, order=None):
     '''Plot the cleaned time-median frame. (Fig 3308)
 
     Parameters
@@ -629,23 +683,20 @@ def median_frame(data, meta, m):
         The metadata object.
     m : int
         The file number.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-06 KBS
-        Initial version
+    medflux : masked array
+        The cleaned median flux array.
+    order : int; optional
+        Spectral order. Default is None
     '''
     xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
-    vmin = data.medflux.min().values
-    vmax = data.medflux.max().values/3
+    vmin = medflux.min()
+    vmax = medflux.max()/3
     cmap = plt.cm.plasma.copy()
 
     plt.figure(3308, figsize=(8, 4))
     plt.clf()
     plt.title("Cleaned Median Frame")
-    plt.imshow(data.medflux, origin='lower', aspect='auto',
+    plt.imshow(medflux, origin='lower', aspect='auto',
                vmin=vmin, vmax=vmax, interpolation='nearest',
                extent=[xmin, xmax, ymin, ymax], cmap=cmap)
     plt.colorbar()
@@ -653,8 +704,12 @@ def median_frame(data, meta, m):
     plt.xlabel('Detector Pixel Position')
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    fname = (f'figs{os.sep}fig3308_file{file_number}_MedianFrame' +
-             plots.figure_filetype)
+    if order is None:
+        orderkey = ''
+    else:
+        orderkey = f'_order{order}'
+    fname = (f'figs{os.sep}fig3308_file{file_number}{orderkey}' +
+             '_MedianFrame' + plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
