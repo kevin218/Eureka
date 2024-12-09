@@ -168,6 +168,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
 
         self.GP = False
         for component in self.components:
+            component.fit = self.fit
             if component.modeltype == 'GP':
                 self.GP = True
 
@@ -184,12 +185,6 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                                f'{param.name} is not recognized.')
                     raise ValueError(message)
                 else:
-                    c = parname.split('_ch')[-1].split('_')[0]
-                    if c.isnumeric():
-                        c = int(c)
-                    else:
-                        c = 0
-
                     if param.prior == 'U':
                         setattr(self.model, parname,
                                 pm.Uniform(parname,
@@ -250,6 +245,12 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                                     lower=param.priorpar1,
                                     upper=param.priorpar2,
                                     testval=param.value)))
+                    elif param.prior == 'LN':
+                        setattr(self.model, parname,
+                                pm.Lognormal(parname,
+                                             mu=param.priorpar1,
+                                             tau=param.priorpar2,
+                                             testval=param.value))
 
     def setup(self, time, flux, lc_unc, newparams):
         """Setup a model for evaluation and fitting.

@@ -40,17 +40,17 @@ class AstroModel(PyMC3Model):
 
     @property
     def components(self):
-        """A getter for the flux."""
+        """A getter for the components."""
         return self._components
 
     @components.setter
     def components(self, components):
-        """A setter for the flux
+        """A setter for the components
 
         Parameters
         ----------
-        flux_array : sequence
-            The flux array
+        components : sequence
+            The collection of astrophysical model components.
         """
         self._components = components
         self.starry_model = None
@@ -63,6 +63,24 @@ class AstroModel(PyMC3Model):
                 self.phasevariation_models.append(component)
             else:
                 self.stellar_models.append(component)
+
+    @property
+    def fit(self):
+        """A getter for the fit object."""
+        return self._fit
+
+    @fit.setter
+    def fit(self, fit):
+        """A setter for the fit object.
+
+        Parameters
+        ----------
+        fit : object
+            The fit object
+        """
+        self._fit = fit
+        for component in self.components:
+            component.fit = fit
 
     def eval(self, channel=None, eval=True, **kwargs):
         """Evaluate the function with the given values.
