@@ -128,23 +128,24 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     if hasattr(data, 'medflux'):
         data['medflux'] -= np.median(data.bg, axis=0)
 
-    # Save BG value at source position and BG stddev (no outlier rejection)
-    coords = list(data.coords.keys())
-    coords.remove('y')
-    data['skylev'] = (coords, np.zeros_like(data.flux[:, 0]))
-    data['skylev'].attrs['flux_units'] = data['flux'].attrs['flux_units']
-    bg_inds = np.ma.getdata(deepcopy(data.mask))
-    if meta.orders is None:
-        data['skylev'] = data.bg[:, meta.src_ypos, :]
-        bg_inds[:, meta.bg_y1:meta.bg_y2, :] = True
-    else:
-        for k in range(len(meta.orders)):
-            data['skylev'][:, :, k] = data.bg[:, meta.src_ypos[k], :, k]
-            bg_inds[:, meta.bg_y1[k]:meta.bg_y2[k], :, k] = True
-    bg_data = np.ma.masked_where(bg_inds, data.flux, copy=True)
-    bg_data = (np.ma.std(bg_data, axis=1))/np.sqrt(np.sum(~bg_inds))
-    data['skyerr'] = (coords, bg_data)
-    data['skyerr'].attrs['flux_units'] = data['flux'].attrs['flux_units']
+    if (meta.bg_dir == 'CxC') and (meta.inst != 'wfc3'):
+        # Save BG value at source position and BG stddev (no outlier rejection)
+        coords = list(data.coords.keys())
+        coords.remove('y')
+        data['skylev'] = (coords, np.zeros_like(data.flux[:, 0]))
+        data['skylev'].attrs['flux_units'] = data['flux'].attrs['flux_units']
+        bg_inds = np.ma.getdata(deepcopy(data.mask))
+        if meta.orders is None:
+            data['skylev'] = data.bg[:, meta.src_ypos, :]
+            bg_inds[:, meta.bg_y1:meta.bg_y2, :] = True
+        else:
+            for k in range(len(meta.orders)):
+                data['skylev'][:, :, k] = data.bg[:, meta.src_ypos[k], :, k]
+                bg_inds[:, meta.bg_y1[k]:meta.bg_y2[k], :, k] = True
+        bg_data = np.ma.masked_where(bg_inds, data.flux, copy=True)
+        bg_data = (np.ma.std(bg_data, axis=1))/np.sqrt(np.sum(~bg_inds))
+        data['skyerr'] = (coords, bg_data)
+        data['skyerr'].attrs['flux_units'] = data['flux'].attrs['flux_units']
 
     # Make image+background plots
     if isplots >= 3:
