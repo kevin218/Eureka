@@ -62,7 +62,7 @@ def exotic_ld(meta, spec, log, white=False):
             filter = 'prism'
         mode = 'JWST_NIRSpec_' + filter
     elif meta.inst == 'niriss':
-        mode = 'JWST_NIRISS_' + meta.filter
+        mode = 'JWST_NIRISS_SOSSo' + str(meta.s4_order)
     elif meta.inst == 'wfc3':
         mode = 'HST_WFC3_' + meta.filter
 
