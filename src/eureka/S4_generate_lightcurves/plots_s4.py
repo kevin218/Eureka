@@ -84,6 +84,87 @@ def binned_lightcurve(meta, log, lc, i, white=False):
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
+        
+
+def binned_background(meta, log, lc, i, white=False):
+    '''Plot each spectroscopic background light curve. (Figs 4105)
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    lc : Xarray Dataset
+        The Dataset object containing light curve and time data.
+    i : int
+        The current bandpass number.
+    white : bool; optional
+        Is this figure for the additional white-light light curve
+    '''
+    fig = plt.figure(4105, figsize=(8, 6))
+    fig.clf()
+    ax = fig.gca()
+    if white:
+        fig.suptitle(f'White-light Bandpass {i}: {meta.wave_min:.3f} - '
+                     f'{meta.wave_max:.3f}')
+        # Normalize the light curve
+        norm_bgdata, norm_bgerr = util.normalize_spectrum(
+            meta, lc.skylev_white, lc.skyerr_white,
+            scandir=getattr(lc, 'scandir', None))
+        i = 0
+        fname_tag = 'white'
+    elif meta.photometry:
+        fig.suptitle(f'Photometric Lightcurve at {meta.phot_wave} microns')
+        # Normalize the light curve
+        norm_bgdata, norm_bgerr = util.normalize_spectrum(
+            meta, lc['skylev'][i], lc['skyerr'][i],
+            scandir=getattr(lc, 'scandir', None))
+        fname_tag = 'phot'
+    else:
+        fig.suptitle(f'Bandpass {i}: {lc.wave_low.values[i]:.3f} - '
+                     f'{lc.wave_hi.values[i]:.3f}')
+        # Normalize the light curve
+        norm_bgdata, norm_bgerr = util.normalize_spectrum(
+            meta, lc['skylev'][i], lc['skyerr'][i],
+            scandir=getattr(lc, 'scandir', None))
+        ch_number = str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))
+        fname_tag = f'ch{ch_number}'
+
+    time_modifier = np.floor(np.ma.min(lc.time.values))
+
+    # Plot the normalized light curve
+    if meta.inst == 'wfc3':
+        for p in range(2):
+            iscans = np.where(lc.scandir.values == p)[0]
+
+            if len(iscans) > 0:
+                ax.errorbar(lc.time.values[iscans]-time_modifier,
+                            norm_bgdata[iscans]+0.005*p,
+                            norm_bgerr[iscans], fmt='o', color=f'C{p}',
+                            mec=f'C{p}', alpha=0.2)
+                mad = util.get_mad_1d(norm_bgdata[iscans])
+                meta.mad_s4_binned.append(mad)
+                log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+                plt.text(0.05, 0.075+0.05*p,
+                         f"MAD = {np.round(mad).astype(int)} ppm",
+                         transform=ax.transAxes, color=f'C{p}')
+    else:
+        plt.errorbar(lc.time.values-time_modifier, norm_bgdata, norm_bgerr,
+                     fmt='o', color=f'C{i}', mec=f'C{i}', alpha=0.2)
+        mad = util.get_mad_1d(norm_bgdata)
+        meta.mad_s4_binned.append(mad)
+        # log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+        plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
+                 transform=ax.transAxes, color='k')
+    plt.ylabel('Normalized Background')
+    time_units = lc.data.attrs['time_units']
+    plt.xlabel(f'Time [{time_units} - {time_modifier}]')
+
+    fname = f'figs{os.sep}fig4105_{fname_tag}_1D_BG'+plots.figure_filetype
+    fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
 
 
 def driftxpos(meta, lc):
@@ -197,7 +278,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
     plt.figure(4101, figsize=(8, 8))
     plt.clf()
     if meta.time_axis == 'y':
-        plt.pcolormesh(wave_1d[iwmin:iwmax], np.arange(meta.n_int),
+        plt.pcolormesh(wave_1d[iwmin:iwmax], np.arange(meta.n_int)+0.5,
                        norm_lcdata, vmin=meta.vmin, vmax=meta.vmax,
                        cmap=cmap)
         plt.xlim(meta.wave_min, meta.wave_max)

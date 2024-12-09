@@ -1,6 +1,7 @@
 import numpy as np
 import astropy.constants as const
 from copy import deepcopy
+import inspect
 
 try:
     import theano
@@ -16,6 +17,7 @@ except ImportError:
 
 from .Model import Model
 from .KeplerOrbit import KeplerOrbit
+from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
 
@@ -62,10 +64,13 @@ class PlanetParams():
             self.channel_id = ''
         else:
             self.channel_id = f'_ch{self.channel}'
-        # Set transit/eclipse parameters
+        # Transit/eclipse parameters
         self.t0 = None
         self.rprs = None
         self.rp = None
+        self.rprs2 = None
+        self.rp2 = None
+        self.phi = 90.
         self.inc = None
         self.ars = None
         self.a = None
@@ -77,20 +82,42 @@ class PlanetParams():
         self.fpfs = None
         self.fp = None
         self.t_secondary = None
+        # POET phase curve parameters
         self.cos1_amp = 0.
         self.cos1_off = 0.
         self.cos2_amp = 0.
         self.cos2_off = 0.
+        # Sinusoidal phase curve parameters
         self.AmpCos1 = 0.
         self.AmpSin1 = 0.
         self.AmpCos2 = 0.
         self.AmpSin2 = 0.
+        # Quasi-Lambertian parameters
         self.quasi_gamma = 0.
         self.quasi_offset = 0.
+        # Limb-darkening parameters
         self.u1 = 0.
         self.u2 = 0.
         self.u3 = 0.
         self.u4 = 0.
+        # Fleck/starry star-spot parameters
+        # Figure out how many star spots
+        self.nspots = len([s for s in model.parameters.dict.keys()
+                           if 'spotrad' in s and '_' not in s])
+        self.spotrad = 0.
+        self.spotlat = 0.
+        self.spotlon = 0.
+        self.spotcon = 0.
+        for n in range(1, self.nspots):
+            # read radii, latitudes, longitudes, and contrasts
+            spot_id = f'{n}'
+            setattr(self, f'spotrad{spot_id}', 0)
+            setattr(self, f'spotlat{spot_id}', 0)
+            setattr(self, f'spotlon{spot_id}', 0)
+            setattr(self, f'spotcon{spot_id}', 0)
+        self.spotstari = 90
+        self.spotrot = None
+        self.spotnpts = None
 
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
@@ -102,8 +129,9 @@ class PlanetParams():
                     value = value.value
                 setattr(self, item, value)
             except KeyError:
-                if item in [f'u{i}' for i in range(1, 5)]:
-                    # Limb darkening probably doesn't vary with planet
+                if (item in [f'u{i}' for i in range(1, 5)] or
+                        'spot' == item[:4]):
+                    # Limb darkening and spots probably don't vary with planet
                     try:
                         item0 = item
                         if model.parameters.dict[item0][1] == 'free':
@@ -124,7 +152,7 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'rprs', value)
+            self.rprs = value
         if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
             item0 = 'rprs' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
@@ -132,7 +160,24 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'rp', value)
+            self.rp = value
+        # Allow for rp2 or rprs2
+        if (self.rprs2 is None) and ('rp2' in model.parameters.dict.keys()):
+            item0 = 'rp2' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            self.rprs2 = value
+        if (self.rp2 is None) and ('rprs2' in model.parameters.dict.keys()):
+            item0 = 'rprs2' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            self.rp2 = value
         # Allow for a or ars
         if (self.ars is None) and ('a' in model.parameters.dict.keys()):
             item0 = 'a' + self.pid_id
@@ -141,7 +186,7 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'ars', value)
+            self.ars = value
         if (self.a is None) and ('ars' in model.parameters.dict.keys()):
             item0 = 'ars' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
@@ -149,14 +194,14 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'a', value)
+            self.a = value
         # Allow for (ecc, w) or (ecosw, esinw)
         if (self.ecosw is None) and self.ecc == 0:
             self.ecosw = 0.
             self.esinw = 0.
-        elif (self.ecc is None) and self.ecosw == 0 and self.sinw == 0:
+        elif (self.ecc is None) and self.ecosw == 0 and self.esinw == 0:
             self.ecc = 0.
-            self.w = None
+            self.w = 180.
         if (self.ecosw is None) and ('ecc' in model.parameters.dict.keys()):
             item0 = 'ecc' + self.pid_id
             item1 = 'w' + self.pid_id
@@ -171,10 +216,8 @@ class PlanetParams():
                 value1 = value1.value
             ecc = value0
             w = value1
-            ecosw = ecc*lib.cos(w*np.pi/180)
-            esinw = ecc*lib.sin(w*np.pi/180)
-            setattr(self, 'ecosw', ecosw)
-            setattr(self, 'esinw', esinw)
+            self.ecosw = ecc*lib.cos(w*np.pi/180)
+            self.esinw = ecc*lib.sin(w*np.pi/180)
         elif (self.ecc is None) and ('ecosw' in model.parameters.dict.keys()):
             item0 = 'ecosw' + self.pid_id
             item1 = 'esinw' + self.pid_id
@@ -189,10 +232,8 @@ class PlanetParams():
                 value1 = value1.value
             ecosw = value0
             esinw = value1
-            ecc = lib.sqrt(ecosw**2+esinw**2)
-            w = lib.arctan2(esinw, ecosw)*180/np.pi
-            setattr(self, 'ecc', ecc)
-            setattr(self, 'w', w)
+            self.ecc = lib.sqrt(ecosw**2+esinw**2)
+            self.w = lib.arctan2(esinw, ecosw)*180/np.pi
         # Allow for fp or fpfs
         if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
             item0 = 'fp' + self.pid_id
@@ -201,9 +242,9 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'fpfs', value)
+            self.fpfs = value
         elif self.fpfs is None:
-            setattr(self, 'fpfs', 0.)
+            self.fpfs = 0.
         if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
             item0 = 'fpfs' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
@@ -211,9 +252,9 @@ class PlanetParams():
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
-            setattr(self, 'fp', value)
+            self.fp = value
         elif self.fp is None:
-            setattr(self, 'fp', 0.)
+            self.fp = 0.
         # Set stellar radius
         if 'Rs' in model.parameters.dict.keys():
             item0 = 'Rs'
@@ -230,14 +271,42 @@ class PlanetParams():
                 raise AssertionError(message)
             if eval:
                 value = value.value
-            setattr(self, 'Rs', value)
+            self.Rs = value
+
+        # Nicely packaging limb-darkening coefficients
+        if not hasattr(model.parameters, 'limb_dark'):
+            self.limb_dark = 'uniform'
+        else:
+            self.limb_dark = model.parameters.limb_dark.value
+        ld_func = ld_profile(self.limb_dark)
+        len_params = len(inspect.signature(ld_func).parameters)
+        coeffs = ['u{}'.format(n) for n in range(1, len_params)]
+        self.u = [getattr(self, coeff) for coeff in coeffs]
+        if self.limb_dark == '4-parameter':
+            self.limb_dark = 'nonlinear'
+        elif self.limb_dark == 'kipping2013':
+            self.limb_dark = 'quadratic'
+            if eval:
+                self.u_original = np.copy(self.u)
+                u1 = 2*np.sqrt(self.u[0])*self.u[1]
+                u2 = np.sqrt(self.u[0])*(1-2*self.u[1])
+                self.u = np.array([u1, u2])
+            else:
+                u1 = 2*tt.sqrt(self.u1)*self.u2
+                u2 = tt.sqrt(self.u1)*(1-2*self.u2)
+                self.u = np.array([u1, u2])
 
         # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
         if self.ecc is None:
             self.ecc = 0
-            self.w = None
+            self.w = 180.
             self.ecosw = 0
             self.esinw = 0
+
+        if self.spotrot is None:
+            # spotrot will default to 10k years (important if t0 is not ~0)
+            self.spotrot = 3650000
+            self.fleck_fast = True
 
 
 class AstroModel(Model):

@@ -50,21 +50,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Updated documentation and arguments. Reduced repeated code.
-        Also saving covariance matrix for later estimation of sampler
-        step size.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-        Record an astropy table for param values
     """
     # Group the different variable types
     freenames = lc.freenames
@@ -86,6 +71,15 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         if model.GP:
             plots.plot_GP_components(lc, model, meta,
                                      fitter=calling_function+'StartingPoint')
+
+    # Plot star spots starting point
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta,
+                              fitter=calling_function+'StartingPoint')
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta,
+                                   fitter=calling_function+'StartingPoint')
 
     def neg_lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
         return -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
@@ -155,6 +149,13 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter=calling_function)
+
+    # Plot star spots
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta, fitter=calling_function)
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta, fitter=calling_function)
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
@@ -318,6 +319,14 @@ def emceefitter(lc, model, meta, log, **kwargs):
             plots.plot_GP_components(lc, model, meta,
                                      fitter='emceeStartingPoint')
 
+    # Plot star spots starting point
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta, fitter='emceeStartingPoint')
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta,
+                                   fitter='emceeStartingPoint')
+
     # Initialize tread pool
     if meta.ncpu > 1:
         pool = Pool(meta.ncpu)
@@ -429,6 +438,13 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='emcee')
+
+    # Plot star spots
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta, fitter='emcee')
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta, fitter='emcee')
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
@@ -835,6 +851,14 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
             plots.plot_GP_components(lc, model, meta,
                                      fitter='dynestyStartingPoint')
 
+    # Plot star spots starting point
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta, fitter='dynestyStartingPoint')
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta,
+                                   fitter='dynestyStartingPoint')
+
     # START DYNESTY
     l_args = [lc, model, freenames]
 
@@ -936,6 +960,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='dynesty')
+
+    # Plot star spots
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta, fitter='dynesty')
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta, fitter='dynesty')
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
@@ -1052,6 +1083,13 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='lmfitter')
+
+    # Plot star spots
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta, fitter='lmfitter')
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta, fitter='lmfitter')
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
@@ -1279,14 +1317,6 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         The list of fitted parameter names.
     samples : ndarray; optional
         The full chain from a sampling method, by default [].
-
-    Notes
-    -----
-    History:
-
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-        Record an astropy table for mean, median, percentiles,
-        +/- 1 sigma, all params
     """
     if lc.white:
         channel_tag = '_white'

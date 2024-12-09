@@ -28,7 +28,8 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
     size : float
         least asymmetry parameter. See err_fasym_c.
     mask : 2D ndarray
-        A mask array of bad pixels. Same shape of data.
+        A boolean mask array of bad pixels (marked with True). Same shape as
+        data. Defaults to only masking non-finite vaules.
     uncd : 2D ndarray
         An array containing the uncertainty values of data.
         Same shape of data.
@@ -57,9 +58,12 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
 
     extra = []
 
-    # Default mask: all good
+    # Default mask: only non-finite values are bad
     if mask is None:
-        mask = np.ones(np.shape(data))
+        mask = ~np.isfinite(data)
+
+    # Apply the mask
+    data = np.ma.masked_where(mask, data)
 
     # Default uncertainties: flat image
     if uncd is None:
@@ -86,10 +90,10 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
         cen = np.array([0, 0])
         # Subtract median BG because photutils sometimes has a hard time
         # fitting for a constant offset
-        img -= np.nanmedian(img)
+        img -= np.ma.median(img)
 
     # If all data is bad:
-    if not np.any(msk):
+    if np.all(msk):
         raise Exception('Bad Frame Exception!')
 
     # Get the center with one of the methods:
@@ -101,16 +105,16 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
         extra = sy, sx  # Gaussian 1-sigma half-widths
     elif method == 'mgmc_pri':
         # Median frame creation + first centroid
-        x, y, refrence_median_frame = gmin.pri_cent(img, meta,
+        x, y, refrence_median_frame = gmin.pri_cent(img, msk, meta,
                                                     saved_ref_median_frame)
     elif method == 'mgmc_sec':
         # Second enhanced centroid position + gaussian widths
-        sy, sx, y, x = gmin.mingauss(img, yxguess=loc, meta=meta)
+        sy, sx, y, x = gmin.mingauss(img, msk, yxguess=loc, meta=meta)
         extra = sy, sx  # Gaussian 1-sigma half-widths
 
     # only plot when we do the second fit
     if (meta.isplots_S3 >= 5 and method[-4:] == '_sec' and i < meta.nplots):
-        plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
+        plots_s3.phot_centroid_fgc(img, msk, x, y, sx, sy, i, m, meta)
 
     # Make trimming correction and return
     return ((y, x) + cen - trim), extra, refrence_median_frame

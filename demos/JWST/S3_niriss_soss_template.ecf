@@ -12,11 +12,10 @@ calibrated_spectra  False   # Set True to generate flux-calibrated spectra/photo
                             # Set False to convert to electrons
 
 # Subarray region of interest
-ywindow         [5,64]      # Vertical axis as seen in DS9
-xwindow         [100,1700]  # Horizontal axis as seen in DS9
-src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, hst, or a numeric value)
-record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
-poly_wavelength	True		# Use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI
+ywindow         [1,250]     # Vertical axis as seen in DS9
+xwindow         [6,2043]    # Horizontal axis as seen in DS9
+orders          [1,2]       # Spectral order(s)
+src_ypos        [35,90]     # Spectral trace will be shifted to given vertical position.  Must be same size as meta.orders.
 dqmask          True        # Mask pixels with an odd entry in the DQ array
 expand          1           # Super-sampling factor along cross-dispersion direction
 
@@ -26,16 +25,13 @@ ff_outlier      False       # Set False to use only background region (recommend
 bg_thresh       [4,4]       # Double-iteration X-sigma threshold for outlier rejection along time axis
 
 # Background parameters
-bg_hw           8           # Half-width of exclusion region for BG subtraction (relative to source position)
+bg_hw           22          # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_deg          0           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
-bg_method       median        # Options: std (Standard Deviation), median (Median Absolute Deviation), mean (Mean Absolute Deviation)
+bg_method       median      # Options: std (Standard Deviation), median (Median Absolute Deviation), mean (Mean Absolute Deviation)
 p3thresh        5           # X-sigma threshold for outlier rejection during background subtraction
-bg_row_by_row   False       # Row-by-row BG subtraction (only useful for NIRCam)
-bg_x1           None        # Left edge of exclusion region for row-by-row BG subtraction
-bg_x2           None        # Right edge of exclusion region for row-by-row BG subtraction
 
 # Spectral extraction parameters
-spec_hw         3           # Half-width of aperture region for spectral extraction (relative to source position)
+spec_hw         17          # Half-width of aperture region for spectral extraction (relative to source position)
 fittype         meddata     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
 median_thresh   10          # Sigma threshold when flagging outliers in median frame, when fittype=meddata and window_len > 1
 window_len      7           # Smoothing window length, for median frame or when fittype = smooth or meddata (when computing median frame). Can set to 1 for no smoothing when computing median frame for fittype=meddata.
@@ -59,7 +55,7 @@ save_fluxdata   False       # Save the much larger FluxData.h5 outputs which can
 verbose         True        # If True, more details will be printed about steps
 
 # Project directory
-topdir          /home/User/Data/JWST-Sim/NIRCam/
+topdir          /home/User/Data/JWST-Sim/NIRISS/
 
 # Directories relative to topdir
 inputdir        Stage2      # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)

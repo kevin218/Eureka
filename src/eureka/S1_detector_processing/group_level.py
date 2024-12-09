@@ -54,18 +54,13 @@ def GLBS(input_model, log, meta):
         log.writelog(f'  Starting group {ngrp}.')
 
         grp_data = all_data[:, ngrp, :, :]
-        grp_mask = np.ones(grp_data.shape, dtype=bool)
-        dqmask = np.where((dq[:, ngrp, :, :] % 2 == 1) |
-                          (dq[:, ngrp, :, :] == 2))
-        grp_mask[dqmask] = 0
+        grp_mask = (dq[:, ngrp, :, :] % 2 == 1) | (dq[:, ngrp, :, :] == 2)
+        grp_mask |= ~np.isfinite(all_data[:, ngrp, :, :])
 
         if meta.masktrace:
             trace_mask = np.broadcast_to(input_model.trace_mask,
-                                         (grp_data.shape[0],
-                                          grp_data.shape[1],
-                                          grp_data.shape[2]))
-            trace_mask = np.nan_to_num(trace_mask).astype(bool)
-            grp_mask *= trace_mask
+                                         grp_data.shape)
+            grp_mask |= trace_mask
 
         xrdata = (['time', 'y', 'x'], grp_data)
         xrmask = (['time', 'y', 'x'], grp_mask)
@@ -124,7 +119,7 @@ def mask_trace(input_model, log, meta):
     ngrp = all_data.shape[1]
     ncol = all_data.shape[3]
     nrow = all_data.shape[2]
-    trace_mask = np.ones_like(all_data[0, 0, :, :])
+    trace_mask = np.zeros_like(all_data[0, 0, :, :], dtype=bool)
 
     # take a median across groups and smooth
     med_data = np.nanmedian(all_data[:, ngrp-1, :, :], axis=0)
@@ -148,7 +143,7 @@ def mask_trace(input_model, log, meta):
     for nc in range_cols:
         mask_low = np.nanmax([0, smooth_coms[nc]-meta.expand_mask])
         mask_hih = np.nanmin([smooth_coms[nc]+meta.expand_mask, nrow-1])
-        trace_mask[mask_low:mask_hih, nc] = np.nan
+        trace_mask[mask_low:mask_hih, nc] = True
 
     input_model.trace_mask = trace_mask
 
@@ -190,15 +185,16 @@ def custom_ref_pixel(input_model, log, meta):
     for nint in range(all_data.shape[0]):
         for ngrp in range(all_data.shape[1]):
             intgrp_data = all_data[nint, ngrp, :, :]
-            dqmask = np.where((dq[nint, ngrp, :, :] % 2 == 1) |
-                              (dq[nint, ngrp, :, :] == 2))
-            intgrp_data[dqmask] = np.nan
+            dqmask = ((dq[nint, ngrp, :, :] % 2 == 1) |
+                      (dq[nint, ngrp, :, :] == 2))
+            intgrp_data = np.ma.masked_where(dqmask, intgrp_data)
 
             if meta.masktrace:
-                intgrp_data *= input_model.trace_mask
+                intgrp_data = np.ma.masked_where(input_model.trace_mask,
+                                                 intgrp_data)
 
-            odd_med = np.nanmedian(intgrp_data[odd_row_ref, :])
-            evn_med = np.nanmedian(intgrp_data[evn_row_ref, :])
+            odd_med = np.ma.median(intgrp_data[odd_row_ref, :])
+            evn_med = np.ma.median(intgrp_data[evn_row_ref, :])
 
             all_data[nint, ngrp, odd_ind, :] -= odd_med
             all_data[nint, ngrp, evn_ind, :] -= evn_med

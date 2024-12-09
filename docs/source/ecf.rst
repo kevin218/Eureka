@@ -168,7 +168,7 @@ Right edge of exclusion region for row-by-row background subtraction.
 
 masktrace
 '''''''''
-Boolean, creates a mask centered on the trace prior to GLBS for curved traces
+Boolean, creates a mask centered on the trace prior to GLBS for curved traces. ``bg_y1`` and ``bg_y2`` will be ignored if ``masktrace`` is ``True`` since the trace will already be masked.
 
 window_len
 ''''''''''
@@ -887,7 +887,7 @@ run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
+[batman_tr, batman_ecl, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
 For theano-based differentiable functions, this can be one or more of the following:
 [starry, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
@@ -898,6 +898,10 @@ compute_ltt
 Optional. Determines whether to correct the astrophysical model for the light travel time effect (True) or to ignore the effect (False).
 The light travel time effect is caused by the finite speed of light which means that the signal from a secondary eclipse (which occurs on the far side of the orbit) arrive later than would be expected if the speed of light were infinite.
 Unless specified, compute_ltt is set to True for batman_ecl and starry models but set to False for batman_tr models (since the light travel time is insignificant during transit).
+
+num_planets
+'''''''''''
+Optional. By default, the code will assume that you are only fitting for a single exoplanet. If, however, you are fitting signals from multiple planets simultaneously, you must set ``num_planets`` to the number of planets being fitted.
 
 force_positivity
 ''''''''''''''''
@@ -911,6 +915,17 @@ manual_clip
 '''''''''''
 Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]]. If you want to clip the 10th integration, this would be index 9 since python uses zero-indexing. And the manual_clip start and end values are used to slice a numpy array, so they follow the same convention of *inclusive* start index and *exclusive* end index. In other words, to trim the 10th integrations, you would set manual_clip to [[9,10]].
 
+Catwoman Convergence Parameters
+'''''''''''''''''''''''''''''''
+The following two parameters can help in the case of convergence issues when using catwoman_tr.
+
+catwoman_max_err
+^^^^^^^^^^^^^^^^
+The ``max_err`` parameter used by catwoman; defaults to ``1.0``. For more information, see the relevant location of catwoman's `readthedocs page <https://catwoman.readthedocs.io/en/latest/tutorial.html#error-tolerance>`_ or the relevant location of `catwoman's API <https://catwoman.readthedocs.io/en/latest/API.html#catwoman.TransitModel>`_.
+
+catwoman_fac
+^^^^^^^^^^^^
+The ``fac`` parameter used by catwoman; defaults to ``None``. For more information, see the relevant location of catwoman's `readthedocs page <https://catwoman.readthedocs.io/en/latest/tutorial.html#error-tolerance>`_ or the relevant location of `catwoman's API <https://catwoman.readthedocs.io/en/latest/API.html#catwoman.TransitModel>`_.
 
 Limb Darkening Parameters
 '''''''''''''''''''''''''
@@ -1082,12 +1097,15 @@ This file describes the transit/eclipse and systematics parameters and their pri
 
 ``Name    Value    Free    PriorPar1    PriorPar2    PriorType``
 
-``Name`` defines the specific parameter being fit for. Available options are:
-   - BATMAN/POET Transit and Eclipse Depth Parameters
+``Name`` defines the specific parameter being fit for. When fitting for multiple channels simultaneously, you can add optionally add ``_ch#`` after the parameter (e.g., ``rprs``, ``rprs_ch1``, ``rprs_ch2``, etc.) to set channel-specific priors; if you don't manually set a different prior for each channel, the code will default to the prior for the 0th channel (e.g., ``rprs``).
+Available fitting parameters are:
+   - Transit and Eclipse Depth Parameters
       - ``rp`` or ``rprs`` - planet-to-star radius ratio, for the transit models.
       - ``fp`` or ``fpfs`` - planet-to-star flux ratio, for the eclipse models.
-      When fitting for multiple planets, add a number after the parameter (e.g., ``rprs``, ``rprs1``, ``rprs2``, etc.).  This also applies to the planet orbital parameters below.
-   - BATMAN/POET/Starry Orbital Parameters
+      - ``rp2`` or ``rprs2`` - an additional planet-to-star radius ratio for use with the catwoman transit model to model transit limb-asymmetries.
+      - ``phi`` - the angle (in degrees) of the line separating the semi-circles defined by ``rp`` and ``rp2`` in the catwoman transit model. If ``phi`` is set to 90 degrees (the parameter's default value), the ``rp`` is the trailing hemisphere and ``rp2`` is the leading hemisphere. If ``phi`` is set to 0, then ``rp`` is the northern hemisphere and ``rp2`` is the southern hemisphere.
+      When fitting for multiple planets, add ``_pl#`` after the parameter (e.g., ``rprs``, ``rprs_pl1``, ``rprs_pl2``, etc.). This also applies to the planetaty orbital parameters below. Also be sure to set the ``num_planets`` parameter in your ECF (not EPF) to specify the number of planets being modelled simultaneously.
+   - Orbital Parameters
       - ``per`` - orbital period (in days)
       - ``t0`` - transit time (in the same units as your input data - most likely BMJD_TDB)
       - ``time_offset`` - (optional), the absolute time offset of your time-series data (in days)
@@ -1154,6 +1172,19 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``osc_t1`` - This offset determined the start phase of the sinusoidal function.
 
          The time-dependent amplitude and period are defined as follows: ``amp = osc_amp * np.exp(-osc_amp_decay * (time - osc_t0))`` and ``per = osc_per * np.exp(-osc_per_decay * (time - osc_t0))``.  The damped oscillator model is then defined as: ``osc = 1 + amp * np.sin(2 * np.pi * (time - osc_t1) / per)``.  Note that ``osc[time < osc_t0] = 1``.
+
+   - Star Spot Parameters (using fleck_tr or starry)
+      - ``spotstari`` - The stellar inclination in degrees. Only matters when the star is rotating so that spots move appropriately relative to the planet, do not need to set unless you're accounting for stellar rotation (fleck slow mode, see ``spotrot`` below), then place priors based on inclination measurements of the stellar inclination. Recommend using fast mode if this is not known! If running multwhite or shared fits, this should be set to 'shared'.
+      - ``spotrot`` - The stellar rotation rate in days. For fleck, only assign if you'd like to run in slow mode! (In slow mode the star rotates and spots move appropriately. Otherwise, Eureka! will use fleck's fast mode which assumes the stellar rotation is >> transit time and spots are stationary). If running multwhite or shared fits, this should be set to 'shared'.
+      - ``spotcon#`` - The spot contrast ratio. Fleck only supports a single contrast ratio that is used for all spots, but for starry assign one value per spot. Replace the # with the spot number (starting with nothing (just ``spotcon``) for spot #0, and then ``spotcon1`` for the next spot)
+      - ``spotrad#`` - The spot radius relative to the star. Replace the # with the spot number (starting with nothing (just ``spotrad``) for spot #0, and then ``spotrad1`` for the next spot)
+      - ``spotlat#`` - The spot latitude in degrees. 0 is the center of the star (at time=0 if you have set the ``spotrot`` parameter). Replace the # with the spot number (starting with nothing (just ``spotlat``) for spot #0, and then ``spotlat1`` for the next spot)
+      - ``spotlon#`` - The spot longitude in degrees. 0 is the center of the star (at time=0 if you have set the ``spotrot`` parameter). Replace the # with the spot number (starting with nothing (just ``spotlon``) for spot #0, and then ``spotlon1`` for the next spot)
+      Fleck specific parameters:
+      - ``spotnpts`` - The number of temporal points to evalaute at. ~200-500 is good.
+      Starry specific parameters:
+      - ``spotnpts`` - The degree of spherical harmonics on the star (ydeg). ~30 is needed to appropriately model the spot.
+
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
       - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
 

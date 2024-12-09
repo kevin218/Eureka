@@ -2,12 +2,16 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
-from . import nircam, sigrej
+from . import nircam, sigrej, straighten, plots_s3
 from ..lib.util import read_time, supersample
+
+__all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg',
+           'fit_bg', 'cut_aperture', 'standard_spectrum', 'clean_median_flux',
+           'calibrated_spectra', 'residualBackground', 'lc_nodriftcorr']
 
 
 def read(filename, data, meta, log):
-    '''Reads single FITS file from JWST's NIRCam instrument.
+    '''Reads single FITS file from JWST's NIRSpec instrument.
 
     Parameters
     ----------
@@ -29,16 +33,6 @@ def read(filename, data, meta, log):
     log : logedit.Logedit
         The current log.
 
-    Notes
-    -----
-    History:
-
-    - November 2012 Kevin Stevenson
-        Initial version
-    - June 2021 Aarynn Carter/Eva-Maria Ahrer
-        Updated for NIRSpec
-    - Apr 22, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     '''
     hdulist = fits.open(filename)
 
@@ -46,14 +40,6 @@ def read(filename, data, meta, log):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    try:
-        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
-        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
-    except:
-        # FINDME: Need to only catch the particular exception we expect
-        print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
-        data.attrs['intstart'] = 0
-        data.attrs['intend'] = data.attrs['mhdr']['NINTS']
     meta.filter = data.attrs['mhdr']['GRATING']
 
     sci = hdulist['SCI', 1].data
@@ -61,7 +47,16 @@ def read(filename, data, meta, log):
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
     wave_2d = hdulist['WAVELENGTH', 1].data
-    int_times = hdulist['INT_TIMES', 1].data
+
+    try:
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
+        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
+    except:
+        # FINDME: Need to only catch the particular exception we expect
+        log.writelog('  WARNING: Manually setting INTSTART to 0 and INTEND '
+                     'to NINTS')
+        data.attrs['intstart'] = 0
+        data.attrs['intend'] = sci.shape[0]
 
     meta.photometry = False  # Photometry for NIRSpec not implemented yet.
 
@@ -77,18 +72,23 @@ def read(filename, data, meta, log):
         wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=0)
 
     # Record integration mid-times in BMJD_TDB
+    int_times = hdulist['INT_TIMES', 1].data
     if meta.time_file is not None:
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         # There is no time information in the simulated NIRSpec data
-        print('  WARNING: The timestamps for the simulated NIRSpec data are '
-              'currently\n'
-              '           hardcoded because they are not in the .fits files '
-              'themselves')
+        if meta.firstFile:
+            log.writelog('  WARNING: The timestamps for simulated MIRI data '
+                         'are not in the .fits files, so using integration '
+                         'number as the time value instead.')
         time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'],
                            data.intend)
     else:
         time = int_times['int_mid_BJD_TDB']
+    if len(time) > len(sci):
+        # This line is needed to still handle the simulated data
+        # which had the full time array for all segments
+        time = time[data.attrs['intstart']:data.attrs['intend']]
 
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']
@@ -111,6 +111,8 @@ def read(filename, data, meta, log):
                                      name='v0')
     data['wave_2d'] = (['y', 'x'], wave_2d)
     data['wave_2d'].attrs['wave_units'] = wave_units
+    # Initialize bad pixel mask (False = good, True = bad)
+    data['mask'] = (['time', 'y', 'x'], np.zeros(data.flux.shape, dtype=bool))
 
     return data, meta, log
 
@@ -188,7 +190,7 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     dataim : ndarray (2D)
         The 2D image array.
     datamask : ndarray (2D)
-        An array of which data should be masked.
+        A boolean array of which data (set to True) should be masked.
     n : int
         The current integration.
     meta : eureka.lib.readECF.MetaClass
@@ -201,7 +203,8 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     bg : ndarray (2D)
         The fitted background level.
     mask : ndarray (2D)
-        The updated mask after background subtraction.
+        The updated boolean mask after background subtraction, where True
+        values should be masked.
     n : int
         The current integration number.
     """
@@ -229,11 +232,13 @@ def cut_aperture(data, meta, log):
     aperr : ndarray
         The noise values over the aperture region.
     apmask : ndarray
-        The mask values over the aperture region.
+        The mask values over the aperture region. True values should be masked.
     apbg : ndarray
         The background flux values over the aperture region.
     apv0 : ndarray
         The v0 values over the aperture region.
+    apmedflux : ndarray
+        The median flux over the aperture region.
 
     Notes
     -----
@@ -243,6 +248,55 @@ def cut_aperture(data, meta, log):
         Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
+
+
+def standard_spectrum(data, meta, apdata, apmask, aperr):
+    """Instrument wrapper for computing the standard box spectrum.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    apdata : ndarray
+        The pixel values in the aperture region.
+    apmask : ndarray
+        The outlier mask in the aperture region. True where pixels should be
+        masked.
+    aperr : ndarray
+        The noise values in the aperture region.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object in which the spectrum data will stored.
+    """
+    return nircam.standard_spectrum(data, meta, apdata, apmask, aperr)
+
+
+def clean_median_flux(data, meta, log, m):
+    """Instrument wrapper for computing a median flux frame that is
+    free of bad pixels.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object.
+    """
+
+    return nircam.clean_median_flux(data, meta, log, m)
 
 
 def calibrated_spectra(data, meta, log, cutoff=1e-4):
@@ -275,10 +329,8 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
     log.writelog("  Setting uncalibrated pixels to zero...",
                  mute=(not meta.verbose))
     boolmask = np.abs(data.flux.data) > cutoff
-    data['flux'].data = np.where(np.abs(data.flux.data) >
-                                 cutoff, 0,
-                                 data.flux.data)
-    log.writelog(f"    Zeroed {np.sum(boolmask.data)} " +
+    data['flux'].data = np.where(boolmask, 0, data.flux.data)
+    log.writelog(f"    Zeroed {np.sum(boolmask)} " +
                  "pixels in total.", mute=(not meta.verbose))
 
     # Convert from MJy to mJy
@@ -294,3 +346,65 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
     data['v0'].attrs["flux_units"] = 'mJy'
 
     return data
+
+
+def straighten_trace(data, meta, log, m):
+    """Instrument-specific wrapper for straighten.straighten_trace
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+            The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with the fits data stored inside.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    """
+    return straighten.straighten_trace(data, meta, log, m)
+
+
+def residualBackground(data, meta, m, vmin=None, vmax=None):
+    """Plot the median, BG-subtracted frame to study the residual BG region and
+    aperture/BG sizes. (Fig 3304)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    m : int
+        The file number.
+    vmin : int; optional
+        Minimum value of colormap. Default is None.
+    vmax : int; optional
+        Maximum value of colormap. Default is None.
+    """
+    plots_s3.residualBackground(data, meta, m, vmin=None, vmax=None)
+
+
+def lc_nodriftcorr(spec, meta):
+    '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
+
+    Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
+    detector pixel x-axis.
+
+    Parameters
+    ----------
+    spec : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    '''
+    mad = meta.mad_s3[0]
+    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
+                            optmask=spec.optmask, mad=mad)

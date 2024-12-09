@@ -735,5 +735,43 @@ CITATIONS = {
                     adsnote = {Provided by the SAO/NASA Astrophysics Data System}
                 }"""
                ],
+    "catwoman": [r"""@ARTICLE{catwoman:joss,
+                    author = {{Jones}, Kathryn and {Espinoza}, N{\'e}stor},
+                    title = "{catwoman: A transit modelling Python package for asymmetric light curves}",
+                    journal = {The Journal of Open Source Software},
+                    keywords = {C, exoplanets, Python, transit, C++, astronomy, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Earth and Planetary Astrophysics},
+                    year = 2020,
+                    month = nov,
+                    volume = {5},
+                    number = {55},
+                    eid = {2382},
+                    pages = {2382},
+                    doi = {10.21105/joss.02382},
+                    archivePrefix = {arXiv},
+                    eprint = {2106.15643},
+                    primaryClass = {astro-ph.IM},
+                    adsurl = {https://ui.adsabs.harvard.edu/abs/2020JOSS....5.2382J},
+                    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+                  }""",
+                 r"""@software{catwoman:ascl,
+                    author = {{Jones}, Kathryn and {Espinoza}, N{\'e}stor},
+                    title = "{catwoman: Transit modeling Python package for asymmetric light curves}",
+                    howpublished = {Astrophysics Source Code Library, record ascl:2108.007},
+                    year = 2021,
+                    month = aug,
+                    eid = {ascl:2108.007},
+                    adsurl = {https://ui.adsabs.harvard.edu/abs/2021ascl.soft08007J},
+                    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+                  }"""],
+    "fleck": [r"""@software{2022ascl.soft03009M,
+                author = {{Morris}, Brett M.},
+                title = "{fleck: Fast starspot rotational modulation light curves}",
+                howpublished = {Astrophysics Source Code Library, record ascl:2203.009},
+                year = 2022,
+                month = mar,
+                eid = {ascl:2203.009},
+                adsurl = {https://ui.adsabs.harvard.edu/abs/2022ascl.soft03009M},
+                adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+               }"""
+              ],
 }
-

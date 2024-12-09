@@ -24,6 +24,7 @@ dependencies:
     - numpy[version='>=1.20.0,<=1.23'] # Upper limit needed for Apple silicon
     - numpydoc # Needed for documentation
     - pandas
+    - pastasoss
     - photutils
     - pip # required for the pip installs below
     - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest, an asdf package, and something in the pymc3 set of installs. Needed for testing
@@ -36,9 +37,11 @@ dependencies:
     - tqdm
     - pip:
         - astraeus@git+https://github.com/kevin218/Astraeus@main
+        - catwoman@git+https://github.com/taylorbell57/catwoman@master
         - celerite2 # Needed for GP
-        - crds
+        - crds<12 # Upper limit needed to avoid bugs with crds.get_context_name
         - exotic-ld==3.2.0 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
+        - fleck
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
         - jwst==1.15.1
         - mc3 # Needed for uncertainties in the Allan variance plots in S5

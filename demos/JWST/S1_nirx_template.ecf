@@ -54,7 +54,7 @@ bg_x1               None    # Left edge of exclusion region for row-by-row BG su
 bg_x2               None    # Right edge of exclusion region for row-by-row BG subtraction
 
 # Mask curved traces
-masktrace           True
+masktrace           True    # bg_y1 and bg_y2 will be ignored if masktrace=True since the trace will already be masked
 window_len          11
 expand_mask         8
 ignore_low          600

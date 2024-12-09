@@ -13,7 +13,7 @@ manual_clip     None    # A list of lists specifying the start and end integrati
 
 fit_par         ./S5_fit_par_template.epf   # What fitting epf do you want to use?
 fit_method      [dynesty]                   #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [batman_tr,polynomial]      # options are: batman_tr, batman_ecl, sinusoid_pc, quasilambert_pc, poet_tr, poet_ecl, poet_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, and GP (can list multiple types separated by commas)
+run_myfuncs     [batman_tr,polynomial]      # options are: batman_tr, batman_ecl, catwoman_tr, sinusoid_pc, quasilambert_pc, poet_tr, poet_ecl, poet_pc, fleck_tr, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, and GP (can list multiple types separated by commas)
 compute_ltt     False                       # options are: True (correct model for the light travel time effect), or False (ignore the light travel time effect)
 force_positivity False                      # Optional boolean for sinusoid_pc and poet_pc models.  Set True to force positive phase variations.
 

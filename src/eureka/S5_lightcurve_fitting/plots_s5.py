@@ -9,15 +9,19 @@ except:
     print("Could not import MC3. No Allan variance plots will be produced.")
 import corner
 from scipy import stats
+import fleck
+import astropy.units as unit
 try:
     import arviz as az
     from arviz.rcparams import rcParams as az_rcParams
+    import starry
 except:
     # PyMC3 hasn't been installed
     pass
 
 from ..lib import plots, util
 from ..lib.split_channels import split
+from .models.AstroModel import PlanetParams
 
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
@@ -789,6 +793,152 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5102_{fname_tag}_lc_GP_{fitter}'
+                 + plots.figure_filetype)
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
+
+def plot_fleck_star(lc, model, meta, fitter):
+    """Plot the location and contrast of the fleck star spots (Figs 5307)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    """
+    for c in range(lc.nchannel_fitted):
+        channel = lc.fitted_channels[c]
+        if lc.nchannel_fitted > 1:
+            chan = channel
+        else:
+            chan = 0
+
+        # Initialize PlanetParams object
+        pl_params = PlanetParams(model, 0, chan)
+
+        # create arrays to hold values
+        spotrad = np.zeros(0)
+        spotlat = np.zeros(0)
+        spotlon = np.zeros(0)
+
+        for n in range(pl_params.nspots):
+            # read radii, latitudes, longitudes, and contrasts
+            if n > 0:
+                spot_id = f'{n}'
+            else:
+                spot_id = ''
+            spotrad = np.concatenate([
+                spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
+            spotlat = np.concatenate([
+                spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
+            spotlon = np.concatenate([
+                spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
+
+        if pl_params.spotnpts is None:
+            # Have a default spotnpts for fleck
+            pl_params.spotnpts = 300
+
+        fig = plt.figure(5307, figsize=(8, 6))
+        plt.clf()
+        ax = fig.gca()
+        star = fleck.Star(spot_contrast=pl_params.spotcon,
+                          u_ld=pl_params.u,
+                          rotation_period=pl_params.spotrot)
+        ax = star.plot(spotlon[:, None]*unit.deg,
+                       spotlat[:, None]*unit.deg,
+                       spotrad[:, None],
+                       pl_params.spotstari*unit.deg,
+                       planet=pl_params, time=pl_params.t0, ax=ax)
+
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5307_{fname_tag}_fleck_star_{fitter}'
+                 + plots.figure_filetype)
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
+
+def plot_starry_star(lc, model, meta, fitter):
+    """Plot the location and contrast of the starry star spots (Figs 5308)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.differentiable_models.CompositePyMC3Model  # noqa: E501
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    """
+    for c in range(lc.nchannel_fitted):
+        channel = lc.fitted_channels[c]
+        if lc.nchannel_fitted > 1:
+            chan = channel
+        else:
+            chan = 0
+
+        # Initialize PlanetParams object
+        pl_params = PlanetParams(model, 0, chan, eval=True)
+
+        # create arrays to hold values
+        spotrad = np.zeros(0)
+        spotlat = np.zeros(0)
+        spotlon = np.zeros(0)
+        spotcon = np.zeros(0)
+
+        for n in range(pl_params.nspots):
+            # read radii, latitudes, longitudes, and contrasts
+            if n > 0:
+                spot_id = f'{n}'
+            else:
+                spot_id = ''
+            spotrad = np.concatenate([
+                spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
+            spotlat = np.concatenate([
+                spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
+            spotlon = np.concatenate([
+                spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
+            spotcon = np.concatenate([
+                spotcon, [getattr(pl_params, f'spotcon{spot_id}'),]])
+
+        # Apply some conversions since inputs are in fleck units
+        spotrad *= 90
+        spotcon = 1-spotcon
+
+        if pl_params.spotnpts is None:
+            # Have a default spotnpts for starry
+            pl_params.spotnpts = 30
+
+        # Initialize map object and add spots
+        map = starry.Map(ydeg=pl_params.spotnpts,
+                         inc=pl_params.spotstari)
+        for n in range(pl_params.nspots):
+            map.spot(contrast=spotcon[n], radius=spotrad[n],
+                     lat=spotlat[n], lon=spotlon[n])
+
+        fig = plt.figure(5308, figsize=(8, 6))
+        plt.clf()
+        ax = fig.gca()
+        map.show(ax=ax)
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5308_{fname_tag}_starry_star_{fitter}'
                  + plots.figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:

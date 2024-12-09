@@ -10,7 +10,7 @@ allapers        False  # Run S5 on all of the apertures considered in S4? Otherw
 
 fit_par         ./S5_fit_par_wfc3_template.epf  # What fitting epf do you want to use?
 fit_method      [dynesty]              #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [batman_tr,polynomial,hstramp] # options are: batman_tr, batman_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, and GP (can list multiple types separated by commas)
+run_myfuncs     [batman_tr,polynomial,hstramp] # options are: batman_tr, batman_ecl, catwoman_tr, sinusoid_pc, quasilambert_pc, poet_tr, poet_ecl, poet_pc, fleck_tr, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, and GP (can list multiple types separated by commas)
 compute_ltt     False                   # options are: True (correct model for the light travel time effect), or False (ignore the light travel time effect)
 
 # Manual clipping in time
