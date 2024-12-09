@@ -554,9 +554,9 @@ def residualBackground(data, meta, m, vmin=None, vmax=None,
         Median flux array. Default is None
     order : int; optional
         Spectral order. Default is None
-    ap_y : list; options
+    ap_y : list; optional
         Two-element list indicating the outer edges of the aperture region
-    bg_y : list; options
+    bg_y : list; optional
         Two-element list indicating the inner edges of the background region
     '''
     xmin, xmax, ymin, ymax = get_bounds(data.x.values, data.y.values)

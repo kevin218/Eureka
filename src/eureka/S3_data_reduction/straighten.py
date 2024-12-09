@@ -137,10 +137,8 @@ def straighten_trace(data, meta, log, m):
     '''
     if meta.fittype != 'meddata':
         # This method only works with the median profile for the extraction
-        log.writelog('  !!! Must use meddata as the optimal '
+        log.writelog('  !!! Strongly recommend using meddata as the optimal '
                      'extraction profile !!!', mute=(not meta.verbose))
-        raise Exception('Must use meddata as the optimal ' +
-                        'extraction profile')
 
     log.writelog('  Correcting curvature and bringing the trace to the '
                  'center of the detector...', mute=(not meta.verbose))

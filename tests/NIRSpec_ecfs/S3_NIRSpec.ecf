@@ -35,7 +35,7 @@ p5thresh        10         # X-sigma threshold for outlier rejection while const
 p7thresh        30         # X-sigma threshold for outlier rejection during optimal spectral extraction
 
 # G395H curvature treatment
-curvature   None    # How to manage the curved trace on the detector (Options: None, correct)
+curvature   correct    # How to manage the curved trace on the detector (Options: None, correct)
 
 # Diagnostics
 isplots_S3  5          # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)

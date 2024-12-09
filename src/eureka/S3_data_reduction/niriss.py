@@ -153,6 +153,34 @@ def get_wave(data, meta, log):
     return data
 
 
+def mask_other_orders(data, meta):
+    '''Mask trace regions from other orders.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with regions masked.
+    '''
+    for order in meta.orders:
+        trace = np.round(data.trace.sel(order=order).values).astype(int)
+        wave = data.wave_1d.sel(order=order).values
+        other_orders = list.copy(meta.orders)
+        other_orders.remove(order)
+        for j in np.where(~np.isnan(wave))[0]:
+            ymin = np.max((0, trace[j] - meta.spec_hw))
+            ymax = np.min((trace[j] + meta.spec_hw + 1, len(data.y) + 1))
+            for other_order in other_orders:
+                data['mask'].sel(order=other_order)[:, ymin:ymax, j] = True
+    return data
+
+
 def straighten_trace(data, meta, log, m):
     '''Takes a set of integrations with a curved trace and shifts the
     columns to bring the center of mass to the middle of the detector
@@ -165,7 +193,7 @@ def straighten_trace(data, meta, log, m):
     Parameters
     ----------
     data : Xarray Dataset
-            The Dataset object in which the fits data will stored.
+        The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
@@ -181,16 +209,7 @@ def straighten_trace(data, meta, log, m):
         The updated metadata object.
     '''
     # Mask trace regions from other orders
-    for order in meta.orders:
-        trace = np.round(data.trace.sel(order=order).values).astype(int)
-        wave = data.wave_1d.sel(order=order).values
-        other_orders = list.copy(meta.orders)
-        other_orders.remove(order)
-        for j in np.where(~np.isnan(wave))[0]:
-            ymin = np.max((0, trace[j] - meta.spec_hw))
-            ymax = np.min((trace[j] + meta.spec_hw + 1, len(data.y) + 1))
-            for other_order in other_orders:
-                data['mask'].sel(order=other_order)[:, ymin:ymax, j] = True
+    data = mask_other_orders(data, meta)
 
     for k, order in enumerate(meta.orders):
         log.writelog(f'  Correcting curvature for order {order} and ' +
