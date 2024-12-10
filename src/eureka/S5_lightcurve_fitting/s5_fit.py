@@ -537,6 +537,11 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     nchannel_fitted = lc_model.nchannel_fitted
     fitted_channels = lc_model.fitted_channels
 
+    if white:
+        spotcon_file = meta.spotcon_file_white
+    else:
+        spotcon_file = meta.spotcon_file
+
     if 'starry' in meta.run_myfuncs:
         StarryModel = dm.StarryModel
         SinusoidModel = dm.SinusoidPhaseCurveModel
@@ -613,6 +618,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                ld_from_file=meta.ld_file,
                                ld_coeffs=ldcoeffs,
                                recenter_ld_prior=meta.recenter_ld_prior,
+                               spotcon_file=spotcon_file,
+                               recenter_spotcon_prior=meta.recenter_spotcon_prior,  # noqa: E501
                                compute_ltt=meta.compute_ltt,
                                multwhite=lc_model.multwhite,
                                nints=lc_model.nints,
@@ -689,6 +696,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                         ld_from_file=meta.ld_file,
                                         ld_coeffs=ldcoeffs,
                                         recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
+                                        spotcon_file=spotcon_file,
+                                        recenter_spotcon_prior=meta.recenter_spotcon_prior,  # noqa: E501
                                         compute_ltt=meta.compute_ltt,
                                         multwhite=lc_model.multwhite,
                                         nints=lc_model.nints,
