@@ -110,6 +110,15 @@ class S5MetaClass(MetaClass):
             # Set this to False if not relevant
             self.recenter_ld_prior = getattr(self, 'recenter_ld_prior', False)
 
+        # Use of modelled spot contrast coefficients
+        self.spotcon_file = getattr(self, 'spotcon_file', None)
+        self.spotcon_file_white = getattr(self, 'spotcon_file_white', None)
+        if not all([self.spotcon_file is None,
+                    self.spotcon_file_white is None]):
+            # Only set this parameter to True if relevant
+            self.recenter_spotcon_prior = getattr(
+                self, 'recenter_spotcon_prior', True)
+
         # Catwoman convergence-aiding parameters
         self.catwoman_fac = getattr(self, 'catwoman_fac', None)
         self.catwoman_max_err = getattr(self, 'catwoman_max_err', 1.0)
