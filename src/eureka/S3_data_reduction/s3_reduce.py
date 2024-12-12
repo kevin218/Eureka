@@ -213,12 +213,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
             saved_refrence_tilt_frame = None
             saved_ref_median_frame = None
+            saved_photometric_profile = None
 
             for m in range(meta.nbatch):
                 # Reset saved median frame if meta.indep_batches
                 if meta.indep_batches:
                     saved_ref_median_frame = None
                     saved_refrence_tilt_frame = None
+                    saved_photometric_profile = None
 
                 first_file = m*meta.files_per_batch
                 last_file = min([meta.num_data_files,
@@ -541,25 +543,29 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                         # Calculate flux in aperture and subtract
                         # background flux
-                        aphot = apphot.apphot(
-                            meta, image=data.flux[i].values,
-                            ctr=position, photap=meta.photap,
-                            skyin=meta.skyin, skyout=meta.skyout,
-                            betahw=1, targpos=position,
-                            mask=data.mask[i].values,
-                            imerr=data.err[i].values,
-                            skyfrac=0.1, med=True, expand=1,
-                            isbeta=False, nochecks=False,
-                            aperr=True, nappix=True, skylev=True,
-                            skyerr=True, nskypix=True,
-                            nskyideal=True, status=True,
-                            betaper=True, aperture_shape=meta.aperture_shape)
-                        # Save results into arrays
-                        (data['aplev'][i], data['aperr'][i],
-                            data['nappix'][i], data['skylev'][i],
-                            data['skyerr'][i], data['nskypix'][i],
-                            data['nskyideal'][i], data['status'][i],
-                            data['betaper'][i]) = aphot
+                        if meta.optphot:
+                            data, saved_ref_median_frame, saved_photometric_profile = apphot.optphot(
+                                data, meta, i, saved_ref_median_frame,
+                                saved_photometric_profile)
+                        else:
+                            aphot = apphot.apphot(
+                                meta, image=data.flux[i].values,
+                                ctr=position, photap=meta.photap,
+                                skyin=meta.skyin, skyout=meta.skyout,
+                                betahw=1, targpos=position,
+                                mask=data.mask[i].values,
+                                imerr=data.err[i].values,
+                                skyfrac=0.1, med=True, expand=1, isbeta=False,
+                                nochecks=False, aperr=True, nappix=True,
+                                skylev=True, skyerr=True, nskypix=True,
+                                nskyideal=True, status=True, betaper=True,
+                                aperture_shape=meta.aperture_shape)
+                            # Save results into arrays
+                            (data['aplev'][i], data['aperr'][i],
+                                data['nappix'][i], data['skylev'][i],
+                                data['skyerr'][i], data['nskypix'][i],
+                                data['nskyideal'][i], data['status'][i],
+                                data['betaper'][i]) = aphot
 
                 # plot tilt events
                 if meta.isplots_S3 >= 5 and meta.inst == 'nircam' and \

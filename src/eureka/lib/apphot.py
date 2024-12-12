@@ -1,4 +1,5 @@
 import numpy as np
+from photutils.aperture import aperture_photometry, CircularAperture, EllipticalAperture, RectangularAperture, CircularAnnulus
 from . import disk as di
 from . import meanerr as me
 from . import interp2d as i2d
@@ -650,3 +651,86 @@ def apphot_status(data):
             if binary_flag[-4] == '1':
                 print('A fraction less than skyfrac of the sky annulus '
                       'pixels is in the image and not masked')
+
+
+def optphot(data, meta, i, saved_ref_median_frame, saved_photometric_profile):
+    """
+    Perform optimal photometric extraction and annular sky subtraction on the
+    input image.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    i : int
+        The current integration number.
+    saved_ref_median_frame : 2D array
+    saved_photometric_profile : 2D array
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object containing the extracted photometry data.
+    """
+
+    method = 'center'
+    movingAperture = False
+
+    if movingAperture:
+        position = [data.centroid_x.values[i], data.centroid_y.values[i]]
+    else:
+        # position = [data.centroid_x.values.mean(), data.centroid_y.values.mean()]
+        position = [148, 116]
+
+    if saved_ref_median_frame is None:
+        img_temp = np.ma.masked_where(data.mask.values,  data.flux.values)
+        refrence_median_frame = np.ma.median(img_temp, axis=0)
+    else:
+        refrence_median_frame = saved_ref_median_frame
+
+    if saved_photometric_profile is None:
+        profile = np.ma.copy(refrence_median_frame)
+        xpixels = np.arange(profile.shape[1])
+        ypixels = np.arange(profile.shape[0])
+        xpixels, ypixels = np.meshgrid(xpixels, ypixels)
+        if method == 'center':
+            inds = np.sqrt((xpixels-position[0])**2+(ypixels-position[1])**2) > meta.photap
+            profile[inds] = 0
+        elif method == 'exact':
+            raise ValueError('Optimal photometric extraction using exact '
+                             'apertures is not yet supported.')
+        else:
+            raise ValueError('Unknown optimal photometric extraction method: '
+                             f'{method}')
+        profile /= np.sqrt(profile)
+        # profile /= np.sum(profile)
+    else:
+        profile = saved_photometric_profile
+
+    image = np.ma.masked_where(data.mask.values[i], data.flux.values[i])
+    good_pixels = ~data.mask.values[i]
+
+    # Setup the sky annulus
+    sky_aper = CircularAnnulus(position, meta.skyin, meta.skyout)
+
+    # Compute the number of good pixels in object aperture and sky annulus
+    nskypix = aperture_photometry(good_pixels, sky_aper, method=method)['aperture_sum'].data[0]
+    nskyideal = aperture_photometry(np.ones_like(good_pixels), sky_aper, method=method)['aperture_sum'].data[0]
+    nappix = np.ma.sum(good_pixels * (profile != 0))
+
+    # Compute the object and sky flux levels
+    skylev = aperture_photometry(image, sky_aper, method=method)['aperture_sum'].data[0]/nskypix
+    aplev = np.ma.sum(image*profile)/np.sum(profile)*nappix  - skylev*nappix
+
+    data['aplev'][i] = aplev
+    data['aperr'][i] = np.sqrt(aplev)
+    data['nappix'][i] = nappix
+    data['skylev'][i] = skylev
+    data['skyerr'][i] = np.sqrt(skylev/nskypix)
+    data['nskypix'][i] = nskypix
+    data['nskyideal'][i] = nskyideal
+    data['status'][i] = 0
+
+    return data, refrence_median_frame, profile

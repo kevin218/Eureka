@@ -188,6 +188,7 @@ class S3MetaClass(MetaClass):
             self.centroid_tech = getattr(self, 'centroid_tech', 'com')
             self.gauss_frame = getattr(self, 'gauss_frame', 15)
         self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
+        self.optphot = getattr(self, 'optphot', False)
         self.aperture_shape = getattr(self, 'aperture_shape', 'circle')
         # Require these parameters to be set
         self.photap = getattr(self, 'photap')
