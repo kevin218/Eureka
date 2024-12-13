@@ -1,6 +1,8 @@
 import numpy as np
-from ..lib import smooth
+from ..lib import smooth, gaussian
 from . import plots_s3
+from .source_pos import gauss
+from scipy.optimize import curve_fit
 
 
 def find_column_median_shifts(data, meta, m):
@@ -38,7 +40,20 @@ def find_column_median_shifts(data, meta, m):
 
     # Compute the center of mass of each column
     column_coms = (np.ma.sum(pix_centers[:, None]*data, axis=0) /
-                   np.ma.sum(data, axis=0))
+                    np.ma.sum(data, axis=0))
+
+    # Center of mass doesn't always work well with calibrated spectra
+    # Therefore, use CoM as starting point for Gaussian fit
+    if meta.calibrated_spectra:
+        # Rough initial guess (heigh, center, width, BG)
+        guess = [np.nanmax(data[:,0]), column_coms[0], 2., 0]
+        for i in np.arange(data.shape[1]):
+            # Gaussian fit for each column
+            params, _ = curve_fit(gauss, pix_centers, data[:,i],
+                                  guess, maxfev=10000)
+            column_coms[i] = params[1]
+            # Update guess for next iteration
+            guess = params
 
     # Smooth CoM values to get rid of outliers
     smooth_coms = smooth.medfilt(column_coms, 11)
