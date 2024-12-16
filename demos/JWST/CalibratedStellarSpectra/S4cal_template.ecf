@@ -2,15 +2,20 @@
 
 # Stage 4cal Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-4cal
 
-# System parameters
-rprs            0.07194         # Planet-star radius ratio
-period          4.2344923       # Orbital period
-t0              110.810782      # Transit time
+# Transit/Eclipse time
+t0              110.810782      # BJD
 time_offset     60000           # Optional; time offset
-inc             87.799          # orbital inclination
+
+# Provide either the system parameters or transit durations
+rprs            0.07194         # Planet-star radius ratio
+period          4.2344923       # Orbital period (in Days)
+inc             87.799          # orbital inclination (in degrees)
 ars             12.518          # Semi-major axis
-# t23             0.00            # Optional; full transit duration
-base_dur        0.1             # Optional; duration used before t1 and after t4
+# t14             0.00            # Total transit duration
+# t23             0.00            # Full transit duration
+
+# Baseline duration used before t1 and after t4
+base_dur        0.1             # Days
 
 # Outlier detection
 sigma_thresh    [4,4,4]

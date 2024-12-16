@@ -1,5 +1,5 @@
 import numpy as np
-from ..lib import smooth, gaussian
+from ..lib import smooth
 from . import plots_s3
 from .source_pos import gauss
 from scipy.optimize import curve_fit

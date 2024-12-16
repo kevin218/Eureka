@@ -33,12 +33,12 @@ class S4cal_MetaClass(MetaClass):
         '''Set Stage 4cal specific defaults for generic instruments.
         '''
         # System parameters
-        self.rprs = getattr(self, 'rprs')
-        self.period = getattr(self, 'period')
+        self.rprs = getattr(self, 'rprs', None)
+        self.period = getattr(self, 'period', None)
         self.t0 = getattr(self, 't0')
         self.time_offset = getattr(self, 'time_offset', 0)
-        self.inc = getattr(self, 'inc')
-        self.ars = getattr(self, 'ars')
+        self.inc = getattr(self, 'inc', None)
+        self.ars = getattr(self, 'ars', None)
 
         self.t14 = getattr(self, 't14', None)
         self.t23 = getattr(self, 't23', None)
@@ -59,4 +59,4 @@ class S4cal_MetaClass(MetaClass):
 
         # Directories relative to topdir
         self.inputdir = getattr(self, 'inputdir', 'Stage3')
-        self.outputdir = getattr(self, 'outputdir', 'Stage7')
+        self.outputdir = getattr(self, 'outputdir', 'Stage4cal')
