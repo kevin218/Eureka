@@ -24,6 +24,7 @@ meta, spec, ds = s4cal.medianCalSpec(eventlabel)
 
 colors = ['xkcd:bright blue', 'xkcd:soft green', 'orange', 'purple']
 
+
 def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     '''Generate median calibrated stellar spectra using in-eclipse data
     and out-of-eclipse baseline.  The outputs also include the standard
@@ -76,13 +77,10 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     meta = S4cal_MetaClass(**me.mergeevents(meta, s3_meta).__dict__)
     meta.set_defaults()
 
-
     # Create directories for Stage 4cal outputs
     meta.run_S4cal = util.makedirectory(meta, 'S4cal', None)
     # Get the directory for Stage 4cal processing outputs
     meta.outputdir = util.pathdirectory(meta, 'S4cal', meta.run_S4cal)
-
-    t_start = time_pkg.time()
 
     # Copy existing S3 log file and resume log
     meta.s4cal_logname = meta.outputdir+'S4cal_'+meta.eventlabel+'.log'
@@ -100,7 +98,7 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         meta.inputdir +
         meta.filename_S3_SpecData.split(os.path.sep)[-1])
     log.writelog(f"Loading S3 save file:\n{specData_savefile}",
-                    mute=(not meta.verbose))
+                 mute=(not meta.verbose))
     spec = xrio.readXR(specData_savefile)
     wave = spec.wave_1d.data
     log.writelog(f"Time range: {np.min(spec.time.values)} " +
@@ -144,7 +142,7 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         it3 = np.where(spec.time > (t0 + meta.t23/2))[0][0]
         it4 = np.where(spec.time > (t0 + meta.t14/2))[0][0]
         # Indeces for beginning and end of baseline
-        if meta.base_dur == None:
+        if meta.base_dur is None:
             it0 = 0
             it5 = -1
         else:
@@ -249,7 +247,7 @@ def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
     time_bin = util.binData_time(time, time, nbin=meta.nbin_plot)
 
     if i == 0:
-        fig = plt.figure(4202, figsize=(8,5))
+        fig = plt.figure(4202, figsize=(8, 5))
         plt.clf()
         ax = fig.subplots(1, 1)
         ax.plot(time_bin-toffset, lc_bin, '.', color='0.2', alpha=0.8,
@@ -281,19 +279,19 @@ def plot_stellarSpec(meta, ds):
     '''Plot calibrated stellar spectra from
     baseline and in-eclipse regions.
     '''
-    fig = plt.figure(4201, figsize=(8,5))
+    fig = plt.figure(4201, figsize=(8, 5))
     plt.clf()
     ax = fig.subplots(1, 1)
     for i in range(len(ds.time)):
-        ax.errorbar(ds.wavelength, ds.base_flux[:,i], ds.base_fstd[:,i],
+        ax.errorbar(ds.wavelength, ds.base_flux[:, i], ds.base_fstd[:, i],
                     fmt='.', ms=1, label=f'Baseline ({ds.time.values[i]})',
                     color=colors[1])
-        ax.errorbar(ds.wavelength, ds.ecl_flux[:,i], ds.ecl_fstd[:,i],
+        ax.errorbar(ds.wavelength, ds.ecl_flux[:, i], ds.ecl_fstd[:, i],
                     fmt='.', ms=1, label=f'In-Eclipse ({ds.time.values[i]})',
                     color=colors[0])
 
     ax.legend(loc='best')
-    ax.set_xlabel("Wavelength ($\mu$m)")
+    ax.set_xlabel(r"Wavelength ($\mu$m)")
     ax.set_ylabel(f"Flux ({ds.base_flux.flux_units})")
 
     fname = 'figs'+os.sep+'fig4201_CalStellarSpec'

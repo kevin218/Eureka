@@ -40,19 +40,19 @@ def find_column_median_shifts(data, meta, m):
 
     # Compute the center of mass of each column
     column_coms = (np.ma.sum(pix_centers[:, None]*data, axis=0) /
-                    np.ma.sum(data, axis=0))
+                   np.ma.sum(data, axis=0))
 
     # Center of mass doesn't always work well with calibrated spectra
     # Therefore, use CoM as starting point for Gaussian fit
     if meta.calibrated_spectra:
         # Rough initial guess (heigh, center, width, BG)
         width = np.ma.sqrt(np.ma.sum(data[:, 0] *
-                                     (pix_centers-column_coms[0])**2) /
-                                     np.ma.sum(data[:, 0]))
+                           (pix_centers-column_coms[0])**2) /
+                           np.ma.sum(data[:, 0]))
         guess = [np.ma.max(data[:, 0]), column_coms[0], width, 0]
         for i in np.arange(data.shape[1]):
             # Gaussian fit for each column
-            params, _ = curve_fit(gauss, pix_centers, data[:,i],
+            params, _ = curve_fit(gauss, pix_centers, data[:, i],
                                   guess, maxfev=10000)
             column_coms[i] = params[1]
             # Update guess for next iteration
