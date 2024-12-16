@@ -22,7 +22,7 @@ eventlabel = 'ngts10b_pc'
 meta, spec, ds = s4cal.medianCalSpec(eventlabel)
 '''
 
-colors = ['xkcd:bright blue','purple','xkcd:soft green','orange']
+colors = ['xkcd:bright blue', 'xkcd:soft green', 'orange', 'purple']
 
 def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     '''Generate median calibrated stellar spectra using in-eclipse data
@@ -103,11 +103,13 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     mute=(not meta.verbose))
     spec = xrio.readXR(specData_savefile)
     wave = spec.wave_1d.data
+    log.writelog(f"Time range: {np.min(spec.time.values)} " +
+                 f"- {np.max(spec.time.values)}")
 
     # Flag outliers in time
     mask = sigrej(spec.optspec.values, meta.sigma_thresh,
-                  mask=~spec.optmask.values, axis=0)
-    optspec = np.ma.masked_array(spec.optspec.values, ~mask)
+                  mask=spec.optmask.values, axis=0)
+    optspec = np.ma.masked_array(spec.optspec.values, mask)
 
     if isinstance(meta.t0, float):
         meta.t0 = [meta.t0]
@@ -147,12 +149,14 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             it5 = -1
         else:
             try:
-                it0 = np.where(spec.time > (t0 - meta.t14/2 - meta.base_dur))[0][0]
-            except:
+                it0 = np.where(spec.time > (t0 - meta.t14/2 -
+                                            meta.base_dur))[0][0]
+            except IndexError:
                 it0 = 0
             try:
-                it5 = np.where(spec.time > (t0 + meta.t14/2 + meta.base_dur))[0][0]
-            except:
+                it5 = np.where(spec.time > (t0 + meta.t14/2 +
+                                            meta.base_dur))[0][0]
+            except IndexError:
                 it5 = -1
         meta.it = [it0, it1, it2, it3, it4, it5]
 
@@ -167,8 +171,17 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         # Mask outliers along wavelength axis
         tck = spi.splrep(wave, spec_baseline, w=1/std_baseline, k=3)
         spline = spi.splev(wave, tck)
+        # plt.figure(1)
+        # plt.clf()
+        # plt.errorbar(wave, spec_baseline, std_baseline, fmt='.')
+        # plt.plot(wave, np.abs(spec_baseline - spline)/std_baseline, '-')
         mask = sigrej(spec_baseline - spline, meta.sigma_thresh)
-        igood = np.where(mask)[0]
+        igood = np.where(~mask)[0]
+        # print("Spec_baseline")
+        # print(spec_baseline)
+        # print("igood")
+        # print(len(igood), len(mask))
+        # print(igood)
         # Create XArray data arrays
         base_flux = xrio.makeLCDA(spec_baseline[igood, np.newaxis],
                                   wave[igood], [t0],
@@ -190,7 +203,7 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         tck = spi.splrep(wave, spec_t23, w=1/std_t23, k=3)
         spline = spi.splev(wave, tck)
         mask = sigrej(spec_t23 - spline, meta.sigma_thresh)
-        igood = np.where(mask)[0]
+        igood = np.where(~mask)[0]
         # Create XArray data arrays
         ecl_flux = xrio.makeLCDA(spec_t23[igood, np.newaxis],
                                  wave[igood], [t0],
@@ -231,16 +244,23 @@ def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
 
     # Created binned white LC
     lc = np.ma.sum(optspec, axis=1)
+    lc /= np.mean(lc)
     lc_bin = util.binData_time(lc, time, nbin=meta.nbin_plot)
     time_bin = util.binData_time(time, time, nbin=meta.nbin_plot)
 
     if i == 0:
-        fig = plt.figure(7202)
+        fig = plt.figure(4202, figsize=(8,5))
         plt.clf()
         ax = fig.subplots(1, 1)
         ax.plot(time_bin-toffset, lc_bin, '.', color='0.2', alpha=0.8,
                 label='Binned White LC')
     ymin, ymax = ax.get_ylim()
+    ax.fill_betweenx((ymin, ymax), time[it0]-toffset, time[it1]-toffset,
+                     color=colors[1], alpha=0.2)
+    ax.fill_betweenx((ymin, ymax), time[it4]-toffset, time[it5]-toffset,
+                     color=colors[1], alpha=0.2)
+    ax.fill_betweenx((ymin, ymax), time[it2]-toffset, time[it3]-toffset,
+                     color=colors[0], alpha=0.2)
     ax.vlines([time[it1]-toffset, time[it4]-toffset,
               time[it0]-toffset, time[it5]-toffset],
               ymin, ymax, color=colors[1], label='Baseline Regions')
@@ -251,7 +271,7 @@ def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
         ax.legend(loc='best')
         ax.set_xlabel("Time (MJD)")
         ax.set_ylabel("Normalized Flux")
-    fname = 'figs'+os.sep+'fig7202_WhiteLC'
+    fname = 'figs'+os.sep+'fig4202_WhiteLC'
     fig.savefig(meta.outputdir+fname+plots.figure_filetype,
                 bbox_inches='tight', dpi=300)
     return fig, ax
@@ -261,14 +281,16 @@ def plot_stellarSpec(meta, ds):
     '''Plot calibrated stellar spectra from
     baseline and in-eclipse regions.
     '''
-    fig = plt.figure(4201)
+    fig = plt.figure(4201, figsize=(8,5))
     plt.clf()
     ax = fig.subplots(1, 1)
     for i in range(len(ds.time)):
         ax.errorbar(ds.wavelength, ds.base_flux[:,i], ds.base_fstd[:,i],
-                    fmt='.', ms=1, label=f'Baseline ({ds.time.values[i]})')
+                    fmt='.', ms=1, label=f'Baseline ({ds.time.values[i]})',
+                    color=colors[1])
         ax.errorbar(ds.wavelength, ds.ecl_flux[:,i], ds.ecl_fstd[:,i],
-                    fmt='.', ms=1, label=f'In-Eclipse ({ds.time.values[i]})')
+                    fmt='.', ms=1, label=f'In-Eclipse ({ds.time.values[i]})',
+                    color=colors[0])
 
     ax.legend(loc='best')
     ax.set_xlabel("Wavelength ($\mu$m)")

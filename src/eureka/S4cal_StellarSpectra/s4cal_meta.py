@@ -27,7 +27,7 @@ class S4cal_MetaClass(MetaClass):
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
         '''
-        super().__init__(folder, file, eventlabel, stage=7, **kwargs)
+        super().__init__(folder, file, eventlabel, stage='4cal', **kwargs)
 
     def set_defaults(self):
         '''Set Stage 4cal specific defaults for generic instruments.

@@ -46,7 +46,10 @@ def find_column_median_shifts(data, meta, m):
     # Therefore, use CoM as starting point for Gaussian fit
     if meta.calibrated_spectra:
         # Rough initial guess (heigh, center, width, BG)
-        guess = [np.nanmax(data[:,0]), column_coms[0], 2., 0]
+        width = np.ma.sqrt(np.ma.sum(data[:, 0] *
+                                     (pix_centers-column_coms[0])**2) /
+                                     np.ma.sum(data[:, 0]))
+        guess = [np.ma.max(data[:, 0]), column_coms[0], width, 0]
         for i in np.arange(data.shape[1]):
             # Gaussian fit for each column
             params, _ = curve_fit(gauss, pix_centers, data[:,i],
