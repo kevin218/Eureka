@@ -3,7 +3,7 @@ try:
     import pymc3 as pm
     import pymc3_ext as pmx
     import arviz
-except:
+except ModuleNotFoundError:
     # PyMC3 hasn't been installed
     pass
 from astropy import table

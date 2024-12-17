@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rcParams
 try:
     from mc3.stats import time_avg
-except:
+except ModuleNotFoundError:
     print("Could not import MC3. No Allan variance plots will be produced.")
 import corner
 from scipy import stats
@@ -15,7 +15,7 @@ try:
     import arviz as az
     from arviz.rcparams import rcParams as az_rcParams
     import starry
-except:
+except ModuleNotFoundError:
     # PyMC3 hasn't been installed
     pass
 

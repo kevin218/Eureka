@@ -10,7 +10,7 @@ from . import lightcurve
 from . import models as m
 try:
     from . import differentiable_models as dm
-except:
+except ModuleNotFoundError:
     # PyMC3 hasn't been installed
     dm = None
 from ..lib import manageevent as me

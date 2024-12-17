@@ -3,7 +3,7 @@ try:
     import starry
     starry.config.quiet = True
     starry.config.lazy = True
-except:
+except ModuleNotFoundError:
     # PyMC3 hasn't been installed
     pass
 
