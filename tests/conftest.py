@@ -1,6 +1,16 @@
 # conftest.py
 def pytest_collection_modifyitems(session, config, items):
-    """Modifies test items to ensure test functions run in a given order"""
+    """Modifies test items to ensure test functions run in a given order
+
+    Parameters
+    ----------
+    session : pytest.Session
+        The pytest session object.
+    config : pytest.Config
+        The pytest config object.
+    items : List[pytest.Item]
+        List of item objects.
+    """
     function_order = ["test_trim", "test_medstddev",
                       "test_parameter", "test_parameters", "test_model",
                       "test_compositemodel", "test_polynomialmodel",
