@@ -477,9 +477,6 @@ def flag_bg_phot(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with outlier background pixels flagged.
     '''
-    log.writelog('  Performing outlier rejection...',
-                 mute=(not meta.verbose))
-
     flux = data.flux.values
     mask = data.mask.values
     # FINDME: KBS removed estsig from inputs to speed up outlier detection.
@@ -491,8 +488,10 @@ def flag_bg_phot(data, meta, log):
         estsig = None
 
     nbadpix_total = 0
+    message = '  Performing background outlier rejection'
+    log.writelog(message+'...', mute=True)
     for i in tqdm(range(flux.shape[1]),
-                  desc='  Looping over rows for outlier removal'):
+                  desc=message):
         for j in range(flux.shape[2]):  # Loops over Columns
             ngoodpix = np.sum(~mask[:, i, j])
             data['mask'][:, i, j] |= sigrej.sigrej(flux[:, i, j],
