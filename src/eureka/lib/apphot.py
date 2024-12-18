@@ -1,5 +1,8 @@
 import numpy as np
-from photutils.aperture import aperture_photometry, CircularAperture, EllipticalAperture, RectangularAperture, CircularAnnulus, EllipticalAnnulus, RectangularAnnulus
+from photutils.aperture import (aperture_photometry, CircularAperture,
+                                EllipticalAperture, RectangularAperture,
+                                CircularAnnulus, EllipticalAnnulus,
+                                RectangularAnnulus)
 from . import disk as di
 from . import meanerr as me
 from . import interp2d as i2d
@@ -656,7 +659,7 @@ def apphot_status(data):
                       'pixels is in the image and not masked')
 
 
-def optphot(data, meta, i, saved_ref_median_frame, saved_photometric_profile):
+def optphot(data, meta, i, saved_photometric_profile):
     """
     Perform optimal photometric extraction and annular sky subtraction on the
     input image.
@@ -669,71 +672,122 @@ def optphot(data, meta, i, saved_ref_median_frame, saved_photometric_profile):
         The metadata object.
     i : int
         The current integration number.
-    saved_ref_median_frame : 2D array
     saved_photometric_profile : 2D array
+        The saved profile to be used for optimal photometric extraction.
 
     Returns
     -------
     data : Xarray Dataset
         The updated Dataset object containing the extracted photometry data.
+    profile : 2D array
+        The profile that was used for optimal photometric extraction.
     """
-
-    method = 'center'
-    movingAperture = False
-
-    if movingAperture:
+    if meta.moving_centroid:
         position = [data.centroid_x.values[i], data.centroid_y.values[i]]
     else:
-        # position = [data.centroid_x.values.mean(), data.centroid_y.values.mean()]
-        position = [148, 116]
-
-    if saved_ref_median_frame is None:
-        img_temp = np.ma.masked_where(data.mask.values,  data.flux.values)
-        refrence_median_frame = np.ma.median(img_temp, axis=0)
-    else:
-        refrence_median_frame = saved_ref_median_frame
+        position = [np.median(data.centroid_x.values),
+                    np.median(data.centroid_y.values)]
 
     if saved_photometric_profile is None:
-        profile = np.ma.copy(refrence_median_frame)
-        xpixels = np.arange(profile.shape[1])
-        ypixels = np.arange(profile.shape[0])
-        xpixels, ypixels = np.meshgrid(xpixels, ypixels)
-        if method == 'center':
-            inds = np.sqrt((xpixels-position[0])**2+(ypixels-position[1])**2) > meta.photap
+        profile = np.ma.copy(data.medflux.values)
+        xpx = np.arange(profile.shape[1])
+        ypx = np.arange(profile.shape[0])
+        xpx, ypx = np.meshgrid(xpx, ypx)
+        theta = meta.photap_theta*np.pi/180
+        if meta.aperture_edge == 'center':
+            if meta.aperture_shape == 'circle':
+                inds = np.sqrt((xpx-position[0])**2
+                               + (ypx-position[1])**2) > meta.photap
+            elif meta.aperture_shape == 'ellipse':
+                x_trans = ((xpx-position[0])*np.cos(theta)
+                           + (ypx-position[1])*np.sin(theta))
+                y_trans = (-(xpx-position[0])*np.sin(theta)
+                           + (ypx-position[1])*np.cos(theta))
+                inds = ((x_trans/meta.photap)**2
+                        + (y_trans/meta.photap_b)**2 > 1)
+            elif meta.aperture_shape == 'rectangle':
+                x_trans = ((xpx-position[0])*np.cos(theta)
+                           + (ypx-position[1])*np.sin(theta))
+                y_trans = (-(xpx-position[0])*np.sin(theta)
+                           + (ypx-position[1])*np.cos(theta))
+                inds = ((np.abs(x_trans) > meta.photap)
+                        & (np.abs(y_trans) > meta.photap_b))
+            else:
+                raise ValueError('Unknown aperture_shape '
+                                 f'{meta.aperture_shape}')
             profile[inds] = 0
-        elif method == 'exact':
+        elif meta.aperture_edge == 'exact':
             raise ValueError('Optimal photometric extraction using exact '
                              'apertures is not yet supported.')
         else:
-            raise ValueError('Unknown optimal photometric extraction method: '
-                             f'{method}')
-        profile /= np.sqrt(profile)
-        # profile /= np.sum(profile)
+            raise ValueError(f'Unknown aperture_edge {meta.aperture_edge}')
+        # Force positivity
+        profile[np.where(profile < 0)] = 0
+        # Get normalized error-weighted profile
+        with np.errstate(divide='ignore', invalid='ignore'):
+            profile /= np.sqrt(profile)
+        profile /= np.sum(profile)
     else:
         profile = saved_photometric_profile
 
-    image = np.ma.masked_where(data.mask.values[i], data.flux.values[i])
-    good_pixels = ~data.mask.values[i]
+    # Grab the current frame and mask
+    mask = data.mask.values[i]
+    good_pixels = (~mask).astype(float)
+    flux = np.ma.masked_where(mask, data.flux.values[i])
+    derr = np.ma.masked_where(mask, data.err.values[i])
 
     # Setup the sky annulus
-    sky_aper = CircularAnnulus(position, meta.skyin, meta.skyout)
+    if meta.aperture_shape == 'circle':
+        sky_annul = CircularAnnulus(position, meta.skyin, meta.skyout)
+    elif meta.aperture_shape == 'ellipse':
+        # Sky annulus has the same aspect ratio and orientation as source aper
+        theta = meta.photap_theta*np.pi/180
+        sky_annul = EllipticalAnnulus(position, meta.skyin, meta.skyout,
+                                      meta.skyin*(meta.photap_b/meta.photap),
+                                      meta.skyout*(meta.photap_b/meta.photap),
+                                      theta)
+    elif meta.aperture_shape == 'rectangle':
+        # Sky annulus has the same aspect ratio and orientation as source aper
+        theta = meta.photap_theta*np.pi/180
+        sky_annul = RectangularAnnulus(position, meta.skyin, meta.skyout,
+                                       meta.skyin*(meta.photap_b/meta.photap),
+                                       meta.skyout*(meta.photap_b/meta.photap),
+                                       theta)
+    else:
+        raise ValueError(f'Unknown aperture_shape "{meta.aperture_shape}"')
 
     # Compute the number of good pixels in object aperture and sky annulus
-    nskypix = aperture_photometry(good_pixels, sky_aper, method=method)['aperture_sum'].data[0]
-    nskyideal = aperture_photometry(np.ones_like(good_pixels), sky_aper, method=method)['aperture_sum'].data[0]
+    nskypix = aperture_photometry(good_pixels, sky_annul,
+                                  method=meta.aperture_edge
+                                  )['aperture_sum'].data[0]
+    nskyideal = aperture_photometry(np.ones_like(good_pixels), sky_annul,
+                                    method=meta.aperture_edge
+                                    )['aperture_sum'].data[0]
     nappix = np.ma.sum(good_pixels * (profile != 0))
 
-    # Compute the object and sky flux levels
-    skylev = aperture_photometry(image, sky_aper, method=method)['aperture_sum'].data[0]/nskypix
-    aplev = np.ma.sum(image*profile)/np.sum(profile)*nappix  - skylev*nappix
+    # Compute the sky flux per pixel
+    skytable = aperture_photometry(flux, sky_annul, derr, mask,
+                                   method=meta.aperture_edge)
+    skylev = skytable['aperture_sum'].data[0]/nskypix
+    skyerr = skytable['aperture_sum_err'].data[0]/nskypix
+    # Compute the total source flux
+    aplev = np.ma.sum(flux*profile)/np.sum(good_pixels*profile)*nappix
+    aperr = (1/np.sqrt(np.ma.sum(1/derr**2*good_pixels*profile))
+             * np.sqrt(nappix/np.sum(good_pixels*profile)))
+    aperr = np.sqrt(aperr**2 + nappix*skyerr**2)
+    # Subtract the sky level that fell within the source aperture
+    skylev_total = (np.sum(skylev*good_pixels*profile)
+                    / np.sum(good_pixels*profile)*nappix)
+    aplev -= skylev_total
 
+    # Store the results in the data object
     data['aplev'][i] = aplev
-    data['aperr'][i] = np.sqrt(aplev)
+    data['aperr'][i] = aperr
     data['nappix'][i] = nappix
     data['skylev'][i] = skylev
-    data['skyerr'][i] = np.sqrt(skylev/nskypix)
+    data['skyerr'][i] = skyerr
     data['nskypix'][i] = nskypix
     data['nskyideal'][i] = nskyideal
     data['status'][i] = 0
 
-    return data, refrence_median_frame, profile
+    return data, profile
