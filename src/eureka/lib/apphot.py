@@ -1,5 +1,5 @@
 import numpy as np
-from photutils.aperture import aperture_photometry, CircularAperture, EllipticalAperture, RectangularAperture, CircularAnnulus
+from photutils.aperture import aperture_photometry, CircularAperture, EllipticalAperture, RectangularAperture, CircularAnnulus, EllipticalAnnulus, RectangularAnnulus
 from . import disk as di
 from . import meanerr as me
 from . import interp2d as i2d
@@ -519,7 +519,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
             ret[skyerr] *= iexpand  # Expand correction.
         else:
             iimage_temp = np.ma.masked_where(skymask, iimage)
-            ret[skylev] = np.ma.mean(iimage)
+            ret[skylev] = np.ma.mean(iimage_temp)
 
     if meta.skip_apphot_bg:
         ret[skylev] = np.zeros_like(ret[skylev])
@@ -575,9 +575,9 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     apdat = iimage[aploc] - ret[skylev]
     apmsk = imask[aploc]
 
-    # flag NaNs and bad pixels
-    goodies = ~np.isfinite(apdat)
-    if np.any(goodies):
+    # flag NaNs and inf pixels
+    nanOrInf = ~np.isfinite(apdat)
+    if np.any(nanOrInf):
         status |= statnan
 
     if np.any(apmsk):
@@ -586,7 +586,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     # PHOTOMETRY
     # Do NOT multiply by bad pixel mask!  We need to use the interpolated
     # pixels here, unfortunately.
-    ret[aplev] = np.sum(apdat[~goodies])
+    ret[aplev] = np.sum(apdat[~nanOrInf])
 
     # Expand correction.  We overcount by iexpand^2.
     ret[aplev] /= iexpand ** 2.0
@@ -595,17 +595,18 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     if imerr is not None:
         # Flag NaNs.  Zeros are ok, if weird.
         apunc = iimerr[aploc]
-        apuncloc = np.isfinite(apunc)
-        if not np.all(apuncloc):
+        apuncNan = ~np.isfinite(apunc)
+        if np.any(apuncNan):
             status |= statnan
 
         # Multiply by mask for the aperture error calc.  The error on a
         # replaced pixel is unknown.  In one sense, it's infinite.  In
         # another, it's zero, or should be close.  So, ignore those points.
         # Sky error still contributes.
-        apunc[np.where(apuncloc == 0)] = 0
-        ret[aperr] = np.sqrt(np.sum(~apmsk * apunc ** 2.0) +
-                             np.size(aploc) * ret[skyerr] ** 2.0)
+        apunc[apuncNan] = 0
+        apunc[apmsk] = 0
+        ret[aperr] = np.sqrt(np.nansum(apunc**2) +
+                             (np.size(aploc)*ret[skyerr]**2))
 
         # Expand correction.  We overcount by iexpand^2, but that's
         # inside sqrt:
@@ -640,16 +641,18 @@ def apphot_status(data):
     if sum(data.status != 0) > 0:
         unique_flags = np.unique(data.status)
         unique_flags_binary = ['{:08b}'.format(int(i)) for i in unique_flags]
+        print('    A warning by the aperture photometry routine:')
         for binary_flag in unique_flags_binary:
-            print('A warning by the aperture photometry routine:')
             if binary_flag[-1] == '1':
-                print('There are NaN(s) in the photometry aperture')
+                print('      There are NaN(s) or infinities in the photometry'
+                      ' aperture')
             if binary_flag[-2] == '1':
-                print('There are masked pixel(s) in the photometry aperture')
+                print('      There are masked pixel(s) in the photometry '
+                      'aperture')
             if binary_flag[-3] == '1':
-                print('The aperture is off the edge of the image')
+                print('      The aperture is off the edge of the image')
             if binary_flag[-4] == '1':
-                print('A fraction less than skyfrac of the sky annulus '
+                print('      A fraction less than skyfrac of the sky annulus '
                       'pixels is in the image and not masked')
 
 
