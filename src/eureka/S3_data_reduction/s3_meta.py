@@ -86,6 +86,11 @@ class S3MetaClass(MetaClass):
         self.dqmask = getattr(self, 'dqmask', True)
         self.manmask = getattr(self, 'manmask', None)
         self.expand = getattr(self, 'expand', 1)
+        if self.expand != int(self.expand) or self.expand < 1:
+            raise ValueError(f'expand must an integer >= 1, but got '
+                             f'{meta.expand}')
+        else:
+            self.expand = int(self.expand)
 
         # Outlier rejection along time axis
         self.ff_outlier = getattr(self, 'ff_outlier', False)
@@ -170,11 +175,12 @@ class S3MetaClass(MetaClass):
         - 2024-03 Taylor J Bell
             Initial version setting defaults for any photometric data.
         '''
+        # FINDME: We should soon be able to support expand != 1 for photometry
         self.expand = getattr(self, 'expand', 1)
         if self.expand > 1:
             # Super sampling not supported for photometry
             # This is here just in case someone tries to super sample
-            print("Super sampling not supported for photometry."
+            print("Super sampling is not currently supported for photometry. "
                   "Setting meta.expand to 1.")
             self.expand = 1
 
@@ -192,12 +198,24 @@ class S3MetaClass(MetaClass):
 
         # Photometric extraction parameters
         self.phot_method = getattr(self, 'phot_method', 'poet')
+        self.aperture_shape = getattr(self, 'aperture_shape', 'circle')
         if self.phot_method in ['photutils', 'optimal']:
             self.aperture_edge = getattr(self, 'aperture_edge', 'center')
-            self.aperture_shape = getattr(self, 'aperture_shape', 'circle')
             if self.aperture_shape != 'circle':
                 self.photap_b = getattr(self, 'photap_b')
                 self.photap_theta = getattr(self, 'photap_theta', 0)
+        elif self.phot_method == 'poet':
+            if self.aperture_shape not in ['circle', 'hexagon']:
+                raise ValueError(f'aperture_shape must be "circle" or "hexagon", '
+                                 f'but got {self.aperture_shape}')
+            self.betahw = getattr(self, 'betahw', None)
+            if self.betahw is not None and self.betahw <= 0:
+                raise ValueError(f'betahw must be > 0, but got {self.betahw}')
+            elif self.betahw is not None and self.betahw != int(self.betahw):
+                raise ValueError(f'betahw must be an integer, but got '
+                                 f'{self.betahw}')
+            elif self.betahw is not None:
+                self.betahw = int(self.betahw)
         self.moving_centroid = getattr(self, 'moving_centroid', False)
         self.interp_method = getattr(self, 'interp_method', 'cubic')
         self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
@@ -205,11 +223,18 @@ class S3MetaClass(MetaClass):
         self.photap = getattr(self, 'photap')
         self.skyin = getattr(self, 'skyin')
         self.skywidth = getattr(self, 'skywidth')
+        self.minskyfrac = getattr(self, 'minskyfrac', 0.1)
+        if ~self.skip_apphot_bg and ~(0 < meta.minskyfrac < 1):
+            raise ValueError(f'skyfrac is {meta.minskyfrac} but must be in '
+                             'range [0,1]')
 
         self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
         self.bg_x1 = getattr(self, 'bg_x1', None)
         self.bg_x2 = getattr(self, 'bg_x2', None)
-        self.bg_method = getattr(self, 'bg_method', 'mean')
+        self.bg_method = getattr(self, 'bg_method', 'median')
+        if ~self.skip_apphot_bg and self.bg_method not in ['mean', 'median']:
+            raise ValueError(f'bg_method must be "mean" or "median", but got '
+                             f'{self.bg_method}')
         self.p3thresh = getattr(self, 'p3thresh', 5)
 
     def set_MIRI_defaults(self):

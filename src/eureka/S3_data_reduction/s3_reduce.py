@@ -546,30 +546,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             data, saved_photometric_profile = apphot.optphot(
                                 data, meta, i, saved_photometric_profile)
                         elif meta.phot_method == 'poet':
-                            if meta.moving_centroid:
-                                position = [data.centroid_y.values[i],
-                                            data.centroid_x.values[i]]
-                            else:
-                                position = [np.median(data.centroid_y.values),
-                                            np.median(data.centroid_x.values)]
-                            aphot = apphot.apphot(
-                                meta, image=data.flux[i].values,
-                                ctr=position, photap=meta.photap,
-                                skyin=meta.skyin, skyout=meta.skyout,
-                                betahw=1, targpos=position,
-                                mask=data.mask[i].values,
-                                imerr=data.err[i].values,
-                                skyfrac=0.1, med=True, expand=1, isbeta=False,
-                                nochecks=False, aperr=True, nappix=True,
-                                skylev=True, skyerr=True, nskypix=True,
-                                nskyideal=True, status=True, betaper=True,
-                                aperture_shape=meta.aperture_shape)
-                            # Save results into arrays
-                            (data['aplev'][i], data['aperr'][i],
-                                data['nappix'][i], data['skylev'][i],
-                                data['skyerr'][i], data['nskypix'][i],
-                                data['nskyideal'][i], data['status'][i],
-                                data['betaper'][i]) = aphot
+                            data = apphot.apphot(data, meta, i)
                         elif meta.phot_method == 'photutils':
                             data = apphot.photutils_apphot(data, meta, i)
                         else:
