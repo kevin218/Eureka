@@ -48,4 +48,4 @@ def nan_helper(y):
         https://stackoverflow.com/questions/6518811/
         interpolate-nan-values-in-a-numpy-array
     """
-    return np.isnan(y), lambda z: z.nonzero()[0]
+    return np.isnan(y), lambda z: np.nonzero(z)[0]

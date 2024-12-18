@@ -2,7 +2,8 @@ import numpy as np
 try:
     import pymc3 as pm
     import pymc3_ext as pmx
-except:
+    import arviz
+except ModuleNotFoundError:
     # PyMC3 hasn't been installed
     pass
 from astropy import table
@@ -105,6 +106,25 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
             log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
         else:
             log.writelog(f'{freenames[i]}: {fit_params[i]}')
+    if meta.pixelsampling:
+        log.writelog('\nSpherical Harmonic Basis:')
+
+        for chan in range(model.nchannel_fitted):
+            if chan == 0:
+                chankey = ''
+            else:
+                chankey = f'_ch{chan}'
+            if model.nchannel_fitted > 1:
+                log.writelog(f'  Channel {chan+1}:')
+                padding = '    '
+            else:
+                padding = '  '
+            log.writelog(f'{padding}fp: {map_soln["fp"+chankey]}')
+            for ell in range(1, meta.ydeg+1):
+                for m in range(-ell, ell+1):
+                    name = f'Y{ell}{m}'
+                    log.writelog(f'{padding}{name}: '
+                                 f'{map_soln[name+chankey][0]}')
     log.writelog('')
 
     # Plot fit
@@ -125,6 +145,10 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
                                  or 'poet_pc' in meta.run_myfuncs
                                  or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
+
+    if meta.pixelsampling and meta.isplots_S5 >= 1:
+        eclipse_maps = map_soln['map'][np.newaxis]
+        plots.plot_eclipse_map(lc, eclipse_maps, meta, fitter=calling_function)
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3 and calling_function == 'exoplanet':
@@ -221,6 +245,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                      mute=(not meta.verbose))
         log.writelog('', mute=(not meta.verbose))
 
+    trace_az = arviz.from_pymc3(trace, model=model.model)
     samples = np.hstack([trace[name].reshape(-1, 1) for name in freenames])
 
     # Record median + percentiles
@@ -268,6 +293,34 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         else:
             log.writelog(f'{freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
                          f' -{lower_errs[i]})')
+    if meta.pixelsampling:
+        log.writelog('\nSpherical Harmonic Basis:')
+
+        for chan in range(model.nchannel_fitted):
+            if chan == 0:
+                chankey = ''
+            else:
+                chankey = f'_ch{chan}'
+            if model.nchannel_fitted > 1:
+                log.writelog(f'  Channel {chan+1}:')
+                padding = '    '
+            else:
+                padding = '  '
+
+            othernames = ['fp', ]
+            for ell in range(1, meta.ydeg+1):
+                for m in range(-ell, ell+1):
+                    othernames.append(f'Y{ell}{m}')
+
+            for name in othernames:
+                values = trace_az.posterior.stack(sample=("chain", "draw")
+                                                  )[name+chankey][:]
+                q = np.percentile(values, [16, 50, 84])
+                medval = q[1]  # median
+                uppererr = q[2]-q[1]
+                lowererr = q[1]-q[0]
+                log.writelog(f'{padding}{name}: {medval} (+{uppererr},'
+                             f' -{lowererr})')
     log.writelog('')
 
     # Plot fit
@@ -289,6 +342,12 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                                  or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter='nuts')
 
+    # Show the inferred planetary brightness map
+    if meta.pixelsampling and meta.isplots_S5 >= 1:
+        eclipse_maps = np.transpose(trace_az.posterior.stack(
+            sample=("chain", "draw"))['map'][:], [2, 0, 1])
+        plots.plot_eclipse_map(lc, eclipse_maps, meta, fitter='nuts')
+
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='nuts')
@@ -302,6 +361,52 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='nuts')
+
+        if meta.pixelsampling:
+            freenames_temp = np.copy(freenames)
+            samples_temp = np.copy(samples)
+            for chan in range(model.nchannel_fitted):
+                if chan == 0:
+                    chankey = ''
+                else:
+                    chankey = f'_ch{chan}'
+
+                # Grab all the Ylm values
+                ylm_names = []
+                for ell in range(1, meta.ydeg+1):
+                    for m in range(-ell, ell+1):
+                        ylm_names.append(f'Y{ell}{m}{chankey}')
+                ylms = []
+                for name in ylm_names:
+                    # Grab all the Ylm values from the trace
+                    ylms.append(trace_az.posterior.stack(
+                        sample=("chain", "draw")
+                    )[name][:].to_numpy().flatten())
+
+                # Replace pixel values with Ylms for a second corner plot
+                freenames_ylm = []
+                samples_ylm = []
+                for i, freename in enumerate(freenames_temp):
+                    if f'pixel{chankey}' == freename:
+                        # Replace pixel values with Ylm values
+                        freenames_ylm.extend(ylm_names)
+                        samples_ylm.extend(ylms)
+                    elif (f'pixel{chankey}' not in freename or
+                            (chan == 0 and model.nchannel_fitted > 1
+                             and 'pixel_ch' in freename)):
+                        # Keep non-pixel values (or pixel values from
+                        # upcoming channels) as they were
+                        freenames_ylm.append(freename)
+                        samples_ylm.append(samples_temp[:, i])
+                samples_ylm = np.array(samples_ylm).T
+
+                # Update temp variables to prepare for next channel
+                # (if relevant)
+                freenames_temp = np.copy(freenames_ylm)
+                samples_temp = np.copy(samples_ylm)
+
+            plots.plot_corner(samples_ylm, lc, meta, freenames_ylm,
+                              fitter='Ylm_nuts')
 
     # Make a new model instance
     model.chi2red = chi2red
