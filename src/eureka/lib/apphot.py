@@ -759,8 +759,8 @@ def optphot(data, meta, i, saved_photometric_profile):
     # Compute the number of good pixels in object aperture and sky annulus
     if not meta.skip_apphot_bg:
         nskypix = aperture_photometry(good_pixels, sky_annul,
-                                    method=meta.aperture_edge
-                                    )['aperture_sum'].data[0]
+                                      method=meta.aperture_edge
+                                      )['aperture_sum'].data[0]
         nskyideal = aperture_photometry(np.ones_like(good_pixels), sky_annul,
                                         method=meta.aperture_edge
                                         )['aperture_sum'].data[0]
@@ -774,7 +774,7 @@ def optphot(data, meta, i, saved_photometric_profile):
     if not meta.skip_apphot_bg:
         # Compute the sky flux per pixel
         skytable = aperture_photometry(flux, sky_annul, derr, mask,
-                                    method=meta.aperture_edge)
+                                       method=meta.aperture_edge)
         skylev = skytable['aperture_sum'].data[0]/nskypix
         skyerr = skytable['aperture_sum_err'].data[0]/nskypix
 
@@ -860,8 +860,8 @@ def photutils_apphot(data, meta, i):
     # Compute the number of good pixels in object aperture and sky annulus
     if not meta.skip_apphot_bg:
         nskypix = aperture_photometry(good_pixels, sky_annul,
-                                    method=meta.aperture_edge
-                                    )['aperture_sum'].data[0]
+                                      method=meta.aperture_edge
+                                      )['aperture_sum'].data[0]
         nskyideal = aperture_photometry(np.ones_like(good_pixels), sky_annul,
                                         method=meta.aperture_edge
                                         )['aperture_sum'].data[0]
@@ -878,7 +878,7 @@ def photutils_apphot(data, meta, i):
     if not meta.skip_apphot_bg:
         # Compute the sky flux per pixel
         skytable = aperture_photometry(flux, sky_annul, derr, mask,
-                                    method=meta.aperture_edge)
+                                       method=meta.aperture_edge)
         skylev_total = skytable['aperture_sum'].data[0]
         skylev = skylev_total/nskypix
         skyerr = skytable['aperture_sum_err'].data[0]/nskypix
