@@ -33,11 +33,13 @@ def apphot(data, meta, i):
     image = data.flux.values[i]
     mask = data.mask.values[i]
     imerr = data.err.values[i]
+    # POET apphot code requires (y,x) coordinates instead of (x,y)
     if meta.moving_centroid:
-        ctr = [data.centroid_x.values[i], data.centroid_y.values[i]]
+        ctr = [data.centroid_y.values[i],
+               data.centroid_x.values[i]]
     else:
-        ctr = [np.median(data.centroid_x.values),
-               np.median(data.centroid_y.values)]
+        ctr = [np.median(data.centroid_y.values),
+               np.median(data.centroid_x.values)]
 
     # set initial error status to 'good' = 0
     status = 0
@@ -122,8 +124,8 @@ def apphot(data, meta, i):
         # Calculate beta values and scale photometric extraction aperture
         # with noise pixel parameter (beta).
 
-        ctr_y = int(ctr[1])
-        ctr_x = int(ctr[0])
+        ctr_y = int(ctr[0])
+        ctr_x = int(ctr[1])
         betahw = int(betahw)
 
         # Create a box of width and length (betahw) around the target position
@@ -141,6 +143,8 @@ def apphot(data, meta, i):
 
         # Return aperture size used for beta.
         betaper = iphotap
+    else:
+        betaper = 0
 
     # APERTURE
     # make aperture mask, extract data and mask
@@ -407,8 +411,8 @@ def optphot(data, meta, i, saved_photometric_profile):
                 weight = (np.sqrt(xpx_scaled**2+ypx_scaled**2) <= 1
                           ).astype(float)
             elif meta.aperture_shape == 'rectangle':
-                weight = ((np.abs(xpx_scaled) <= meta.photap) &
-                          (np.abs(ypx_scaled) <= meta.photap_b)).astype(float)
+                weight = ((np.abs(xpx_scaled) <= 1) &
+                          (np.abs(ypx_scaled) <= 1)).astype(float)
             else:
                 raise ValueError('aperture_shape must be "circle", "ellipse", '
                                  'or "rectangle", but got '
@@ -451,15 +455,15 @@ def optphot(data, meta, i, saved_photometric_profile):
         # Sky annulus has the same aspect ratio and orientation as source aper
         theta = meta.photap_theta*np.pi/180
         sky_annul = EllipticalAnnulus(position, meta.skyin, meta.skyout,
-                                      meta.skyin*(meta.photap_b/meta.photap),
                                       meta.skyout*(meta.photap_b/meta.photap),
+                                      meta.skyin*(meta.photap_b/meta.photap),
                                       theta)
     elif meta.aperture_shape == 'rectangle':
         # Sky annulus has the same aspect ratio and orientation as source aper
         theta = meta.photap_theta*np.pi/180
         sky_annul = RectangularAnnulus(position, meta.skyin, meta.skyout,
-                                       meta.skyin*(meta.photap_b/meta.photap),
                                        meta.skyout*(meta.photap_b/meta.photap),
+                                       meta.skyin*(meta.photap_b/meta.photap),
                                        theta)
     else:
         raise ValueError(f'Unknown aperture_shape "{meta.aperture_shape}"')
@@ -549,8 +553,8 @@ def photutils_apphot(data, meta, i):
         obj_aper = EllipticalAperture(position, meta.photap, meta.photap_b,
                                       theta)
         sky_annul = EllipticalAnnulus(position, meta.skyin, meta.skyout,
-                                      meta.skyin*(meta.photap_b/meta.photap),
                                       meta.skyout*(meta.photap_b/meta.photap),
+                                      meta.skyin*(meta.photap_b/meta.photap),
                                       theta)
     elif meta.aperture_shape == 'box':
         # Sky annulus has the same aspect ratio and orientation as source aper
@@ -558,8 +562,8 @@ def photutils_apphot(data, meta, i):
         obj_aper = RectangularAperture(position, meta.photap, meta.photap_b,
                                        theta)
         sky_annul = RectangularAnnulus(position, meta.skyin, meta.skyout,
-                                       meta.skyin*(meta.photap_b/meta.photap),
                                        meta.skyout*(meta.photap_b/meta.photap),
+                                       meta.skyin*(meta.photap_b/meta.photap),
                                        theta)
     else:
         raise ValueError(f'Unknown aperture_shape "{meta.aperture_shape}"')

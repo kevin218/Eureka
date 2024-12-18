@@ -87,8 +87,8 @@ class S3MetaClass(MetaClass):
         self.manmask = getattr(self, 'manmask', None)
         self.expand = getattr(self, 'expand', 1)
         if self.expand != int(self.expand) or self.expand < 1:
-            raise ValueError(f'expand must an integer >= 1, but got '
-                             f'{meta.expand}')
+            raise ValueError('expand must an integer >= 1, but got '
+                             f'{self.expand}')
         else:
             self.expand = int(self.expand)
 
@@ -175,11 +175,9 @@ class S3MetaClass(MetaClass):
         - 2024-03 Taylor J Bell
             Initial version setting defaults for any photometric data.
         '''
-        # FINDME: We should soon be able to support expand != 1 for photometry
         self.expand = getattr(self, 'expand', 1)
         if self.expand > 1:
-            # Super sampling not supported for photometry
-            # This is here just in case someone tries to super sample
+            # FINDME: We should soon be able to support expand != 1 for photometry
             print("Super sampling is not currently supported for photometry. "
                   "Setting meta.expand to 1.")
             self.expand = 1
@@ -209,12 +207,16 @@ class S3MetaClass(MetaClass):
                                  'or "rectangle", but got '
                                  f'{self.aperture_shape}')
             if self.aperture_shape != 'circle':
-                self.photap_b = getattr(self, 'photap_b')
+                self.photap_b = getattr(self, 'photap_b', self.photap)
                 self.photap_theta = getattr(self, 'photap_theta', 0)
             else:
                 self.photap_b = self.photap
                 self.photap_theta = 0
         elif self.phot_method == 'poet':
+            self.aperture_edge = getattr(self, 'aperture_edge', 'center')
+            if self.aperture_edge != 'center':
+                raise ValueError('aperture_edge must be "center" for poet, '
+                                 f'but got {self.aperture_edge}')
             if self.aperture_shape not in ['circle', 'hexagon']:
                 raise ValueError(f'aperture_shape must be "circle" or "hexagon", '
                                  f'but got {self.aperture_shape}')
