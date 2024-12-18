@@ -693,12 +693,12 @@ def optphot(data, meta, i, saved_photometric_profile):
         xpx = np.arange(profile.shape[1])
         ypx = np.arange(profile.shape[0])
         xpx, ypx = np.meshgrid(xpx, ypx)
-        theta = meta.photap_theta*np.pi/180
         if meta.aperture_edge == 'center':
             if meta.aperture_shape == 'circle':
                 inds = np.sqrt((xpx-position[0])**2
                                + (ypx-position[1])**2) > meta.photap
             elif meta.aperture_shape == 'ellipse':
+                theta = meta.photap_theta*np.pi/180
                 x_trans = ((xpx-position[0])*np.cos(theta)
                            + (ypx-position[1])*np.sin(theta))
                 y_trans = (-(xpx-position[0])*np.sin(theta)
@@ -706,6 +706,7 @@ def optphot(data, meta, i, saved_photometric_profile):
                 inds = ((x_trans/meta.photap)**2
                         + (y_trans/meta.photap_b)**2 > 1)
             elif meta.aperture_shape == 'rectangle':
+                theta = meta.photap_theta*np.pi/180
                 x_trans = ((xpx-position[0])*np.cos(theta)
                            + (ypx-position[1])*np.sin(theta))
                 y_trans = (-(xpx-position[0])*np.sin(theta)
@@ -879,12 +880,11 @@ def photutils_apphot(data, meta, i):
         # Compute the sky flux per pixel
         skytable = aperture_photometry(flux, sky_annul, derr, mask,
                                        method=meta.aperture_edge)
-        skylev_total = skytable['aperture_sum'].data[0]
-        skylev = skylev_total/nskypix
+        skylev = skytable['aperture_sum'].data[0]/nskypix
         skyerr = skytable['aperture_sum_err'].data[0]/nskypix
 
         # Subtract the sky level that fell within the source aperture
-        aplev -= skylev_total
+        aplev -= skylev*nappix
 
         # Add the skyerr to the aperr in quadrature
         aperr = np.sqrt(aperr**2 + nappix*skyerr**2)
