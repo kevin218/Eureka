@@ -1,4 +1,7 @@
 import numpy as np
+from shapely.geometry import Polygon, Point
+from shapely.affinity import rotate
+from functools import partial
 from photutils.aperture import (aperture_photometry, CircularAperture,
                                 EllipticalAperture, RectangularAperture,
                                 CircularAnnulus, EllipticalAnnulus,
@@ -108,10 +111,12 @@ def apphot(data, meta, i):
         _, skyerr = me.meanerr(iimage, iimerr, mask=skymask, err=True)
         # Expand correction. Since repeats are correlated,
         skyerr *= meta.expand
-    elif meta.bg_method == 'mean'
+    elif meta.bg_method == 'mean':
         skylev, skyerr = me.meanerr(iimage, iimerr, mask=skymask, err=True)
         # Expand correction. Since repeats are correlated,
         skyerr *= meta.expand
+    else:
+        raise ValueError(f'Unknown bg_method "{meta.bg_method}"')
 
     if meta.betahw is not None:
         # Calculate beta values and scale photometric extraction aperture
@@ -239,6 +244,127 @@ def apphot_status(data):
                       'pixels is in the image and not masked')
 
 
+def transform_pixels(x, y, position, a, b=0, theta=0):
+    """Transform the pixel coordinates based on an aperture's parameters.
+
+    Parameters
+    ----------
+    x : ndarray
+        Pixel x-coordinates to be transformed.
+    y : ndarray
+        Pixel y-coordinates to be transformed.
+    position : list
+        [cx, cy] list for the center of the aperture.
+    a : float
+        The semi-major axis of the ellipse or rectangle or the radius of
+        the circle.
+    b : float; optional
+        The semi-minor axes of the ellipse or rectangle or the radius of
+        the circle. Defaults to 0, in which case b will be set to a.
+    theta : float; optional
+        Rotation angle in degrees. Defaults to 0.
+
+    Returns
+    -------
+    x : ndarray
+        Transformed pixel x-coordinates.
+    y : ndarray
+        Transformed pixel y-coordinates.
+    """
+    theta *= np.pi/180
+    cx, cy = position
+    if b == 0:
+        b = a
+    cos_theta = np.cos(theta)
+    sin_theta = np.sin(theta)
+    x_rot = cos_theta*(x-cx) + sin_theta*(y-cy)
+    y_rot = -sin_theta*(x-cx) + cos_theta*(y-cy)
+    return x_rot/a, y_rot/b
+
+def circle_overlap(xpx, ypx, position, a, b=0, theta=0):
+    """Helper function for circle and ellipse overlap.
+
+    Parameters
+    ----------
+    xpx : ndarray
+        Pixel x-coordinates.
+    ypx : ndarray
+        Pixel y-coordinates.
+    position : list
+        [cx, cy] list for the center of the aperture.
+    a : float
+        The semi-major axis of the ellipse or the radius of the circle.
+    b : float; optional
+        The semi-minor axes of the ellipse or the radius of the circle.
+        Defaults to 0, in which case b will be set to a.
+    theta : float; optional
+        Rotation angle of the ellipse in degrees. Defaults to 0.
+
+    Returns
+    -------
+    fractionalArea : float
+        The fractional area of the circle or ellipse that overlaps with the
+        pixel.
+    """
+    xmin, ymin = transform_pixels(xpx-0.5, ypx-0.5, position, a, b, theta)
+    xmax, ymax = transform_pixels(xpx+0.5, ypx+0.5, position, a, b, theta)
+    r = 1  # We've just scaled the pixels
+
+    pixel_polygon = Polygon([
+        (xmin, ymin), (xmin, ymax), (xmax, ymax), (xmax, ymin)])
+    circle = Point(0, 0).buffer(r)
+    intersection = pixel_polygon.intersection(circle)
+    if intersection.is_empty:
+        return 0.0
+    else:
+        pixel_area = (xmax-xmin)*(ymax-ymin)
+        return intersection.area/pixel_area
+
+
+def rectangle_overlap(xpx, ypx, position, a, b=0, theta=0):
+    """Helper function for circle and ellipse overlap.
+
+    Parameters
+    ----------
+    xpx : ndarray
+        Pixel x-coordinates.
+    ypx : ndarray
+        Pixel y-coordinates.
+    position : list
+        [cx, cy] list for the center of the aperture.
+    a : float
+        Half the x-axis size of the rectangle.
+    b : float; optional
+        Half the y-axis size of the rectangle. Defaults to 0, in which case
+        b will be set to a.
+    theta : float; optional
+        Rotation angle of the rectangle in degrees. Defaults to 0.
+
+    Returns
+    -------
+    fractionalArea : float
+        The fractional area of the rectangle that overlaps with the pixel.
+    """
+    if b == 0:
+        b = a
+
+    xmin = xpx - 0.5 - position[0]
+    xmax = xpx + 0.5 - position[0]
+    ymin = ypx - 0.5 - position[1]
+    ymax = ypx + 0.5 - position[1]
+
+    pixel_polygon = Polygon([
+        (xmin, ymin), (xmin, ymax), (xmax, ymax), (xmax, ymin)])
+    rect_polygon = Polygon([
+        (-a, -b), (a, -b), (a, b), (-a, b)])
+    rotated_rect = rotate(rect_polygon, theta, origin=(0, 0))
+    intersection = pixel_polygon.intersection(rotated_rect)
+    if intersection.is_empty:
+        return 0.0
+    else:
+        return intersection.area
+
+
 def optphot(data, meta, i, saved_photometric_profile):
     """
     Perform optimal photometric extraction and annular sky subtraction on the
@@ -269,45 +395,46 @@ def optphot(data, meta, i, saved_photometric_profile):
                     np.median(data.centroid_y.values)]
 
     if saved_photometric_profile is None:
-        profile = np.ma.copy(data.medflux.values)
+        profile = np.ma.masked_invalid(data.medflux.values)
         xpx = np.arange(profile.shape[1])
         ypx = np.arange(profile.shape[0])
         xpx, ypx = np.meshgrid(xpx, ypx)
         if meta.aperture_edge == 'center':
-            if meta.aperture_shape == 'circle':
-                inds = np.sqrt((xpx-position[0])**2
-                               + (ypx-position[1])**2) > meta.photap
-            elif meta.aperture_shape == 'ellipse':
-                theta = meta.photap_theta*np.pi/180
-                x_trans = ((xpx-position[0])*np.cos(theta)
-                           + (ypx-position[1])*np.sin(theta))
-                y_trans = (-(xpx-position[0])*np.sin(theta)
-                           + (ypx-position[1])*np.cos(theta))
-                inds = ((x_trans/meta.photap)**2
-                        + (y_trans/meta.photap_b)**2 > 1)
+            xpx_scaled, ypx_scaled = transform_pixels(
+                xpx, ypx, position, meta.photap, meta.photap_b,
+                meta.photap_theta)
+            if meta.aperture_shape in ['circle', 'ellipse']:
+                weight = (np.sqrt(xpx_scaled**2+ypx_scaled**2) <= 1
+                          ).astype(float)
             elif meta.aperture_shape == 'rectangle':
-                theta = meta.photap_theta*np.pi/180
-                x_trans = ((xpx-position[0])*np.cos(theta)
-                           + (ypx-position[1])*np.sin(theta))
-                y_trans = (-(xpx-position[0])*np.sin(theta)
-                           + (ypx-position[1])*np.cos(theta))
-                inds = ((np.abs(x_trans) > meta.photap)
-                        & (np.abs(y_trans) > meta.photap_b))
+                weight = ((np.abs(xpx_scaled) <= meta.photap) &
+                          (np.abs(ypx_scaled) <= meta.photap_b)).astype(float)
             else:
-                raise ValueError('Unknown aperture_shape '
+                raise ValueError('aperture_shape must be "circle", "ellipse", '
+                                 'or "rectangle", but got '
                                  f'{meta.aperture_shape}')
-            profile[inds] = 0
         elif meta.aperture_edge == 'exact':
-            raise ValueError('Optimal photometric extraction using exact '
-                             'apertures is not yet supported.')
+            if meta.aperture_shape in ['circle', 'ellipse']:
+                overlap_func = circle_overlap
+            elif meta.aperture_shape == 'rectangle':
+                overlap_func = rectangle_overlap
+            else:
+                raise ValueError('aperture_edge must be "center" or "exact", '
+                                 f'but got {meta.aperture_edge}')
+            overlap_func = partial(overlap_func, position=position,
+                                   a=meta.photap, b=meta.photap_b,
+                                   theta=meta.photap_theta)
+            weight = np.vectorize(overlap_func)(xpx, ypx)
         else:
-            raise ValueError(f'Unknown aperture_edge {meta.aperture_edge}')
+            raise ValueError('aperture_edge must be "center" or "exact", '
+                             f'but got {meta.aperture_edge}')
+        profile *= weight
         # Force positivity
         profile[np.where(profile < 0)] = 0
         # Get normalized error-weighted profile
         with np.errstate(divide='ignore', invalid='ignore'):
-            profile /= np.sqrt(profile)
-        profile /= np.sum(profile)
+            profile /= np.ma.sqrt(profile)
+        profile /= np.ma.sum(profile)
     else:
         profile = saved_photometric_profile
 

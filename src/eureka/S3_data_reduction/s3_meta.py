@@ -201,9 +201,19 @@ class S3MetaClass(MetaClass):
         self.aperture_shape = getattr(self, 'aperture_shape', 'circle')
         if self.phot_method in ['photutils', 'optimal']:
             self.aperture_edge = getattr(self, 'aperture_edge', 'center')
+            if self.aperture_edge not in ['center', 'exact']:
+                raise ValueError('aperture_edge must be "center" or "exact", '
+                                 f'but got {self.aperture_edge}')
+            if self.aperture_shape not in ['circle', 'ellipse', 'rectangle']:
+                raise ValueError('aperture_shape must be "circle", "ellipse", '
+                                 'or "rectangle", but got '
+                                 f'{self.aperture_shape}')
             if self.aperture_shape != 'circle':
                 self.photap_b = getattr(self, 'photap_b')
                 self.photap_theta = getattr(self, 'photap_theta', 0)
+            else:
+                self.photap_b = self.photap
+                self.photap_theta = 0
         elif self.phot_method == 'poet':
             if self.aperture_shape not in ['circle', 'hexagon']:
                 raise ValueError(f'aperture_shape must be "circle" or "hexagon", '
@@ -224,8 +234,8 @@ class S3MetaClass(MetaClass):
         self.skyin = getattr(self, 'skyin')
         self.skywidth = getattr(self, 'skywidth')
         self.minskyfrac = getattr(self, 'minskyfrac', 0.1)
-        if ~self.skip_apphot_bg and ~(0 < meta.minskyfrac < 1):
-            raise ValueError(f'skyfrac is {meta.minskyfrac} but must be in '
+        if ~self.skip_apphot_bg and not (0 < self.minskyfrac < 1):
+            raise ValueError(f'skyfrac is {self.minskyfrac} but must be in '
                              'range [0,1]')
 
         self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
