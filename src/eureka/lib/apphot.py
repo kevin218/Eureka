@@ -84,7 +84,7 @@ def apphot(data, meta, i):
     # FINDME: include NaNs and zero errors
     nskypix = np.sum(~skymask)/meta.expand**2
     szsky = (int(np.ceil(iskyout))*2+3)*np.array([1, 1], dtype=int)
-    ctrsky = (ictr%1)+np.ceil(iskyout)+1
+    ctrsky = (ictr % 1)+np.ceil(iskyout)+1
     # nskyideal = all pixels in sky
     nskyideal = (np.sum(~np.logical_and(
         apFunc(iskyout, ctrsky, szsky), apFunc(iskyin, ctrsky, szsky)))
@@ -126,7 +126,7 @@ def apphot(data, meta, i):
 
         ctr_y = int(ctr[0])
         ctr_x = int(ctr[1])
-        betahw = int(betahw)
+        betahw = int(meta.betahw)
 
         # Create a box of width and length (betahw) around the target position
         betabox = image[ctr_y-betahw:ctr_y+betahw+1,
@@ -284,6 +284,7 @@ def transform_pixels(x, y, position, a, b=0, theta=0):
     x_rot = cos_theta*(x-cx) + sin_theta*(y-cy)
     y_rot = -sin_theta*(x-cx) + cos_theta*(y-cy)
     return x_rot/a, y_rot/b
+
 
 def circle_overlap(xpx, ypx, position, a, b=0, theta=0):
     """Helper function for circle and ellipse overlap.

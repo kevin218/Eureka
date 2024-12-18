@@ -177,7 +177,8 @@ class S3MetaClass(MetaClass):
         '''
         self.expand = getattr(self, 'expand', 1)
         if self.expand > 1:
-            # FINDME: We should soon be able to support expand != 1 for photometry
+            # FINDME: We should soon be able to support expand != 1
+            # for photometry
             print("Super sampling is not currently supported for photometry. "
                   "Setting meta.expand to 1.")
             self.expand = 1
@@ -218,8 +219,8 @@ class S3MetaClass(MetaClass):
                 raise ValueError('aperture_edge must be "center" for poet, '
                                  f'but got {self.aperture_edge}')
             if self.aperture_shape not in ['circle', 'hexagon']:
-                raise ValueError(f'aperture_shape must be "circle" or "hexagon", '
-                                 f'but got {self.aperture_shape}')
+                raise ValueError('aperture_shape must be "circle" or '
+                                 f'"hexagon", but got {self.aperture_shape}')
             self.betahw = getattr(self, 'betahw', None)
             if self.betahw is not None and self.betahw <= 0:
                 raise ValueError(f'betahw must be > 0, but got {self.betahw}')

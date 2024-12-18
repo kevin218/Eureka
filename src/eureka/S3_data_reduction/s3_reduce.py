@@ -556,9 +556,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # plot tilt events
                 if meta.isplots_S3 >= 5 and meta.inst == 'nircam' and \
                    meta.photometry:
+                    position = [np.median(data.centroid_x.values),
+                                np.median(data.centroid_y.values)]
                     refrence_tilt_frame = \
-                        plots_s3.tilt_events(meta, data, log, m,
-                                             position,
+                        plots_s3.tilt_events(meta, data, log, m, position,
                                              saved_refrence_tilt_frame)
 
                     if saved_refrence_tilt_frame is not None:
