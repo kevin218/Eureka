@@ -179,17 +179,28 @@ class S3MetaClass(MetaClass):
             self.expand = 1
 
         self.flag_bg = getattr(self, 'flag_bg', True)
-        self.interp_method = getattr(self, 'interp_method', 'cubic')
-        self.ctr_guess = getattr(self, 'ctr_guess', None)
-        self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
-        self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
+
+        # Centroiding parameters
         self.centroid_method = getattr(self, 'centroid_method', 'fgc')
         if self.centroid_method == 'mgmc':
             self.centroid_tech = getattr(self, 'centroid_tech', 'com')
             self.gauss_frame = getattr(self, 'gauss_frame', 15)
+        self.ctr_guess = getattr(self, 'ctr_guess', None)
+        self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
+
+        self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
+
+        # Photometric extraction parameters
+        self.phot_method = getattr(self, 'phot_method', 'poet')
+        if self.phot_method in ['photutils', 'optimal']:
+            self.aperture_edge = getattr(self, 'aperture_edge', 'center')
+            self.aperture_shape = getattr(self, 'aperture_shape', 'circle')
+            if self.aperture_shape != 'circle':
+                self.photap_b = getattr(self, 'photap_b')
+                self.photap_theta = getattr(self, 'photap_theta', 0)
+        self.moving_centroid = getattr(self, 'moving_centroid', False)
+        self.interp_method = getattr(self, 'interp_method', 'cubic')
         self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
-        self.optphot = getattr(self, 'optphot', False)
-        self.aperture_shape = getattr(self, 'aperture_shape', 'circle')
         # Require these parameters to be set
         self.photap = getattr(self, 'photap')
         self.skyin = getattr(self, 'skyin')
