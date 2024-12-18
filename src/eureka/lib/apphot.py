@@ -757,37 +757,44 @@ def optphot(data, meta, i, saved_photometric_profile):
         raise ValueError(f'Unknown aperture_shape "{meta.aperture_shape}"')
 
     # Compute the number of good pixels in object aperture and sky annulus
-    nskypix = aperture_photometry(good_pixels, sky_annul,
-                                  method=meta.aperture_edge
-                                  )['aperture_sum'].data[0]
-    nskyideal = aperture_photometry(np.ones_like(good_pixels), sky_annul,
+    if not meta.skip_apphot_bg:
+        nskypix = aperture_photometry(good_pixels, sky_annul,
                                     method=meta.aperture_edge
                                     )['aperture_sum'].data[0]
+        nskyideal = aperture_photometry(np.ones_like(good_pixels), sky_annul,
+                                        method=meta.aperture_edge
+                                        )['aperture_sum'].data[0]
     nappix = np.ma.sum(good_pixels * (profile != 0))
 
-    # Compute the sky flux per pixel
-    skytable = aperture_photometry(flux, sky_annul, derr, mask,
-                                   method=meta.aperture_edge)
-    skylev = skytable['aperture_sum'].data[0]/nskypix
-    skyerr = skytable['aperture_sum_err'].data[0]/nskypix
     # Compute the total source flux
     aplev = np.ma.sum(flux*profile)/np.sum(good_pixels*profile)*nappix
     aperr = (1/np.sqrt(np.ma.sum(1/derr**2*good_pixels*profile))
              * np.sqrt(nappix/np.sum(good_pixels*profile)))
-    aperr = np.sqrt(aperr**2 + nappix*skyerr**2)
-    # Subtract the sky level that fell within the source aperture
-    skylev_total = (np.sum(skylev*good_pixels*profile)
-                    / np.sum(good_pixels*profile)*nappix)
-    aplev -= skylev_total
+
+    if not meta.skip_apphot_bg:
+        # Compute the sky flux per pixel
+        skytable = aperture_photometry(flux, sky_annul, derr, mask,
+                                    method=meta.aperture_edge)
+        skylev = skytable['aperture_sum'].data[0]/nskypix
+        skyerr = skytable['aperture_sum_err'].data[0]/nskypix
+
+        # Subtract the sky level that fell within the source aperture
+        skylev_total = (np.sum(skylev*good_pixels*profile)
+                        / np.sum(good_pixels*profile)*nappix)
+        aplev -= skylev_total
+
+        # Add the skyerr to the aperr in quadrature
+        aperr = np.sqrt(aperr**2 + nappix*skyerr**2)
 
     # Store the results in the data object
     data['aplev'][i] = aplev
     data['aperr'][i] = aperr
     data['nappix'][i] = nappix
-    data['skylev'][i] = skylev
-    data['skyerr'][i] = skyerr
-    data['nskypix'][i] = nskypix
-    data['nskyideal'][i] = nskyideal
+    if not meta.skip_apphot_bg:
+        data['skylev'][i] = skylev
+        data['skyerr'][i] = skyerr
+        data['nskypix'][i] = nskypix
+        data['nskyideal'][i] = nskyideal
     data['status'][i] = 0
 
     return data, profile
@@ -851,29 +858,36 @@ def photutils_apphot(data, meta, i):
         raise ValueError(f'Unknown aperture_shape "{meta.aperture_shape}"')
 
     # Compute the number of good pixels in object aperture and sky annulus
-    nskypix = aperture_photometry(good_pixels, sky_annul,
-                                  method=meta.aperture_edge
-                                  )['aperture_sum'].data[0]
-    nskyideal = aperture_photometry(np.ones_like(good_pixels), sky_annul,
+    if not meta.skip_apphot_bg:
+        nskypix = aperture_photometry(good_pixels, sky_annul,
                                     method=meta.aperture_edge
                                     )['aperture_sum'].data[0]
+        nskyideal = aperture_photometry(np.ones_like(good_pixels), sky_annul,
+                                        method=meta.aperture_edge
+                                        )['aperture_sum'].data[0]
     nappix = aperture_photometry(good_pixels, obj_aper,
                                  method=meta.aperture_edge
                                  )['aperture_sum'].data[0]
 
-    # Compute the sky flux per pixel
-    skytable = aperture_photometry(flux, sky_annul, derr, mask,
-                                   method=meta.aperture_edge)
-    skylev = skytable['aperture_sum'].data[0]/nskypix
-    skyerr = skytable['aperture_sum_err'].data[0]/nskypix
     # Compute the total source flux
     aptable = aperture_photometry(flux, obj_aper, derr, mask,
                                   method=meta.aperture_edge)
     aplev = aptable['aperture_sum'].data[0]
     aperr = aptable['aperture_sum_err'].data[0]
-    aperr = np.sqrt(aperr**2 + nappix*skyerr**2)
-    # Subtract the sky level that fell within the source aperture
-    aplev -= skylev*nappix
+
+    if not meta.skip_apphot_bg:
+        # Compute the sky flux per pixel
+        skytable = aperture_photometry(flux, sky_annul, derr, mask,
+                                    method=meta.aperture_edge)
+        skylev_total = skytable['aperture_sum'].data[0]
+        skylev = skylev_total/nskypix
+        skyerr = skytable['aperture_sum_err'].data[0]/nskypix
+
+        # Subtract the sky level that fell within the source aperture
+        aplev -= skylev_total
+
+        # Add the skyerr to the aperr in quadrature
+        aperr = np.sqrt(aperr**2 + nappix*skyerr**2)
 
     # Store the results in the data object
     data['aplev'][i] = aplev
