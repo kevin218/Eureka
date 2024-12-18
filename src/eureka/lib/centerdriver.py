@@ -87,10 +87,10 @@ def centerdriver(method, data, meta, i=None, m=None):
 
     # Store centroid positions and
     # the Gaussian 1-sigma half-widths
-    data['centroid_x'][i] = x + cen[1] - trim
-    data['centroid_y'][i] = y + cen[0] - trim
-    data['centroid_sx'][i] = sx
-    data['centroid_sy'][i] = sy
+    data.centroid_x.values[i] = x + cen[1] - trim
+    data.centroid_y.values[i] = y + cen[0] - trim
+    data.centroid_sx.values[i] = sx
+    data.centroid_sy.values[i] = sy
 
     # Make trimming correction and return
     return data, meta
