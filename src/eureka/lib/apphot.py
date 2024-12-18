@@ -791,3 +791,98 @@ def optphot(data, meta, i, saved_photometric_profile):
     data['status'][i] = 0
 
     return data, profile
+
+
+def photutils_apphot(data, meta, i):
+    """
+    Perform aperture photometric extraction and annular sky subtraction on the
+    input image using photutils.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    i : int
+        The current integration number.
+    saved_ref_median_frame : 2D array
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object containing the extracted photometry data.
+    """
+    if meta.moving_centroid:
+        position = [data.centroid_x.values[i], data.centroid_y.values[i]]
+    else:
+        position = [np.median(data.centroid_x.values),
+                    np.median(data.centroid_y.values)]
+
+    # Grab the current frame and mask
+    mask = data.mask.values[i]
+    good_pixels = (~mask).astype(float)
+    flux = np.ma.masked_where(mask, data.flux.values[i])
+    derr = np.ma.masked_where(mask, data.err.values[i])
+
+    # Setup the object aperture and the sky annulus
+    if meta.aperture_shape == 'circle':
+        obj_aper = CircularAperture(position, meta.photap)
+        sky_annul = CircularAnnulus(position, meta.skyin, meta.skyout)
+    elif meta.aperture_shape == 'ellipse':
+        # Sky annulus has the same aspect ratio and orientation as source aper
+        theta = meta.photap_theta*np.pi/180
+        obj_aper = EllipticalAperture(position, meta.photap, meta.photap_b,
+                                      theta)
+        sky_annul = EllipticalAnnulus(position, meta.skyin, meta.skyout,
+                                      meta.skyin*(meta.photap_b/meta.photap),
+                                      meta.skyout*(meta.photap_b/meta.photap),
+                                      theta)
+    elif meta.aperture_shape == 'box':
+        # Sky annulus has the same aspect ratio and orientation as source aper
+        theta = meta.photap_theta*np.pi/180
+        obj_aper = RectangularAperture(position, meta.photap, meta.photap_b,
+                                       theta)
+        sky_annul = RectangularAnnulus(position, meta.skyin, meta.skyout,
+                                       meta.skyin*(meta.photap_b/meta.photap),
+                                       meta.skyout*(meta.photap_b/meta.photap),
+                                       theta)
+    else:
+        raise ValueError(f'Unknown aperture_shape "{meta.aperture_shape}"')
+
+    # Compute the number of good pixels in object aperture and sky annulus
+    nskypix = aperture_photometry(good_pixels, sky_annul,
+                                  method=meta.aperture_edge
+                                  )['aperture_sum'].data[0]
+    nskyideal = aperture_photometry(np.ones_like(good_pixels), sky_annul,
+                                    method=meta.aperture_edge
+                                    )['aperture_sum'].data[0]
+    nappix = aperture_photometry(good_pixels, obj_aper,
+                                 method=meta.aperture_edge
+                                 )['aperture_sum'].data[0]
+
+    # Compute the sky flux per pixel
+    skytable = aperture_photometry(flux, sky_annul, derr, mask,
+                                   method=meta.aperture_edge)
+    skylev = skytable['aperture_sum'].data[0]/nskypix
+    skyerr = skytable['aperture_sum_err'].data[0]/nskypix
+    # Compute the total source flux
+    aptable = aperture_photometry(flux, obj_aper, derr, mask,
+                                  method=meta.aperture_edge)
+    aplev = aptable['aperture_sum'].data[0]
+    aperr = aptable['aperture_sum_err'].data[0]
+    aperr = np.sqrt(aperr**2 + nappix*skyerr**2)
+    # Subtract the sky level that fell within the source aperture
+    aplev -= skylev*nappix
+
+    # Store the results in the data object
+    data['aplev'][i] = aplev
+    data['aperr'][i] = aperr
+    data['nappix'][i] = nappix
+    data['skylev'][i] = skylev
+    data['skyerr'][i] = skyerr
+    data['nskypix'][i] = nskypix
+    data['nskyideal'][i] = nskyideal
+    data['status'][i] = 0
+
+    return data
