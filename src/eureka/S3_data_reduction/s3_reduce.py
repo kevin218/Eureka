@@ -546,8 +546,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             data, saved_photometric_profile = apphot.optphot(
                                 data, meta, i, saved_photometric_profile)
                         elif meta.phot_method == 'poet':
-                            position = [data.centroid_y.values[i],
-                                        data.centroid_x.values[i]]
+                            if meta.moving_centroid:
+                                position = [data.centroid_y.values[i],
+                                            data.centroid_x.values[i]]
+                            else:
+                                position = [np.median(data.centroid_y.values),
+                                            np.median(data.centroid_x.values)]
                             aphot = apphot.apphot(
                                 meta, image=data.flux[i].values,
                                 ctr=position, photap=meta.photap,
