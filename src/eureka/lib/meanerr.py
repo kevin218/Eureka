@@ -86,23 +86,27 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     status = 0
 
     # Mask off NaNs
-    fin = ~np.isfinite(data) + ~np.isfinite(derr)
+    nans = ~np.isfinite(data) + ~np.isfinite(derr)
 
     # Mask off errors = zero
     nonzero = derr == 0
 
     # Final Mask
-    loc = np.where(fin + nonzero + mask)
-    weights = (1.0 / derr[loc] ** 2.0)
+    finalMask = nans + nonzero + mask
+
+    data = np.ma.masked_where(finalMask, data)
+    derr = np.ma.masked_where(finalMask, derr)
+
+    weights = 1/derr**2
 
     # The returns (a tuple if err or status set to True).
-    ret = (np.average(data[loc], weights=weights),)
+    ret = (np.ma.average(data, weights=weights),)
 
     if err:
-        ret = ret + (np.sqrt(1.0 / np.sum(weights)),)
+        ret = ret + (np.sqrt(1/np.ma.sum(weights)),)
 
     if retstatus:
-        if np.any(fin):  # NaNs
+        if np.any(nans):  # NaNs
             status |= 1
         if np.any(nonzero):  # errors = zero
             status |= 2
