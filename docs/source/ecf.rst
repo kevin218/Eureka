@@ -907,6 +907,18 @@ force_positivity
 ''''''''''''''''
 Optional boolean. Used by the sinusoid_pc and poet_pc models. If True, force positive phase variations (phase variations that never go below the bottom of the eclipse). Physically speaking, a negative phase curve is impossible, but strictly enforcing this can hide issues with the decorrelation or potentially bias your measured minimum flux level. Either way, use caution when choosing the value of this parameter.
 
+pixelsampling
+'''''''''''''
+Optional boolean for starry's phase curve and/or eclipse mapping model. Set to ``True`` to use starry's pixel-sampling method to ensure non-negative fluxes across the planet and set priors on the ``pixel`` parameter(s) in your EPF. Set to ``False`` (default) or leave undefined if you want to use starry's spherical harmonic method and are okay with permitting negative fluxes, or if you intend to use Eureka!'s ``sinusoid_pc``, ``quasilambert_pc``, or ``poet_pc`` methods.
+
+ydeg
+''''
+Optional integer. An integer specifying the spherical harmonic order to use with starry's phase curve and/or eclipse mapping model. This setting is mandatory if you set ``pixelsampling`` to ``True``, otherwise the setting is optional and will be inferred from your EPF settings.
+
+oversample
+''''''''''
+Optional integer. Used by starry's phase curve and/or eclipse mapping model when ``pixelsampling`` is set to ``True``. The default value is ``3`` when ``pixelsampling`` is set to ``True`` which should generally suffice for most/all fits. For more details, read the documentation for the ``get_pixel_transforms`` function at https://starry.readthedocs.io/en/latest/SphericalHarmonicMap.
+
 mutualOccultations
 ''''''''''''''''''
 Optional boolean, only relevant for starry astrophysical models. If True (default), then the model will account for planet-planet occultations; if False, then the model will not include planet-planet occultations (and will likely take longer since each planet needs to be modelled separately).
@@ -1158,13 +1170,20 @@ Available fitting parameters are:
    - Starry Phase Curve and Eclipse Mapping Parameters
       The starry model allows for the modelling of an arbitrarily complex phase curve by fitting the phase curve using spherical harmonics terms for the planet's brightness map
 
-      - ``Yl_m`` - Spherical harmonic coefficients normalized by the Y0_0 term where ``l`` and ``m`` should be replaced with integers.
+      - You can use ``Yl_m`` - Spherical harmonic coefficients normalized by the Y0_0 term where ``l`` and ``m`` should be replaced with integers.
 
          ``l`` can be any integer greater than or equal to 1, and ``m`` can be any integer between ``-l`` to ``+l``.
          For example, the ``Y1_0`` term fits for the sub-stellar to anti-stellar brightness ratio (comparable to ``AmpCos1``),
          the ``Y1_1`` term fits for the East--West brightness ratio (comparable to ``-AmpSin1``),
          and the ``Y1_-1`` term fits for the North--South pole brightness ratio (undetectable using phase variations, but potentially detectable using eclipse mapping).
          The ``Y0_0`` term cannot be fit directly but is instead fit through the more observable ``fp`` term which is composed of the ``Y0_0`` term and the square of the ``rp`` term.
+      - OR, you can use ``pixel#`` - Spherical harmonic coefficients converted into pixel space as described at https://starry.readthedocs.io/en/latest/notebooks/PixelSampling/; using pixel sampling can allow you to impose a physicality constraint that the planetary flux does not go negative anywhere.
+
+         Replace the # with the pixel number (starting with just ``pixel`` for pixel #0).
+         The number of pixels for any given fit is a function of the spherical harmonic order (set by ``ydeg`` in your ECF) as well as the oversampling factor (set by ``oversample`` in your ECF).
+         In most cases, you will just want to set the same prior for all pixels, regardless of the spherical harmonic order or oversampling factor;
+         the simplest way to do this is to just set a prior for the ``pixel`` parameter in your EPF which will then automatically be copied to all other pixels not specified in your EPF.
+         Since the numerical values of the pixels are normalized to give the eclipse depth specified by ``fp``, it is recommended to impose a uniform prior spanning the range 0--1 for all pixels.
    - Limb Darkening Parameters
       - ``limb_dark`` - The limb darkening model to be used.
 

@@ -281,8 +281,7 @@ def optimal_spectrum(data, meta, n, m):
         plt.semilogy(data.stdspec.x.values, stdspec[n], '-', color='C1',
                      label='Standard Spec')
         plt.errorbar(data.stdspec.x.values, optspec[n], yerr=opterr[n],
-                     fmt='-', color='C2', ecolor='C2',
-                     label='Optimal Spec')
+                     fmt='-', color='C2', ecolor='C2', label='Optimal Spec')
     else:
         norders = len(meta.orders)
         for j in range(norders):

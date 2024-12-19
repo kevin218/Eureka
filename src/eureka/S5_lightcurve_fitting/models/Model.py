@@ -258,7 +258,7 @@ class Model:
         if self.name != self.default_name:
             label += ': '+self.name
 
-        if not share:
+        if not share and not self.multwhite:
             channel = 0
         else:
             channel = chan

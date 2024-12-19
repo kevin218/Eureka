@@ -10,7 +10,7 @@ from . import lightcurve
 from . import models as m
 try:
     from . import differentiable_models as dm
-except:
+except ModuleNotFoundError:
     # PyMC3 hasn't been installed
     dm = None
 from ..lib import manageevent as me
@@ -190,7 +190,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 if meta.multwhite:
                     for p in range(len(meta.inputdirlist)+1):
                         meta, lc_whites[p], log = \
-                            util.manual_clip(lc_whites[p], meta, log)
+                            util.manual_clip(lc_whites[p], meta, log, p)
                         meta.nints[p] = len(lc_whites[p].time.values)
                 else:
                     meta, lc, log = util.manual_clip(lc, meta, log)
@@ -253,7 +253,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     ld_coeffs = None
 
                 # Make a long list of parameters for each channel
-                longparamlist, paramtitles, freenames = \
+                longparamlist, paramtitles, freenames, params = \
                     make_longparamlist(meta, params, 1)
 
                 log.writelog("\nStarting Fit of White-light Light Curve\n")
@@ -328,7 +328,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 ld_coeffs = None
 
             # Make a long list of parameters for each channel
-            longparamlist, paramtitles, freenames = \
+            longparamlist, paramtitles, freenames, params = \
                 make_longparamlist(meta, params, chanrng)
 
             # Joint White Light Fits (may have different time axis)
@@ -624,9 +624,12 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                multwhite=lc_model.multwhite,
                                nints=lc_model.nints,
                                num_planets=meta.num_planets,
-                               mutualOccultations=meta.mutualOccultations)
+                               mutualOccultations=meta.mutualOccultations,
+                               force_positivity=meta.force_positivity,
+                               pixelsampling=meta.pixelsampling,
+                               oversample=meta.oversample,
+                               ydeg=meta.ydeg, npix=meta.npix)
         modellist.append(t_starry)
-        meta.ydeg = t_starry.ydeg
     if 'batman_tr' in meta.run_myfuncs:
         t_transit = BatmanTransitModel(parameters=params,
                                        fmt='r--', log=log, time=time,
@@ -956,7 +959,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                            paramtitles=paramtitles,
                            multwhite=lc_model.multwhite,
                            nints=lc_model.nints,
-                           num_planets=meta.num_planets)
+                           num_planets=meta.num_planets,
+                           npix=meta.npix)
 
     # Fit the models using one or more fitters
     log.writelog("=========================")
@@ -1062,6 +1066,11 @@ def make_longparamlist(meta, params, chanrng):
         The long list of all parameters relevant to this fit.
     paramtitles : list
         The names of the fitted parameters.
+    freenames : list
+        The list of freely fitted parameters.
+    params : eureka.lib.readEPF.Parameters
+        The updated Parameters object containing the fitted parameters
+        and their priors.
     """
     if meta.multwhite:
         nspecchan = int(len(meta.inputdirlist)+1)
@@ -1079,30 +1088,55 @@ def make_longparamlist(meta, params, chanrng):
 
     for param in paramtitles:
         for c in range(nspecchan):
-            name = param
-            if c > 0:
-                name += f'_ch{c}'
-            longparamlist[c].append(name)
-            if (name not in params.dict.keys() and
-                    getattr(params, param).ptype not in ['shared',
-                                                         'independent']):
-                # Set this parameter based on channel 0
-                params.__setattr__(name, params.dict[param])
+            npix = meta.npix
+            if npix == 0:
+                npix = 1
+            for pix in range(npix):
+                name = param
+                if pix > 0 and param == 'pixel':
+                    # Doing pixel-sampling within starry
+                    name += f'{pix}'
+                elif pix > 0 and param != 'pixel':
+                    # Skip pix>0 for non-pixel parameters
+                    continue
+                if c > 0:
+                    name += f'_ch{c}'
+                if name not in longparamlist[c]:
+                    longparamlist[c].append(name)
+
+                if (name not in params.dict.keys() and
+                        getattr(params, param).ptype != 'independent' and
+                        (c == 0 or getattr(params, param).ptype != 'shared')):
+                    # Set this parameter based on channel 0
+                    params.__setattr__(name, params.dict[param])
 
     freenames = [key for key in params.dict.keys()
                  if getattr(params, key).ptype in
                  ['free', 'shared', 'white_fixed', 'white_free']]
     # Sort the list based on the order input by the user
     freenames_sorted = []
-    for name in paramtitles:
+    for param in paramtitles:
         for c in range(nspecchan):
-            key = ''
-            if c > 0:
-                key += f'_ch{c}'
-            if name+key in freenames:
-                freenames_sorted.append(name+key)
+            npix = meta.npix
+            if npix == 0:
+                npix = 1
+            for pix in range(npix):
+                name = param
+                if pix > 0 and param == 'pixel':
+                    # Doing pixel-sampling within starry
+                    name += f'{pix}'
+                elif pix > 0 and param != 'pixel':
+                    # Skip pix>0 for non-pixel parameters
+                    continue
+                if c > 0:
+                    name += f'_ch{c}'
+                if name in freenames and name not in freenames_sorted:
+                    freenames_sorted.append(name)
 
-    return longparamlist, paramtitles, freenames_sorted
+    if meta.pixelsampling:
+        params.__setattr__('ydeg', [meta.ydeg, 'independent'])
+
+    return longparamlist, paramtitles, freenames_sorted, params
 
 
 def load_specific_s4_meta_info(meta):

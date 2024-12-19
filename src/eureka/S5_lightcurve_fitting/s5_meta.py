@@ -1,4 +1,12 @@
 import numpy as np
+try:
+    import starry
+    starry.config.quiet = True
+    starry.config.lazy = True
+except ModuleNotFoundError:
+    # PyMC3 hasn't been installed
+    pass
+
 from ..lib.readECF import MetaClass
 
 
@@ -154,6 +162,20 @@ class S5MetaClass(MetaClass):
             # Must be provided in the ECF if relevant
             self.tune = getattr(self, 'tune')
             self.draws = getattr(self, 'draws')
+
+        # Starry eclipse mapping pixel-sampling parameters
+        self.pixelsampling = getattr(self, 'pixelsampling', False)
+        self.oversample = getattr(self, 'oversample', 3)
+        if self.pixelsampling:
+            # Must be provided in the ECF if relevant
+            self.ydeg = getattr(self, 'ydeg')
+            # Compute the number of pixels used in sampling
+            map = starry.Map(ydeg=self.ydeg)
+            A = map.get_pixel_transforms(oversample=self.oversample)[3]
+            self.npix = A.shape[1]
+        else:
+            self.ydeg = getattr(self, 'ydeg', None)
+            self.npix = 0
 
         # GP inputs
         self.kernel_inputs = getattr(self, 'kernel_inputs', ['time'])

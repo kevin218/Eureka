@@ -14,6 +14,7 @@ logger.setLevel(logging.ERROR)
 import starry
 starry.config.quiet = True
 starry.config.lazy = True
+import pymc3 as pm
 
 from . import PyMC3Model
 from .AstroModel import PlanetParams
@@ -56,16 +57,6 @@ class StarryModel(PyMC3Model):
             self.udeg = 1
         else:
             self.udeg = 0
-
-        # Find the Ylm value with the largest l value to set ydeg
-        ylm_params = np.where(['Y' == par[0] and par[1].isnumeric()
-                               for par in self.paramtitles])[0]
-        if len(ylm_params) > 0:
-            l_vals = [int(self.paramtitles[ind][1])
-                      for ind in ylm_params]
-            self.ydeg = max(l_vals)
-        else:
-            self.ydeg = 0
 
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
@@ -156,6 +147,11 @@ class StarryModel(PyMC3Model):
         self.systems = []
         self.rps = []
         for chan in range(self.nchannel_fitted):
+            if chan == 0:
+                chankey = ''
+            else:
+                chankey = f'_ch{chan}'
+
             # Initialize PlanetParams object
             pl_params = PlanetParams(self, 0, chan, eval=False)
 
@@ -225,12 +221,51 @@ class StarryModel(PyMC3Model):
                 # Initialize PlanetParams object for this planet
                 pl_params = PlanetParams(self, pid, chan, eval=False)
 
-                if not hasattr(pl_params, 'fp'):
-                    planet_map = starry.Map(ydeg=self.ydeg, amp=0)
+                # Pixel sampling setup
+                if self.pixelsampling:
+                    planet_map = starry.Map(ydeg=pl_params.ydeg)
+                    planet_map_temp = starry.Map(ydeg=pl_params.ydeg)
+
+                    # Get pixel values
+                    p = tt.zeros(0)
+                    for pix in range(self.npix):
+                        pixname = 'pixel'
+                        if pix > 0:
+                            pixname += f'{pix}'
+                        p = tt.concatenate([p, [getattr(pl_params, pixname),]])
+
+                    # Get pixel transform matrix
+                    P2Y = planet_map.get_pixel_transforms(
+                        oversample=self.oversample)[3]
+
+                    # Transform pixels to spherical harmonics
+                    ylms = tt.dot(P2Y, p)
+                    planet_map_temp.amp = ylms[0]
+                    planet_map_temp[1:, :] = ylms[1:]/ylms[0]
+
+                    amp = pl_params.fp/tt.abs_(
+                        planet_map_temp.flux(theta=0)[0])
+                    planet_map.amp = amp*ylms[0]
+                    planet_map[1:, :] = ylms[1:]/ylms[0]
+
+                    # Store the fp, Ylm, and map for convenient access later
+                    if f'fp{chankey}' not in self.freenames:
+                        setattr(self.model, f'fp{chankey}', pm.Deterministic(
+                            f'fp{chankey}', pl_params.fp))
+                    for ell in range(1, pl_params.ydeg+1):
+                        for m in range(-ell, ell+1):
+                            setattr(self.model, f'Y{ell}{m}{chankey}',
+                                    pm.Deterministic(f'Y{ell}{m}{chankey}',
+                                                     planet_map[ell, m]))
+                    setattr(self.model, f'map{chankey}', pm.Deterministic(
+                        f'map{chankey}',
+                        planet_map.render(projection="rect", res=100)))
+                elif not hasattr(pl_params, 'fp'):
+                    planet_map = starry.Map(ydeg=pl_params.ydeg, amp=0)
                 else:
-                    planet_map = starry.Map(ydeg=self.ydeg)
-                    planet_map_temp = starry.Map(ydeg=self.ydeg)
-                    for ell in range(1, self.ydeg+1):
+                    planet_map = starry.Map(ydeg=pl_params.ydeg)
+                    planet_map_temp = starry.Map(ydeg=pl_params.ydeg)
+                    for ell in range(1, pl_params.ydeg+1):
                         for m in range(-ell, ell+1):
                             if hasattr(pl_params, f'Y{ell}{m}'):
                                 planet_map[ell, m] = getattr(pl_params,
@@ -409,6 +444,11 @@ class StarryModel(PyMC3Model):
         self.fit.systems = []
         self.fit_rps = []
         for chan in range(self.nchannel_fitted):
+            if chan == 0:
+                chankey = ''
+            else:
+                chankey = f'_ch{chan}'
+
             # Initialize PlanetParams object
             pl_params = PlanetParams(self, 0, chan, eval=True)
 
@@ -477,12 +517,48 @@ class StarryModel(PyMC3Model):
                 # Initialize PlanetParams object for this planet
                 pl_params = PlanetParams(self, pid, chan, eval=True)
 
-                if not hasattr(pl_params, 'fp'):
-                    planet_map = starry.Map(ydeg=self.ydeg, amp=0)
+                # Pixel sampling setup
+                if self.pixelsampling:
+                    planet_map = starry.Map(ydeg=pl_params.ydeg)
+                    planet_map_temp = starry.Map(ydeg=pl_params.ydeg)
+
+                    # Get pixel values
+                    p = np.zeros(0)
+                    for pix in range(self.npix):
+                        pixname = 'pixel'
+                        if pix > 0:
+                            pixname += f'{pix}'
+                        p = np.concatenate([p, [getattr(pl_params, pixname),]])
+
+                    # Get pixel transform matrix
+                    P2Y = planet_map.get_pixel_transforms(
+                        oversample=self.oversample)[3]
+
+                    # Transform pixels to spherical harmonics
+                    ylms = np.dot(P2Y, p)
+                    planet_map_temp.amp = ylms[0]
+                    planet_map_temp[1:, :] = ylms[1:]/ylms[0]
+
+                    amp = pl_params.fp/np.abs(planet_map_temp.flux(theta=0)[0])
+                    planet_map.amp = amp*ylms[0]
+                    planet_map[1:, :] = ylms[1:]/ylms[0]
+
+                    # Store the fp, Ylm, and map for convenient access later
+                    if f'fp{chankey}' not in self.freenames:
+                        setattr(self.fit, f'fp{chankey}', pl_params.fp)
+                    for ell in range(1, pl_params.ydeg+1):
+                        for m in range(-ell, ell+1):
+                            setattr(self.fit, f'Y{ell}{m}{chankey}',
+                                    planet_map[ell, m])
+                    setattr(self.fit, f'map{chankey}',
+                            planet_map.render(projection="rect",
+                                              res=100).eval())
+                elif not hasattr(pl_params, 'fp'):
+                    planet_map = starry.Map(ydeg=pl_params.ydeg, amp=0)
                 else:
-                    planet_map = starry.Map(ydeg=self.ydeg)
-                    planet_map_temp = starry.Map(ydeg=self.ydeg)
-                    for ell in range(1, self.ydeg+1):
+                    planet_map = starry.Map(ydeg=pl_params.ydeg)
+                    planet_map_temp = starry.Map(ydeg=pl_params.ydeg)
+                    for ell in range(1, pl_params.ydeg+1):
                         for m in range(-ell, ell+1):
                             if hasattr(pl_params, f'Y{ell}{m}'):
                                 planet_map[ell, m] = getattr(pl_params,

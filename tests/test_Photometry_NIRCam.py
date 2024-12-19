@@ -16,7 +16,7 @@ from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 
 
-def test_NIRCam(capsys):
+def test_NIRCamPhotometry(capsys):
     # Set up some parameters to make plots look nicer.
     # You can set usetex=True if you have LaTeX installed
     eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
@@ -85,7 +85,7 @@ def test_NIRCam(capsys):
     os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage5")
 
 
-def test_NIRCam_hex(capsys):
+def test_NIRCamPhotometry_hex(capsys):
     # tests hexagonal photometry aperture
 
     eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
