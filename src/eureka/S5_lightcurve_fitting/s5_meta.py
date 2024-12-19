@@ -126,6 +126,9 @@ class S5MetaClass(MetaClass):
             # Only set this parameter to True if relevant
             self.recenter_spotcon_prior = getattr(
                 self, 'recenter_spotcon_prior', True)
+        else:
+            # Default to False since it ends up being checked later
+            self.recenter_spotcon_prior = False
 
         # Catwoman convergence-aiding parameters
         self.catwoman_fac = getattr(self, 'catwoman_fac', None)
