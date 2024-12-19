@@ -15,7 +15,7 @@ def centerdriver(method, data, meta, i=None, m=None):
     method : string
         Name of the centering method to use.
     data : Xarray Dataset
-        The Dataset object in which the fits data will stored.
+        The Dataset object in which the centroid data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     i : int; optional
@@ -27,8 +27,6 @@ def centerdriver(method, data, meta, i=None, m=None):
     -------
     data : Xarray Dataset
         The updated Dataset object with the centroid data stored inside.
-    meta : eureka.lib.readECF.MetaClass
-        The updated metadata object.
     """
     # Apply the mask
     mask = data.mask.values[i]
@@ -85,12 +83,11 @@ def centerdriver(method, data, meta, i=None, m=None):
     if (meta.isplots_S3 >= 5 and method[-4:] == '_sec' and i < meta.nplots):
         plots_s3.phot_centroid_fgc(flux, mask, x, y, sx, sy, i, m, meta)
 
-    # Store centroid positions and
+    # Make trimming correction, then store centroid positions and
     # the Gaussian 1-sigma half-widths
     data.centroid_x.values[i] = x + cen[1] - trim
     data.centroid_y.values[i] = y + cen[0] - trim
     data.centroid_sx.values[i] = sx
     data.centroid_sy.values[i] = sy
 
-    # Make trimming correction and return
-    return data, meta
+    return data

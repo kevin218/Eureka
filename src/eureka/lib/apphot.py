@@ -19,7 +19,7 @@ def apphot(data, meta, i):
     Parameters
     ----------
     data : Xarray Dataset
-        The Dataset object in which the fits data will stored.
+        The Dataset object in which the photometry data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     i : int
@@ -378,13 +378,14 @@ def optphot(data, meta, i, saved_photometric_profile):
     Parameters
     ----------
     data : Xarray Dataset
-        The Dataset object in which the fits data will stored.
+        The Dataset object in which the photometry data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     i : int
         The current integration number.
     saved_photometric_profile : 2D array
         The saved profile to be used for optimal photometric extraction.
+        If None, the profile will be generated from the median flux array.
 
     Returns
     -------
@@ -514,14 +515,13 @@ def optphot(data, meta, i, saved_photometric_profile):
 
 
 def photutils_apphot(data, meta, i):
-    """
-    Perform aperture photometric extraction and annular sky subtraction on the
-    input image using photutils.
+    """Perform aperture photometric extraction and annular sky subtraction on
+    the input image using photutils.
 
     Parameters
     ----------
     data : Xarray Dataset
-        The Dataset object in which the fits data will stored.
+        The Dataset object in which the photometry data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     i : int

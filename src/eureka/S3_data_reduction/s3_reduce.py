@@ -488,8 +488,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         log.writelog('  Doing first round of mgmc centroiding'
                                      '...', mute=(not meta.verbose))
                         # Do mgmc fit to the whole median frame
-                        data, meta = centerdriver.centerdriver(
-                            'mgmc_pri', data, meta)
+                        data = centerdriver.centerdriver('mgmc_pri', data,
+                                                         meta)
                     elif meta.centroid_method == 'fgc':
                         # Use the center of the frame as an initial guess
                         centroid_guess = [data.flux.shape[2]//2,
@@ -500,8 +500,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                      '...', mute=(not meta.verbose))
                         for i in range(len(data.time)):
                             # Do fgc fit to each whole frame
-                            data, meta = centerdriver.centerdriver(
-                                'fgc_pri', data, meta, i)
+                            data = centerdriver.centerdriver('fgc_pri', data,
+                                                             meta, i)
 
                     if meta.oneoverf_corr is not None:
                         message = '  Correcting for 1/f noise'
@@ -531,7 +531,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                  f'{meta.centroid_method} centroiding...',
                                  mute=(not meta.verbose))
                     for i in range(len(data.time)):
-                        data, meta = centerdriver.centerdriver(
+                        data = centerdriver.centerdriver(
                             meta.centroid_method+'_sec', data, meta, i=i, m=m)
 
                         # Plot 2D frame, the centroid and the centroid position
