@@ -25,6 +25,38 @@ class FleckTransitModel(BatmanTransitModel):
         # Define transit model to be used
         self.transit_model = TransitModel
 
+        self.spotcon_file = kwargs.get('spotcon_file')
+        if self.spotcon_file:
+            # Load spot contrast coefficients from a custom file
+            try:
+                spot_coeffs = np.genfromtxt(self.spotcon_file)
+            except FileNotFoundError:
+                raise Exception(f"The spot contrast file {self.spotcon_file}"
+                                " could not be found.")
+
+            # Load all spot contrasts into the parameters object
+            log = kwargs.get('log')
+            log.writelog("Using the following spot contrast values:")
+            for c in range(self.nchannel_fitted):
+                chan = self.fitted_channels[c]
+                if c == 0 or self.nchannel_fitted == 1:
+                    chankey = ''
+                else:
+                    chankey = f'_ch{chan}'
+                item = f'spotcon{chankey}'
+                if item in self.paramtitles:
+                    contrast_val = spot_coeffs[chan]
+                    log.writelog(f"{item}: {contrast_val}")
+                    # Use the file value as the starting guess
+                    self.parameters.dict[item][0] = contrast_val
+                    # In a normal prior, center at the file value
+                    if (self.parameters.dict[item][-1] == 'N' and
+                            self.recenter_spotcon_prior):
+                        self.parameters.dict[item][-3] = contrast_val
+                    # Update the non-dictionary form as well
+                    setattr(self.parameters, item,
+                            self.parameters.dict[item])
+
 
 class TransitModel():
     """
