@@ -957,7 +957,7 @@ The same type of parameter as ``ld_file``, but for the limb-darkening coefficien
 
 recenter_ld_prior
 ^^^^^^^^^^^^^^^^^
-If ``ld_file`` is not set to ``None``, then this setting allows you apply a Normal prior centered on the model provided by ``ld_file``. To do this, you will need to keep the limb-darkening coefficients specified as ``'free'`` in your EPF with your desired Gaussian standard deviation; any initial guess and Gaussian mean values you enter will be replaced with the values loaded in from ``ld_file`` for each wavelength.
+If one of ``use_generate_ld`` or ``ld_file`` is not set to ``None``, then this setting allows you apply a Normal prior centered on the limd-darkening model. To do this, you will need to keep the limb-darkening coefficients specified as ``'free'`` in your EPF with your desired Gaussian standard deviation; any initial guess and Gaussian mean values you enter will be replaced with the values loaded in from the limb-darkeing model for each wavelength.
 
 spotcon_file
 ^^^^^^^^^^^^
