@@ -945,15 +945,31 @@ The following three parameters control the use of pre-generated limb darkening c
 
 use_generate_ld
 ^^^^^^^^^^^^^^^
-If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld or spam. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld and spam are linear, quadratic, 3-parameter and 4-parameter non-linear.
+If you want to use the generated limb-darkening coefficients from Stage 4, use ``exotic-ld`` or ``spam``. Otherwise, use ``None``. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to ``'fixed'`` in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld and spam are linear, quadratic, 3-parameter, and 4-parameter (non-linear).
 
 ld_file
 ^^^^^^^
-If you want to use custom calculated limb-darkening coefficients, set to the fully qualified path to a file containing limb darkening coefficients that you want to use. Otherwise, set to None. Note: this option only works if use_generate_ld=None. The file should be a plain .txt file with one column for each limb darkening coefficient and one row for each wavelength range.
+If you want to use custom calculated limb-darkening coefficients, set to the fully qualified path to a file containing limb-darkening coefficients that you want to use. Otherwise, set to ``None``. Note: this option only works if ``use_generate_ld=None``. The file should be a plain .txt file with one column for each limb-darkening coefficient and one row for each wavelength range. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to ``'fixed'`` in the .epf file if they should be fixed instead of fitted!
 
 ld_file_white
 ^^^^^^^^^^^^^
-The same type of parameter as ld_file, but for the limb-darkening coefficients to be used for the white-light fit. This parameter is required if ld_file is not None and any of your EPF parameters are set to white_free or white_fixed. If no parameter is set to white_free or white_fixed, then this parameter is ignored.
+The same type of parameter as ``ld_file``, but for the limb-darkening coefficients to be used for the white-light fit. This parameter is required if ``ld_file`` is not None and any of your EPF parameters are set to ``white_free`` or ``white_fixed``. If no parameter is set to ``white_free`` or ``white_fixed``, then this parameter is ignored.
+
+recenter_ld_prior
+^^^^^^^^^^^^^^^^^
+If one of ``use_generate_ld`` or ``ld_file`` is not set to ``None``, then this setting allows you apply a Normal prior centered on the limd-darkening model. To do this, you will need to keep the limb-darkening coefficients specified as ``'free'`` in your EPF with your desired Gaussian standard deviation; any initial guess and Gaussian mean values you enter will be replaced with the values loaded in from the limb-darkeing model for each wavelength.
+
+spotcon_file
+^^^^^^^^^^^^
+If you want to use custom calculated spot-contrast coefficients, set to the fully qualified path to a file containing spot-contrast coefficients that you want to use. Otherwise, set to ``None``. The file should be a plain .txt file with one column (or one column per spot if using starry) and one row for each wavelength bin. Important: spot-contrast coefficients are not automatically fixed, change the spot-contrast parameters to ``'fixed'`` in the .epf file if they should be fixed instead of fitted!
+
+spotcon_file_white
+^^^^^^^^^^^^^^^^^^
+The same type of parameter as ``spotcon_file``, but for the spot contrast coefficients to be used for the white-light fit. This parameter is required if ``spotcon_file`` is not ``None`` and any of your EPF parameters are set to ``white_free`` or ``white_fixed``. If no parameter is set to ``white_free`` or ``white_fixed``, then this parameter is ignored.
+
+recenter_spotcon_prior
+^^^^^^^^^^^^^^^^^^^^^^
+If ``spotcon_file`` is not set to ``None``, then this setting allows you apply a Normal prior centered on the model provided by ``spotcon_file``. To do this, you will need to keep the spot-contrast coefficients specified as ``'free'`` in your EPF with your desired Gaussian standard deviation; any initial guess and Gaussian mean values you enter will be replaced with the values loaded in from ``spotcon_file`` for each wavelength.
 
 GP parameters
 '''''''''''''
