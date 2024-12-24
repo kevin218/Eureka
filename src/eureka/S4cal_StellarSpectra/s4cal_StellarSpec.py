@@ -16,12 +16,6 @@ from eureka.lib import util, logedit, plots
 from eureka.S3_data_reduction.sigrej import sigrej
 from eureka.S4cal_StellarSpectra.s4cal_meta import S4cal_MetaClass
 
-'''
-import s4cal_calStellarSpec as s4cal
-eventlabel = 'ngts10b_pc'
-meta, spec, ds = s4cal.medianCalSpec(eventlabel)
-'''
-
 colors = ['xkcd:bright blue', 'xkcd:soft green', 'orange', 'purple']
 
 
@@ -169,17 +163,8 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         # Mask outliers along wavelength axis
         tck = spi.splrep(wave, spec_baseline, w=1/std_baseline, k=3)
         spline = spi.splev(wave, tck)
-        # plt.figure(1)
-        # plt.clf()
-        # plt.errorbar(wave, spec_baseline, std_baseline, fmt='.')
-        # plt.plot(wave, np.abs(spec_baseline - spline)/std_baseline, '-')
         mask = sigrej(spec_baseline - spline, meta.sigma_thresh)
         igood = np.where(~mask)[0]
-        # print("Spec_baseline")
-        # print(spec_baseline)
-        # print("igood")
-        # print(len(igood), len(mask))
-        # print(igood)
         # Create XArray data arrays
         base_flux = xrio.makeLCDA(spec_baseline[igood, np.newaxis],
                                   wave[igood], [t0],
