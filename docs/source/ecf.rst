@@ -851,6 +851,90 @@ The path to the directory in which to output the Stage 4 JWST data and plots. Di
 
 
 
+
+Stage 4cal
+--------
+
+.. include:: ../media/S4cal_template.ecf
+   :literal:
+
+t0
+''
+Transit or eclipse midpoint (in BMJD_TDB).
+
+
+time_offset
+'''''''''''''
+Absolute time offset of time-series data (in days).  Defaults to 0.
+
+
+rprs
+''''
+Planet-to-star radius ratio.
+
+
+period
+''''''
+Orbital period (in days).
+
+
+inc
+'''
+Orbital inclination (in degrees).
+
+
+ars
+'''
+Ratio of the semimajor axis to the stellar radius, a/R*.
+
+
+t14
+'''
+Optional. Total transit duration, from t1 to t4.  The data points before t1 and after t4 are used to determine the out-of-transit baseline flux.  When not given, t14 is computed using the orbital parameters above.  When given, the orbital parameters are ignored.
+
+
+t23
+'''
+Optional.  Full transit duration, from t2 to t3.  The data points between t2 and t3 are used to determine the in-transit flux.  When not given, t23 is computed using the orbital parameters above.  When given, the orbital parameters are ignored.
+
+
+base_dur
+''''''''
+Baseline duration used before t1 and after t4 (in days).  Flux for the baseline region combines data points from (t1 - base_dur) to t1 and from t4 to (t4 + base_dur).
+
+
+sigma_thresh
+''''''''''''
+Sigma threshold when flagging outliers along the wavelength axis.  Process is performed X times, where X is the length of the list. Defaults to [4, 4, 4].
+
+
+isplots_S4cal
+'''''''''''''
+Sets how many plots should be saved when running Stage 4cal. Defaults to 3.
+
+
+nbin_plot
+'''''''''
+The number of bins that should be used for figures 5104 and 5304. Defaults to 100.
+
+
+hide_plots
+^^^^^^^^^^
+If True, plots will automatically be closed rather than popping up on the screen.
+
+
+topdir + inputdir
+'''''''''''''''''
+The path to the directory containing the Stage 3 JWST data. Directories containing spaces should be enclosed in quotation marks.
+
+
+topdir + outputdir
+''''''''''''''''''
+The path to the directory in which to output the Stage 4cal JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
+
+
+
+
 Stage 5
 -------
 
