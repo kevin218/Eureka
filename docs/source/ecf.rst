@@ -853,7 +853,7 @@ The path to the directory in which to output the Stage 4 JWST data and plots. Di
 
 
 Stage 4cal
---------
+----------
 
 .. include:: ../media/S4cal_template.ecf
    :literal:
@@ -864,7 +864,7 @@ Transit or eclipse midpoint (in BMJD_TDB).
 
 
 time_offset
-'''''''''''''
+'''''''''''
 Absolute time offset of time-series data (in days).  Defaults to 0.
 
 
@@ -1183,11 +1183,13 @@ This file describes the transit/eclipse and systematics parameters and their pri
 
 ``Name`` defines the specific parameter being fit for. When fitting for multiple channels simultaneously, you can add optionally add ``_ch#`` after the parameter (e.g., ``rprs``, ``rprs_ch1``, ``rprs_ch2``, etc.) to set channel-specific priors; if you don't manually set a different prior for each channel, the code will default to the prior for the 0th channel (e.g., ``rprs``).
 Available fitting parameters are:
+
    - Transit and Eclipse Depth Parameters
       - ``rp`` or ``rprs`` - planet-to-star radius ratio, for the transit models.
       - ``fp`` or ``fpfs`` - planet-to-star flux ratio, for the eclipse models.
       - ``rp2`` or ``rprs2`` - an additional planet-to-star radius ratio for use with the catwoman transit model to model transit limb-asymmetries.
       - ``phi`` - the angle (in degrees) of the line separating the semi-circles defined by ``rp`` and ``rp2`` in the catwoman transit model. If ``phi`` is set to 90 degrees (the parameter's default value), the ``rp`` is the trailing hemisphere and ``rp2`` is the leading hemisphere. If ``phi`` is set to 0, then ``rp`` is the northern hemisphere and ``rp2`` is the southern hemisphere.
+
       When fitting for multiple planets, add ``_pl#`` after the parameter (e.g., ``rprs``, ``rprs_pl1``, ``rprs_pl2``, etc.). This also applies to the planetaty orbital parameters below. Also be sure to set the ``num_planets`` parameter in your ECF (not EPF) to specify the number of planets being modelled simultaneously.
    - Orbital Parameters
       - ``per`` - orbital period (in days)
@@ -1264,8 +1266,10 @@ Available fitting parameters are:
       - ``spotrad#`` - The spot radius relative to the star. Replace the # with the spot number (starting with nothing (just ``spotrad``) for spot #0, and then ``spotrad1`` for the next spot)
       - ``spotlat#`` - The spot latitude in degrees. 0 is the center of the star (at time=0 if you have set the ``spotrot`` parameter). Replace the # with the spot number (starting with nothing (just ``spotlat``) for spot #0, and then ``spotlat1`` for the next spot)
       - ``spotlon#`` - The spot longitude in degrees. 0 is the center of the star (at time=0 if you have set the ``spotrot`` parameter). Replace the # with the spot number (starting with nothing (just ``spotlon``) for spot #0, and then ``spotlon1`` for the next spot)
+
       Fleck specific parameters:
       - ``spotnpts`` - The number of temporal points to evalaute at. ~200-500 is good.
+
       Starry specific parameters:
       - ``spotnpts`` - The degree of spherical harmonics on the star (ydeg). ~30 is needed to appropriately model the spot.
 
