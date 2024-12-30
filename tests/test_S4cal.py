@@ -5,11 +5,9 @@ import os
 from importlib import reload
 import time as time_pkg
 
-import numpy as np
-
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
-from eureka.lib.util import COMMON_IMPORTS, pathdirectory
+from eureka.lib.util import pathdirectory
 import eureka.lib.plots
 from eureka.S2_calibrations import s2_calibrate as s2
 from eureka.S3_data_reduction import s3_reduce as s3
@@ -25,8 +23,8 @@ def test_S4cal(capsys):
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
         print("\n\nIMPORTANT: Make sure that any changes to the ecf files "
-                "are\nincluded in demo ecf files and documentation "
-                "(docs/source/ecf.rst).")
+              "are\nincluded in demo ecf files and documentation "
+              "(docs/source/ecf.rst).")
         print("\nCalibrated Stellar Spectra S2-4 test: ", end='', flush=True)
 
     # explicitly define meta variables to be able to run

@@ -26,8 +26,8 @@ def test_NIRSpec(capsys):
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
         print("\n\nIMPORTANT: Make sure that any changes to the ecf files "
-                "are\nincluded in demo ecf files and documentation "
-                "(docs/source/ecf.rst).")
+              "are\nincluded in demo ecf files and documentation "
+              "(docs/source/ecf.rst).")
         print("\nNIRSpec S2-5 test: ", end='', flush=True)
 
     # explicitly define meta variables to be able to run
