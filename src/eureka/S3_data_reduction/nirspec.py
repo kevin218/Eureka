@@ -78,7 +78,7 @@ def read(filename, data, meta, log):
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         # There is no time information in the simulated NIRSpec data
         if meta.firstFile:
-            log.writelog('  WARNING: The timestamps for simulated MIRI data '
+            log.writelog('  WARNING: The timestamps for simulated NIRSpec data '
                          'are not in the .fits files, so using integration '
                          'number as the time value instead.')
         time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'],
@@ -328,7 +328,7 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
     # Mask uncalibrated BG region
     log.writelog("  Setting uncalibrated pixels to zero...",
                  mute=(not meta.verbose))
-    boolmask = np.abs(data.flux.data) > cutoff
+    boolmask = np.abs(data.flux.data) > meta.cutoff
     data['flux'].data = np.where(boolmask, 0, data.flux.data)
     log.writelog(f"    Zeroed {np.sum(boolmask)} " +
                  "pixels in total.", mute=(not meta.verbose))
