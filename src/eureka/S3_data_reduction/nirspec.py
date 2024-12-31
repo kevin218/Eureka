@@ -240,12 +240,6 @@ def cut_aperture(data, meta, log):
     apmedflux : ndarray
         The median flux over the aperture region.
 
-    Notes
-    -----
-    History:
-
-    - 2022-06-17, Taylor J Bell
-        Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
 
@@ -299,7 +293,7 @@ def clean_median_flux(data, meta, log, m):
     return nircam.clean_median_flux(data, meta, log, m)
 
 
-def calibrated_spectra(data, meta, log, cutoff=1e-4):
+def calibrated_spectra(data, meta, log):
     """Modify data to compute calibrated spectra in units of mJy.
 
     Parameters
@@ -310,20 +304,12 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
         The metadata object.
     log : logedit.Logedit
         The current log.
-    cutoff : float
-        Flux values above the cutoff will be set to zero.
 
     Returns
     -------
     data : ndarray
         The flux values in mJy
 
-    Notes
-    -----
-    History:
-
-    - 2023-07-17, KBS
-        Initial version.
     """
     # Mask uncalibrated BG region
     log.writelog("  Setting uncalibrated pixels to zero...",
