@@ -1,4 +1,3 @@
-# import numpy as np
 from eureka.lib.readECF import MetaClass
 
 

@@ -6,11 +6,12 @@
 t0              502.47118       # BJD
 time_offset     60000           # Optional; time offset
 
-# Provide either the system parameters or transit durations
+# Orbital parameters
 rprs            0.07194         # Planet-star radius ratio
 period          4.2344923       # Orbital period (in Days)
 inc             87.799          # orbital inclination (in degrees)
 ars             12.518          # Semi-major axis
+# Transit durations. When given, the orbital parameters are ignored.
 t14             0.0015            # Total transit duration
 t23             0.001            # Full transit duration
 
