@@ -119,6 +119,31 @@ class PlanetParams():
         self.spotrot = None
         self.spotnpts = None
 
+        # Figure out how many planet map pixels
+        self.npix = len([s for s in model.parameters.dict.keys()
+                         if 'pixel' in s and '_' not in s])
+        for pix in range(self.npix):
+            # read radii, latitudes, longitudes, and contrasts
+            pixname = 'pixel'
+            if pix > 0:
+                pixname += f'{pix}'
+            setattr(self, pixname, 0)
+
+        # Figure out how many planet Ylm spherical harmonics
+        ylm_params = np.where(['Y' == par[0] and par[1].isnumeric()
+                               for par in list(model.parameters.dict.keys())
+                               ])[0]
+        if len(ylm_params) > 0:
+            l_vals = [int(list(model.parameters.dict.keys())[ind][1])
+                      for ind in ylm_params]
+            self.ydeg = max(l_vals)
+            for ell in range(1, self.ydeg+1):
+                for m in range(-ell, ell+1):
+                    setattr(self, f'Y{ell}{m}', 0)
+        else:
+            self.ydeg = 0
+
+        # Load in all the values for each astro parameter
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
             try:
@@ -360,6 +385,24 @@ class AstroModel(Model):
                 self.phasevariation_models.append(component)
             else:
                 self.stellar_models.append(component)
+
+    @property
+    def fit(self):
+        """A getter for the fit object."""
+        return self._fit
+
+    @fit.setter
+    def fit(self, fit):
+        """A setter for the fit object.
+
+        Parameters
+        ----------
+        fit : object
+            The fit object
+        """
+        self._fit = fit
+        for component in self.components:
+            component.fit = fit
 
     def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
