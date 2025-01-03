@@ -32,17 +32,6 @@ def disk(r, ctr, size, status=False):
         Set to 1 if any part of the disk is outside the image boundaries.
         Only returned if status==True.
 
-    Notes
-    -----
-    History:
-
-    - 2003 April 4; Joseph Harrington, jh@oobleck.astro.cornell.edu
-        Initial version.
-    - 2004 Feb 27; jh
-        Added alternate input method
-    - 2005 Nov 16; jh
-        Added STATUS, simplified disk calculation,
-        use double precision
     """
     # check if disk is off image
     retstatus = int(ctr[0] - r < 0 or ctr[0] + r > size[0]-1 or
@@ -90,11 +79,6 @@ def hex(r, ctr, size, status=False):
         Set to 1 if any part of the hexagon is outside the image boundaries.
         Only returned if status==True.
 
-    Notes
-    -----
-    History:
-        - 2024-06-05: Yoni Brande, jbrande@ku.edu
-        Initial version, adapted from a snippet by Ian Crossfield
     """
 
     # check if hex is off image (same check as disk, for now)

@@ -239,6 +239,9 @@ class S3MetaClass(MetaClass):
             Initial empty version setting defaults for NIRSpec.
         '''
         self.curvature = getattr(self, 'curvature', True)
+        # When calibrated_spectra is True, flux values above the cutoff
+        # will be set to zero.
+        self.cutoff = getattr(self, 'cutoff', 1e-4)
 
         self.set_spectral_defaults()
 

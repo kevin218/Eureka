@@ -216,9 +216,10 @@ class LightCurve(m.Model):
                 binned_unc = unc
             else:
                 nbin_plot = meta.nbin_plot
-                binned_time = util.binData_time(time, time, nbin_plot)
-                binned_flux = util.binData_time(flux, time, nbin_plot)
-                binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+                binned_time = util.binData_time(time, time, nbin=nbin_plot)
+                binned_flux = util.binData_time(flux, time, nbin=nbin_plot)
+                binned_unc = util.binData_time(unc, time, nbin=nbin_plot,
+                                               err=True)
 
             fig = plt.figure(5103, figsize=(8, 6))
             fig.clf()
