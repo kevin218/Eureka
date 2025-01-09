@@ -12,16 +12,26 @@ allapers        False  # Run S5 on all of the apertures considered in S4? Otherw
 manual_clip     None    # A list of lists specifying the start and end integration numbers for manual removal.
 
 fit_par         ./S5_fit_par_template.epf   # What fitting epf do you want to use?
-fit_method      [dynesty]                   #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [batman_tr,polynomial]      # options are: batman_tr, batman_ecl, catwoman_tr, sinusoid_pc, quasilambert_pc, poet_tr, poet_ecl, poet_pc, fleck_tr, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, and GP (can list multiple types separated by commas)
+fit_method      [dynesty]                   #options are: lsq, emcee, dynesty, exoplanet, nuts (can list multiple types separated by commas)
+run_myfuncs     [batman_tr,polynomial]      # options are: batman_tr, batman_ecl, catwoman_tr, sinusoid_pc, quasilambert_pc, poet_tr, poet_ecl, poet_pc, fleck_tr, starry, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, and GP (can list multiple types separated by commas)
 compute_ltt     False                       # options are: True (correct model for the light travel time effect), or False (ignore the light travel time effect)
 force_positivity False                      # Optional boolean for sinusoid_pc and poet_pc models.  Set True to force positive phase variations.
+# pixelsampling   False                       # Optional boolean for starry's phase curve and/or eclipse mapping model. Set to True to use starry's pixel-sampling method to ensure non-negative fluxes across the planet and set priors on the pixel parameter(s) in your EPF. Set to False (default) or leave undefined if you want to use starry's spherical harmonic method and are okay with permitting negative fluxes, or if you intend to use Eureka!'s sinusoid_pc, quasilambert_pc, or poet_pc methods
+# ydeg            2                           # Integer specifying the spherical harmonic order to use with starry's phase curve and/or eclipse mapping model. This setting is mandatory if you set pixelsampling to True, otherwise the setting is optional and will be inferred from your EPF settings.
+# oversample      3                           # Optional integer specifying the oversampling factor to be used when converting spherical harmonics to pixels when pixelsampling has been set to True.
 
 # Limb darkening controls
-# IMPORTANT: limb-darkening coefficients are not automatically fixed then, change to 'fixed' in .epf file whether they should be fixed or fitted!
-use_generate_ld  None  # use the generated limb-darkening coefficients from Stage 4? Options: exotic-ld, spam, None. For exotic-ld and spam, the limb-darkening laws available are linear, quadratic, 3-parameter and 4-parameter non-linear.
-ld_file          None  # Fully qualified path to the location of a limb darkening file that you want to use
-ld_file_white    None  # Fully qualified path to the location of a limb darkening file that you want to use for the white-light light curve (required if ld_file is not None and any EPF parameters are set to white_free or white_fixed).
+# IMPORTANT: limb-darkening coefficients are not automatically fixed. Change them to 'fixed' in your .epf file if they should be fixed!
+use_generate_ld      None  # use the generated limb-darkening coefficients from Stage 4? Options: exotic-ld, spam, None. For exotic-ld and spam, the limb-darkening laws available are linear, quadratic, 3-parameter and 4-parameter non-linear.
+ld_file              None  # Fully qualified path to the location of a limb darkening file that you want to use
+ld_file_white        None  # Fully qualified path to the location of a limb darkening file that you want to use for the white-light light curve (required if ld_file is not None and any EPF parameters are set to white_free or white_fixed).
+recenter_ld_prior    True  # Set to True if you want your Gaussian prior on the 'free' limb-darkening coefficients to be centered around the model coefficients for each wavelength.
+
+# Spot contrast models
+# IMPORTANT: spot-contrast coefficients are not automatically fixed. Change them to 'fixed' in your .epf file if they should be fixed!
+spotcon_file              None  # Fully qualified path to the location of a spot contrast model file that you want to use
+spotcon_file_white        None  # Fully qualified path to the location of a spot contrast model file that you want to use for the white-light light curve (required if spotcon_file is not None and any EPF parameters are set to white_free or white_fixed).
+recenter_spotcon_prior    True  # Set to True if you want your Gaussian prior on the 'free' spot-contrast coefficients to be centered around the model coefficients for each wavelength.
 
 # General fitter
 old_fitparams   None # filename relative to topdir that points to a fitparams csv to resume where you left off (set to None to start from scratch)
@@ -70,7 +80,6 @@ topdir          /home/User/Data/JWST-Sim/NIRSpec/
 
 # Directories relative to topdir
 inputdir        Stage4   # The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
-inputdirlist	None     # list of extra folders to read in from after inputdir for multwhite fits. Must be strings.
 outputdir       Stage5
 
 # inputdirlist    []       # A list of additional Stage 4 input folders to use in a joint white lightcurve fit (e.g., NIRSpec NRS1+NRS2, or NIRCam+MIRI). Only relevant if multwhite is set to True
