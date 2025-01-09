@@ -182,7 +182,7 @@ def trim(data, meta):
     return subdata, meta
 
 
-def manual_clip(lc, meta, log):
+def manual_clip(lc, meta, log, channel=0):
     """Manually clip integrations along time axis.
 
     Parameters
@@ -193,6 +193,8 @@ def manual_clip(lc, meta, log):
         The current metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
+    channel : int; optional
+        The current channel for multwhite fits.
 
     Returns
     -------
@@ -211,10 +213,19 @@ def manual_clip(lc, meta, log):
     if len(meta.manual_clip.shape) == 1:
         # The user didn't quite enter things right, so reshape
         meta.manual_clip = meta.manual_clip[np.newaxis]
+    if meta.multwhite and len(meta.manual_clip.shape) == 2:
+        # The user didn't quite enter things right, so reshape
+        meta.manual_clip = np.repeat(meta.manual_clip[np.newaxis],
+                                     len(meta.inputdirlist)+1, axis=0)
+
+    if meta.multwhite:
+        manual_clip_temp = meta.manual_clip[channel]
+    else:
+        manual_clip_temp = meta.manual_clip
 
     # Figure out which indices are being clipped
     time_bool = np.ones(len(lc.data.time), dtype=bool)
-    for inds in meta.manual_clip:
+    for inds in manual_clip_temp:
         time_bool[inds[0]:inds[1]] = False
     time_inds = np.arange(len(lc.data.time))[time_bool]
 
