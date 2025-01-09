@@ -1,4 +1,12 @@
 import numpy as np
+try:
+    import starry
+    starry.config.quiet = True
+    starry.config.lazy = True
+except ModuleNotFoundError:
+    # PyMC3 hasn't been installed
+    pass
+
 from ..lib.readECF import MetaClass
 
 
@@ -110,6 +118,18 @@ class S5MetaClass(MetaClass):
             # Set this to False if not relevant
             self.recenter_ld_prior = getattr(self, 'recenter_ld_prior', False)
 
+        # Use of modelled spot contrast coefficients
+        self.spotcon_file = getattr(self, 'spotcon_file', None)
+        self.spotcon_file_white = getattr(self, 'spotcon_file_white', None)
+        if not all([self.spotcon_file is None,
+                    self.spotcon_file_white is None]):
+            # Only set this parameter to True if relevant
+            self.recenter_spotcon_prior = getattr(
+                self, 'recenter_spotcon_prior', True)
+        else:
+            # Default to False since it ends up being checked later
+            self.recenter_spotcon_prior = False
+
         # Catwoman convergence-aiding parameters
         self.catwoman_fac = getattr(self, 'catwoman_fac', None)
         self.catwoman_max_err = getattr(self, 'catwoman_max_err', 1.0)
@@ -145,6 +165,20 @@ class S5MetaClass(MetaClass):
             # Must be provided in the ECF if relevant
             self.tune = getattr(self, 'tune')
             self.draws = getattr(self, 'draws')
+
+        # Starry eclipse mapping pixel-sampling parameters
+        self.pixelsampling = getattr(self, 'pixelsampling', False)
+        self.oversample = getattr(self, 'oversample', 3)
+        if self.pixelsampling:
+            # Must be provided in the ECF if relevant
+            self.ydeg = getattr(self, 'ydeg')
+            # Compute the number of pixels used in sampling
+            map = starry.Map(ydeg=self.ydeg)
+            A = map.get_pixel_transforms(oversample=self.oversample)[3]
+            self.npix = A.shape[1]
+        else:
+            self.ydeg = getattr(self, 'ydeg', None)
+            self.npix = 0
 
         # GP inputs
         self.kernel_inputs = getattr(self, 'kernel_inputs', ['time'])

@@ -167,8 +167,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 else:
                     axis = 'xwindow'
                 log.writelog('  If you want to use wavelengths shorter than '
-                             f'{np.nanmin(wave_1d)}, you will need to decrease '
-                             f'your {axis} lower limit in Stage 3.')
+                             f'{np.nanmin(wave_1d)}, you will need to decrease'
+                             f' your {axis} lower limit in Stage 3.')
             if meta.wave_max is None:
                 meta.wave_max = np.nanmax(wave_1d)
                 log.writelog(f'No value was provided for meta.wave_max, so '
@@ -183,8 +183,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 else:
                     axis = 'xwindow'
                 log.writelog('  If you want to use wavelengths longer than '
-                             f'{np.nanmax(wave_1d)}, you will need to increase '
-                             f'your {axis} upper limit in Stage 3.')
+                             f'{np.nanmax(wave_1d)}, you will need to increase'
+                             f' your {axis} upper limit in Stage 3.')
 
             meta.n_int = len(spec.time)
             if meta.photometry:
@@ -267,13 +267,13 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                    'mask': lcmask})
             if 'skylev' in list(spec.keys()):
                 # if bg level/error was saved in S3, make bg lightcurves
-                lc['skylev'] = (['wavelength', 'time'], 
+                lc['skylev'] = (['wavelength', 'time'],
                                 np.zeros([meta.nspecchan, meta.n_int]))
                 lc['skylev'].attrs['wave_units'] = lc.data.wave_units
                 lc['skylev'].attrs['time_units'] = time_units
                 lc['skylev'].attrs['flux_units'] = flux_units
-                
-                lc['skyerr'] = (['wavelength', 'time'], 
+
+                lc['skyerr'] = (['wavelength', 'time'],
                                 np.zeros([meta.nspecchan, meta.n_int]))
                 lc['skyerr'].attrs['wave_units'] = lc.data.wave_units
                 lc['skyerr'].attrs['time_units'] = time_units
@@ -446,7 +446,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     # then divide by number of good points to get
                     # proper uncertainties
                     lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
-                                    np.ma.MaskedArray.count(opterr_ma, axis=1))    
+                                    np.ma.MaskedArray.count(opterr_ma, axis=1))
                     if 'skylev' in list(spec.keys()):
                         # if bg level/error was saved in S3, make bg lcs
                         skylev_ma = np.ma.masked_where(
@@ -457,18 +457,18 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                             spec.skyerr.values[:, index])
                         lc['skylev'][i] = np.ma.mean(skylev_ma, axis=1)
                         lc['skyerr'][i] = (np.sqrt(np.ma.sum(
-                            skyerr_ma**2, axis=1)) / 
+                            skyerr_ma**2, axis=1)) /
                             np.ma.MaskedArray.count(skyerr_ma, axis=1))
-                        
+
                 else:
                     lc['data'][i] = spec.aplev.values
                     lc['err'][i] = spec.aperr.values
-                    
+
                     if 'skylev' in list(spec.keys()):
                         # if bg level/error was saved in S3, make bg lcs
                         lc['skylev'][i] = spec.skylev.values
                         lc['skyerr'][i] = spec.skyerr.values
-                        
+
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.clip_binned:
                     lc['data'][i], lc['mask'][i], nout = \
@@ -537,7 +537,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                                            axis=1)).data
                 lc.mask_white[:] = np.ma.getmaskarray(np.ma.mean(optspec_ma,
                                                                  axis=1))
-                                                                 
+
                 if 'skylev' in list(spec.keys()):
                     # if bg level/error was saved in S3, make bg lcs
                     lc['skylev_white'] = (['time'], np.zeros(meta.n_int))
@@ -545,13 +545,13 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     lc['skylev_white'].attrs['wave_units'] = lc.data.wave_units
                     lc['skylev_white'].attrs['time_units'] = time_units
                     lc['skylev_white'].attrs['flux_units'] = flux_units
-                
+
                     lc['skyerr_white'] = (['time'], np.zeros(meta.n_int))
                     lc['skyerr_white'].attrs['wavelength'] = central_wavelength
                     lc['skyerr_white'].attrs['wave_units'] = lc.data.wave_units
                     lc['skyerr_white'].attrs['time_units'] = time_units
                     lc['skyerr_white'].attrs['flux_units'] = flux_units
-                    
+
                     skylev_ma = np.ma.masked_where(
                         spec.optmask.values[:, index],
                         spec.skylev.values[:, index])
@@ -579,8 +579,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 if meta.isplots_S4 >= 1:
                     plots_s4.binned_lightcurve(meta, log, lc, 0, white=True)
                     if 'skylev' in list(spec.keys()):
-                        plots_s4.binned_background(meta, log, lc, 
-                                                   0, white=True) 
+                        plots_s4.binned_background(meta, log, lc,
+                                                   0, white=True)
 
             # Generate ExoTiC limb-darkening coefficients
             if (meta.compute_ld == 'exotic-ld') or \
