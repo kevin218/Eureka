@@ -56,9 +56,9 @@ class ExpRampModel(Model):
                     # of the original time axis
                     trim1, trim2 = get_trim(self.nints, chan)
                     time = self.time[trim1:trim2]
-                    self.time_local[trim1:trim2] = time-time[0]
+                    self.time_local[trim1:trim2] = time-time.data[0]
             else:
-                self.time_local = self.time - self.time[0]
+                self.time_local = self.time - self.time.data[0]
 
     def _parse_coeffs(self):
         """Convert dict of 'r#' coefficients into a list

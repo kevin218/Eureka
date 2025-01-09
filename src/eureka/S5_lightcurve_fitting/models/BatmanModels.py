@@ -60,7 +60,7 @@ class BatmanTransitModel(Model):
                         item = self.longparamlist[c][index[0]]
                         param = int(item.split('_')[0][-1])
                         ld_val = ld_array[chan][param-1]
-                        log.writelog(f"{item}, {ld_val}")
+                        log.writelog(f"{item}: {ld_val}")
                         # Use the file value as the starting guess
                         self.parameters.dict[item][0] = ld_val
                         # In a normal prior, center at the file value

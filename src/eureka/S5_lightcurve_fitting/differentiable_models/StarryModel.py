@@ -14,6 +14,7 @@ logger.setLevel(logging.ERROR)
 import starry
 starry.config.quiet = True
 starry.config.lazy = True
+import pymc3 as pm
 
 from . import PyMC3Model
 from .AstroModel import PlanetParams
@@ -38,6 +39,8 @@ class StarryModel(PyMC3Model):
         if self.compute_ltt is None:
             self.compute_ltt = True
 
+        log = kwargs.get('log')
+
         required = np.array(['Rs',])
         missing = np.array([name not in self.paramtitles for name in required])
         if np.any(missing):
@@ -55,16 +58,6 @@ class StarryModel(PyMC3Model):
         else:
             self.udeg = 0
 
-        # Find the Ylm value with the largest l value to set ydeg
-        ylm_params = np.where(['Y' == par[0] and par[1].isnumeric()
-                               for par in self.paramtitles])[0]
-        if len(ylm_params) > 0:
-            l_vals = [int(self.paramtitles[ind][1])
-                      for ind in ylm_params]
-            self.ydeg = max(l_vals)
-        else:
-            self.ydeg = 0
-
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
         if hasattr(self.parameters, 'limb_dark'):
@@ -78,23 +71,67 @@ class StarryModel(PyMC3Model):
 
         # Replace u parameters with generated limb-darkening values
         if self.ld_from_S4 or self.ld_from_file:
+            log.writelog("Using the following limb-darkening values:")
             self.ld_array = kwargs.get('ld_coeffs')
-            if self.ld_from_S4:
-                self.ld_array = self.ld_array[len_params-2]
             for c in range(self.nchannel_fitted):
                 chan = self.fitted_channels[c]
+                if self.ld_from_S4:
+                    ld_array = self.ld_array[len_params-2]
+                else:
+                    ld_array = self.ld_array
                 for u in self.coeffs:
                     index = np.where(np.array(self.paramtitles) == u)[0]
                     if len(index) != 0:
                         item = self.longparamlist[c][index[0]]
                         param = int(item.split('_')[0][-1])
-                        ld_val = self.ld_array[chan][param-1]
+                        ld_val = ld_array[chan][param-1]
+                        log.writelog(f"{item}: {ld_val}")
                         # Use the file value as the starting guess
                         self.parameters.dict[item][0] = ld_val
                         # In a normal prior, center at the file value
                         if (self.parameters.dict[item][-1] == 'N' and
                                 self.recenter_ld_prior):
                             self.parameters.dict[item][-3] = ld_val
+                        # Update the non-dictionary form as well
+                        setattr(self.parameters, item,
+                                self.parameters.dict[item])
+
+        self.spotcon_file = kwargs.get('spotcon_file')
+        if self.spotcon_file:
+            # Load spot contrast coefficients from a custom file
+            try:
+                spot_coeffs = np.genfromtxt(self.spotcon_file)
+            except FileNotFoundError:
+                raise Exception(f"The spot contrast file {self.spotcon_file}"
+                                " could not be found.")
+
+            nspots = len([s for s in self.parameters.dict.keys()
+                          if 'spotrad' in s and '_' not in s])
+
+            # Fix array shaping if only one contrast specified for all spots
+            if len(spot_coeffs.shape) == 1:
+                spot_coeffs = np.repeat(spot_coeffs[np.newaxis, :],
+                                        nspots, axis=0)
+
+            # Load all spot contrasts into the parameters object
+            log.writelog("Using the following spot contrast values:")
+            for c in range(self.nchannel_fitted):
+                chan = self.fitted_channels[c]
+                if c == 0 or self.nchannel_fitted == 1:
+                    chankey = ''
+                else:
+                    chankey = f'_ch{chan}'
+                for n in range(nspots):
+                    item = f'spotcon{n}{chankey}'
+                    if item in self.paramtitles:
+                        contrast_val = spot_coeffs[n, chan]
+                        log.writelog(f"{item}: {contrast_val}")
+                        # Use the file value as the starting guess
+                        self.parameters.dict[item][0] = contrast_val
+                        # In a normal prior, center at the file value
+                        if (self.parameters.dict[item][-1] == 'N' and
+                                self.recenter_spotcon_prior):
+                            self.parameters.dict[item][-3] = contrast_val
                         # Update the non-dictionary form as well
                         setattr(self.parameters, item,
                                 self.parameters.dict[item])
@@ -110,6 +147,11 @@ class StarryModel(PyMC3Model):
         self.systems = []
         self.rps = []
         for chan in range(self.nchannel_fitted):
+            if chan == 0:
+                chankey = ''
+            else:
+                chankey = f'_ch{chan}'
+
             # Initialize PlanetParams object
             pl_params = PlanetParams(self, 0, chan, eval=False)
 
@@ -179,12 +221,51 @@ class StarryModel(PyMC3Model):
                 # Initialize PlanetParams object for this planet
                 pl_params = PlanetParams(self, pid, chan, eval=False)
 
-                if not hasattr(pl_params, 'fp'):
-                    planet_map = starry.Map(ydeg=self.ydeg, amp=0)
+                # Pixel sampling setup
+                if self.pixelsampling:
+                    planet_map = starry.Map(ydeg=pl_params.ydeg)
+                    planet_map_temp = starry.Map(ydeg=pl_params.ydeg)
+
+                    # Get pixel values
+                    p = tt.zeros(0)
+                    for pix in range(self.npix):
+                        pixname = 'pixel'
+                        if pix > 0:
+                            pixname += f'{pix}'
+                        p = tt.concatenate([p, [getattr(pl_params, pixname),]])
+
+                    # Get pixel transform matrix
+                    P2Y = planet_map.get_pixel_transforms(
+                        oversample=self.oversample)[3]
+
+                    # Transform pixels to spherical harmonics
+                    ylms = tt.dot(P2Y, p)
+                    planet_map_temp.amp = ylms[0]
+                    planet_map_temp[1:, :] = ylms[1:]/ylms[0]
+
+                    amp = pl_params.fp/tt.abs_(
+                        planet_map_temp.flux(theta=0)[0])
+                    planet_map.amp = amp*ylms[0]
+                    planet_map[1:, :] = ylms[1:]/ylms[0]
+
+                    # Store the fp, Ylm, and map for convenient access later
+                    if f'fp{chankey}' not in self.freenames:
+                        setattr(self.model, f'fp{chankey}', pm.Deterministic(
+                            f'fp{chankey}', pl_params.fp))
+                    for ell in range(1, pl_params.ydeg+1):
+                        for m in range(-ell, ell+1):
+                            setattr(self.model, f'Y{ell}{m}{chankey}',
+                                    pm.Deterministic(f'Y{ell}{m}{chankey}',
+                                                     planet_map[ell, m]))
+                    setattr(self.model, f'map{chankey}', pm.Deterministic(
+                        f'map{chankey}',
+                        planet_map.render(projection="rect", res=100)))
+                elif not hasattr(pl_params, 'fp'):
+                    planet_map = starry.Map(ydeg=pl_params.ydeg, amp=0)
                 else:
-                    planet_map = starry.Map(ydeg=self.ydeg)
-                    planet_map_temp = starry.Map(ydeg=self.ydeg)
-                    for ell in range(1, self.ydeg+1):
+                    planet_map = starry.Map(ydeg=pl_params.ydeg)
+                    planet_map_temp = starry.Map(ydeg=pl_params.ydeg)
+                    for ell in range(1, pl_params.ydeg+1):
                         for m in range(-ell, ell+1):
                             if hasattr(pl_params, f'Y{ell}{m}'):
                                 planet_map[ell, m] = getattr(pl_params,
@@ -363,6 +444,11 @@ class StarryModel(PyMC3Model):
         self.fit.systems = []
         self.fit_rps = []
         for chan in range(self.nchannel_fitted):
+            if chan == 0:
+                chankey = ''
+            else:
+                chankey = f'_ch{chan}'
+
             # Initialize PlanetParams object
             pl_params = PlanetParams(self, 0, chan, eval=True)
 
@@ -431,12 +517,48 @@ class StarryModel(PyMC3Model):
                 # Initialize PlanetParams object for this planet
                 pl_params = PlanetParams(self, pid, chan, eval=True)
 
-                if not hasattr(pl_params, 'fp'):
-                    planet_map = starry.Map(ydeg=self.ydeg, amp=0)
+                # Pixel sampling setup
+                if self.pixelsampling:
+                    planet_map = starry.Map(ydeg=pl_params.ydeg)
+                    planet_map_temp = starry.Map(ydeg=pl_params.ydeg)
+
+                    # Get pixel values
+                    p = np.zeros(0)
+                    for pix in range(self.npix):
+                        pixname = 'pixel'
+                        if pix > 0:
+                            pixname += f'{pix}'
+                        p = np.concatenate([p, [getattr(pl_params, pixname),]])
+
+                    # Get pixel transform matrix
+                    P2Y = planet_map.get_pixel_transforms(
+                        oversample=self.oversample)[3]
+
+                    # Transform pixels to spherical harmonics
+                    ylms = np.dot(P2Y, p)
+                    planet_map_temp.amp = ylms[0]
+                    planet_map_temp[1:, :] = ylms[1:]/ylms[0]
+
+                    amp = pl_params.fp/np.abs(planet_map_temp.flux(theta=0)[0])
+                    planet_map.amp = amp*ylms[0]
+                    planet_map[1:, :] = ylms[1:]/ylms[0]
+
+                    # Store the fp, Ylm, and map for convenient access later
+                    if f'fp{chankey}' not in self.freenames:
+                        setattr(self.fit, f'fp{chankey}', pl_params.fp)
+                    for ell in range(1, pl_params.ydeg+1):
+                        for m in range(-ell, ell+1):
+                            setattr(self.fit, f'Y{ell}{m}{chankey}',
+                                    planet_map[ell, m])
+                    setattr(self.fit, f'map{chankey}',
+                            planet_map.render(projection="rect",
+                                              res=100).eval())
+                elif not hasattr(pl_params, 'fp'):
+                    planet_map = starry.Map(ydeg=pl_params.ydeg, amp=0)
                 else:
-                    planet_map = starry.Map(ydeg=self.ydeg)
-                    planet_map_temp = starry.Map(ydeg=self.ydeg)
-                    for ell in range(1, self.ydeg+1):
+                    planet_map = starry.Map(ydeg=pl_params.ydeg)
+                    planet_map_temp = starry.Map(ydeg=pl_params.ydeg)
+                    for ell in range(1, pl_params.ydeg+1):
                         for m in range(-ell, ell+1):
                             if hasattr(pl_params, f'Y{ell}{m}'):
                                 planet_map[ell, m] = getattr(pl_params,
