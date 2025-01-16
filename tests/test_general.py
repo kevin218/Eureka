@@ -1,5 +1,3 @@
-# Last Updated: 2022-04-05
-
 import numpy as np
 import sys
 import os
