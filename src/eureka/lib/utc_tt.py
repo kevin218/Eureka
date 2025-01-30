@@ -45,7 +45,7 @@ def leapdates(rundir, log):
                      mute=True)
         try:
             with urllib.request.urlopen('ftp://ftp.boulder.nist.gov/'
-                                        'pub/time/leap-seconds.list') as nist:
+                                        'pub/time/leap-seconds.list', timeout=5) as nist:
                 doc = nist.read().decode()
             use_fallback = False
         except:
