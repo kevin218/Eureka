@@ -86,7 +86,7 @@ def test_NIRSpec(capsys):
     # run assertions for S3
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage3{os.sep}')
-    name = pathdirectory(meta, 'S3', 1, ap=8, bg=10,
+    name = pathdirectory(meta, 'S3', 1, ap=5, bg=10,
                          old_datetime=s3_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -96,7 +96,7 @@ def test_NIRSpec(capsys):
     # run assertions for S4
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage4{os.sep}')
-    name = pathdirectory(meta, 'S4', 1, ap=8, bg=10,
+    name = pathdirectory(meta, 'S4', 1, ap=5, bg=10,
                          old_datetime=s4_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -107,7 +107,7 @@ def test_NIRSpec(capsys):
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage5{os.sep}')
-    name = pathdirectory(meta, 'S5', 1, ap=8, bg=10,
+    name = pathdirectory(meta, 'S5', 1, ap=5, bg=10,
                          old_datetime=s5_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
