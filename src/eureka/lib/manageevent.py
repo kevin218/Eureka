@@ -290,16 +290,13 @@ def mergeevents(new_meta, old_meta):
     new_meta : eureka.lib.readECF.MetaClass
         The current metadata object containing the details from the previous
         metadata object.
-
-    Notes
-    -----
-    History:
-
-    - April 25, 2022 Taylor Bell
-        Initial version.
     """
     # Load current ECF into old MetaClass
     for key in new_meta.__dict__:
-        setattr(old_meta, key, getattr(new_meta, key))
+        if key == 'data_format' and getattr(old_meta, key) == 'custom':
+            # Don't over-ride meta.data_format='custom' if set previously
+            pass
+        else:
+            setattr(old_meta, key, getattr(new_meta, key))
 
     return old_meta
