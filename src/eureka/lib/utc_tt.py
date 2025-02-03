@@ -48,11 +48,17 @@ def leapdates(rundir, log):
                                         'pub/time/leap-seconds.list', timeout=5) as nist:
                 doc = nist.read().decode()
             use_fallback = False
-        except:
-            # FINDME: Need to only catch the expected exception.
-            # Couldn't connect to the internet, so use the local array
-            # defined below
-            use_fallback = True
+        except urllib.error.URLError:
+            # Couldn't connect to NIST page, so try backup page
+            try:
+                with urllib.request.urlopen('https://hpiers.obspm.fr/iers/bul/bulc/'
+                                       'ntp/leap-seconds.list', timeout=5) as nist:
+                    doc = nist.read().decode()
+                use_fallback = False
+            except urllib.error.URLError:
+                # Couldn't connect to the internet, so use the local array
+                # defined below
+                use_fallback = True
 
         if not use_fallback:
             newexp = doc.split('#@')[1].split('\n')[0][1:]
