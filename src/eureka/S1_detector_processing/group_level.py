@@ -62,11 +62,11 @@ def GLBS(input_model, log, meta):
                                          grp_data.shape)
             grp_mask |= trace_mask
 
-        xrdata = (['time', 'y', 'x'], grp_data)
-        xrmask = (['time', 'y', 'x'], grp_mask)
-        xrdict = dict(flux=xrdata, mask=xrmask)
-        data = xrio.makeDataset(dictionary=xrdict)
-        data['flux'].attrs['flux_units'] = 'n/a'
+        data = xrio.makeDataset()
+        time = np.arange(grp_data.shape[0])
+        data['flux'] = xrio.makeFluxLikeDA(grp_data, time, flux_units='n/a',
+                                           time_units='n/a', name='flux')
+        data['mask'] = (['time', 'y', 'x'], grp_mask)
         data.attrs['intstart'] = meta.intstart
         meta.bg_dir = 'CxC'
 
