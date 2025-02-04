@@ -602,7 +602,7 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
                         normspec[iscans[r::meta.nreads]], axis=0)
     else:
         if opterr is not None:
-            normerr = normerr/np.ma.mean(normspec, axis=0)
+            normerr = np.ma.abs(normerr/np.ma.mean(normspec, axis=0))
         normspec = normspec/np.ma.mean(normspec, axis=0)
 
     if opterr is not None:
