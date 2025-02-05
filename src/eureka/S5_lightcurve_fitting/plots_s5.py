@@ -43,16 +43,6 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     isTitle : bool; optional
         Should figure have a title. Defaults to True.
 
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved plotting code to a separate function.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter
     """
     if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
@@ -111,12 +101,12 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             binned_res = residuals
         else:
             nbin_plot = meta.nbin_plot
-            binned_time = util.binData_time(time, time, nbin_plot)
-            binned_flux = util.binData_time(flux, time, nbin_plot)
-            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+            binned_time = util.binData_time(time, time, nbin=nbin_plot)
+            binned_flux = util.binData_time(flux, time, nbin=nbin_plot)
+            binned_unc = util.binData_time(unc, time, nbin=nbin_plot, err=True)
             binned_normflux = util.binData_time(flux/model_sys - gp, time,
-                                                nbin_plot)
-            binned_res = util.binData_time(residuals, time, nbin_plot)
+                                                nbin=nbin_plot)
+            binned_res = util.binData_time(residuals, time, nbin=nbin_plot)
 
         fig = plt.figure(5101, figsize=(8, 6))
         plt.clf()
@@ -241,9 +231,9 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             binned_unc = unc
         else:
             nbin_plot = meta.nbin_plot
-            binned_time = util.binData_time(time, time, nbin_plot)
-            binned_flux = util.binData_time(flux, time, nbin_plot)
-            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+            binned_time = util.binData_time(time, time, nbin=nbin_plot)
+            binned_flux = util.binData_time(flux, time, nbin=nbin_plot)
+            binned_unc = util.binData_time(unc, time, nbin=nbin_plot, err=True)
 
         # Setup the figure
         fig = plt.figure(5104, figsize=(8, 6))
