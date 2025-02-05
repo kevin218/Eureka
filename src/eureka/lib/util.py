@@ -596,10 +596,12 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
             if len(iscans) > 0:
                 for r in range(meta.nreads):
                     if opterr is not None:
-                        normerr[iscans[r::meta.nreads]] /= np.ma.abs(np.ma.mean(
-                            normspec[iscans[r::meta.nreads]], axis=0))
-                    normspec[iscans[r::meta.nreads]] /= np.ma.abs(np.ma.mean(
-                        normspec[iscans[r::meta.nreads]], axis=0))
+                        normerr[iscans[r::meta.nreads]] /= np.ma.abs(
+                            np.ma.mean(normspec[iscans[r::meta.nreads]],
+                                       axis=0))
+                    normspec[iscans[r::meta.nreads]] /= np.ma.abs(
+                        np.ma.mean(normspec[iscans[r::meta.nreads]],
+                                   axis=0))
     else:
         if opterr is not None:
             normerr = normerr/np.ma.abs(np.ma.mean(normspec, axis=0))

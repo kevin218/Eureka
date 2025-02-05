@@ -45,14 +45,16 @@ def leapdates(rundir, log):
                      mute=True)
         try:
             with urllib.request.urlopen('ftp://ftp.boulder.nist.gov/'
-                                        'pub/time/leap-seconds.list', timeout=5) as nist:
+                                        'pub/time/leap-seconds.list',
+                                        timeout=5) as nist:
                 doc = nist.read().decode()
             use_fallback = False
         except urllib.error.URLError:
             # Couldn't connect to NIST page, so try backup page
             try:
-                with urllib.request.urlopen('https://hpiers.obspm.fr/iers/bul/bulc/'
-                                       'ntp/leap-seconds.list', timeout=5) as nist:
+                with urllib.request.urlopen('https://hpiers.obspm.fr/iers/bul/'
+                                            'bulc/ntp/leap-seconds.list',
+                                            timeout=5) as nist:
                     doc = nist.read().decode()
                 use_fallback = False
             except urllib.error.URLError:
