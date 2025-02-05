@@ -18,6 +18,9 @@ try:
 except ModuleNotFoundError:
     # PyMC3 hasn't been installed
     pass
+import warnings
+warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
+                                          'this call because figure with num')
 
 from ..lib import plots, util
 from ..lib.split_channels import split

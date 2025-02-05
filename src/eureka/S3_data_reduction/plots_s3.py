@@ -10,6 +10,9 @@ import matplotlib.patches as patches
 from matplotlib.path import Path
 from mpl_toolkits import axes_grid1
 import imageio
+import warnings
+warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
+                                          'this call because figure with num')
 
 from .source_pos import gauss
 from ..lib import util, plots
