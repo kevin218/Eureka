@@ -660,9 +660,12 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
     plt.figure(3107)
     plt.clf()
     plt.title("Trace Curvature")
-    plt.plot(column_coms+meta.ywindow[0], '.', label='Measured', color=cmap(0.25))
-    plt.plot(smooth_coms+meta.ywindow[0], '-', label='Smoothed', color=cmap(0.98))
-    plt.plot(int_coms+meta.ywindow[0], 's', label='Integer', color=cmap(0.7), ms=2)
+    plt.plot(column_coms+meta.ywindow[0], '.', label='Measured',
+             color=cmap(0.25))
+    plt.plot(smooth_coms+meta.ywindow[0], '-', label='Smoothed',
+             color=cmap(0.98))
+    plt.plot(int_coms+meta.ywindow[0], 's', label='Integer',
+             color=cmap(0.7), ms=2)
     plt.legend()
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
