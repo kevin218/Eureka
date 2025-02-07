@@ -31,15 +31,33 @@ def leapdates(rundir, log):
     if not os.path.isdir(rundir):
         # Make the leapdir folder if needed
         os.mkdir(rundir)
+
     files = os.listdir(rundir)
     if len(files) != 0:
         recent = np.sort(files)[-1]
         with open(rundir+recent, 'r') as nist:
             doc = nist.read()
-        table = doc.split('#@')[1].split('\n#\n')[1].split('\n')
         expiration = float(doc.split('#@')[1].split('\n')[0][1:])
+
+        if 'obspm.fr' in doc:
+            # This file is formatted slightly differently, so we need to do
+            # some things differently.
+            if '\r' in doc:
+                split = 'Year\n#\r\n'
+            else:
+                split = 'Year\n#\n'
+            table = doc.split('#@')[1].split(split)[1].split('\n')
+            table = [line for line in table if len(line)>0 and line[0]!='#']
+        else:
+            if '\r' in doc:
+                split = str(int(expiration))+'\n#\r\n'
+            else:
+                split = str(int(expiration))+'\n#\n'
+            table = doc.split('#@')[1].split(split)[1].split('\n')
+            table = [line for line in table if len(line)>0 and line[0]!='#']
     else:
         expiration = -np.inf
+
     if time.time() + ntpepoch > expiration:
         log.writelog("  Leap-second file expired. Retrieving new file.",
                      mute=True)
@@ -48,14 +66,34 @@ def leapdates(rundir, log):
                                         'pub/time/leap-seconds.list',
                                         timeout=5) as nist:
                 doc = nist.read().decode()
+            newexp = doc.split('#@')[1].split('\n')[0][1:]
+            # Remove non-alphanumeric characters with regular expressions
+            newexp = re.sub(r'\W+', '', newexp)
+            if '\r' in doc:
+                split = newexp+'\n#\r\n'
+            else:
+                split = newexp+'\n#\n'
+            table = doc.split('#@')[1].split(split)[1].split('\n')
+            table = [line for line in table if len(line)>0 and line[0]!='#']
             use_fallback = False
         except urllib.error.URLError:
-            # Couldn't connect to NIST page, so try backup page
+            # Couldn't connect to NIST page, so try backup page.
+            # This file is formatted slightly differently, so we need to do
+            # some things differently.
             try:
                 with urllib.request.urlopen('https://hpiers.obspm.fr/iers/bul/'
                                             'bulc/ntp/leap-seconds.list',
                                             timeout=5) as nist:
                     doc = nist.read().decode()
+                newexp = doc.split('#@')[1].split('\n')[0][1:]
+                # Remove non-alphanumeric characters with regular expressions
+                newexp = re.sub(r'\W+', '', newexp)
+                if '\r' in doc:
+                    split = 'Year\n#\r\n'
+                else:
+                    split = 'Year\n#\n'
+                table = doc.split('#@')[1].split(split)[1].split('\n')
+                table = [line for line in table if len(line)>0 and line[0]!='#']
                 use_fallback = False
             except urllib.error.URLError:
                 # Couldn't connect to the internet, so use the local array
@@ -63,12 +101,8 @@ def leapdates(rundir, log):
                 use_fallback = True
 
         if not use_fallback:
-            newexp = doc.split('#@')[1].split('\n')[0][1:]
-            # Remove non-alphanumeric characters with regular expressions
-            newexp = re.sub(r'\W+', '', newexp)
             with open(rundir+"leap-seconds."+newexp, 'w') as newfile:
                 newfile.write(doc)
-            table = doc.split('#@')[1].split('\n#\r\n')[1].split('\n')
             log.writelog("  Leap second file updated.", mute=True)
     else:
         use_fallback = False
@@ -79,7 +113,7 @@ def leapdates(rundir, log):
     if not use_fallback:
         ls = np.zeros(len(table))
         for i in range(len(table)):
-            ls[i] = float(table[i].split('\t')[0])
+            ls[i] = float(table[i].split()[0])
         jd = ls/86400+2415020.5
         return jd
     else:
