@@ -47,14 +47,16 @@ def leapdates(rundir, log):
             else:
                 split = 'Year\n#\n'
             table = doc.split('#@')[1].split(split)[1].split('\n')
-            table = [line for line in table if len(line)>0 and line[0]!='#']
+            table = [line for line in table
+                     if len(line) > 0 and line[0] != '#']
         else:
             if '\r' in doc:
                 split = str(int(expiration))+'\n#\r\n'
             else:
                 split = str(int(expiration))+'\n#\n'
             table = doc.split('#@')[1].split(split)[1].split('\n')
-            table = [line for line in table if len(line)>0 and line[0]!='#']
+            table = [line for line in table
+                     if len(line) > 0 and line[0] != '#']
     else:
         expiration = -np.inf
 
@@ -74,7 +76,8 @@ def leapdates(rundir, log):
             else:
                 split = newexp+'\n#\n'
             table = doc.split('#@')[1].split(split)[1].split('\n')
-            table = [line for line in table if len(line)>0 and line[0]!='#']
+            table = [line for line in table
+                     if len(line) > 0 and line[0] != '#']
             use_fallback = False
         except urllib.error.URLError:
             # Couldn't connect to NIST page, so try backup page.
@@ -93,7 +96,8 @@ def leapdates(rundir, log):
                 else:
                     split = 'Year\n#\n'
                 table = doc.split('#@')[1].split(split)[1].split('\n')
-                table = [line for line in table if len(line)>0 and line[0]!='#']
+                table = [line for line in table
+                         if len(line) > 0 and line[0] != '#']
                 use_fallback = False
             except urllib.error.URLError:
                 # Couldn't connect to the internet, so use the local array
