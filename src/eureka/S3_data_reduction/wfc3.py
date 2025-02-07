@@ -7,6 +7,8 @@ from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
+from tqdm import tqdm
+
 from . import sigrej, source_pos, background, plots_s3, nircam
 from . import hst_scan as hst
 from . import bright2flux as b2f
@@ -891,6 +893,7 @@ def correct_drift2D(data, meta, log, m):
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
+        jobs = []
         for n in range(meta.n_int):
             if np.all(np.isnan(data.flux[n])):
                 # This file had one fewer read, so skip this "filler" read
@@ -906,9 +909,13 @@ def correct_drift2D(data, meta, log, m):
                                          (data.flux[n]*~data.flatmask[n]),
                                          n),
                                    callback=writeDrift2D)
+            jobs.append(res)
         pool.close()
-        pool.join()
-        res.wait()
+        iterfn = jobs
+        if meta.verbose:
+            iterfn = tqdm(iterfn)
+        for job in iterfn:
+            job.get()
 
     # Save the fitted drifts in the data object
     data['centroid_x'] = (['time'], drift2D[:, 0])

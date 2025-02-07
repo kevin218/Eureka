@@ -352,7 +352,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     err_temp = np.ma.masked_where(
                         mask, lc_whites[pi].err.values[0, :])
                     flux_temp, err_temp = util.normalize_spectrum(
-                        meta, flux_temp, err_temp, mask)
+                        meta, flux_temp, err_temp, mask,
+                        scandir=getattr(lc_whites[pi], 'scandir', None))
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
                     time = np.ma.append(time, time_temp)

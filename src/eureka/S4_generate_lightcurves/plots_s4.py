@@ -3,6 +3,9 @@ import os
 import matplotlib.pyplot as plt
 from ..lib import util
 from ..lib import plots
+import warnings
+warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
+                                          'this call because figure with num')
 
 
 def binned_lightcurve(meta, log, lc, i, white=False):
@@ -84,7 +87,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
-        
+
 
 def binned_background(meta, log, lc, i, white=False):
     '''Plot each spectroscopic background light curve. (Figs 4105)
