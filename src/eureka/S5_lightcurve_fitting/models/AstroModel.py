@@ -335,6 +335,8 @@ class PlanetParams():
             # spotrot will default to 10k years (important if t0 is not ~0)
             self.spotrot = 3650000
             self.fleck_fast = True
+        else:
+            self.fleck_fast = False
 
 
 class AstroModel(Model):
