@@ -160,11 +160,11 @@ Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
 bg_x1
 '''''
-Left edge of exclusion region for row-by-row background subtraction.
+The pixel number for the end of the left background region for row-by-row background subtraction. The background region goes from the left of the subarray to this pixel.
 
 bg_x2
 '''''
-Right edge of exclusion region for row-by-row background subtraction.
+The pixel number for the start of the right background region for row-by-row background subtraction. The background region goes from this pixel to the right of the subarray.
 
 masktrace
 '''''''''
@@ -508,11 +508,11 @@ Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
 bg_x1
 '''''
-Left edge of exclusion region for row-by-row background subtraction.
+The pixel number for the end of the left background region for row-by-row background subtraction. The background region goes from the left of the subarray to this pixel.
 
 bg_x2
 '''''
-Right edge of exclusion region for row-by-row background subtraction.
+The pixel number for the start of the right background region for row-by-row background subtraction. The background region goes from this pixel to the right of the subarray.
 
 p3thresh
 ''''''''
