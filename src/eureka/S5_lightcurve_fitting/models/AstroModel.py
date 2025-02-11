@@ -306,7 +306,10 @@ class PlanetParams():
         ld_func = ld_profile(self.limb_dark)
         len_params = len(inspect.signature(ld_func).parameters)
         coeffs = ['u{}'.format(n) for n in range(1, len_params)]
-        self.u = [getattr(self, coeff) for coeff in coeffs]
+        for i, item0 in enumerate(coeffs):
+            item0 += self.channel_id
+            coeffs[i] = item0
+        self.u = [getattr(parameterObject, coeff).value for coeff in coeffs]
         if self.limb_dark == '4-parameter':
             self.limb_dark = 'nonlinear'
         elif self.limb_dark == 'kipping2013':
