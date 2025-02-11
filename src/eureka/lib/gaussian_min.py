@@ -28,13 +28,6 @@ def evalgauss(params, x, y, x0, y0):
     -------
     ndarray
         A 2D array of a 2D gaussian formula.
-
-    Notes
-    -----
-    History:
-
-    - Feb 22, 2023 Isaac Edelman
-        Initial implementation.
     """
     # unpack params
     amplitude, x_stddev, y_stddev = params
@@ -69,13 +62,6 @@ def minfunc(params, frame, x, y, x_mean, y_mean):
     -------
     float
         The mean-squared error of the Gaussian centroid model.
-
-    Notes
-    -----
-    History:
-
-    - Feb 22, 2023 Isaac Edelman
-        Initial implementation.
     """
     # Evaluates the guassian using parameters given
     model_gauss = evalgauss(params, x, y, x_mean, y_mean)
@@ -106,32 +92,16 @@ def pri_cent(img, mask, meta, saved_ref_median_frame):
         First guess of x centroid position.
     y : float
         First guess of y centroid position.
-    refrence_median_frame : ndarray
-        Median frame of the first batch.
-
-    Notes
-    -----
-    History:
-
-    - Feb 22, 2023 Isaac Edelman
-        Initial implementation.
     """
-    # Create median frame
-    if saved_ref_median_frame is None:
-        img_temp = np.ma.masked_where(mask, img)
-        refrence_median_frame = np.ma.median(img_temp, axis=0)
-    else:
-        refrence_median_frame = saved_ref_median_frame
-
     # Create initial centroid guess using specified method
     if meta.centroid_tech.lower() in ['com', '1dg', '2dg']:
         cent_func = getattr(sys.modules[__name__],
                             ("centroid_" + meta.centroid_tech.lower()))
-        x, y = cent_func(refrence_median_frame)
+        x, y = cent_func(saved_ref_median_frame)
     else:
-        print("Invalid centroid_tech option")
+        raise ValueError(f"Invalid centroid_tech option {meta.centroid_tech}")
 
-    return x, y, refrence_median_frame
+    return x, y
 
 
 def mingauss(img, mask, yxguess, meta):
@@ -162,13 +132,6 @@ def mingauss(img, mask, yxguess, meta):
         Refined centroid x position.
     y : float
         Refined centroid y position.
-
-    Notes
-    -----
-    History:
-
-    - Feb 22, 2023 Isaac Edelman
-        Initial implementation.
     """
     img = np.ma.masked_where(mask, img)
 
@@ -183,7 +146,7 @@ def mingauss(img, mask, yxguess, meta):
                                 box_size=(2*meta.ctr_cutout_size+1))
         x, y = x[0], y[0]
     else:
-        print("Invalid centroid_tech option")
+        raise ValueError(f"Invalid centroid_tech option {meta.centroid_tech}")
 
     # Cropping frame to speed up guassian fit
     minx = -int(meta.gauss_frame)+int(x)
