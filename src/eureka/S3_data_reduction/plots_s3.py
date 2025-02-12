@@ -1506,11 +1506,6 @@ def get_bounds(x, y=None):
     ymax, optional
         Maximum y bound
 
-    Notes
-    -----
-    History:
-    - 2023-12-22 Kevin Stevenson
-        Initial implementation.
     """
     xmin, xmax = x[0], x[-1]
     if xmin < xmax:
