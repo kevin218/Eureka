@@ -62,7 +62,7 @@ def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
     if i == 0:
         ax.set_ylim(ymin, ymax)
         ax.legend(loc='best')
-        ax.set_xlabel("Time (MJD)")
+        ax.set_xlabel(f"Time ({time.time_units})")
         ax.set_ylabel("Normalized Flux")
     fname = 'figs'+os.sep+'fig4202_WhiteLC'
     fig.savefig(meta.outputdir+fname+plots.figure_filetype,
