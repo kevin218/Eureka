@@ -44,12 +44,12 @@ class S4cal_MetaClass(MetaClass):
         self.base_dur = getattr(self, 'base_dur', None)
 
         # Outlier detection
+        self.smoothing = getattr(self, 'smoothing', 0)
         self.sigma_thresh = getattr(self, 'sigma_thresh', [4, 4, 4])
 
         # Diagnostics
         self.isplots_S4cal = getattr(self, 'isplots_S4cal', 3)
         self.nbin_plot = getattr(self, 'nbin_plot', 100)
-        # self.testing_S4cal = getattr(self, 'testing_S4cal', False)
         self.hide_plots = getattr(self, 'hide_plots', False)
         self.verbose = getattr(self, 'verbose', True)
 

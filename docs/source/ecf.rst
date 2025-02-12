@@ -860,7 +860,7 @@ Stage 4cal
 
 t0
 ''
-Transit or eclipse midpoint (in BMJD_TDB).
+Transit or eclipse midpoint (in days).
 
 
 time_offset
@@ -890,13 +890,14 @@ Ratio of the semimajor axis to the stellar radius, a/R*.
 
 t14
 '''
-Optional. Total transit duration, from t1 to t4.  The data points before t1 and after t4 are used to determine the out-of-transit baseline flux.  When not given, t14 is computed using the orbital parameters above.  When given, the orbital parameters are ignored.
+Optional. Total transit duration, from t1 to t4 (see image below).  The data points before t1 and after t4 are used to determine the out-of-transit baseline flux.  When not given, t14 is computed using the orbital parameters above.  When given, the orbital parameters are ignored.
 
 
 t23
 '''
-Optional.  Full transit duration, from t2 to t3.  The data points between t2 and t3 are used to determine the in-transit flux.  When not given, t23 is computed using the orbital parameters above.  When given, the orbital parameters are ignored.
+Optional.  Full transit duration, from t2 to t3 (see image below).  The data points between t2 and t3 are used to determine the in-transit flux.  When not given, t23 is computed using the orbital parameters above.  When given, the orbital parameters are ignored.
 
+.. image:: ../media/transit_shape2.png
 
 base_dur
 ''''''''

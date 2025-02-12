@@ -8,20 +8,18 @@ import time as time_pkg
 from copy import deepcopy
 import astraeus.xarrayIO as xrio
 import scipy.interpolate as spi
-import matplotlib.pyplot as plt
 
-from eureka.version import version
-from eureka.lib import manageevent as me
-from eureka.lib import util, logedit, plots
-from eureka.S3_data_reduction.sigrej import sigrej
-from eureka.S4cal_StellarSpectra.s4cal_meta import S4cal_MetaClass
-
-colors = ['xkcd:bright blue', 'xkcd:soft green', 'orange', 'purple']
+from ..version import version
+from ..lib import manageevent as me
+from ..lib import util, logedit
+from ..S3_data_reduction.sigrej import sigrej
+from .s4cal_meta import S4cal_MetaClass
+from .plots_s4cal import plot_whitelc, plot_stellarSpec
 
 
 def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
-    '''Generate median calibrated stellar spectra using in-eclipse data
-    and out-of-eclipse baseline.  The outputs also include the standard
+    '''Generate median calibrated stellar spectra using in-occultation data
+    and out-of-occultation baseline.  The outputs also include the standard
     deviation in time, which can reasonably be used as uncertainties.
 
     Parameters
@@ -110,32 +108,32 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     ax = None
     batch = []
     for i in range(num_ecl):
-        # Compute baseline/in-transit median spectra
+        # Compute baseline/in-occultation median spectra
         t0 = meta.t0[i] + meta.time_offset
         p = meta.period
         rprs = meta.rprs
         ars = meta.ars
         cosi = np.cos(meta.inc*np.pi/180)
-        # total transit duration
+        # total occultation duration
         if meta.t14 is None:
             meta.t14 = p/np.pi*np.arcsin(
                 1/ars*np.sqrt(((1 + rprs)**2 - (ars*cosi)**2)/(1 - cosi**2)))
             if ~np.isfinite(meta.t14):
                 raise Exception("t14 is not finite. Check your system " +
                                 "parameters.")
-        # Full transit duration
+        # Full occultation duration
         if meta.t23 is None:
             meta.t23 = p/np.pi*np.arcsin(
                 1/ars*np.sqrt(((1 - rprs)**2 - (ars*cosi)**2)/(1 - cosi**2)))
             if ~np.isfinite(meta.t23):
                 raise Exception("t23 is not finite. Check your system " +
                                 "parameters or planet may be grazing.")
-        # Indeces for first through fourth contact
+        # Indices for first through fourth contact
         it1 = np.where(spec.time > (t0 - meta.t14/2))[0][0]
         it2 = np.where(spec.time > (t0 - meta.t23/2))[0][0]
         it3 = np.where(spec.time > (t0 + meta.t23/2))[0][0]
         it4 = np.where(spec.time > (t0 + meta.t14/2))[0][0]
-        # Indeces for beginning and end of baseline
+        # Indices for beginning and end of baseline
         if meta.base_dur is None:
             it0 = 0
             it5 = -1
@@ -155,13 +153,14 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         if meta.isplots_S4cal >= 2:
             fig, ax = plot_whitelc(optspec, spec.time, meta, i, fig=fig, ax=ax)
 
-        # Median baseline (i.e. out-of-eclipse) flux
+        # Median baseline (i.e. out-of-occultation) flux
         spec_baseline = np.ma.median(np.ma.concatenate(
             (optspec[it0:it1], optspec[it4:it5])), axis=0)
         std_baseline = np.ma.std(np.ma.concatenate(
             (optspec[it0:it1], optspec[it4:it5])), axis=0)
         # Mask outliers along wavelength axis
-        tck = spi.splrep(wave, spec_baseline, w=1/std_baseline, k=3)
+        tck = spi.splrep(wave, spec_baseline, w=1/std_baseline, k=3,
+                         s=meta.smoothing)
         spline = spi.splev(wave, tck)
         mask = sigrej(spec_baseline - spline, meta.sigma_thresh)
         igood = np.where(~mask)[0]
@@ -179,7 +178,7 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                   spec.optspec.time_units,
                                   name='Std. Dev. of Baseline Flux')
 
-        # Median in-eclipse (or in-transit) flux
+        # Median in-occultation flux
         spec_t23 = np.ma.median(optspec[it2:it3+1], axis=0)
         std_t23 = np.ma.std(optspec[it2:it3+1], axis=0)
         # Mask outliers along wavelength axis
@@ -193,13 +192,13 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                  spec.optspec.flux_units,
                                  spec.optspec.wave_units,
                                  spec.optspec.time_units,
-                                 name='Median In-Eclipse Flux')
+                                 name='Median In-Occultation Flux')
         ecl_fstd = xrio.makeLCDA(std_t23[igood, np.newaxis],
                                  wave[igood], [t0],
                                  spec.optspec.flux_units,
                                  spec.optspec.wave_units,
                                  spec.optspec.time_units,
-                                 name='Std. Dev. of In-Eclipse Flux')
+                                 name='Std. Dev. of In-Occultation Flux')
 
         # Create XArray dataset
         ds = dict(base_flux=base_flux, base_fstd=base_fstd,
@@ -217,69 +216,3 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
     return meta, spec, ds
 
-
-def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
-    '''Plot binned white light curve and indicate
-    baseline and in-eclipse regions.
-    '''
-    toffset = meta.time_offset
-    it0, it1, it2, it3, it4, it5 = meta.it
-
-    # Created binned white LC
-    lc = np.ma.sum(optspec, axis=1)
-    lc /= np.mean(lc)
-    lc_bin = util.binData_time(lc, time, nbin=meta.nbin_plot)
-    time_bin = util.binData_time(time, time, nbin=meta.nbin_plot)
-
-    if i == 0:
-        fig = plt.figure(4202, figsize=(8, 5))
-        plt.clf()
-        ax = fig.subplots(1, 1)
-        ax.plot(time_bin-toffset, lc_bin, '.', color='0.2', alpha=0.8,
-                label='Binned White LC')
-    ymin, ymax = ax.get_ylim()
-    ax.fill_betweenx((ymin, ymax), time[it0]-toffset, time[it1]-toffset,
-                     color=colors[1], alpha=0.2)
-    ax.fill_betweenx((ymin, ymax), time[it4]-toffset, time[it5]-toffset,
-                     color=colors[1], alpha=0.2)
-    ax.fill_betweenx((ymin, ymax), time[it2]-toffset, time[it3]-toffset,
-                     color=colors[0], alpha=0.2)
-    ax.vlines([time[it1]-toffset, time[it4]-toffset,
-              time[it0]-toffset, time[it5]-toffset],
-              ymin, ymax, color=colors[1], label='Baseline Regions')
-    ax.vlines([time[it2]-toffset, time[it3]-toffset],
-              ymin, ymax, color=colors[0], label='In-Eclipse Region')
-    if i == 0:
-        ax.set_ylim(ymin, ymax)
-        ax.legend(loc='best')
-        ax.set_xlabel("Time (MJD)")
-        ax.set_ylabel("Normalized Flux")
-    fname = 'figs'+os.sep+'fig4202_WhiteLC'
-    fig.savefig(meta.outputdir+fname+plots.figure_filetype,
-                bbox_inches='tight', dpi=300)
-    return fig, ax
-
-
-def plot_stellarSpec(meta, ds):
-    '''Plot calibrated stellar spectra from
-    baseline and in-eclipse regions.
-    '''
-    fig = plt.figure(4201, figsize=(8, 5))
-    plt.clf()
-    ax = fig.subplots(1, 1)
-    for i in range(len(ds.time)):
-        ax.errorbar(ds.wavelength, ds.base_flux[:, i], ds.base_fstd[:, i],
-                    fmt='.', ms=1, label=f'Baseline ({ds.time.values[i]})',
-                    color=colors[1])
-        ax.errorbar(ds.wavelength, ds.ecl_flux[:, i], ds.ecl_fstd[:, i],
-                    fmt='.', ms=1, label=f'In-Eclipse ({ds.time.values[i]})',
-                    color=colors[0])
-
-    ax.legend(loc='best')
-    ax.set_xlabel(r"Wavelength ($\mu$m)")
-    ax.set_ylabel(f"Flux ({ds.base_flux.flux_units})")
-
-    fname = 'figs'+os.sep+'fig4201_CalStellarSpec'
-    fig.savefig(meta.outputdir+fname+plots.figure_filetype,
-                bbox_inches='tight', dpi=300)
-    return
