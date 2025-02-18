@@ -187,7 +187,7 @@ class S1MetaClass(MetaClass):
             # Row-by-row BG subtraction (only useful for NIRCam)
             self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
             self.orders = getattr(self, 'orders', None)
-            self.src_ypos = getattr(self, 'src_ypos', 15)
+            self.src_ypos = getattr(self, 'src_ypos', None)
         # bg_x1 and bg_x2 also need to be defined if meta.masktrace is True
         # Left edge of exclusion region for row-by-row BG subtraction
         self.bg_x1 = getattr(self, 'bg_x1', None)
