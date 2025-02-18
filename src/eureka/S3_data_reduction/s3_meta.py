@@ -86,6 +86,10 @@ class S3MetaClass(MetaClass):
         self.dqmask = getattr(self, 'dqmask', True)
         self.manmask = getattr(self, 'manmask', None)
         self.expand = getattr(self, 'expand', 1)
+        if int(self.expand) != self.expand:
+            print('WARNING: meta.expand must be set to an integer. Rounding '
+                  f'{self.expand} to {int(np.round(self.expand))}')
+        self.expand = int(np.round(self.expand))
 
         # Outlier rejection along time axis
         self.ff_outlier = getattr(self, 'ff_outlier', False)
@@ -134,9 +138,12 @@ class S3MetaClass(MetaClass):
         if self.fittype in ['meddata', 'smooth']:
             # Require this parameter to be set if relevant
             self.window_len = getattr(self, 'window_len')
-        elif self.fittype == 'poly':
+        if self.fittype == 'poly':
             # Require this parameter to be set if relevant
             self.prof_deg = getattr(self, 'prof_deg')
+        else:
+            # Set it to None if not relevant
+            self.prof_deg = self.prof_deg = None
         if self.fittype in ['smooth', 'gauss', 'poly']:
             # Require this parameter to be set if relevant
             self.p5thresh = getattr(self, 'p5thresh')
@@ -279,6 +286,8 @@ class S3MetaClass(MetaClass):
             self.hst_cal = getattr(self, 'hst_cal')
         self.leapdir = getattr(self, 'leapdir', 'leapdir')
         self.flatfile = getattr(self, 'flatfile', None)
+        # Applying DQ mask doesn't seem to work for WFC3
+        self.dqmask = getattr(self, 'dqmask', False)
 
         self.set_spectral_defaults()
 
