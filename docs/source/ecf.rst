@@ -609,15 +609,15 @@ Only used for photometry analyses. Skips the background subtraction in the apert
 
 photap
 ''''''
-Only used for photometry analyses. Size of photometry aperture in pixels. If aperture_shape is 'circle', then photap is the radius of the circle. If aperture_shape is 'hexagon', then photap is the radius of the circle circumscribing the hexagon. If the center of a pixel is not included within the aperture, it is being considered. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If skyin and/or skywidth are also lists, all combinations of the three will be attempted.
+Only used for photometry analyses. Size of photometry aperture in pixels. If aperture_shape is 'circle', then photap is the radius of the circle. If aperture_shape is 'hexagon', then photap is the radius of the circle circumscribing the hexagon. If aperture_shape is 'rectangle', then photap is the half-width of the rectangle along the x-axis. If the center of a pixel is not included within the aperture, it is being considered. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If skyin and/or skywidth are also lists, all combinations of the three will be attempted.
 
 photap_b
 ''''''''
-Only used for photometry analyses. Size of photometry aperture radius along the y-axis in units of pixels. This parameter can only be used if aperture_shape is ellipse or rectangle.
+Only used for photometry analyses. If aperture_shape is 'ellipse', then photap is the size of photometry aperture radius along the y-axis in units of pixels. If aperture_shape is 'rectangle', then photap is the half-width of the rectangle along the y-axis. This parameter can only be used if aperture_shape is ellipse or rectangle.
 
 photap_theta
 ''''''''''''
-Only used for photometry analyses. The rotation angle of photometry aperture in degrees. This parameter can only be used if aperture_shape is ellipse or rectangle.
+Only used for photometry analyses. The rotation angle of photometry aperture in degrees. This parameter can only be used if aperture_shape is ellipse or rectangle. The aperture is rotated about the center of the aperture.
 
 skyin
 '''''
