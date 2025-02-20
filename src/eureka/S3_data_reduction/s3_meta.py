@@ -86,10 +86,11 @@ class S3MetaClass(MetaClass):
         self.dqmask = getattr(self, 'dqmask', True)
         self.manmask = getattr(self, 'manmask', None)
         self.expand = getattr(self, 'expand', 1)
-        if int(self.expand) != self.expand:
-            print('WARNING: meta.expand must be set to an integer. Rounding '
-                  f'{self.expand} to {int(np.round(self.expand))}')
-        self.expand = int(np.round(self.expand))
+        if self.expand != int(self.expand) or self.expand < 1:
+            raise ValueError('meta.expand must be an integer >= 1, but got '
+                             f'{self.expand}')
+        else:
+            self.expand = int(self.expand)
 
         # Outlier rejection along time axis
         self.ff_outlier = getattr(self, 'ff_outlier', False)
@@ -179,32 +180,85 @@ class S3MetaClass(MetaClass):
         '''
         self.expand = getattr(self, 'expand', 1)
         if self.expand > 1:
-            # Super sampling not supported for photometry
-            # This is here just in case someone tries to super sample
-            print("Super sampling not supported for photometry."
+            # FINDME: We should soon be able to support expand != 1
+            # for photometry
+            print("Super sampling is not currently supported for photometry. "
                   "Setting meta.expand to 1.")
             self.expand = 1
 
-        self.flag_bg = getattr(self, 'flag_bg', True)
-        self.interp_method = getattr(self, 'interp_method', 'cubic')
-        self.ctr_guess = getattr(self, 'ctr_guess', None)
-        self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
-        self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
+        self.ff_outlier = getattr(self, 'ff_outlier', False)
+
+        # Require window_len to be sent to 0 to avoid smoothing in
+        # optspex.get_clean
+        self.window_len = getattr(self, 'window_len', 0)
+        if self.window_len != 0:
+            print("Warning: meta.window_len is not 0 which is not permitted "
+                  "for photometric data! Setting it to 0.")
+            self.window_len = 0
+
+        # Centroiding parameters
         self.centroid_method = getattr(self, 'centroid_method', 'fgc')
         if self.centroid_method == 'mgmc':
             self.centroid_tech = getattr(self, 'centroid_tech', 'com')
             self.gauss_frame = getattr(self, 'gauss_frame', 15)
-        self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
+        self.ctr_guess = getattr(self, 'ctr_guess', None)
+        self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
+
+        self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
+
+        # Photometric extraction parameters
+        self.phot_method = getattr(self, 'phot_method', 'poet')
         self.aperture_shape = getattr(self, 'aperture_shape', 'circle')
+        if self.phot_method in ['photutils', 'optimal']:
+            self.aperture_edge = getattr(self, 'aperture_edge', 'center')
+            if self.aperture_edge not in ['center', 'exact']:
+                raise ValueError('aperture_edge must be "center" or "exact", '
+                                 f'but got {self.aperture_edge}')
+            if self.aperture_shape not in ['circle', 'ellipse', 'rectangle']:
+                raise ValueError('aperture_shape must be "circle", "ellipse", '
+                                 'or "rectangle", but got '
+                                 f'{self.aperture_shape}')
+            if self.aperture_shape != 'circle':
+                self.photap_b = getattr(self, 'photap_b', self.photap)
+                self.photap_theta = getattr(self, 'photap_theta', 0)
+            else:
+                self.photap_b = self.photap
+                self.photap_theta = 0
+        elif self.phot_method == 'poet':
+            self.aperture_edge = getattr(self, 'aperture_edge', 'center')
+            if self.aperture_edge != 'center':
+                raise ValueError('aperture_edge must be "center" for poet, '
+                                 f'but got {self.aperture_edge}')
+            if self.aperture_shape not in ['circle', 'hexagon']:
+                raise ValueError('aperture_shape must be "circle" or '
+                                 f'"hexagon", but got {self.aperture_shape}')
+            self.betahw = getattr(self, 'betahw', None)
+            if self.betahw is not None and self.betahw <= 0:
+                raise ValueError(f'betahw must be > 0, but got {self.betahw}')
+            elif self.betahw is not None and self.betahw != int(self.betahw):
+                raise ValueError(f'betahw must be an integer, but got '
+                                 f'{self.betahw}')
+            elif self.betahw is not None:
+                self.betahw = int(self.betahw)
+        self.moving_centroid = getattr(self, 'moving_centroid', False)
+        self.interp_method = getattr(self, 'interp_method', 'cubic')
+        self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
         # Require these parameters to be set
         self.photap = getattr(self, 'photap')
         self.skyin = getattr(self, 'skyin')
         self.skywidth = getattr(self, 'skywidth')
+        self.minskyfrac = getattr(self, 'minskyfrac', 0.1)
+        if ~self.skip_apphot_bg and not (0 < self.minskyfrac <= 1):
+            raise ValueError(f'skyfrac is {self.minskyfrac} but must be in '
+                             'range (0,1]')
 
         self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
         self.bg_x1 = getattr(self, 'bg_x1', None)
         self.bg_x2 = getattr(self, 'bg_x2', None)
-        self.bg_method = getattr(self, 'bg_method', 'mean')
+        self.bg_method = getattr(self, 'bg_method', 'median')
+        if ~self.skip_apphot_bg and self.bg_method not in ['mean', 'median']:
+            raise ValueError(f'bg_method must be "mean" or "median", but got '
+                             f'{self.bg_method}')
         self.p3thresh = getattr(self, 'p3thresh', 5)
 
     def set_MIRI_defaults(self):

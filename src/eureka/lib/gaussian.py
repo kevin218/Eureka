@@ -542,9 +542,9 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
     # get a guess if not provided
     if guess is None:
         if yxguess is None:
-            guess = gaussianguess(y-medbg, mask=mask)
+            guess = gaussianguess(y-medbg, mask=medmask)
         else:
-            guess = gaussianguess(y-medbg, mask=mask, yxguess=yxguess)
+            guess = gaussianguess(y-medbg, mask=medmask, yxguess=yxguess)
 
     # "ravel" the guess
     gparams = np.append(guess[0], guess[1])
@@ -561,7 +561,7 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
     # Concatenate sets of parameters we want to fit:
     params = np.append(gparams, bgparams)
     # Rest of parameters needed by residuals:
-    args = (x, y, mask, weights, bgpars, fitbg)
+    args = (x, y, medmask, weights, bgpars, fitbg)
 
     # The fit:
     p, cov, info, mesg, success = so.leastsq(residuals, params, args,
