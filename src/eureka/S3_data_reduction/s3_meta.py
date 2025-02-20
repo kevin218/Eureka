@@ -87,7 +87,7 @@ class S3MetaClass(MetaClass):
         self.manmask = getattr(self, 'manmask', None)
         self.expand = getattr(self, 'expand', 1)
         if self.expand != int(self.expand) or self.expand < 1:
-            raise ValueError('expand must an integer >= 1, but got '
+            raise ValueError('meta.expand must be an integer >= 1, but got '
                              f'{self.expand}')
         else:
             self.expand = int(self.expand)
@@ -139,9 +139,12 @@ class S3MetaClass(MetaClass):
         if self.fittype in ['meddata', 'smooth']:
             # Require this parameter to be set if relevant
             self.window_len = getattr(self, 'window_len')
-        elif self.fittype == 'poly':
+        if self.fittype == 'poly':
             # Require this parameter to be set if relevant
             self.prof_deg = getattr(self, 'prof_deg')
+        else:
+            # Set it to None if not relevant
+            self.prof_deg = self.prof_deg = None
         if self.fittype in ['smooth', 'gauss', 'poly']:
             # Require this parameter to be set if relevant
             self.p5thresh = getattr(self, 'p5thresh')
@@ -289,6 +292,9 @@ class S3MetaClass(MetaClass):
             Initial empty version setting defaults for NIRSpec.
         '''
         self.curvature = getattr(self, 'curvature', True)
+        # When calibrated_spectra is True, flux values above the cutoff
+        # will be set to zero.
+        self.cutoff = getattr(self, 'cutoff', 1e-4)
 
         self.set_spectral_defaults()
 
@@ -326,6 +332,8 @@ class S3MetaClass(MetaClass):
             self.hst_cal = getattr(self, 'hst_cal')
         self.leapdir = getattr(self, 'leapdir', 'leapdir')
         self.flatfile = getattr(self, 'flatfile', None)
+        # Applying DQ mask doesn't seem to work for WFC3
+        self.dqmask = getattr(self, 'dqmask', False)
 
         self.set_spectral_defaults()
 

@@ -536,12 +536,18 @@ def binData_time(data, time, mask=None, nbin=100, err=False):
         mask = ~np.isfinite(data)
 
     # Make a copy for good measure
-    data = np.ma.masked_where(mask, data)
+    data = np.ma.masked_where(mask, data, copy=True)
 
     # Binned_statistic will copy data without keeping it a masked array
     # so we have to manually remove invalid points
-    good_time = time[~np.ma.getmaskarray(data.mask)]
-    good_data = data[~np.ma.getmaskarray(data.mask)]
+    if (type(data.mask) == np.bool_):
+        # Only good data
+        # np.ma.maskarray doesn't work with np.bool_ objects
+        good_time = time
+        good_data = data
+    else:
+        good_time = time[~np.ma.getmaskarray(data.mask)]
+        good_data = data[~np.ma.getmaskarray(data.mask)]
 
     binned, _, _ = binned_statistic(good_time, good_data,
                                     statistic='mean',
@@ -598,8 +604,9 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
             if len(iscans) > 0:
                 for r in range(meta.nreads):
                     if opterr is not None:
-                        normerr[iscans[r::meta.nreads]] /= np.ma.abs(np.ma.mean(
-                            normspec[iscans[r::meta.nreads]], axis=0))
+                        normerr[iscans[r::meta.nreads]] /= np.ma.abs(
+                            np.ma.mean(normspec[iscans[r::meta.nreads]],
+                                       axis=0))
                     normspec[iscans[r::meta.nreads]] /= np.ma.mean(
                         normspec[iscans[r::meta.nreads]], axis=0)
     else:
@@ -658,11 +665,11 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     optspec = np.ma.masked_where(optmask, optspec)
 
     if wave_min is not None:
-        iwmin = np.argmin(np.abs(wave_1d-wave_min))
+        iwmin = np.nanargmin(np.abs(wave_1d-wave_min))
     else:
         iwmin = 0
     if wave_max is not None:
-        iwmax = np.argmin(np.abs(wave_1d-wave_max))
+        iwmax = np.nanargmin(np.abs(wave_1d-wave_max))
     else:
         iwmax = None
 

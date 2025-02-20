@@ -875,6 +875,91 @@ The path to the directory in which to output the Stage 4 JWST data and plots. Di
 
 
 
+
+Stage 4cal
+----------
+
+.. include:: ../media/S4cal_template.ecf
+   :literal:
+
+t0
+''
+Transit or eclipse midpoint (in days).
+
+
+time_offset
+'''''''''''
+Absolute time offset of time-series data (in days).  Defaults to 0.
+
+
+rprs
+''''
+Planet-to-star radius ratio.
+
+
+period
+''''''
+Orbital period (in days).
+
+
+inc
+'''
+Orbital inclination (in degrees).
+
+
+ars
+'''
+Ratio of the semimajor axis to the stellar radius, a/R*.
+
+
+t14
+'''
+Optional. Total transit duration, from t1 to t4 (see image below).  The data points before t1 and after t4 are used to determine the out-of-transit baseline flux.  When not given, t14 is computed using the orbital parameters above.  When given, the orbital parameters are ignored.
+
+
+t23
+'''
+Optional.  Full transit duration, from t2 to t3 (see image below).  The data points between t2 and t3 are used to determine the in-transit flux.  When not given, t23 is computed using the orbital parameters above.  When given, the orbital parameters are ignored.
+
+.. image:: ../media/transit_shape2.png
+
+base_dur
+''''''''
+Baseline duration used before t1 and after t4 (in days).  Flux for the baseline region combines data points from (t1 - base_dur) to t1 and from t4 to (t4 + base_dur).
+
+
+sigma_thresh
+''''''''''''
+Sigma threshold when flagging outliers along the wavelength axis.  Process is performed X times, where X is the length of the list. Defaults to [4, 4, 4].
+
+
+isplots_S4cal
+'''''''''''''
+Sets how many plots should be saved when running Stage 4cal. Defaults to 3.
+
+
+nbin_plot
+'''''''''
+The number of bins that should be used for figures 5104 and 5304. Defaults to 100.
+
+
+hide_plots
+^^^^^^^^^^
+If True, plots will automatically be closed rather than popping up on the screen.
+
+
+topdir + inputdir
+'''''''''''''''''
+The path to the directory containing the Stage 3 JWST data. Directories containing spaces should be enclosed in quotation marks.
+
+
+topdir + outputdir
+''''''''''''''''''
+The path to the directory in which to output the Stage 4cal JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
+
+
+
+
 Stage 5
 -------
 
@@ -1151,11 +1236,13 @@ This file describes the transit/eclipse and systematics parameters and their pri
 
 ``Name`` defines the specific parameter being fit for. When fitting for multiple channels simultaneously, you can add optionally add ``_ch#`` after the parameter (e.g., ``rprs``, ``rprs_ch1``, ``rprs_ch2``, etc.) to set channel-specific priors; if you don't manually set a different prior for each channel, the code will default to the prior for the 0th channel (e.g., ``rprs``).
 Available fitting parameters are:
+
    - Transit and Eclipse Depth Parameters
       - ``rp`` or ``rprs`` - planet-to-star radius ratio, for the transit models.
       - ``fp`` or ``fpfs`` - planet-to-star flux ratio, for the eclipse models.
       - ``rp2`` or ``rprs2`` - an additional planet-to-star radius ratio for use with the catwoman transit model to model transit limb-asymmetries.
       - ``phi`` - the angle (in degrees) of the line separating the semi-circles defined by ``rp`` and ``rp2`` in the catwoman transit model. If ``phi`` is set to 90 degrees (the parameter's default value), the ``rp`` is the trailing hemisphere and ``rp2`` is the leading hemisphere. If ``phi`` is set to 0, then ``rp`` is the northern hemisphere and ``rp2`` is the southern hemisphere.
+
       When fitting for multiple planets, add ``_pl#`` after the parameter (e.g., ``rprs``, ``rprs_pl1``, ``rprs_pl2``, etc.). This also applies to the planetaty orbital parameters below. Also be sure to set the ``num_planets`` parameter in your ECF (not EPF) to specify the number of planets being modelled simultaneously.
    - Orbital Parameters
       - ``per`` - orbital period (in days)
@@ -1239,8 +1326,10 @@ Available fitting parameters are:
       - ``spotrad#`` - The spot radius relative to the star. Replace the # with the spot number (starting with nothing (just ``spotrad``) for spot #0, and then ``spotrad1`` for the next spot)
       - ``spotlat#`` - The spot latitude in degrees. 0 is the center of the star (at time=0 if you have set the ``spotrot`` parameter). Replace the # with the spot number (starting with nothing (just ``spotlat``) for spot #0, and then ``spotlat1`` for the next spot)
       - ``spotlon#`` - The spot longitude in degrees. 0 is the center of the star (at time=0 if you have set the ``spotrot`` parameter). Replace the # with the spot number (starting with nothing (just ``spotlon``) for spot #0, and then ``spotlon1`` for the next spot)
+
       Fleck specific parameters:
       - ``spotnpts`` - The number of temporal points to evalaute at. ~200-500 is good.
+
       Starry specific parameters:
       - ``spotnpts`` - The degree of spherical harmonics on the star (ydeg). ~30 is needed to appropriately model the spot.
 
@@ -1258,7 +1347,7 @@ Available fitting parameters are:
 
       - ``h0--h5`` - Coefficients for the HST exponential + polynomial ramp model.
 
-         The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch + h2) + h3*time_batch + h4*time_batch**2``,
+         The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch) + h2*time_batch + h3*time_batch**2``,
          where ``h0--h1`` describe the exponential ramp per HST orbit, ``h2--h3`` describe the polynomial (up to order two) per HST orbit, ``h4`` is the orbital period of HST (in the same time units as the data, usually days), and ``h5`` is the time offset when computing ``time_batch``.  A good starting point for ``h4`` is 0.066422 days and ``h5`` is 0.03 days.  ``time_batch = (time_local-h5) % h4``.
          If you want to fit a linear trend in time, you can omit ``h3`` or fix it to ``0``.
 
