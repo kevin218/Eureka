@@ -888,9 +888,9 @@ def interp_masked_helper(flux, mask, grid_x, grid_y, interp_method, i):
         # Don't bother trying to replace bad values if there are none
         return flux, i
 
-    # flux values of not masked pixels
+    # flux values of good pixels
     values = flux[~mask]
-    # x,y positions of not masked pixels
+    # x,y positions of good pixels
     points = np.array(np.where(~mask)).T
     # Use scipy.interpolate.griddata to interpolate
     grid_z = griddata(points, values, (grid_x, grid_y), method=interp_method)

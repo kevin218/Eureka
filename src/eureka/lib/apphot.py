@@ -77,11 +77,11 @@ def apphot(data, meta, i):
                              apFunc(iskyin, ictr, isz))
 
     # combine masks to mask all bad pixels and pixels outside annulus
-    skymask = skyann | imask | ~np.isfinite(iimage)  # flag NaNs to eliminate
+    # flag NaNs to eliminate them and any pixels with zero or negative errors
+    skymask = skyann | imask | ~np.isfinite(iimage) | iimerr <= 0
     # from nskypix
 
     # Check for skyfrac violation
-    # FINDME: include NaNs and zero errors
     nskypix = np.sum(~skymask)/meta.expand**2
     szsky = (int(np.ceil(iskyout))*2+3)*np.array([1, 1], dtype=int)
     ctrsky = (ictr % 1)+np.ceil(iskyout)+1

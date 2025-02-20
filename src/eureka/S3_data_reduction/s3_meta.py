@@ -188,6 +188,13 @@ class S3MetaClass(MetaClass):
 
         self.flag_bg = getattr(self, 'flag_bg', True)
 
+        # Require window_len to be sent to 0 to avoid smoothing in optspex.get_clean
+        self.window_len = getattr(self, 'window_len', 0)
+        if self.window_len != 0:
+            print("Warning: meta.window_len is not 0 which is not permitted "
+                  "for photometric data! Setting it to 0.")
+            self.window_len = 0
+
         # Centroiding parameters
         self.centroid_method = getattr(self, 'centroid_method', 'fgc')
         if self.centroid_method == 'mgmc':
@@ -240,9 +247,9 @@ class S3MetaClass(MetaClass):
         self.skyin = getattr(self, 'skyin')
         self.skywidth = getattr(self, 'skywidth')
         self.minskyfrac = getattr(self, 'minskyfrac', 0.1)
-        if ~self.skip_apphot_bg and not (0 < self.minskyfrac < 1):
+        if ~self.skip_apphot_bg and not (0 < self.minskyfrac <= 1):
             raise ValueError(f'skyfrac is {self.minskyfrac} but must be in '
-                             'range [0,1]')
+                             'range (0,1]')
 
         self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
         self.bg_x1 = getattr(self, 'bg_x1', None)

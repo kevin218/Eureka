@@ -551,17 +551,13 @@ curvature
 '''''''''
 Current options: 'None', 'correct'. Using 'None' will not use any curvature correction and is strongly recommended against for instruments with strong curvature like NIRSpec/G395. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. If using 'correct', you should also be using fittype = 'meddata'.
 
-flag_bg
-'''''''
-Only used for photometry analyses. Options are: True, False. Does an outlier rejection along the time axis for each individual pixel in a segment (= in a calints file).
-
 interp_method
 '''''''''''''
 Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 
 oneoverf_corr
 '''''''''''''
-Only used for photometry analyses. The NIRCam detector exhibits 1/f noise along the long axis. Furthermore, each amplifier area (each is 512 colomns in length) has its own 1/f characteristics. Correcting for the 1/f effect will improve the quality of the final light curve. So, performing this correction is advised if it has not been done in any of the previous stages. The 1/f correction in Stage 3 treats every amplifier region separately. It does a row by row subtraction while avoiding pixels close to the star (see oneoverf_dist). "oneoverf_corr" sets which method should be used to determine the average flux value in each row of an amplifier region. Options: None, meanerr, median. If the user sets oneoverf_corr = None, no 1/f correction will be performed in S3. meanerr calculates a mean value which is weighted by the error array in a row. median calculated the median flux in a row.
+Only used for photometry analyses. The NIRCam detector exhibits 1/f noise along the long axis. Furthermore, each amplifier area (which are all 512 columns in length) has its own 1/f characteristics. Correcting for the 1/f effect will improve the quality of the final light curve. So, performing this correction is advised if it has not been done in any of the previous stages. The 1/f correction in Stage 3 treats every amplifier region separately. It does a row by row subtraction while avoiding pixels close to the star (see oneoverf_dist). "oneoverf_corr" sets which method should be used to determine the average flux value in each row of an amplifier region. Options: None, meanerr, median. If the user sets oneoverf_corr = None, no 1/f correction will be performed in S3. meanerr calculates a mean value which is weighted by the error array in a row. median calculated the median flux in a row.
 
 oneoverf_dist
 '''''''''''''
@@ -585,7 +581,7 @@ Only used for photometry analyses. The centroiding technique used if centroid_me
 
 gauss_frame
 '''''''''''
-Only used for photometry analyses. Range away from first centroid guess to include in centroiding map for gaussian widths. Only required for mgmc method. Options: 1 -> Max frame size (type integer).
+Only used for photometry analyses. Half-width of the pixel box centered around the centroid measurement to include in estimating gaussian width of the PSF. Options: this should be set to something larger than your expected PSF size; ~100 should work for defocused NIRCam photometry, and ~15 for MIRI photometry.
 
 phot_method
 '''''''''''
@@ -600,7 +596,7 @@ Options are 'center' (each pixel is included only if its center lies within the 
 aperture_shape
 ''''''''''''''
 Only used for photometry analyses. Specifies the shape of the extraction aperture.
-If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_utils is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape. If
+If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_utils is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape.
 Hexagonal apertures may better match the shape of the JWST primary mirror for defocused NIRCam photometry.
 
 moving_centroid
@@ -609,7 +605,7 @@ Only used for photometry analyses. If False (recommended), the aperture will sta
 
 skip_apphot_bg
 ''''''''''''''
-Only used for photometry analyses. Skips the background subtraction in the aperture photometry routine. If the user does the 1/f noise subtraction during S3, the code will subtract the background from each amplifier region. The aperture photometry code will again subtract a background flux from the target flux by calculating the flux in an annulus in the background. If the user wants to skip this background subtraction by setting an background annulus, skip_apphot_bg has to be set to True.
+Only used for photometry analyses. Skips the background subtraction in the aperture photometry routine. If the user does the 1/f noise subtraction during S3, the code will subtract the background from each amplifier region. The aperture photometry code will again subtract a background flux from the target flux by calculating the flux in an annulus in the background. If the user wants to skip the annular background subtraction step, skip_apphot_bg has to be set to True.
 
 photap
 ''''''

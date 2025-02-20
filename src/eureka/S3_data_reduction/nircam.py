@@ -7,7 +7,7 @@ from . import sigrej, background, optspex, straighten, plots_s3
 from ..lib.util import read_time, supersample
 from ..lib import meanerr as me
 
-__all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg',
+__all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg', 'flag_bg_phot',
            'fit_bg', 'cut_aperture', 'standard_spectrum', 'clean_median_flux',
            'do_oneoverf_corr', 'calibrated_spectra',
            'residualBackground', 'lc_nodriftcorr']
@@ -231,6 +231,45 @@ def flag_bg(data, meta, log):
                                                  bgmask1, estsig1)
     data['mask'][:, meta.bg_y2:] = sigrej.sigrej(bgdata2, meta.bg_thresh,
                                                  bgmask2, estsig2)
+
+    return data
+
+
+def flag_bg_phot(data, meta, log):
+    '''Outlier rejection of sky background along time axis for photometry.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
+    '''
+    log.writelog('  Performing background outlier rejection...',
+                 mute=(not meta.verbose))
+
+    # Figure out which pixels are outside of the source aperture
+    x_indices, y_indices = np.meshgrid(np.arange(data.flux.shape[2]),
+                                       np.arange(data.flux.shape[1]))
+    mean_x = np.ma.median(data.centroid_x.values)
+    mean_y = np.ma.median(data.centroid_y.values)
+    distance = np.sqrt((x_indices-mean_x)** 2 + (y_indices-mean_y)**2)
+    outside_aperture = distance > meta.photap
+
+    # Do sigrej only on the pixels outside of the source aperture
+    bgdata = data.flux[outside_aperture]
+    bgmask = data.mask[outside_aperture]
+    data['mask'][outside_aperture] = sigrej.sigrej(bgdata1, meta.bg_thresh,
+                                                   bgmask1, None)
+    data['mask'][outside_aperture] = sigrej.sigrej(bgdata2, meta.bg_thresh,
+                                                   bgmask2, None)
 
     return data
 

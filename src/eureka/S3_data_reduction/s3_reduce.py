@@ -452,22 +452,19 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         # (eg. MJy/sr -> DN -> Electrons)
                         data, meta = b2f.convert_to_e(data, meta, log)
 
-                    # Do outlier reduction along time axis for
+                    # Do outlier rejection along time axis for
                     # each individual pixel
-                    if meta.flag_bg:
+                    if meta.ff_outlier:
                         data = inst.flag_ff(data, meta, log)
+                    else:
+                        data = inst.flag_bg_phot(data, meta, log)
 
                     # Setting up arrays for photometry reduction
                     data = util.phot_arrays(data)
 
                     # Compute the median frame
                     if saved_ref_median_frame is None:
-                        img_temp = np.ma.masked_where(data.mask.values,
-                                                      data.flux.values)
-                        median_frame = np.ma.median(img_temp, axis=0)
-                        data['medflux'] = (['y', 'x'], median_frame)
-                        data['medflux'].attrs['flux_units'] = \
-                            data.flux.attrs['flux_units']
+                        data = inst.clean_median_flux(data, meta, log, m)
                         saved_ref_median_frame = deepcopy(data.medflux)
                     else:
                         # Load the original median frame
