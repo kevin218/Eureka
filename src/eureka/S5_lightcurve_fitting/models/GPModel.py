@@ -179,7 +179,7 @@ class GPModel(Model):
 
             if self.gp_code_name == 'george':
                 gp.compute(self.kernel_inputs[chan][:, good].T, unc_fit)
-                mu = gp.predict(residuals, self.kernel_inputs[chan].T,
+                mu = gp.predict(residuals, self.kernel_inputs[chan][:, good].T,
                                 return_cov=False)
             elif self.gp_code_name == 'celerite':
                 kernel_inputs = self.kernel_inputs[chan][0][good]
