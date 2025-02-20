@@ -2,12 +2,14 @@ import numpy as np
 import os
 import glob
 from astropy.io import fits
-from . import sort_nicely as sn
 from scipy.interpolate import griddata
 from scipy.ndimage import zoom
 from scipy.stats import binned_statistic
-from .naninterp1d import naninterp1d
+import multiprocessing as mp
+from tqdm import tqdm
 
+from . import sort_nicely as sn
+from .naninterp1d import naninterp1d
 from .citations import CITATIONS
 
 # populate common imports for current stage
@@ -538,7 +540,7 @@ def binData_time(data, time, mask=None, nbin=100, err=False):
 
     # Binned_statistic will copy data without keeping it a masked array
     # so we have to manually remove invalid points
-    if (type(data.mask) == np.bool_):
+    if (type(data.mask) is np.bool_):
         # Only good data
         # np.ma.maskarray doesn't work with np.bool_ objects
         good_time = time
@@ -786,7 +788,7 @@ def manmask(data, meta, log):
 
 
 # PHOTOMETRY
-def interp_masked(data, meta, i, log):
+def interp_masked(data, meta, log):
     """
     Interpolates masked pixels.
     Based on the example here:
@@ -798,8 +800,6 @@ def interp_masked(data, meta, i, log):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    i : int
-        The current integration.
     log : logedit.Logedit
         The current log.
 
@@ -808,34 +808,94 @@ def interp_masked(data, meta, i, log):
     data : Xarray Dataset
         The updated Dataset object with requested pixels masked.
     """
-    if i == 0:
-        log.writelog('    Interpolating masked values...',
-                     mute=(not meta.verbose))
-    flux = data.flux.values[i]
-    mask = data.mask.values[i]
-    nx = flux.shape[1]
-    ny = flux.shape[0]
+    nx = data.flux.values.shape[2]
+    ny = data.flux.values.shape[1]
     grid_x, grid_y = np.mgrid[0:ny-1:complex(0, ny), 0:nx-1:complex(0, nx)]
-    points = np.where(~mask)
-    # x,y positions of not masked pixels
-    points_t = np.array(points).transpose()
-    values = flux[np.where(~mask)]  # flux values of not masked pixels
 
-    # Use scipy.interpolate.griddata to interpolate
-    if meta.interp_method == 'nearest':
-        grid_z = griddata(points_t, values, (grid_x, grid_y), method='nearest')
-    elif meta.interp_method == 'linear':
-        grid_z = griddata(points_t, values, (grid_x, grid_y), method='linear')
-    elif meta.interp_method == 'cubic':
-        grid_z = griddata(points_t, values, (grid_x, grid_y), method='cubic')
+    if meta.interp_method not in ['nearest', 'linear', 'cubic']:
+        message = (f'Your method for interpolation "{meta.interp_method}" '
+                   'is not supported! Please choose between None, nearest, '
+                   'linear or cubic.')
+        log.writelog(message, mute=(not meta.verbose))
+        raise ValueError(message)
+
+    # Write interpolated values
+    def writeInterploated(arg):
+        grid_z, i = arg
+        data.flux.values[i] = grid_z
+        return
+
+    message = '  Interpolating masked values'
+    log.writelog(message+'...', mute=True)
+
+    if meta.ncpu == 1:
+        # Only 1 CPU
+
+        iterfn = range(len(data.time))
+        if meta.verbose:
+            iterfn = tqdm(iterfn, desc=message)
+        for i in iterfn:
+            writeInterploated(interp_masked_helper(
+                data.flux.values[i], data.mask.values[i], grid_x, grid_y,
+                meta.interp_method, i))
     else:
-        log.writelog('Your method for interpolation is not supported!'
-                     'Please choose between None, nearest, linear or cubic.',
-                     mute=(not meta.verbose))
-
-    data.flux.values[i] = grid_z
+        # Multiple CPUs
+        pool = mp.Pool(meta.ncpu)
+        jobs = [pool.apply_async(func=interp_masked_helper,
+                                 args=(data.flux.values[i],
+                                       data.mask.values[i],
+                                       grid_x, grid_y,
+                                       meta.interp_method, i,),
+                                 callback=writeInterploated)
+                for i in range(len(data.time))]
+        pool.close()
+        iterfn = jobs
+        if meta.verbose:
+            iterfn = tqdm(iterfn, desc=message)
+        for job in iterfn:
+            job.get()
 
     return data
+
+
+def interp_masked_helper(flux, mask, grid_x, grid_y, interp_method, i):
+    """A helper function to do bad-pixel intepolation when multiprocessing.
+
+    Parameters
+    ----------
+    flux : ndarray (2D)
+        A 2D float array.
+    mask : ndarray
+        A 2D boolean array, where True values are masked.
+    grid_x : ndarray
+        The x position for every index.
+    grid_y : ndarray
+        The y position for every index.
+    interp_method : str
+        One of ['linear', 'nearest', 'cubic']. For more details, read the
+        documentation for scipy.interpolate.griddata.
+    i : int
+        The current integration number.
+
+    Returns
+    -------
+    grid_z : ndarray
+        The input flux array with bad values interpolated over.
+    i : int
+        The same input i, to be used when multiprocessing.
+    """
+    if not np.any(mask):
+        # Don't bother trying to replace bad values if there are none
+        return flux, i
+
+    # flux values of good pixels
+    values = flux[~mask]
+    # x,y positions of good pixels
+    points = np.array(np.where(~mask)).T
+    # Use scipy.interpolate.griddata to interpolate
+    grid_z = griddata(points, values, (grid_x, grid_y), method=interp_method)
+    # Replace flux with interpolated values
+    return grid_z, i
 
 
 def phot_arrays(data):
