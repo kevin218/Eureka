@@ -4,7 +4,7 @@
 # Name        Value         Free?          PriorPar1    PriorPar2    PriorType
 # "Free?" can be free, fixed, white_free, white_fixed, shared, or independent
 # PriorType can be U (Uniform), LU (Log Uniform), or N (Normal).
-# If U/LU, PriorPar1 and PriorPar2 represent upper and lower limits of the parameter/log(the parameter).
+# If U/LU, PriorPar1 and PriorPar2 represent lower and upper limits of the parameter/log(the parameter).
 # If N, PriorPar1 is the mean and PriorPar2 is the standard deviation of a Gaussian prior.
 #-------------------------------------------------------------------------------------------------------
 # ------------------
