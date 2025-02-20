@@ -188,7 +188,8 @@ class S3MetaClass(MetaClass):
 
         self.flag_bg = getattr(self, 'flag_bg', True)
 
-        # Require window_len to be sent to 0 to avoid smoothing in optspex.get_clean
+        # Require window_len to be sent to 0 to avoid smoothing in
+        # optspex.get_clean
         self.window_len = getattr(self, 'window_len', 0)
         if self.window_len != 0:
             print("Warning: meta.window_len is not 0 which is not permitted "

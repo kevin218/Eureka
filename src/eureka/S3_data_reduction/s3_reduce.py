@@ -456,8 +456,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     # each individual pixel
                     if meta.ff_outlier:
                         data = inst.flag_ff(data, meta, log)
-                    else:
-                        data = inst.flag_bg_phot(data, meta, log)
 
                     # Setting up arrays for photometry reduction
                     data = util.phot_arrays(data)
@@ -534,6 +532,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         # Plot 2D frame, the centroid and the centroid position
                         if meta.isplots_S3 >= 3 and i < meta.nplots:
                             plots_s3.phot_2d_frame(data, meta, m, i)
+
+                    # Do outlier rejection along time axis for
+                    # only background pixels
+                    if not meta.ff_outlier:
+                        # This requires centroid positions, so must be done
+                        # later than inst.flag_ff
+                        data = inst.flag_bg_phot(data, meta, log)
 
                     # Calculate flux in aperture and subtract background flux
                     log.writelog('  Doing photometric extraction...',

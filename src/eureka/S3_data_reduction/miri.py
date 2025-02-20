@@ -284,6 +284,8 @@ def flag_bg(data, meta, log):
 def flag_bg_phot(data, meta, log):
     '''Outlier rejection of sky background along time axis for photometry.
 
+    Uses the code written for NIRCam which also works for MIRI.
+
     Parameters
     ----------
     data : Xarray Dataset
@@ -423,30 +425,6 @@ def standard_spectrum(data, meta, apdata, apmask, aperr):
     """
 
     return nircam.standard_spectrum(data, meta, apdata, apmask, aperr)
-
-
-def flag_bg_phot(data, meta, log):
-    '''Outlier rejection of segment along time axis adjusted for the
-    photometry reduction routine.
-
-    Uses the code written for NIRCam which works for MIRI as long
-    as the MIRI data gets rotated.
-
-    Parameters
-    ----------
-    data : Xarray Dataset
-        The Dataset object.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    log : logedit.Logedit
-        The current log.
-
-    Returns
-    -------
-    data : Xarray Dataset
-        The updated Dataset object with outlier background pixels flagged.
-    '''
-    return nircam.flag_bg_phot(data, meta, log)
 
 
 def calibrated_spectra(data, meta, log):

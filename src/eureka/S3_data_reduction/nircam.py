@@ -260,16 +260,14 @@ def flag_bg_phot(data, meta, log):
                                        np.arange(data.flux.shape[1]))
     mean_x = np.ma.median(data.centroid_x.values)
     mean_y = np.ma.median(data.centroid_y.values)
-    distance = np.sqrt((x_indices-mean_x)** 2 + (y_indices-mean_y)**2)
+    distance = np.sqrt((x_indices-mean_x)**2 + (y_indices-mean_y)**2)
     outside_aperture = distance > meta.photap
 
     # Do sigrej only on the pixels outside of the source aperture
     bgdata = data.flux[outside_aperture]
     bgmask = data.mask[outside_aperture]
-    data['mask'][outside_aperture] = sigrej.sigrej(bgdata1, meta.bg_thresh,
-                                                   bgmask1, None)
-    data['mask'][outside_aperture] = sigrej.sigrej(bgdata2, meta.bg_thresh,
-                                                   bgmask2, None)
+    data['mask'][outside_aperture] = sigrej.sigrej(bgdata, meta.bg_thresh,
+                                                   bgmask, None)
 
     return data
 

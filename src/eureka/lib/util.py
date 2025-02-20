@@ -540,7 +540,7 @@ def binData_time(data, time, mask=None, nbin=100, err=False):
 
     # Binned_statistic will copy data without keeping it a masked array
     # so we have to manually remove invalid points
-    if (type(data.mask) == np.bool_):
+    if (type(data.mask) is np.bool_):
         # Only good data
         # np.ma.maskarray doesn't work with np.bool_ objects
         good_time = time
