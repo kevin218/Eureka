@@ -186,7 +186,7 @@ class S3MetaClass(MetaClass):
                   "Setting meta.expand to 1.")
             self.expand = 1
 
-        self.flag_bg = getattr(self, 'flag_bg', True)
+        self.ff_outlier = getattr(self, 'ff_outlier', False)
 
         # Require window_len to be sent to 0 to avoid smoothing in
         # optspex.get_clean

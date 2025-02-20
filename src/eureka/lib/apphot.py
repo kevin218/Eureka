@@ -78,7 +78,7 @@ def apphot(data, meta, i):
 
     # combine masks to mask all bad pixels and pixels outside annulus
     # flag NaNs to eliminate them and any pixels with zero or negative errors
-    skymask = skyann | imask | ~np.isfinite(iimage) | iimerr <= 0
+    skymask = skyann | imask | ~np.isfinite(iimage) | (iimerr <= 0)
     # from nskypix
 
     # Check for skyfrac violation

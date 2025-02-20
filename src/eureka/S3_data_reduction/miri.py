@@ -308,6 +308,8 @@ def flag_ff(data, meta, log):
     For data with deep transits, there is a risk of masking good transit data.
     Proceed with caution.
 
+    Uses the code written for NIRCam which also works for MIRI.
+
     Parameters
     ----------
     data : Xarray Dataset

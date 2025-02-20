@@ -215,6 +215,9 @@ def flag_bg(data, meta, log):
     log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
+    size = data.mask.size
+    prev_count = (~data.mask.values).sum()
+
     bgdata1 = data.flux[:, :meta.bg_y1]
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
@@ -231,6 +234,13 @@ def flag_bg(data, meta, log):
                                                  bgmask1, estsig1)
     data['mask'][:, meta.bg_y2:] = sigrej.sigrej(bgdata2, meta.bg_thresh,
                                                  bgmask2, estsig2)
+
+    # Count difference in number of good pixels
+    new_count = (~data.mask.values).sum()
+    diff_count = prev_count - new_count
+    perc_rej = 100*(diff_count/size)
+    log.writelog(f'    Flagged {perc_rej:.6f}% of pixels as bad.',
+                 mute=(not meta.verbose))
 
     return data
 
@@ -255,6 +265,9 @@ def flag_bg_phot(data, meta, log):
     log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
+    size = data.mask.size
+    prev_count = (~data.mask.values).sum()
+
     # Figure out which pixels are outside of the source aperture
     x_indices, y_indices = np.meshgrid(np.arange(data.flux.shape[2]),
                                        np.arange(data.flux.shape[1]))
@@ -264,10 +277,17 @@ def flag_bg_phot(data, meta, log):
     outside_aperture = distance > meta.photap
 
     # Do sigrej only on the pixels outside of the source aperture
-    bgdata = data.flux[outside_aperture]
-    bgmask = data.mask[outside_aperture]
-    data['mask'][outside_aperture] = sigrej.sigrej(bgdata, meta.bg_thresh,
-                                                   bgmask, None)
+    bgdata = data.flux.values[:, outside_aperture]
+    bgmask = data.mask.values[:, outside_aperture]
+    data.mask.values[:, outside_aperture] = sigrej.sigrej(bgdata, meta.bg_thresh,
+                                                          bgmask, None)
+
+    # Count difference in number of good pixels
+    new_count = (~data.mask.values).sum()
+    diff_count = prev_count - new_count
+    perc_rej = 100*(diff_count/size)
+    log.writelog(f'    Flagged {perc_rej:.6f}% of pixels as bad.',
+                 mute=(not meta.verbose))
 
     return data
 
