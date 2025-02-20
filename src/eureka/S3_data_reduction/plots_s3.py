@@ -1043,19 +1043,25 @@ def make_artists(meta, centroid_x, centroid_y):
         skyin_b = meta.skyin*(meta.photap_b/meta.photap)
         skyout_b = meta.skyout*(meta.photap_b/meta.photap)
 
-        ap1 = patches.Rectangle((centroid_x-meta.photap, centroid_y-meta.photap_b),
+        ap1 = patches.Rectangle((centroid_x-meta.photap,
+                                 centroid_y-meta.photap_b),
                                 2*meta.photap, 2*meta.photap_b,
-                                angle=meta.photap_theta, rotation_point='center',
+                                angle=meta.photap_theta,
+                                rotation_point='center',
                                 color='r', fill=False, lw=3,
                                 alpha=0.7, label='target aperture')
-        ap2 = patches.Rectangle((centroid_x-meta.skyin, centroid_y-skyin_b),
+        ap2 = patches.Rectangle((centroid_x-meta.skyin,
+                                 centroid_y-skyin_b),
                                 2*meta.skyin, 2*skyin_b,
-                                angle=meta.photap_theta, rotation_point='center',
+                                angle=meta.photap_theta,
+                                rotation_point='center',
                                 color='w', fill=False, lw=4, alpha=0.8,
                                 label='sky aperture')
-        ap3 = patches.Rectangle((centroid_x-meta.skyout, centroid_y-skyout_b),
+        ap3 = patches.Rectangle((centroid_x-meta.skyout,
+                                 centroid_y-skyout_b),
                                 2*meta.skyout, 2*skyout_b,
-                                angle=meta.photap_theta, rotation_point='center',
+                                angle=meta.photap_theta,
+                                rotation_point='center',
                                 color='w', fill=False, lw=4, alpha=0.8)
     else:
         # circular apertures

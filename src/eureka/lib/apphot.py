@@ -551,21 +551,23 @@ def photutils_apphot(data, meta, i):
     elif meta.aperture_shape == 'ellipse':
         # Sky annulus has the same aspect ratio and orientation as source aper
         theta = meta.photap_theta*np.pi/180
+        skyin_b = meta.skyin*(meta.photap_b/meta.photap)
+        skyout_b = meta.skyout*(meta.photap_b/meta.photap)
+
         obj_aper = EllipticalAperture(position, meta.photap, meta.photap_b,
                                       theta)
         sky_annul = EllipticalAnnulus(position, meta.skyin, meta.skyout,
-                                      meta.skyout*(meta.photap_b/meta.photap),
-                                      meta.skyin*(meta.photap_b/meta.photap),
-                                      theta)
+                                      skyout_b, skyin_b, theta)
     elif meta.aperture_shape == 'rectangle':
         # Sky annulus has the same aspect ratio and orientation as source aper
         theta = meta.photap_theta*np.pi/180
-        obj_aper = RectangularAperture(position, 2*meta.photap, 2*meta.photap_b,
-                                       theta)
+        skyin_b = meta.skyin*(meta.photap_b/meta.photap)
+        skyout_b = meta.skyout*(meta.photap_b/meta.photap)
+
+        obj_aper = RectangularAperture(position, 2*meta.photap,
+                                       2*meta.photap_b, theta)
         sky_annul = RectangularAnnulus(position, 2*meta.skyin, 2*meta.skyout,
-                                       2*meta.skyout*(meta.photap_b/meta.photap),
-                                       2*meta.skyin*(meta.photap_b/meta.photap),
-                                       theta)
+                                       2*skyout_b, 2*skyin_b, theta)
     else:
         raise ValueError(f'Unknown aperture_shape "{meta.aperture_shape}"')
 
