@@ -569,7 +569,7 @@ Only used for photometry analyses. Selects the method used for determining the c
 
 ctr_guess
 '''''''''
-Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess.
+Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess. If set to 'fits', the code will use the approximate centroid position information contained in the FITS header as an starting point. If set to None, the code will first perform centroiding on whole frame (which can sometimes fail).
 
 ctr_cutout_size
 '''''''''''''''
@@ -596,7 +596,7 @@ Options are 'center' (each pixel is included only if its center lies within the 
 aperture_shape
 ''''''''''''''
 Only used for photometry analyses. Specifies the shape of the extraction aperture.
-If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_utils is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape.
+If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_method is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape.
 Hexagonal apertures may better match the shape of the JWST primary mirror for defocused NIRCam photometry.
 
 moving_centroid

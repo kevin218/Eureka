@@ -24,7 +24,7 @@ interp_method   linear      # Interpolate bad pixels. Options: None (if no inter
 
 # Centroiding parameters
 centroid_method fgc         # Method used for centroiding. Options: mgmc, fgc
-ctr_guess		[698, 516]	# Initial guess of centroid position. If None, will first perform centroiding on whole frame (can sometimes fail)
+ctr_guess       'fits'      # Initial guess of centroid position [x,y]. If set to 'fits', the code will use the approximate centroid position information contained in the FITS header as an starting point. If set to None, will first perform centroiding on whole frame (can sometimes fail)
 ctr_cutout_size 10          # Cutoff size all around the centroid after the coarse centroid calculation or first centroid guess when using the mgmc method.
 centroid_tech   com         # (mgmc method param) Technique used for centroiding. Options: com, 1dg, 2dg
 gauss_frame     15          # (mgmc method param) Half-width away from second centroid guess to include in centroiding map for gaussian widths. Recommend ~15 for MIRI photometry.
@@ -32,7 +32,7 @@ gauss_frame     15          # (mgmc method param) Half-width away from second ce
 # Photometric extraction parameters
 phot_method     photutils   # photutils (aperture photometry using photutils), poet (aperture photometry using code from POET), or optimal (for optimal photometric extraction)
 aperture_edge   exact       # center (pixel is included only if its center lies within the aperture), or exact (pixel is weighted by the fractional area that lies within the aperture)
-aperture_shape  circle      # If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_utils is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape
+aperture_shape  circle      # If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_method is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape
 moving_centroid False       # Boolean: False if the aperture should stay fixed on the median centroid location (recommended), or True if the aperture should track the moving centroid
 skip_apphot_bg  False       # Skips the background subtraction during the aperture photometry step
 photap          5           # Size of photometry aperture radius in pixels

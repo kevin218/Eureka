@@ -30,6 +30,12 @@ import astraeus.xarrayIO as xrio
 from tqdm import tqdm
 import psutil
 
+try:
+    from stdatamodels.jwst.datamodels import CubeModel
+    jwst_imported = True
+except ModuleNotFoundError:
+    jwst_imported = False
+
 from . import optspex
 from . import plots_s3, source_pos
 from . import background as bg
@@ -470,7 +476,24 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                     # Determine coarse centroid position. We do this twice:
                     # first a coarse estimation, then a more precise one.
-                    if meta.ctr_guess is not None:
+                    if (isinstance(meta.ctr_guess, str)
+                            and meta.ctr_guess == 'fits'):
+                        if not jwst_imported:
+                            raise ModuleNotFoundError(
+                                'stdatamodels module is required for '
+                                'FITS-based centroiding. Please ensure the '
+                                'jwst-related dependencies are installed.')
+                        log.writelog('  Using approximate centroid position '
+                                     'from FITS header for initial centroid '
+                                     'estimate', mute=(not meta.verbose))
+                        with CubeModel(meta.segment_list[0]) as model:
+                            guess = [model.meta.wcsinfo.crpix1,
+                                     model.meta.wcsinfo.crpix2]
+                        trim = np.array([meta.xwindow[0], meta.ywindow[0]])
+                        position_pri = guess - trim
+                        data.centroid_x.values[:] = position_pri[0]
+                        data.centroid_y.values[:] = position_pri[1]
+                    elif isinstance(meta.ctr_guess, list):
                         log.writelog('  Using ctr_guess for initial centroid '
                                      'estimate', mute=(not meta.verbose))
                         # Use the provided initial guess
