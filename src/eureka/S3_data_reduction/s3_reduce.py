@@ -29,12 +29,7 @@ from copy import deepcopy
 import astraeus.xarrayIO as xrio
 from tqdm import tqdm
 import psutil
-
-try:
-    from stdatamodels.jwst.datamodels import CubeModel
-    jwst_imported = True
-except ModuleNotFoundError:
-    jwst_imported = False
+from stdatamodels.jwst.datamodels import CubeModel
 
 from . import optspex
 from . import plots_s3, source_pos
@@ -478,11 +473,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     # first a coarse estimation, then a more precise one.
                     if (isinstance(meta.ctr_guess, str)
                             and meta.ctr_guess == 'fits'):
-                        if not jwst_imported:
-                            raise ModuleNotFoundError(
-                                'stdatamodels module is required for '
-                                'FITS-based centroiding. Please ensure the '
-                                'jwst-related dependencies are installed.')
                         log.writelog('  Using approximate centroid position '
                                      'from FITS header for initial centroid '
                                      'estimate', mute=(not meta.verbose))
