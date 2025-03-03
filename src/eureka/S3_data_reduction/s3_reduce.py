@@ -649,20 +649,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             # make citations for current stage
             util.make_citations(meta, 3)
 
-            # Save Dataset object containing time-series of 1D spectra
-            if meta.save_output:
-                meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
-                                             "_SpecData.h5")
-
-                # Save Meta information to attributes of Xarray
-                util.add_meta_to_xarray(meta, spec)
-
-                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
-                                       verbose=True)
-
-                if not success:
-                    raise OSError('Failed to write S3_SpecData.')
-
             # Compute MAD value
             scandir = getattr(spec, 'scandir', None)
             if not meta.photometry:
@@ -694,6 +680,20 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 except:
                     log.writelog("Could not compute Stage 3 MAD")
                     meta.mad_s3[i] = 0
+
+            # Save Dataset object containing time-series of 1D spectra
+            if meta.save_output:
+                meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
+                                             "_SpecData.h5")
+
+                # Save Meta information to attributes of Xarray
+                util.add_meta_to_xarray(meta, spec)
+
+                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
+                                       verbose=True)
+
+                if not success:
+                    raise OSError('Failed to write S3_SpecData.')
 
             if meta.isplots_S3 >= 1 and not meta.photometry:
                 log.writelog('Generating figures')
