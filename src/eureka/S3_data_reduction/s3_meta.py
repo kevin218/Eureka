@@ -82,6 +82,10 @@ class S3MetaClass(MetaClass):
         # Require these to be set in the ECF
         self.ywindow = getattr(self, 'ywindow', [None,None])
         self.xwindow = getattr(self, 'xwindow', [None,None])
+        if self.xwindow is None:
+            self.xwindow = [None, None]
+        if self.ywindow is None:
+            self.ywindow = [None, None]
 
         # Auto-populate the xwindow and ywindow if they are None
         if self.xwindow[0] is None:
