@@ -1,5 +1,4 @@
 import numpy as np
-from astropy.io import fits
 from stdatamodels.jwst.datamodels import CubeModel
 
 from ..lib.readECF import MetaClass
@@ -70,13 +69,13 @@ class S3MetaClass(MetaClass):
         if self.xwindow[0] is None:
             self.xwindow[0] = 0
         if self.xwindow[1] is None:
-            with fits.open(self.segment_list[0]) as hdulist:
-                self.xwindow[1] = hdulist[1].data.shape[2]
+            with CubeModel(self.segment_list[0]) as model:
+                self.xwindow[1] = model.data.shape[2]
         if self.ywindow[0] is None:
             self.ywindow[0] = 0
         if self.ywindow[1] is None:
-            with fits.open(self.segment_list[0]) as hdulist:
-                self.ywindow[1] = hdulist[1].data.shape[1]
+            with CubeModel(self.segment_list[0]) as model:
+                self.ywindow[1] = model.data.shape[1]
 
         self.src_pos_type = getattr(self, 'src_pos_type', 'gaussian')
         self.record_ypos = getattr(self, 'record_ypos', True)

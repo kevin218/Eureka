@@ -12,8 +12,8 @@ calibrated_spectra  False   # Set True to generate flux-calibrated spectra/photo
                             # Set False to convert to electrons
 
 # Subarray region of interest
-ywindow         [425, 625]	# Vertical axis as seen in DS9
-xwindow         [600, 775]  # Horizontal axis as seen in DS9
+ywindow         None        # Vertical axis as seen in DS9
+xwindow         None        # Horizontal axis as seen in DS9
 dqmask          True        # Mask pixels with an odd entry in the DQ array
 
 # Background parameters
