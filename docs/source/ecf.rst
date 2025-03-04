@@ -404,6 +404,8 @@ Below an example with the following setting:
 
 Everything outside of the box will be discarded and not used in the analysis.
 
+For most datasets, any element of xwindow or ywindow can be set to None to use the full frame in that direction. However, for MIRI photometry, any element of xwindow or ywindow that is set to None will be repalced by a default of 150x150 pixel box around the approximate centroid (since the MIRI full frame images are very large and it is generally helpful and faster to zoom-in on the science target).
+
 src_pos_type
 ''''''''''''
 Determine the source position on the detector. Options: header, gaussian, weighted, max, or hst. The value 'header' uses the value of SRCYPOS in the FITS header.

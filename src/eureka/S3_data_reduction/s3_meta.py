@@ -1,4 +1,5 @@
 import numpy as np
+from stdatamodels.jwst.datamodels import CubeModel
 
 from ..lib.readECF import MetaClass
 
@@ -57,8 +58,24 @@ class S3MetaClass(MetaClass):
 
         # Subarray region of interest
         # Require these to be set in the ECF
-        self.ywindow = getattr(self, 'ywindow')
-        self.xwindow = getattr(self, 'xwindow')
+        self.ywindow = getattr(self, 'ywindow', [None,None])
+        self.xwindow = getattr(self, 'xwindow', [None,None])
+        if self.xwindow is None:
+            self.xwindow = [None, None]
+        if self.ywindow is None:
+            self.ywindow = [None, None]
+
+        # Auto-populate the xwindow and ywindow if they are None
+        if self.xwindow[0] is None:
+            self.xwindow[0] = 0
+        if self.xwindow[1] is None:
+            with CubeModel(self.segment_list[0]) as model:
+                self.xwindow[1] = model.data.shape[2]
+        if self.ywindow[0] is None:
+            self.ywindow[0] = 0
+        if self.ywindow[1] is None:
+            with CubeModel(self.segment_list[0]) as model:
+                self.ywindow[1] = model.data.shape[1]
 
         self.src_pos_type = getattr(self, 'src_pos_type', 'gaussian')
         self.record_ypos = getattr(self, 'record_ypos', True)
@@ -291,6 +308,31 @@ class S3MetaClass(MetaClass):
     def set_MIRI_Photometry_defaults(self):
         '''Set Stage 3 specific defaults for MIRI Photometry.
         '''
+        self.xwindow = getattr(self, 'xwindow', [None, None])
+        self.ywindow = getattr(self, 'ywindow', [None, None])
+        if self.xwindow is None:
+            self.xwindow = [None, None]
+        if self.ywindow is None:
+            self.ywindow = [None, None]
+
+        # Auto-populate the xwindow and ywindow if any elements are None
+        if None in [*self.xwindow, *self.ywindow]:
+            # Get the centroid position and the subarray size
+            with CubeModel(self.segment_list[0]) as model:
+                guess = [model.meta.wcsinfo.crpix1,
+                         model.meta.wcsinfo.crpix2]
+                ysize, xsize = model.data.shape[1:]
+
+            # By default use a 150x150 subarray centered on the centroid
+            if self.xwindow[0] is None:
+                self.xwindow[0] = max(0, int(np.ceil(guess[0])-75))
+            if self.xwindow[1] is None:
+                self.xwindow[1] = min(xsize, int(np.floor(guess[0])+75))
+            if self.ywindow[0] is None:
+                self.ywindow[0] = max(0, int(np.floor(guess[1])-75))
+            if self.ywindow[1] is None:
+                self.ywindow[1] = min(ysize, int(np.ceil(guess[1])+75))
+
         self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 10)
         self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
         if self.oneoverf_corr is not None:
