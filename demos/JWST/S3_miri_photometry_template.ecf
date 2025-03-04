@@ -24,7 +24,7 @@ interp_method   linear      # Interpolate bad pixels. Options: None (if no inter
 
 # Centroiding parameters
 centroid_method fgc         # Method used for centroiding. Options: mgmc, fgc
-ctr_guess		[698, 516]	# Initial guess of centroid position. If None, will first perform centroiding on whole frame (can sometimes fail)
+ctr_guess       'fits'      # Initial guess of centroid position [x,y]. If set to 'fits', the code will use the approximate centroid position information contained in the FITS header as an starting point. If set to None, will first perform centroiding on whole frame (can sometimes fail)
 ctr_cutout_size 10          # Cutoff size all around the centroid after the coarse centroid calculation or first centroid guess when using the mgmc method.
 centroid_tech   com         # (mgmc method param) Technique used for centroiding. Options: com, 1dg, 2dg
 gauss_frame     15          # (mgmc method param) Half-width away from second centroid guess to include in centroiding map for gaussian widths. Recommend ~15 for MIRI photometry.

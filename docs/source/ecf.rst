@@ -569,7 +569,7 @@ Only used for photometry analyses. Selects the method used for determining the c
 
 ctr_guess
 '''''''''
-Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess.
+Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess. If set to 'fits', the code will use the approximate centroid position information contained in the FITS header as an starting point. If set to None, the code will first perform centroiding on whole frame (which can sometimes fail).
 
 ctr_cutout_size
 '''''''''''''''
