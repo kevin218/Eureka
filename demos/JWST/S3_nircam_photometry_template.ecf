@@ -35,7 +35,7 @@ oneoverf_dist        350              # How many pixels away from the centroid s
 # Photometric extraction parameters
 phot_method          photutils        # photutils (aperture photometry using photutils), poet (aperture photometry using code from POET), or optimal (for optimal photometric extraction)
 aperture_edge        exact            # center (pixel is included only if its center lies within the aperture), or exact (pixel is weighted by the fractional area that lies within the aperture)
-aperture_shape       circle           # If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_utils is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape
+aperture_shape       circle           # If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_method is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape
 moving_centroid      False            # Boolean: False if the aperture should stay fixed on the median centroid location (recommended), or True if the aperture should track the moving centroid
 interp_method        cubic            # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 skip_apphot_bg       False            # Skips the background subtraction during the aperture photometry step
