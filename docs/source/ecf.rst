@@ -596,7 +596,7 @@ Options are 'center' (each pixel is included only if its center lies within the 
 aperture_shape
 ''''''''''''''
 Only used for photometry analyses. Specifies the shape of the extraction aperture.
-If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_utils is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape.
+If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_method is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape.
 Hexagonal apertures may better match the shape of the JWST primary mirror for defocused NIRCam photometry.
 
 moving_centroid
