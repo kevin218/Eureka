@@ -993,6 +993,26 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
 
 
 def make_artists(meta, centroid_x, centroid_y):
+    """Make the aperture shapes for the photometry plots.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    centroid_x : float
+        The x-coordinate of the centroid.
+    centroid_y : float
+        The y-coordinate of the centroid.
+
+    Returns
+    -------
+    ap1 : matplotlib.patches.PathPatch
+        The target aperture.
+    ap2 : matplotlib.patches.PathPatch
+        The inner circle of the sky annulus.
+    ap3 : matplotlib.patches.PathPatch
+        The outer circle of the sky annulus.
+    """
     # Plot proper aperture shapes
     if meta.aperture_shape == "hexagon":
         # to make a hexagon, make the vertices and add them into a path

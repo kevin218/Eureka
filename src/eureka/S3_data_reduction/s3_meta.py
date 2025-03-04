@@ -8,13 +8,6 @@ class S3MetaClass(MetaClass):
 
     This class loads a Stage 3 Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-03 Taylor J Bell
-        Made specific S3 class based on MetaClass
     '''
 
     def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
@@ -34,25 +27,11 @@ class S3MetaClass(MetaClass):
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version.
         '''
         super().__init__(folder, file, eventlabel, stage=3, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for any instrument.
         '''
         # Data file suffix
         self.suffix = getattr(self, 'suffix', 'calints')
@@ -123,13 +102,6 @@ class S3MetaClass(MetaClass):
 
     def set_spectral_defaults(self):
         '''Set Stage 3 specific defaults for generic spectroscopic data.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for any spectroscopic data.
         '''
         # Spectral extraction parameters
         # Require this parameter to be set
@@ -170,13 +142,6 @@ class S3MetaClass(MetaClass):
 
     def set_photometric_defaults(self):
         '''Set Stage 3 specific defaults for generic photometric data.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for any photometric data.
         '''
         self.expand = getattr(self, 'expand', 1)
         if self.expand > 1:
@@ -188,7 +153,7 @@ class S3MetaClass(MetaClass):
 
         self.ff_outlier = getattr(self, 'ff_outlier', False)
 
-        # Require window_len to be sent to 0 to avoid smoothing in
+        # Require window_len to be set to 0 to avoid smoothing in
         # optspex.get_clean
         self.window_len = getattr(self, 'window_len', 0)
         if self.window_len != 0:
@@ -263,25 +228,11 @@ class S3MetaClass(MetaClass):
 
     def set_MIRI_defaults(self):
         '''Set Stage 3 specific defaults for MIRI.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for MIRI.
         '''
         self.set_spectral_defaults()
 
     def set_NIRCam_defaults(self):
         '''Set Stage 3 specific defaults for NIRCam.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRCam.
         '''
         self.poly_wavelength = getattr(self, 'poly_wavelength', False)
         self.wave_pixel_offset = getattr(self, 'wave_pixel_offset', None)
@@ -291,13 +242,6 @@ class S3MetaClass(MetaClass):
 
     def set_NIRSpec_defaults(self):
         '''Set Stage 3 specific defaults for NIRSpec.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRSpec.
         '''
         self.curvature = getattr(self, 'curvature', True)
         # When calibrated_spectra is True, flux values above the cutoff
@@ -308,13 +252,6 @@ class S3MetaClass(MetaClass):
 
     def set_NIRISS_defaults(self):
         '''Set Stage 3 specific defaults for NIRISS.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRISS.
         '''
         self.curvature = getattr(self, 'curvature', True)
         self.src_ypos = getattr(self, 'src_ypos', [35, 80])
@@ -325,13 +262,6 @@ class S3MetaClass(MetaClass):
 
     def set_WFC3_defaults(self):
         '''Set Stage 3 specific defaults for WFC3.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for WFC3.
         '''
         self.iref = getattr(self, 'iref', [2, 3])
         self.horizonsfile = getattr(self, 'horizonsfile', None)
@@ -347,13 +277,6 @@ class S3MetaClass(MetaClass):
 
     def set_NIRCam_Photometry_defaults(self):
         '''Set Stage 3 specific defaults for NIRCam Photometry.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRCam Photometry.
         '''
         self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
         self.oneoverf_corr = getattr(self, 'oneoverf_corr', 'median')
@@ -367,13 +290,6 @@ class S3MetaClass(MetaClass):
 
     def set_MIRI_Photometry_defaults(self):
         '''Set Stage 3 specific defaults for MIRI Photometry.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for MIRI Photometry.
         '''
         self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 10)
         self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
@@ -388,7 +304,7 @@ class S3MetaClass(MetaClass):
         self.set_photometric_defaults()
 
     def setup_aperture_radii(self):
-        '''
+        '''A function to set up the spectral and background aperture radii.
         '''
         # check for range of spectral apertures
         if self.photometry:
