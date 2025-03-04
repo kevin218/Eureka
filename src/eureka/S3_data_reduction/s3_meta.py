@@ -326,15 +326,7 @@ class S3MetaClass(MetaClass):
             self.spec_hw_range *= self.expand
 
         # check for range of background apertures
-        if hasattr(self, 'bg_hw'):
-            if isinstance(self.bg_hw, list):
-                self.bg_hw_range = np.arange(self.bg_hw[0],
-                                             self.bg_hw[1]+self.bg_hw[2],
-                                             self.bg_hw[2])
-            else:
-                self.bg_hw_range = np.array([self.bg_hw])
-            self.bg_hw_range *= self.expand
-        elif hasattr(self, 'skyin') and hasattr(self, 'skywidth'):
+        if hasattr(self, 'skyin') and hasattr(self, 'skywidth'):
             # E.g., if skyin = 90 and skywidth = 60, then the
             # directory will use "bg90_150"
             if not isinstance(self.skyin, list):
@@ -352,3 +344,11 @@ class S3MetaClass(MetaClass):
             self.bg_hw_range = [f'{skyin}_{skyin+skywidth}'
                                 for skyin in self.skyin
                                 for skywidth in self.skywidth]
+        elif hasattr(self, 'bg_hw'):
+            if isinstance(self.bg_hw, list):
+                self.bg_hw_range = np.arange(self.bg_hw[0],
+                                             self.bg_hw[1]+self.bg_hw[2],
+                                             self.bg_hw[2])
+            else:
+                self.bg_hw_range = np.array([self.bg_hw])
+            self.bg_hw_range *= self.expand
