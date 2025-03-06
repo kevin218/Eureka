@@ -374,15 +374,15 @@ class S3MetaClass(MetaClass):
             if not isinstance(self.skyin, list):
                 self.skyin = [self.skyin]
             else:
-                self.skyin = range(self.skyin[0],
-                                   self.skyin[1]+self.skyin[2],
-                                   self.skyin[2])
+                self.skyin = np.arange(self.skyin[0],
+                                       self.skyin[1]+self.skyin[2],
+                                       self.skyin[2])
             if not isinstance(self.skywidth, list):
                 self.skywidth = [self.skywidth]
             else:
-                self.skywidth = range(self.skywidth[0],
-                                      self.skywidth[1]+self.skywidth[2],
-                                      self.skywidth[2])
+                self.skywidth = np.arange(self.skywidth[0],
+                                          self.skywidth[1]+self.skywidth[2],
+                                          self.skywidth[2])
             self.bg_hw_range = [f'{skyin}_{skyin+skywidth}'
                                 for skyin in self.skyin
                                 for skywidth in self.skywidth]
