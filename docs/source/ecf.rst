@@ -551,13 +551,17 @@ curvature
 '''''''''
 Current options: 'None', 'correct'. Using 'None' will not use any curvature correction and is strongly recommended against for instruments with strong curvature like NIRSpec/G395. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. If using 'correct', you should also be using fittype = 'meddata'.
 
-flag_bg
-'''''''
-Only used for photometry analyses. Options are: True, False. Does an outlier rejection along the time axis for each individual pixel in a segment (= in a calints file).
-
 interp_method
 '''''''''''''
 Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
+
+oneoverf_corr
+'''''''''''''
+Only used for photometry analyses. The NIRCam detector exhibits 1/f noise along the long axis. Furthermore, each amplifier area (which are all 512 columns in length) has its own 1/f characteristics. Correcting for the 1/f effect will improve the quality of the final light curve. So, performing this correction is advised if it has not been done in any of the previous stages. The 1/f correction in Stage 3 treats every amplifier region separately. It does a row by row subtraction while avoiding pixels close to the star (see oneoverf_dist). "oneoverf_corr" sets which method should be used to determine the average flux value in each row of an amplifier region. Options: None, meanerr, median. If the user sets oneoverf_corr = None, no 1/f correction will be performed in S3. meanerr calculates a mean value which is weighted by the error array in a row. median calculated the median flux in a row.
+
+oneoverf_dist
+'''''''''''''
+Only used for photometry analyses. Set how many pixels away from the centroid should be considered as background during the 1/f correction. E.g., Assume the frame has the shape 1000 in x and 200 in y. The centroid is at x,y = 400,100. Assume, oneoverf_dist has been set to 250. Then the area 0-150 and 650-1000 (in x) will be considered as background during the 1/f correction. The goal of oneoverf_dist is therefore basically to not subtract starlight during the 1/f correction.
 
 centroid_method
 '''''''''''''''
@@ -571,25 +575,49 @@ ctr_cutout_size
 '''''''''''''''
 Only used for photometry analyses. For the 'fgc' and 'mgmc' methods this parameter is the amount of pixels all around the guessed centroid location which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
 
-oneoverf_corr
+centroid_tech
 '''''''''''''
-Only used for photometry analyses. The NIRCam detector exhibits 1/f noise along the long axis. Furthermore, each amplifier area (each is 512 colomns in length) has its own 1/f characteristics. Correcting for the 1/f effect will improve the quality of the final light curve. So, performing this correction is advised if it has not been done in any of the previous stages. The 1/f correction in Stage 3 treats every amplifier region separately. It does a row by row subtraction while avoiding pixels close to the star (see oneoverf_dist). "oneoverf_corr" sets which method should be used to determine the average flux value in each row of an amplifier region. Options: None, meanerr, median. If the user sets oneoverf_corr = None, no 1/f correction will be performed in S3. meanerr calculates a mean value which is weighted by the error array in a row. median calculated the median flux in a row.
+Only used for photometry analyses. The centroiding technique used if centroid_method is set to mgmc. The options are: com, 1dg, 2dg. The recommended technique is com (standing for Center of Mass). More details about the options can be found in the photutils documentation at https://photutils.readthedocs.io/en/stable/centroids.html.
 
-oneoverf_dist
+gauss_frame
+'''''''''''
+Only used for photometry analyses. Half-width of the pixel box centered around the centroid measurement to include in estimating gaussian width of the PSF. Options: this should be set to something larger than your expected PSF size; ~100 should work for defocused NIRCam photometry, and ~15 for MIRI photometry.
+
+phot_method
+'''''''''''
+Only used for photometry analyses. The method used to do photometric extraction.
+Options: 'photutils' (aperture photometry using photutils), 'poet' (aperture photometry using code from POET), or 'optimal' (for optimal photometric extraction).
+
+aperture_edge
 '''''''''''''
-Only used for photometry analyses. Set how many pixels away from the centroid should be considered as background during the 1/f correction. E.g., Assume the frame has the shape 1000 in x and 200 in y. The centroid is at x,y = 400,100. Assume, oneoverf_dist has been set to 250. Then the area 0-150 and 650-1000 (in x) will be considered as background during the 1/f correction. The goal of oneoverf_dist is therefore basically to not subtract starlight during the 1/f correction.
-
-skip_apphot_bg
-''''''''''''''
-Only used for photometry analyses. Skips the background subtraction in the aperture photometry routine. If the user does the 1/f noise subtraction during S3, the code will subtract the background from each amplifier region. The aperture photometry code will again subtract a background flux from the target flux by calculating the flux in an annulus in the background. If the user wants to skip this background subtraction by setting an background annulus, skip_apphot_bg has to be set to True.
+Only used for photometry analyses. Specifies how to treat pixels near the edge of the aperture.
+Options are 'center' (each pixel is included only if its center lies within the aperture), or 'exact' (each pixel is weighted by the fraction of its area that lies within the aperture).
 
 aperture_shape
 ''''''''''''''
-Only used for photometry analyses. Specifies the shape of the extraction aperture, either 'circle' for circular apertures, or 'hexagon' for hexagonal apertures, to better match the shape of the JWST primary mirror for defocused NIRCam photometry.
+Only used for photometry analyses. Specifies the shape of the extraction aperture.
+If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_method is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape.
+Hexagonal apertures may better match the shape of the JWST primary mirror for defocused NIRCam photometry.
+
+moving_centroid
+'''''''''''''''
+Only used for photometry analyses. If False (recommended), the aperture will stay fixed on the median centroid location. If True, the aperture will track the moving centroid.
+
+skip_apphot_bg
+''''''''''''''
+Only used for photometry analyses. Skips the background subtraction in the aperture photometry routine. If the user does the 1/f noise subtraction during S3, the code will subtract the background from each amplifier region. The aperture photometry code will again subtract a background flux from the target flux by calculating the flux in an annulus in the background. If the user wants to skip the annular background subtraction step, skip_apphot_bg has to be set to True.
 
 photap
 ''''''
-Only used for photometry analyses. Size of photometry aperture in pixels. If aperture_shape is 'circle', then photap is the radius of the circle. If aperture_shape is 'hexagon', then photap is the radius of the circle circumscribing the hexagon. If the center of a pixel is not included within the aperture, it is being considered. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If skyin and/or skywidth are also lists, all combinations of the three will be attempted.
+Only used for photometry analyses. Size of photometry aperture in pixels. If aperture_shape is 'circle', then photap is the radius of the circle. If aperture_shape is 'hexagon', then photap is the radius of the circle circumscribing the hexagon. If aperture_shape is 'rectangle', then photap is the half-width of the rectangle along the x-axis. If the center of a pixel is not included within the aperture, it is being considered. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If skyin and/or skywidth are also lists, all combinations of the three will be attempted.
+
+photap_b
+''''''''
+Only used for photometry analyses. If aperture_shape is 'ellipse', then photap is the size of photometry aperture radius along the y-axis in units of pixels. If aperture_shape is 'rectangle', then photap is the half-width of the rectangle along the y-axis. This parameter can only be used if aperture_shape is ellipse or rectangle.
+
+photap_theta
+''''''''''''
+Only used for photometry analyses. The rotation angle of photometry aperture in degrees. This parameter can only be used if aperture_shape is ellipse or rectangle. The aperture is rotated about the center of the aperture.
 
 skyin
 '''''
@@ -598,14 +626,6 @@ Only used for photometry analyses. Inner sky annulus edge, in pixels. If apertur
 skywidth
 ''''''''
 Only used for photometry analyses. The width of the sky annulus, in pixels. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If photap and/or skyin are also lists, all combinations of the three will be attempted.
-
-centroid_tech
-'''''''''''''
-Only used for photometry analyses. The centroiding technique used if centroid_method is set to mgmc. The options are: com, 1dg, 2dg. The recommended technique is com (standing for Center of Mass). More details about the options can be found in the photutils documentation at https://photutils.readthedocs.io/en/stable/centroids.html.
-
-gauss_frame
-'''''''''''
-Only used for photometry analyses. Range away from first centroid guess to include in centroiding map for gaussian widths. Only required for mgmc method. Options: 1 -> Max frame size (type integer).
 
 isplots_S3
 ''''''''''

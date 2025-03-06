@@ -8,13 +8,6 @@ class S3MetaClass(MetaClass):
 
     This class loads a Stage 3 Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-03 Taylor J Bell
-        Made specific S3 class based on MetaClass
     '''
 
     def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
@@ -34,25 +27,11 @@ class S3MetaClass(MetaClass):
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version.
         '''
         super().__init__(folder, file, eventlabel, stage=3, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for any instrument.
         '''
         # Data file suffix
         self.suffix = getattr(self, 'suffix', 'calints')
@@ -86,10 +65,11 @@ class S3MetaClass(MetaClass):
         self.dqmask = getattr(self, 'dqmask', True)
         self.manmask = getattr(self, 'manmask', None)
         self.expand = getattr(self, 'expand', 1)
-        if int(self.expand) != self.expand:
-            print('WARNING: meta.expand must be set to an integer. Rounding '
-                  f'{self.expand} to {int(np.round(self.expand))}')
-        self.expand = int(np.round(self.expand))
+        if self.expand != int(self.expand) or self.expand < 1:
+            raise ValueError('meta.expand must be an integer >= 1, but got '
+                             f'{self.expand}')
+        else:
+            self.expand = int(self.expand)
 
         # Outlier rejection along time axis
         self.ff_outlier = getattr(self, 'ff_outlier', False)
@@ -122,13 +102,6 @@ class S3MetaClass(MetaClass):
 
     def set_spectral_defaults(self):
         '''Set Stage 3 specific defaults for generic spectroscopic data.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for any spectroscopic data.
         '''
         # Spectral extraction parameters
         # Require this parameter to be set
@@ -169,65 +142,97 @@ class S3MetaClass(MetaClass):
 
     def set_photometric_defaults(self):
         '''Set Stage 3 specific defaults for generic photometric data.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for any photometric data.
         '''
         self.expand = getattr(self, 'expand', 1)
         if self.expand > 1:
-            # Super sampling not supported for photometry
-            # This is here just in case someone tries to super sample
-            print("Super sampling not supported for photometry."
+            # FINDME: We should soon be able to support expand != 1
+            # for photometry
+            print("Super sampling is not currently supported for photometry. "
                   "Setting meta.expand to 1.")
             self.expand = 1
 
-        self.flag_bg = getattr(self, 'flag_bg', True)
-        self.interp_method = getattr(self, 'interp_method', 'cubic')
-        self.ctr_guess = getattr(self, 'ctr_guess', None)
-        self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
-        self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
+        self.ff_outlier = getattr(self, 'ff_outlier', False)
+
+        # Require window_len to be set to 0 to avoid smoothing in
+        # optspex.get_clean
+        self.window_len = getattr(self, 'window_len', 0)
+        if self.window_len != 0:
+            print("Warning: meta.window_len is not 0 which is not permitted "
+                  "for photometric data! Setting it to 0.")
+            self.window_len = 0
+
+        # Centroiding parameters
         self.centroid_method = getattr(self, 'centroid_method', 'fgc')
         if self.centroid_method == 'mgmc':
             self.centroid_tech = getattr(self, 'centroid_tech', 'com')
             self.gauss_frame = getattr(self, 'gauss_frame', 15)
-        self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
+        self.ctr_guess = getattr(self, 'ctr_guess', None)
+        self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
+
+        self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
+
+        # Photometric extraction parameters
+        self.phot_method = getattr(self, 'phot_method', 'poet')
         self.aperture_shape = getattr(self, 'aperture_shape', 'circle')
+        if self.phot_method in ['photutils', 'optimal']:
+            self.aperture_edge = getattr(self, 'aperture_edge', 'center')
+            if self.aperture_edge not in ['center', 'exact']:
+                raise ValueError('aperture_edge must be "center" or "exact", '
+                                 f'but got {self.aperture_edge}')
+            if self.aperture_shape not in ['circle', 'ellipse', 'rectangle']:
+                raise ValueError('aperture_shape must be "circle", "ellipse", '
+                                 'or "rectangle", but got '
+                                 f'{self.aperture_shape}')
+            if self.aperture_shape != 'circle':
+                self.photap_b = getattr(self, 'photap_b', self.photap)
+                self.photap_theta = getattr(self, 'photap_theta', 0)
+            else:
+                self.photap_b = self.photap
+                self.photap_theta = 0
+        elif self.phot_method == 'poet':
+            self.aperture_edge = getattr(self, 'aperture_edge', 'center')
+            if self.aperture_edge != 'center':
+                raise ValueError('aperture_edge must be "center" for poet, '
+                                 f'but got {self.aperture_edge}')
+            if self.aperture_shape not in ['circle', 'hexagon']:
+                raise ValueError('aperture_shape must be "circle" or '
+                                 f'"hexagon", but got {self.aperture_shape}')
+            self.betahw = getattr(self, 'betahw', None)
+            if self.betahw is not None and self.betahw <= 0:
+                raise ValueError(f'betahw must be > 0, but got {self.betahw}')
+            elif self.betahw is not None and self.betahw != int(self.betahw):
+                raise ValueError(f'betahw must be an integer, but got '
+                                 f'{self.betahw}')
+            elif self.betahw is not None:
+                self.betahw = int(self.betahw)
+        self.moving_centroid = getattr(self, 'moving_centroid', False)
+        self.interp_method = getattr(self, 'interp_method', 'cubic')
+        self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
         # Require these parameters to be set
         self.photap = getattr(self, 'photap')
         self.skyin = getattr(self, 'skyin')
         self.skywidth = getattr(self, 'skywidth')
+        self.minskyfrac = getattr(self, 'minskyfrac', 0.1)
+        if ~self.skip_apphot_bg and not (0 < self.minskyfrac <= 1):
+            raise ValueError(f'skyfrac is {self.minskyfrac} but must be in '
+                             'range (0,1]')
 
         self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
         self.bg_x1 = getattr(self, 'bg_x1', None)
         self.bg_x2 = getattr(self, 'bg_x2', None)
-        self.bg_method = getattr(self, 'bg_method', 'mean')
+        self.bg_method = getattr(self, 'bg_method', 'median')
+        if ~self.skip_apphot_bg and self.bg_method not in ['mean', 'median']:
+            raise ValueError(f'bg_method must be "mean" or "median", but got '
+                             f'{self.bg_method}')
         self.p3thresh = getattr(self, 'p3thresh', 5)
 
     def set_MIRI_defaults(self):
         '''Set Stage 3 specific defaults for MIRI.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for MIRI.
         '''
         self.set_spectral_defaults()
 
     def set_NIRCam_defaults(self):
         '''Set Stage 3 specific defaults for NIRCam.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRCam.
         '''
         self.poly_wavelength = getattr(self, 'poly_wavelength', False)
         self.wave_pixel_offset = getattr(self, 'wave_pixel_offset', None)
@@ -237,13 +242,6 @@ class S3MetaClass(MetaClass):
 
     def set_NIRSpec_defaults(self):
         '''Set Stage 3 specific defaults for NIRSpec.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRSpec.
         '''
         self.curvature = getattr(self, 'curvature', True)
         # When calibrated_spectra is True, flux values above the cutoff
@@ -254,13 +252,6 @@ class S3MetaClass(MetaClass):
 
     def set_NIRISS_defaults(self):
         '''Set Stage 3 specific defaults for NIRISS.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRISS.
         '''
         self.curvature = getattr(self, 'curvature', True)
         self.src_ypos = getattr(self, 'src_ypos', [35, 80])
@@ -271,13 +262,6 @@ class S3MetaClass(MetaClass):
 
     def set_WFC3_defaults(self):
         '''Set Stage 3 specific defaults for WFC3.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for WFC3.
         '''
         self.iref = getattr(self, 'iref', [2, 3])
         self.horizonsfile = getattr(self, 'horizonsfile', None)
@@ -293,13 +277,6 @@ class S3MetaClass(MetaClass):
 
     def set_NIRCam_Photometry_defaults(self):
         '''Set Stage 3 specific defaults for NIRCam Photometry.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRCam Photometry.
         '''
         self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
         self.oneoverf_corr = getattr(self, 'oneoverf_corr', 'median')
@@ -313,13 +290,6 @@ class S3MetaClass(MetaClass):
 
     def set_MIRI_Photometry_defaults(self):
         '''Set Stage 3 specific defaults for MIRI Photometry.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for MIRI Photometry.
         '''
         self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 10)
         self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
@@ -334,7 +304,7 @@ class S3MetaClass(MetaClass):
         self.set_photometric_defaults()
 
     def setup_aperture_radii(self):
-        '''
+        '''A function to set up the spectral and background aperture radii.
         '''
         # check for range of spectral apertures
         if self.photometry:
