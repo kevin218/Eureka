@@ -90,12 +90,6 @@ class PlanetParams():
         self.b2 = 0
         self.a3 = 0
         self.b3 = 0
-        # self.nab = len([s for s in model.parameters.dict.keys()
-        #                  if 'ab' in s and '_' not in s])
-        # for ab in range(self.nab):
-        #     # read radii, latitudes, longitudes, and contrasts
-        #     ab_id = f'{ab}'
-        #     setattr(self, f'ab{ab_id}', 0)
         # POET phase curve parameters
         self.cos1_amp = 0.
         self.cos1_off = 0.
@@ -336,8 +330,6 @@ class PlanetParams():
                 self.u = np.array([u1, u2])
 
         # Nicely packaging Harmonica coefficients
-        # coeffs = ['ab{}'.format(n) for n in range(0, self.nab)]
-        # self.ab = np.array([getattr(self, coeff) for coeff in coeffs])
         self.ab = np.array([self.a0,
                             self.a1, self.b1,
                             self.a2, self.b2,
