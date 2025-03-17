@@ -596,6 +596,7 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
     if opterr is not None:
         normerr = np.ma.masked_invalid(np.ma.copy(opterr))
         normerr = np.ma.masked_where(np.ma.getmaskarray(normspec), normerr)
+        normerr = np.ma.abs(normerr)
 
     # Normalize the spectrum
     if meta.inst == 'wfc3':
@@ -603,16 +604,16 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
             iscans = np.where(scandir == p)[0]
             if len(iscans) > 0:
                 for r in range(meta.nreads):
+                    normFactor = np.ma.abs(np.ma.mean(
+                        normspec[iscans[r::meta.nreads]], axis=0))
+                    normspec[iscans[r::meta.nreads]] /= normFactor
                     if opterr is not None:
-                        normerr[iscans[r::meta.nreads]] /= np.ma.abs(
-                            np.ma.mean(normspec[iscans[r::meta.nreads]],
-                                       axis=0))
-                    normspec[iscans[r::meta.nreads]] /= np.ma.mean(
-                        normspec[iscans[r::meta.nreads]], axis=0)
+                        normerr[iscans[r::meta.nreads]] /= normFactor
     else:
+        normFactor = np.ma.abs(np.ma.mean(normspec, axis=0))
+        normspec /= normFactor
         if opterr is not None:
-            normerr = np.ma.abs(normerr/np.ma.mean(normspec, axis=0))
-        normspec = normspec/np.ma.mean(normspec, axis=0)
+            normerr /= normFactor
 
     if opterr is not None:
         return normspec, normerr
@@ -674,9 +675,9 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
         iwmax = None
 
     # Normalize the spectrum
-    normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax],
-                                  optmask=optmask[:, iwmin:iwmax],
-                                  scandir=scandir)
+    meta, normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax],
+                                        optmask=optmask[:, iwmin:iwmax],
+                                        scandir=scandir)
 
     if meta.inst == 'wfc3':
         # Setup 1D MAD arrays
