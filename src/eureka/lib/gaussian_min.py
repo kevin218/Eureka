@@ -150,25 +150,30 @@ def mingauss(img, mask, yxguess, meta):
 
     # Cropping frame to speed up guassian fit
     minx = -int(meta.gauss_frame)+int(x)
-    maxx = int(meta.gauss_frame)+int(x)
+    maxx = int(meta.gauss_frame)+int(x)+1
+    miny = -int(meta.gauss_frame)+int(y)
+    maxy = int(meta.gauss_frame)+int(y)+1
 
     # Set Frame size based off of frame crop
-    frame = img[:, minx:maxx]
+    frame = img[miny:maxy, minx:maxx]
 
     # Create meshgrid
-    x_shape = np.arange(img.shape[1])[minx:maxx]
-    y_shape = np.arange(img.shape[0])
-    x_mesh, y_mesh = np.meshgrid(x_shape, y_shape)
+    y_mesh, x_mesh = np.mgrid[miny:maxy, minx:maxx]
 
     # The initial guess for [Gaussian amplitude, xsigma, ysigma]
     if meta.inst == 'miri':
-        initial_guess = [400, 5, 5]
+        initial_guess = [400, 2, 2]
     elif meta.inst == 'nircam':
         initial_guess = [400, 41, 41]
     else:
         print(f"Warning: Photometry has only been tested on MIRI and NIRCam"
               f"while meta.inst is set to {meta.inst}")
         initial_guess = [400, 20, 20]
+
+    # Subtract the median background computed using pixels beyond 2 sigma of the centroid
+    bg_frame = np.ma.masked_where((x_mesh-x)**2+(y_mesh-y)**2 < 4*initial_guess[1]*initial_guess[2],
+                                  frame).mean()
+    frame -= np.ma.median(bg_frame)
 
     # Fit the gaussian width by minimizing minfunc with the Powell method.
     results = minimize(minfunc, initial_guess,
