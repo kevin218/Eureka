@@ -383,9 +383,20 @@ class S3MetaClass(MetaClass):
                 self.skywidth = np.arange(self.skywidth[0],
                                           self.skywidth[1]+self.skywidth[2],
                                           self.skywidth[2])
-            self.bg_hw_range = [f'{skyin}_{skyin+skywidth}'
-                                for skyin in self.skyin
-                                for skywidth in self.skywidth]
+
+            self.bg_hw_range = []
+            for skyin in self.skyin:
+                for skywidth in self.skywidth:
+                    skyout = skyin + skywidth
+                    if isinstance(skyout, float):
+                        # Avoid annoying floating point precision issues
+                        # by rounding to the same number of decimal places
+                        # as the input values
+                        ndecimals_skyin = len(str(float(skyin)).split('.')[1])
+                        ndecimals_skywidth = len(str(float(skywidth)).split('.')[1])
+                        ndecimals_skyout = max(ndecimals_skyin, ndecimals_skywidth)
+                        skyout = np.round(skyout, ndecimals_skyout)
+                    self.bg_hw_range.append(f'{skyin}_{skyout}')
         elif hasattr(self, 'bg_hw'):
             if isinstance(self.bg_hw, list):
                 self.bg_hw_range = np.arange(self.bg_hw[0],

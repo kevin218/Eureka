@@ -125,10 +125,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             meta.eventlabel = eventlabel
             if not isinstance(bg_hw_val, str):
                 # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+                if isinstance(bg_hw_val, float):
+                    bg_hw_val /= meta.expand
+                else:
+                    bg_hw_val //= meta.expand
+            if isinstance(spec_hw_val, float):
+                spec_hw_val /= meta.expand
+            else:
+                spec_hw_val //= meta.expand
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
-                                             ap=spec_hw_val//meta.expand,
-                                             bg=bg_hw_val)
+                                             ap=spec_hw_val, bg=bg_hw_val)
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
@@ -139,10 +145,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             meta.spec_hw = spec_hw_val
             meta.bg_hw = bg_hw_val
             # Directory structure should not use expanded HW values
-            spec_hw_val //= meta.expand
+            if isinstance(spec_hw_val, float):
+                spec_hw_val /= meta.expand
+            else:
+                spec_hw_val //= meta.expand
             if not isinstance(bg_hw_val, str):
                 # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+                if isinstance(bg_hw_val, float):
+                    bg_hw_val /= meta.expand
+                else:
+                    bg_hw_val //= meta.expand
             meta.outputdir = util.pathdirectory(meta, 'S3', meta.run_s3,
                                                 ap=spec_hw_val,
                                                 bg=bg_hw_val)
@@ -442,7 +454,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 else:  # Do Photometry reduction
                     meta.photap = meta.spec_hw
                     meta.skyin, meta.skyout = np.array(meta.bg_hw.split('_')
-                                                       ).astype(int)
+                                                       ).astype(float)
+                    if meta.skyin == int(meta.skyin):
+                        meta.skyin = int(meta.skyin)
+                    if meta.skyout == int(meta.skyout):
+                        meta.skyout = int(meta.skyout)
 
                     if meta.calibrated_spectra:
                         # Instrument-specific steps for generating
