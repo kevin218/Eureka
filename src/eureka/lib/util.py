@@ -675,9 +675,9 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
         iwmax = None
 
     # Normalize the spectrum
-    meta, normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax],
-                                        optmask=optmask[:, iwmin:iwmax],
-                                        scandir=scandir)
+    normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax],
+                                  optmask=optmask[:, iwmin:iwmax],
+                                  scandir=scandir)
 
     if meta.inst == 'wfc3':
         # Setup 1D MAD arrays
