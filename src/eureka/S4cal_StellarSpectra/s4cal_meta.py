@@ -43,6 +43,11 @@ class S4cal_MetaClass(MetaClass):
         self.t23 = getattr(self, 't23', None)
         self.base_dur = getattr(self, 'base_dur', None)
 
+        # Aperture correction
+        self.apcorr = getattr(self, 'apcorr', 1.0)
+        if self.apcorr is None:
+            self.apcorr = 1.0
+
         # Outlier detection
         self.smoothing = getattr(self, 'smoothing', 0)
         self.sigma_thresh = getattr(self, 'sigma_thresh', [4, 4, 4])

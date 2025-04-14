@@ -228,6 +228,14 @@ default='none') # max number of processes to create
                                       readnoise_2d, gain_2d, self.algorithm,
                                       self.weighting, self.maximum_cores,
                                       dqflags.pixel)
+            elif self.algorithm.lower() == 'likely':
+                # Want to use the newer likelihood-based ramp fitting algorithm
+                self.algorithm = 'LIKELY'
+                image_info, integ_info, _, _ = \
+                    ramp_fit.ramp_fit(input_model, buffsize, self.save_opt,
+                                      readnoise_2d, gain_2d, self.algorithm,
+                                      self.weighting, self.maximum_cores,
+                                      dqflags.pixel)
             # FUTURE IMPROVEMENT, WFC3-like differenced frames.
             elif self.algorithm == 'differenced':
                 raise ValueError("I can't handle differenced frames yet.")

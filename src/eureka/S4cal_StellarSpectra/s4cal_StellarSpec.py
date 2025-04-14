@@ -97,9 +97,22 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                  f"- {np.max(spec.time.values)}")
 
     # Flag outliers in time
-    mask = sigrej(spec.optspec.values, meta.sigma_thresh,
-                  mask=spec.optmask.values, axis=0)
-    optspec = np.ma.masked_array(spec.optspec.values, mask)
+    if meta.photometry:
+        mask = sigrej(spec.aplev.values, meta.sigma_thresh)
+        optspec = np.ma.masked_where(mask, spec.aplev.values)
+        flux_units = spec.aplev.flux_units
+        wave_units = spec.wave_1d.wave_units
+        time_units = spec.aplev.time_units
+    else:
+        mask = sigrej(spec.optspec.values, meta.sigma_thresh,
+                      mask=spec.optmask.values, axis=0)
+        optspec = np.ma.masked_array(spec.optspec.values, mask)
+        flux_units = spec.optspec.flux_units
+        wave_units = spec.optspec.wave_units
+        time_units = spec.optspec.time_units
+ 
+    # Apply aperture correction
+    optspec *= meta.apcorr
 
     if isinstance(meta.t0, float):
         meta.t0 = [meta.t0]
@@ -150,6 +163,10 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 it5 = -1
         meta.it = [it0, it1, it2, it3, it4, it5]
 
+        # Get binned data and times
+        if not meta.nbin_plot or meta.nbin_plot > len(spec.time):
+            nbin_plot = len(spec.time)
+
         if meta.isplots_S4cal >= 2:
             fig, ax = plot_whitelc(optspec, spec.time, meta, i, fig=fig, ax=ax)
 
@@ -158,51 +175,57 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             (optspec[it0:it1], optspec[it4:it5])), axis=0)
         std_baseline = np.ma.std(np.ma.concatenate(
             (optspec[it0:it1], optspec[it4:it5])), axis=0)
-        # Mask outliers along wavelength axis
-        tck = spi.splrep(wave, spec_baseline, w=1/std_baseline, k=3,
-                         s=meta.smoothing)
-        spline = spi.splev(wave, tck)
-        mask = sigrej(spec_baseline - spline, meta.sigma_thresh)
-        igood = np.where(~mask)[0]
+
+        if not meta.photometry:
+            # Mask outliers along wavelength axis
+            tck = spi.splrep(wave, spec_baseline, w=1/std_baseline, k=3,
+                             s=meta.smoothing)
+            spline = spi.splev(wave, tck)
+            mask = sigrej(spec_baseline - spline, meta.sigma_thresh)
+            igood = np.where(~mask)[0]
+        else:
+            spec_baseline = np.array([spec_baseline, ])
+            std_baseline = np.array([std_baseline, ])
+            igood = np.zeros(1, dtype=int)
         # Create XArray data arrays
         base_flux = xrio.makeLCDA(spec_baseline[igood, np.newaxis],
                                   wave[igood], [t0],
-                                  spec.optspec.flux_units,
-                                  spec.optspec.wave_units,
-                                  spec.optspec.time_units,
+                                  flux_units, wave_units, time_units,
                                   name='Median Baseline Flux')
         base_fstd = xrio.makeLCDA(std_baseline[igood, np.newaxis],
                                   wave[igood], [t0],
-                                  spec.optspec.flux_units,
-                                  spec.optspec.wave_units,
-                                  spec.optspec.time_units,
+                                  flux_units, wave_units, time_units,
                                   name='Std. Dev. of Baseline Flux')
+        base_ferr = base_fstd.copy()/np.sqrt(it5-it4+it1-it0)
 
         # Median in-occultation flux
         spec_t23 = np.ma.median(optspec[it2:it3+1], axis=0)
         std_t23 = np.ma.std(optspec[it2:it3+1], axis=0)
-        # Mask outliers along wavelength axis
-        tck = spi.splrep(wave, spec_t23, w=1/std_t23, k=3)
-        spline = spi.splev(wave, tck)
-        mask = sigrej(spec_t23 - spline, meta.sigma_thresh)
-        igood = np.where(~mask)[0]
+        if not meta.photometry:
+            # Mask outliers along wavelength axis
+            tck = spi.splrep(wave, spec_t23, w=1/std_t23, k=3)
+            spline = spi.splev(wave, tck)
+            mask = sigrej(spec_t23 - spline, meta.sigma_thresh)
+            igood = np.where(~mask)[0]
+        else:
+            spec_t23 = np.array([spec_t23, ])
+            std_t23 = np.array([std_t23, ])
+            igood = np.zeros(1, dtype=int)
         # Create XArray data arrays
         ecl_flux = xrio.makeLCDA(spec_t23[igood, np.newaxis],
                                  wave[igood], [t0],
-                                 spec.optspec.flux_units,
-                                 spec.optspec.wave_units,
-                                 spec.optspec.time_units,
+                                 flux_units, wave_units, time_units,
                                  name='Median In-Occultation Flux')
         ecl_fstd = xrio.makeLCDA(std_t23[igood, np.newaxis],
                                  wave[igood], [t0],
-                                 spec.optspec.flux_units,
-                                 spec.optspec.wave_units,
-                                 spec.optspec.time_units,
+                                 flux_units, wave_units, time_units,
                                  name='Std. Dev. of In-Occultation Flux')
+        ecl_ferr = ecl_fstd.copy()/np.sqrt(it3-it2+1)
 
         # Create XArray dataset
         ds = dict(base_flux=base_flux, base_fstd=base_fstd,
-                  ecl_flux=ecl_flux, ecl_fstd=ecl_fstd)
+                  base_ferr=base_ferr, ecl_flux=ecl_flux,
+                  ecl_fstd=ecl_fstd, ecl_ferr=ecl_ferr)
         ds = xrio.makeDataset(ds)
         batch.append(ds)
 
