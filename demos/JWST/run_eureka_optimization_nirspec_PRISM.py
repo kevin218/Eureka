@@ -1416,9 +1416,9 @@ if __name__ == "__main__":
         shutil.copy(src, os.path.join(dest_dir, dest_filename))
 
     if __name__ == "__main__":
-        source_file = "optimizer_inputs.txt"
+        source_file = "optimizer_inputs_nirspec_PRISM.txt"
         destination_directory = outputdir_optimization
-        destination_filename = "optimizer_inputs_copy.txt"
+        destination_filename = "optimizer_inputs_nirspec_PRISM_copy.txt"
         
         copy_and_rename_file(source_file, destination_directory, destination_filename)
         print(f"'{source_file}' has been copied to '{destination_directory}/{destination_filename}'")
