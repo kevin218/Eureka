@@ -154,7 +154,8 @@ class PlanetParams():
                 if eval:
                     value = value.value
                 setattr(self, item, value)
-            except KeyError:
+            except (KeyError, AttributeError):
+                # Item not in model.parameters, so check for some special cases
                 if (item in [f'u{i}' for i in range(1, 5)] or
                         'spot' == item[:4]):
                     # Limb darkening and spots probably don't vary with planet
@@ -167,10 +168,9 @@ class PlanetParams():
                         if eval:
                             value = value.value
                         setattr(self, item, value)
-                    except KeyError:
+                    except (KeyError, AttributeError):
+                        # Item not in model.parameters, so leave it as default
                         pass
-                else:
-                    pass
         # Allow for rp or rprs
         if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
             item0 = 'rp' + self.pid_id
