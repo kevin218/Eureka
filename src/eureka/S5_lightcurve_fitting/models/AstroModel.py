@@ -147,8 +147,9 @@ class PlanetParams():
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
             try:
-                if model.parameters.dict[item0][1] == 'free':
-                    item0 += self.channel_id
+                item_temp = item0 + self.channel_id
+                if item_temp in model.parameters.dict.keys():
+                    item0 = item_temp
                 value = getattr(parameterObject, item0)
                 if eval:
                     value = value.value
@@ -159,8 +160,9 @@ class PlanetParams():
                     # Limb darkening and spots probably don't vary with planet
                     try:
                         item0 = item
-                        if model.parameters.dict[item0][1] == 'free':
-                            item0 += self.channel_id
+                        item_temp = item0 + self.channel_id
+                        if item_temp in model.parameters.dict.keys():
+                            item0 = item_temp
                         value = getattr(parameterObject, item0)
                         if eval:
                             value = value.value
@@ -306,10 +308,7 @@ class PlanetParams():
         ld_func = ld_profile(self.limb_dark)
         len_params = len(inspect.signature(ld_func).parameters)
         coeffs = ['u{}'.format(n) for n in range(1, len_params)]
-        for i, item0 in enumerate(coeffs):
-            item0 += self.channel_id
-            coeffs[i] = item0
-        self.u = [getattr(parameterObject, coeff).value for coeff in coeffs]
+        self.u = [getattr(self, coeff) for coeff in coeffs]
         if self.limb_dark == '4-parameter':
             self.limb_dark = 'nonlinear'
         elif self.limb_dark == 'kipping2013':
