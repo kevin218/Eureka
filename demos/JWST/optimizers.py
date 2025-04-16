@@ -829,7 +829,8 @@ def parametric_sweep_dqmask(
 
         except Exception as e:
             print(
-                f"Could not calculate fitness score for dqmask={dqmask_value}. Error: {e}"
+                f"Could not calculate fitness score for dqmask={dqmask_value
+                                                                }. Error: {e}"
             )
             continue
 
@@ -922,7 +923,8 @@ def parametric_sweep_bg_method_s1(
 
         except Exception as e:
             print(
-                f"Could not calculate fitness score for bg_method={bg_method_value}. Error: {e}"
+                f"Could not calculate fitness score for bg_method={
+                    bg_method_value}. Error: {e}"
             )
             continue
 
@@ -1005,7 +1007,8 @@ def parametric_sweep_bg_method(
 
         except Exception as e:
             print(
-                f"Could not calculate fitness score for bg_method={bg_method_value}. Error: {e}"
+                f"Could not calculate fitness score for bg_method={
+                    bg_method_value}. Error: {e}"
             )
             continue
 
@@ -1562,7 +1565,13 @@ def read_inputs(filename):
             elif value.isdigit():
                 value = int(value)
             # If value is a float
-            elif "." in value and all(char.isdigit() or char == "." for char in value):
+            elif (
+                "." in value
+                and all(
+                    char.isdigit() or char == "."
+                    for char in value
+                )
+            ):
                 value = float(value)
 
             # Add key-value pair to the dictionary
