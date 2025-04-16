@@ -78,8 +78,8 @@ def read(filename, data, meta, log):
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         # There is no time information in the simulated NIRSpec data
         if meta.firstFile:
-            log.writelog('  WARNING: The timestamps for simulated MIRI data '
-                         'are not in the .fits files, so using integration '
+            log.writelog('  WARNING: The timestamps for simulated NIRSpec data'
+                         ' are not in the .fits files, so using integration '
                          'number as the time value instead.')
         time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'],
                            data.intend)
@@ -240,12 +240,6 @@ def cut_aperture(data, meta, log):
     apmedflux : ndarray
         The median flux over the aperture region.
 
-    Notes
-    -----
-    History:
-
-    - 2022-06-17, Taylor J Bell
-        Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
 
@@ -299,7 +293,7 @@ def clean_median_flux(data, meta, log, m):
     return nircam.clean_median_flux(data, meta, log, m)
 
 
-def calibrated_spectra(data, meta, log, cutoff=1e-4):
+def calibrated_spectra(data, meta, log):
     """Modify data to compute calibrated spectra in units of mJy.
 
     Parameters
@@ -310,25 +304,17 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
         The metadata object.
     log : logedit.Logedit
         The current log.
-    cutoff : float
-        Flux values above the cutoff will be set to zero.
 
     Returns
     -------
     data : ndarray
         The flux values in mJy
 
-    Notes
-    -----
-    History:
-
-    - 2023-07-17, KBS
-        Initial version.
     """
     # Mask uncalibrated BG region
     log.writelog("  Setting uncalibrated pixels to zero...",
                  mute=(not meta.verbose))
-    boolmask = np.abs(data.flux.data) > cutoff
+    boolmask = np.abs(data.flux.data) > meta.cutoff
     data['flux'].data = np.where(boolmask, 0, data.flux.data)
     log.writelog(f"    Zeroed {np.sum(boolmask)} " +
                  "pixels in total.", mute=(not meta.verbose))
