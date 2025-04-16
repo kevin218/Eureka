@@ -829,8 +829,8 @@ def parametric_sweep_dqmask(
 
         except Exception as e:
             print(
-                f"Could not calculate fitness score for dqmask={dqmask_value}."
-                f"Error: {e}"
+                f"Could not calculate fitness score for dqmask={dqmask_value
+                                                                }. Error: {e}"
             )
             continue
 
@@ -924,8 +924,7 @@ def parametric_sweep_bg_method_s1(
         except Exception as e:
             print(
                 f"Could not calculate fitness score for bg_method={
-                    bg_method_value}."
-                f"Error: {e}"
+                    bg_method_value}. Error: {e}"
             )
             continue
 
