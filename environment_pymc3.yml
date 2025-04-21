@@ -3,7 +3,7 @@ channels:
     - conda-forge
     - defaults
 dependencies:
-    - python==3.10.14
+    - python==3.11.0
     - asdf[version='>=2.15.0'] # Lower limit needed when installing theano, starry, and pymc3
     - astropy
     - astroquery
