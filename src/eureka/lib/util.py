@@ -546,8 +546,8 @@ def binData_time(data, time, mask=None, nbin=100, err=False):
         good_time = time
         good_data = data
     else:
-        good_time = time[~np.ma.getmaskarray(data.mask)]
-        good_data = data[~np.ma.getmaskarray(data.mask)]
+        good_time = time[~np.ma.getmaskarray(data)]
+        good_data = data[~np.ma.getmaskarray(data)]
 
     binned, _, _ = binned_statistic(good_time, good_data,
                                     statistic='mean',
