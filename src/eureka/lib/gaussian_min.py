@@ -92,8 +92,6 @@ def pri_cent(img, mask, meta, saved_ref_median_frame):
         First guess of x centroid position.
     y : float
         First guess of y centroid position.
-    refrence_median_frame : ndarray
-        Median frame of the first batch.
     """
     # Create initial centroid guess using specified method
     if meta.centroid_tech.lower() in ['com', '1dg', '2dg']:
