@@ -110,7 +110,7 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         flux_units = spec.optspec.flux_units
         wave_units = spec.optspec.wave_units
         time_units = spec.optspec.time_units
- 
+
     # Apply aperture correction
     optspec *= meta.apcorr
 
@@ -162,10 +162,6 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             except IndexError:
                 it5 = -1
         meta.it = [it0, it1, it2, it3, it4, it5]
-
-        # Get binned data and times
-        if not meta.nbin_plot or meta.nbin_plot > len(spec.time):
-            nbin_plot = len(spec.time)
 
         if meta.isplots_S4cal >= 2:
             fig, ax = plot_whitelc(optspec, spec.time, meta, i, fig=fig, ax=ax)

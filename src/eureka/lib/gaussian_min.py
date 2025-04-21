@@ -149,10 +149,10 @@ def mingauss(img, mask, yxguess, meta):
         raise ValueError(f"Invalid centroid_tech option {meta.centroid_tech}")
 
     # Cropping frame to speed up guassian fit
-    minx = -int(meta.gauss_frame)+int(x)
-    maxx = int(meta.gauss_frame)+int(x)+1
-    miny = -int(meta.gauss_frame)+int(y)
-    maxy = int(meta.gauss_frame)+int(y)+1
+    minx = np.max([0, -int(meta.gauss_frame)+int(x)])
+    maxx = np.min([int(meta.gauss_frame)+int(x)+1, img.shape[1]-1])
+    miny = np.max([0, -int(meta.gauss_frame)+int(y)])
+    maxy = np.min([int(meta.gauss_frame)+int(y)+1, img.shape[0]-1])
 
     # Set Frame size based off of frame crop
     frame = img[miny:maxy, minx:maxx]
@@ -170,8 +170,10 @@ def mingauss(img, mask, yxguess, meta):
               f"while meta.inst is set to {meta.inst}")
         initial_guess = [400, 20, 20]
 
-    # Subtract the median background computed using pixels beyond 2 sigma of the centroid
-    bg_frame = np.ma.masked_where((x_mesh-x)**2+(y_mesh-y)**2 < 4*initial_guess[1]*initial_guess[2],
+    # Subtract the median background computed using pixels beyond 2 sigma
+    # of the centroid
+    bg_frame = np.ma.masked_where((x_mesh-x)**2+(y_mesh-y)**2 <
+                                  4*initial_guess[1]*initial_guess[2],
                                   frame).mean()
     frame -= np.ma.median(bg_frame)
 

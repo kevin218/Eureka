@@ -58,8 +58,8 @@ class S3MetaClass(MetaClass):
 
         # Subarray region of interest
         # Require these to be set in the ECF
-        self.ywindow = getattr(self, 'ywindow', [None,None])
-        self.xwindow = getattr(self, 'xwindow', [None,None])
+        self.ywindow = getattr(self, 'ywindow', [None, None])
+        self.xwindow = getattr(self, 'xwindow', [None, None])
         if self.xwindow is None:
             self.xwindow = [None, None]
         if self.ywindow is None:
@@ -393,8 +393,10 @@ class S3MetaClass(MetaClass):
                         # by rounding to the same number of decimal places
                         # as the input values
                         ndecimals_skyin = len(str(float(skyin)).split('.')[1])
-                        ndecimals_skywidth = len(str(float(skywidth)).split('.')[1])
-                        ndecimals_skyout = max(ndecimals_skyin, ndecimals_skywidth)
+                        ndecimals_skywidth = len(str(float(skywidth)
+                                                     ).split('.')[1])
+                        ndecimals_skyout = max(ndecimals_skyin,
+                                               ndecimals_skywidth)
                         skyout = np.round(skyout, ndecimals_skyout)
                     self.bg_hw_range.append(f'{skyin}_{skyout}')
         elif hasattr(self, 'bg_hw'):
