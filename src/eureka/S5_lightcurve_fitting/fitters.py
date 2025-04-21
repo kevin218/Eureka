@@ -167,7 +167,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                                  or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
-    # Plot Allan plot
+    # Make Pont time-averaging plot
     if meta.isplots_S5 >= 3 and calling_function == 'lsq' and \
             np.size(lc.flux) > 20:
         # This plot is only really useful if you're actually using the
@@ -456,7 +456,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                  or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter='emcee')
 
-    # Plot Allan plot
+    # Make Pont time-averaging plot
     if meta.isplots_S5 >= 3 and np.size(lc.flux) > 20:
         # mc3.stats.time_avg breaks when testing with a small
         # number of integrations
@@ -978,7 +978,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                                  or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter='dynesty')
 
-    # Plot Allan plot
+    # Make Pont time-averaging plot
     if meta.isplots_S5 >= 3 and np.size(lc.flux) > 20:
         # mc3.stats.time_avg breaks when testing with a small
         # number of integrations
@@ -1101,7 +1101,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
                                  or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter='lmfitter')
 
-    # Plot Allan plot
+    # Make Pont time-averaging plot
     if meta.isplots_S5 >= 3 and np.size(lc.flux) > 20:
         # mc3.stats.time_avg breaks when testing with a small
         # number of integrations
