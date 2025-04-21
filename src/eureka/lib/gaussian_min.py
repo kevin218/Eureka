@@ -170,8 +170,10 @@ def mingauss(img, mask, yxguess, meta):
               f"while meta.inst is set to {meta.inst}")
         initial_guess = [400, 20, 20]
 
-    # Subtract the median background computed using pixels beyond 2 sigma of the centroid
-    bg_frame = np.ma.masked_where((x_mesh-x)**2+(y_mesh-y)**2 < 4*initial_guess[1]*initial_guess[2],
+    # Subtract the median background computed using pixels beyond 2 sigma
+    # of the centroid
+    bg_frame = np.ma.masked_where((x_mesh-x)**2+(y_mesh-y)**2 <
+                                  4*initial_guess[1]*initial_guess[2],
                                   frame).mean()
     frame -= np.ma.median(bg_frame)
 
