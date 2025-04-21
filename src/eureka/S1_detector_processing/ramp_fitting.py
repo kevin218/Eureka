@@ -647,6 +647,9 @@ def mean_ramp_fit(model, buffsize, save_opt, readnoise_2d, gain_2d,
 
         return image_info, integ_info, opt_info
 
+    # Compute differences between groups for each pixel in the data cube
+    differences = np.diff(data, axis=1)
+
     # Calculate effective integration time (once EFFINTIM has been populated
     #   and accessible, will use that instead), and other keywords that will
     #   needed if the pedestal calculation is requested. Note 'nframes'
@@ -655,7 +658,7 @@ def mean_ramp_fit(model, buffsize, save_opt, readnoise_2d, gain_2d,
     #   groupgap.
     effintim = (nframes + groupgap) * frame_time
     # Compute the final 2D array of differences; create rate array
-    sum_int = np.sum(data, axis=0)
+    sum_int = np.sum(differences, axis=1)
     integ_err = 1/np.sqrt(sum_int)
     mean_2d = np.average(sum_int, axis=0)
     var_2d_poisson = 1/mean_2d
@@ -664,7 +667,7 @@ def mean_ramp_fit(model, buffsize, save_opt, readnoise_2d, gain_2d,
     var_2d_rnoise = np.std(readnoise_2d, axis=0)**2*np.ones(mean_2d.shape)
     c_rates = mean_2d / effintim
     image_err = np.sqrt(var_2d_poisson + var_2d_rnoise)
-    integ_dq = np.sum(groupdq, axis=0)
+    integ_dq = np.sum(groupdq, axis=1)
     image_info = (c_rates, inpixeldq, var_2d_poisson, var_2d_rnoise, image_err)
     integ_info = (sum_int, integ_dq, var_poisson, var_rnoise, integ_err)
 
