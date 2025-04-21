@@ -101,7 +101,7 @@ def pri_cent(img, mask, meta, saved_ref_median_frame):
                             ("centroid_" + meta.centroid_tech.lower()))
         x, y = cent_func(saved_ref_median_frame)
     else:
-        print("Invalid centroid_tech option")
+        raise ValueError(f"Invalid centroid_tech option {meta.centroid_tech}")
 
     return x, y
 
