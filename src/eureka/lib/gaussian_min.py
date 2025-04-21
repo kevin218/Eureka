@@ -151,10 +151,10 @@ def mingauss(img, mask, yxguess, meta):
         raise ValueError(f"Invalid centroid_tech option {meta.centroid_tech}")
 
     # Cropping frame to speed up guassian fit
-    minx = -int(meta.gauss_frame)+int(x)
-    maxx = int(meta.gauss_frame)+int(x)+1
-    miny = -int(meta.gauss_frame)+int(y)
-    maxy = int(meta.gauss_frame)+int(y)+1
+    minx = np.max([0, -int(meta.gauss_frame)+int(x)])
+    maxx = np.min([int(meta.gauss_frame)+int(x)+1, img.shape[1]-1])
+    miny = np.max([0, -int(meta.gauss_frame)+int(y)])
+    maxy = np.min([int(meta.gauss_frame)+int(y)+1, img.shape[0]-1])
 
     # Set Frame size based off of frame crop
     frame = img[miny:maxy, minx:maxx]
