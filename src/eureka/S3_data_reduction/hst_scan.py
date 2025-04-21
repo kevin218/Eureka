@@ -5,8 +5,9 @@ try:
     imported_image_registration = True
 except ModuleNotFoundError:
     imported_image_registration = False
-from ..lib import centerdriver
+from ..lib import gaussian as g
 from ..lib.util import supersample
+
 
 def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
                   POSTARG2, meta, log):
@@ -64,15 +65,16 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
     for i in range(nfiles):
         with fits.open(filenames[i].rstrip()) as file:
             image = file['SCI'].data
-            dq = file['DQ'].data
             calhdr0 = file[0].header
             calhdr1 = file[1].header
 
         reset_nint = not hasattr(meta, 'n_int')
         if reset_nint:
             meta.n_int = nfiles
-        position, _, _ = centerdriver.centerdriver('fgc_sec', image, guess,
-                                                   trim, i, 0, meta, maskstar=True)
+        _, _, y, x = g.fitgaussian(image, yxguess=guess, fitbg=1,
+                                   maskg=False)[0][0:4]
+        position = np.array([y, x])
+
         centers.append(position)
         if reset_nint:
             delattr(meta, 'n_int')

@@ -9,7 +9,7 @@ except ImportError:
           'wavelength solution will not be able to be calculated in Stage 3.')
 from ..lib.util import read_time, supersample
 
-__all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg',
+__all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg', 'flag_bg_phot',
            'fit_bg', 'cut_aperture', 'standard_spectrum', 'clean_median_flux',
            'calibrated_spectra', 'residualBackground', 'lc_nodriftcorr']
 
@@ -281,10 +281,34 @@ def flag_bg(data, meta, log):
     return nircam.flag_bg(data, meta, log)
 
 
+def flag_bg_phot(data, meta, log):
+    '''Outlier rejection of sky background along time axis for photometry.
+
+    Uses the code written for NIRCam which also works for MIRI.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
+    '''
+    return nircam.flag_bg_phot(data, meta, log)
+
+
 def flag_ff(data, meta, log):
     '''Outlier rejection of full frame along time axis.
     For data with deep transits, there is a risk of masking good transit data.
     Proceed with caution.
+
+    Uses the code written for NIRCam which also works for MIRI.
 
     Parameters
     ----------
@@ -403,30 +427,6 @@ def standard_spectrum(data, meta, apdata, apmask, aperr):
     """
 
     return nircam.standard_spectrum(data, meta, apdata, apmask, aperr)
-
-
-def flag_bg_phot(data, meta, log):
-    '''Outlier rejection of segment along time axis adjusted for the
-    photometry reduction routine.
-
-    Uses the code written for NIRCam which works for MIRI as long
-    as the MIRI data gets rotated.
-
-    Parameters
-    ----------
-    data : Xarray Dataset
-        The Dataset object.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    log : logedit.Logedit
-        The current log.
-
-    Returns
-    -------
-    data : Xarray Dataset
-        The updated Dataset object with outlier background pixels flagged.
-    '''
-    return nircam.flag_bg_phot(data, meta, log)
 
 
 def calibrated_spectra(data, meta, log):

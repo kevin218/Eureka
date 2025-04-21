@@ -205,12 +205,12 @@ def bright2dn(data, meta, log, mjy=False):
         f = spi.interp1d(response_wave, response_vals, kind='cubic',
                          bounds_error=False, fill_value='extrapolate')
         response = f(data.wave_1d)
+        response = xr.DataArray(response, dims="x")
 
     scalar = data.attrs['shdr']['PHOTMJSR']
     if mjy:
         scalar *= data.attrs['shdr']['PIXAR_SR']
     # Convert to DN/sec
-    response = xr.DataArray(response, dims="x")
     data['flux'] /= scalar * response
     data['err'] /= scalar * response
     # FINDME: should this really be squared

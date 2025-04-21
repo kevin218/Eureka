@@ -3,6 +3,9 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import re
+import warnings
+warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
+                                          'this call because figure with num')
 
 from ..lib import plots
 

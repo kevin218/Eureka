@@ -24,7 +24,7 @@ dependencies:
     - numpy[version='>=1.20.0,<=1.23'] # Upper limit needed for Apple silicon
     - numpydoc # Needed for documentation
     - pandas
-    - pastasoss
+    - pastasoss[version='>=1.2.1']
     - photutils
     - pip # required for the pip installs below
     - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest, an asdf package, and something in the pymc3 set of installs. Needed for testing
@@ -32,6 +32,7 @@ dependencies:
     - pytest-doctestplus # Needed for testing
     - requests
     - scipy[version='>=1.8.0'] # Lower limit needed for scipy.spatial.QhullError
+    - shapely
     - sphinx # Needed for documentation
     - sphinx-automodapi # Needed for documentation
     - tqdm

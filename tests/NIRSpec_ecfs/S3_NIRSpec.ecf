@@ -9,7 +9,7 @@ convert_to_e    True        # Whether or not a conversion to electrons should be
 
 # Subarray region of interest
 ywindow         [0,31]      # Vertical axis as seen in DS9
-xwindow         [85,410]    # Horizontal axis as seen in DS9
+xwindow         [85,415]    # Horizontal axis as seen in DS9
 src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
 record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 dqmask          True        # Mask pixels with an odd entry in the DQ array
@@ -18,15 +18,15 @@ expand          1           # Super-sampling factor along cross-dispersion direc
 # Outlier rejection along time axis
 ff_outlier      False       # Set False to use only background region (recommended for deep transits)
                             # Set True to use full frame (works well for shallow transits/eclipses)
-bg_thresh       [15,15]     # Double-iteration X-sigma threshold for outlier rejection along time axis
+bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
 
 # Background parameters
 bg_hw       10         # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_deg      0          # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
-p3thresh    2          # X-sigma threshold for outlier rejection during background subtraction
+p3thresh    5          # X-sigma threshold for outlier rejection during background subtraction
 
 # Spectral extraction parameters
-spec_hw         8          # Half-width of aperture region for spectral extraction (relative to source position)
+spec_hw         5          # Half-width of aperture region for spectral extraction (relative to source position)
 fittype         smooth     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
 median_thresh   5          # X-sigma threshold when flagging outliers in median frame
 window_len      13         # Smoothing window length, for median frame or when fittype = smooth
@@ -39,11 +39,11 @@ curvature   correct    # How to manage the curved trace on the detector (Options
 
 # Diagnostics
 isplots_S3  5          # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
-nplots      5           # How many of each type of figure do you want to make per file?
+nplots      5          # How many of each type of figure do you want to make per file?
 vmin        0.97       # Sets the vmin of the color bar for Figure 3101.
 vmax        1.03       # Sets the vmax of the color bar for Figure 3101.
 time_axis   'y'        # Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x')
-testing_S3  True       # Boolean, set True to only use last file and generate select figures
+testing_S3  False      # Boolean, set True to only use last file and generate select figures
 hide_plots  True       # If True, plots will automatically be closed rather than popping up
 save_output True       # Save outputs for use in S4
 verbose     True       # If True, more details will be printed about steps

@@ -8,10 +8,11 @@ from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
-from . import sigrej, source_pos, background, straighten, optspex, plots_s3, nircam
+from tqdm import tqdm
+
+from . import sigrej, source_pos, straighten, plots_s3, nircam
 from . import hst_scan as hst
 from . import bright2flux as b2f
-from . import nircam
 from ..lib import suntimecorr, utc_tt, util
 from ..lib.util import supersample
 
@@ -696,13 +697,6 @@ def difference_frames(data, meta, log):
             diffmask[n][np.where(differr[n] > meta.diffthresh *
                         np.median(differr[n], axis=1)[:, np.newaxis])] = True
 
-        # Guess spectrum position only using subarray region
-        masked_data = np.ma.masked_where(
-            diffmask[n, meta.ywindow[0]:meta.ywindow[1],
-                     meta.xwindow[0]:meta.xwindow[1]],
-            diffflux[n, meta.ywindow[0]:meta.ywindow[1],
-                     meta.xwindow[0]:meta.xwindow[1]])
-
     # Create Xarray Dataset with updated time axis for differenced frames
     flux_units = data.flux.attrs['flux_units']
     time_units = data.flux.attrs['time_units']
@@ -747,6 +741,10 @@ def difference_frames(data, meta, log):
     diffdata['mask'] = diffdata['flatmask']
     verbose = meta.verbose
     meta.verbose = False
+    # Make a placeholder for the guess
+    # guess = np.zeros_like(difftime)
+    # diffdata['guess'] = xrio.makeTimeLikeDA(guess, difftime, 'pixels',
+    #                                         time_units, 'guess')
     diffdata, meta, log = source_pos.source_pos_wrapper(diffdata, meta, log, 0,
                                                         integ=None)
     meta.verbose = verbose
@@ -920,7 +918,7 @@ def correct_drift2D(data, meta, log, m):
     data.dq.values = straighten.roll_columns(data.dq.values, shifts)
     data.v0.values = straighten.roll_columns(data.v0.values, shifts)
     meta.src_ypos = new_center
-    data = optspex.clean_median_flux(data, meta, log, m)
+    data = nircam.clean_median_flux(data, meta, log, m)
 
     def writeDrift2D(arg):
         value, n = arg
@@ -948,6 +946,7 @@ def correct_drift2D(data, meta, log, m):
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
+        jobs = []
         for n in range(meta.n_int):
             if np.all(np.isnan(data.flux[n])):
                 # This file had one fewer read, so skip this "filler" read
@@ -963,9 +962,13 @@ def correct_drift2D(data, meta, log, m):
                                          (data.flux[n]*~data.flatmask[n]),
                                          n),
                                    callback=writeDrift2D)
+            jobs.append(res)
         pool.close()
-        pool.join()
-        res.wait()
+        iterfn = jobs
+        if meta.verbose:
+            iterfn = tqdm(iterfn)
+        for job in iterfn:
+            job.get()
 
     # Save the fitted drifts in the data object
     data['centroid_x'] = (['time'], drift2D[:, 0])
