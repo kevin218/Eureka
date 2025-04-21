@@ -70,7 +70,7 @@ def minfunc(params, frame, x, y, x_mean, y_mean):
     return np.ma.mean((model_gauss-frame)**2)
 
 
-def pri_cent(img, mask, meta, saved_ref_median_frame):
+def pri_cent(img, mask, meta, saved_ref_median_frame=None):
     """
     Create initial centroid guess based off of median frame of data.
 
@@ -83,8 +83,9 @@ def pri_cent(img, mask, meta, saved_ref_median_frame):
         data.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    saved_ref_median_frame : ndarray
-        The stored median frame of the first batch.
+    saved_ref_median_frame : ndarray; optional
+        The stored median frame of the first batch. Defaults to None, in which
+        case a new reference frame will be computed.
 
     Returns
     -------
@@ -92,16 +93,28 @@ def pri_cent(img, mask, meta, saved_ref_median_frame):
         First guess of x centroid position.
     y : float
         First guess of y centroid position.
+    refrence_median_frame : ndarray
+        Median frame of the first batch.
     """
+    # Create median frame
+    if saved_ref_median_frame is None:
+        img_temp = np.ma.masked_where(mask, img)
+        if len(img_temp.shape) > 2:
+            refrence_median_frame = np.ma.median(img_temp, axis=0)
+        else:
+            refrence_median_frame = img_temp
+    else:
+        refrence_median_frame = saved_ref_median_frame
+
     # Create initial centroid guess using specified method
     if meta.centroid_tech.lower() in ['com', '1dg', '2dg']:
         cent_func = getattr(sys.modules[__name__],
                             ("centroid_" + meta.centroid_tech.lower()))
-        x, y = cent_func(saved_ref_median_frame)
+        x, y = cent_func(refrence_median_frame)
     else:
-        raise ValueError(f"Invalid centroid_tech option {meta.centroid_tech}")
+        print("Invalid centroid_tech option")
 
-    return x, y
+    return x, y, refrence_median_frame
 
 
 def mingauss(img, mask, yxguess, meta):
