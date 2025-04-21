@@ -124,20 +124,20 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     # Search
                     path = glob(path+os.sep+f'**{os.sep}*LCData.h5',
                                 recursive=True)
-                    
+
                     # Get lightcurve file with latest modified time
                     path = np.unique([os.sep.join(fname.split(os.sep))
-                             for fname in path])
-                    
+                                      for fname in path])
+
                     if len(path) == 0:
                         raise AssertionError(
                             'Unable to find any LCData save files at '
                             f'{path}')
                     elif len(path) > 1:
-                        print(f'WARNING: Found {len(path)} LCData save '
-                              f'files... Using {max(path, key=os.path.getmtime)}')
+                        print(f'WARNING: Found {len(path)} LCData save files'
+                              f'... Using {max(path, key=os.path.getmtime)}')
 
-                    # Use the latest file found                    
+                    # Use the latest file found
                     path = max(path, key=os.path.getmtime)
                     lc_hold = xrio.readXR(path)
                     meta.wave_low = np.append(meta.wave_low,
