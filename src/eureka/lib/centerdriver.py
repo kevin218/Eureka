@@ -73,7 +73,7 @@ def centerdriver(method, data, meta, i=None, m=None):
                                      fitbg=1, maskg=False)[0][0:4]
     elif method == 'mgmc_pri':
         # Median frame creation + first centroid
-        x, y = gmin.pri_cent(flux, mask, meta, data.medflux.values)
+        x, y = gmin.pri_cent(flux, mask, meta, saved_ref_median_frame)
         sy, sx = np.nan, np.nan
     elif method == 'mgmc_sec':
         # Second enhanced centroid position + gaussian widths
