@@ -6,7 +6,7 @@ from matplotlib import rcParams
 try:
     from mc3.stats import time_avg
 except ModuleNotFoundError:
-    print("Could not import MC3. No Pont time-averaging plots will be produced.")
+    print("Could not import MC3. No RMS time-averaging plots will be produced.")
 import corner
 from scipy import stats
 import fleck
@@ -301,7 +301,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
 
 
 def plot_rms(lc, model, meta, fitter):
-    """Create a Pont time-averaging plot to look for red noise. (Figs 5301)
+    """Create a RMS time-averaging plot to look for red noise. (Figs 5301)
 
     Parameters
     ----------
@@ -394,7 +394,7 @@ def plot_rms(lc, model, meta, fitter):
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
-        fname = (f'figs{os.sep}fig5301_{fname_tag}_PontTimeAveraging_{fitter}'
+        fname = (f'figs{os.sep}fig5301_{fname_tag}_RMS_TimeAveraging_{fitter}'
                  + plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
