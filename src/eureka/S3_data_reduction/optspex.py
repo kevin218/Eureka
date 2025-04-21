@@ -768,9 +768,6 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
             print("Unknown normalized spatial profile method.")
             return
 
-        if meta.isplots_S3 >= 3 and n < meta.int_end:
-            plots_s3.profile(meta, profile, submask, n, m, order=order)
-
         isnewprofile = False
         isoutliers = True
         # Loop through steps 6-8 until no more bad pixels are uncovered
@@ -826,6 +823,9 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
             denom = np.ma.masked_where(denom == 0, denom)
             spectrum = np.ma.sum(profile*~submask*subdata/variance,
                                  axis=0)/denom
+
+    if meta.isplots_S3 >= 3 and n < meta.int_end:
+        plots_s3.profile(meta, profile, submask, n, m, order=order)
 
     # Calculate variance of optimal spectrum
     specvar = np.ma.sum(profile*~submask, axis=0) / denom
