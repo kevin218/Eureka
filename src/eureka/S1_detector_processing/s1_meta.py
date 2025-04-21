@@ -61,8 +61,11 @@ class S1MetaClass(MetaClass):
         self.maximum_cores = getattr(self, 'maximum_cores', 'half')
 
         # Control ramp fitting method
-        self.ramp_fit_algorithm = getattr(self, 'ramp_fit_algorithm',
-                                          'default')
+        self.ramp_fit_algorithm = getattr(self, 'ramp_fit_algorithm', 'OLS_C')
+        self.ramp_fit_firstgroup = getattr(self, 'ramp_fit_firstgroup', None)
+        self.ramp_fit_lastgroup = getattr(self, 'ramp_fit_lastgroup', None)
+        self.ramp_fit_suppress_one_group = getattr(
+            self, 'ramp_fit_suppress_one_group', True)
 
         # Pipeline steps
         self.skip_group_scale = getattr(self, 'skip_group_scale', False)
@@ -211,15 +214,15 @@ class S1MetaClass(MetaClass):
 
         #####
 
-        # "Default" ramp fitting settings
-        # Options are "default", "fixed", "interpolated", "flat", or "custom"
-        self.default_ramp_fit_weighting = 'default'
+        # OLS/OLS_C ramp fitting settings
+        # Options are "default"/"optimal", "unweighted", "fixed",
+        # "interpolated", "uniform", or "custom"
+        self.default_ramp_fit_weighting = getattr(
+            self, 'default_ramp_fit_weighting', 'default')
         if self.default_ramp_fit_weighting == 'fixed':
-            # Force this to be specified if fixed weighting
             self.default_ramp_fit_fixed_exponent = getattr(
                 self, 'default_ramp_fit_fixed_exponent', 10)
         elif self.default_ramp_fit_weighting == 'custom':
-            # Force these to be specified if custom weighting
             self.default_ramp_fit_custom_snr_bounds = getattr(
                 self, 'default_ramp_fit_custom_snr_bounds',
                 [5, 10, 20, 50, 100])
