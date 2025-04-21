@@ -6,7 +6,7 @@ from matplotlib import rcParams
 try:
     from mc3.stats import time_avg
 except ModuleNotFoundError:
-    print("Could not import MC3. No RMS time-averaging plots will be produced.")
+    print("Could not import MC3. No RMS time-averaging plots will be made.")
 import corner
 from scipy import stats
 import fleck
