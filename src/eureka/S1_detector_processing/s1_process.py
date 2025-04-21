@@ -212,11 +212,14 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.ramp_fit.algorithm = meta.ramp_fit_algorithm
         self.ramp_fit.maximum_cores = meta.maximum_cores
         self.ramp_fit.skip = meta.skip_ramp_fitting
+        self.ramp_fit.firstgroup = meta.ramp_fit_firstgroup
+        self.ramp_fit.lastgroup = meta.ramp_fit_lastgroup
+        self.ramp_fit.suppress_one_group = meta.ramp_fit_suppress_one_group
         self.ramp_fit.s1_meta = meta
         self.ramp_fit.s1_log = log
 
         # Default ramp fitting settings
-        if self.ramp_fit.algorithm == 'default':
+        if self.ramp_fit.algorithm in ['OLS', 'OLS_C']:
             self.ramp_fit.weighting = meta.default_ramp_fit_weighting
             # Some weighting methods need additional parameters
             if self.ramp_fit.weighting == 'fixed':
