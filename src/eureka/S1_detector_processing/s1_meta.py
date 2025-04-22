@@ -78,7 +78,8 @@ class S1MetaClass(MetaClass):
         self.skip_jump = getattr(self, 'skip_jump', False)
         self.skip_ramp_fitting = getattr(self, 'skip_ramp_fitting', False)
         self.skip_gain_scale = getattr(self, 'skip_gain_scale', False)
-        self.skip_clean_flicker_noise = getattr(self, 'skip_clean_flicker_noise', True)
+        self.skip_clean_flicker_noise = getattr(
+            self, 'skip_clean_flicker_noise', True)
 
         # CR sigma rejection threshold
         self.jump_rejection_threshold = getattr(self,
