@@ -11,7 +11,7 @@ from stcal.ramp_fitting import ramp_fit, utils
 import stcal.ramp_fitting.ols_fit
 from stcal.ramp_fitting.ramp_fit import suppress_one_good_group_ramps
 from stcal.ramp_fitting.ols_fit import discard_miri_groups, \
-    assemble_pool_results, compute_slices_for_starmap, find_0th_one_good_group
+    find_0th_one_good_group
 
 from stcal.ramp_fitting.likely_fit import LIKELY_MIN_NGROUPS
 
@@ -531,7 +531,8 @@ def calc_opt_sums_uniform_weight(ramp_data, rn_sect, gain_sect, data_masked,
 
 
 def mean_ramp_fit(model, buffsize, save_opt, readnoise_2d, gain_2d,
-                  algorithm, weighting, max_cores, dqflags, suppress_one_group):
+                  algorithm, weighting, max_cores, dqflags,
+                  suppress_one_group):
     """Fit a ramp using average.
 
     Calculate the count rate for each pixel in all data cube sections and all
@@ -541,11 +542,11 @@ def mean_ramp_fit(model, buffsize, save_opt, readnoise_2d, gain_2d,
     Parameters
     ----------
     model : data model
-        input data model, assumed to be of type RampModel
+        Input data model, assumed to be of type RampModel
     buffsize : int
-        size of data section (buffer) in bytes
+        Unused. Size of data section (buffer) in bytes
     save_opt : bool
-       calculate optional fitting results
+       Calculate optional fitting results
     readnoise_2d : ndarray
         2-D array readnoise for all pixels
     gain_2d : ndarray
@@ -553,14 +554,9 @@ def mean_ramp_fit(model, buffsize, save_opt, readnoise_2d, gain_2d,
     algorithm : str
         Unused, since algorithm is always 'mean' in this function.
     weighting : str
-        'optimal' specifies that optimal weighting should be used;
-         currently the only weighting supported.
+        Unused.
     max_cores : str
-        Number of cores to use for multiprocessing. If set to 'none' (the
-        default), then no multiprocessing will be done. The other allowable
-        values are 'quarter', 'half', and 'all'. This is the fraction of cores
-        to use for multi-proc. The total number of cores includes the SMT cores
-        (Hyper Threading for Intel).
+        Unused.
     dqflags : dict
         A dictionary with at least the following keywords:
         DO_NOT_USE, SATURATED, JUMP_DET, NO_GAIN_VALUE, UNRELIABLE_SLOPE
@@ -577,7 +573,8 @@ def mean_ramp_fit(model, buffsize, save_opt, readnoise_2d, gain_2d,
     opt_info : tuple
         The tuple of computed optional results arrays for fitting.
     """
-    ramp_data = ramp_fit.create_ramp_fit_class(model, 'mean', dqflags, suppress_one_group)
+    ramp_data = ramp_fit.create_ramp_fit_class(model, 'mean', dqflags,
+                                               suppress_one_group)
     # Get readnoise array for calculation of variance of noiseless ramps, and
     #   gain array in case optimal weighting is to be done
     nframes = ramp_data.nframes
@@ -594,7 +591,7 @@ def mean_ramp_fit(model, buffsize, save_opt, readnoise_2d, gain_2d,
     #   and the input model arrays will be resized appropriately. If all
     #   pixels in all groups are flagged, return None for the models.
     if ramp_data.instrument_name == 'MIRI' and ramp_data.data.shape[1] > 1:
-        miri_ans = stcal.ramp_fitting.ols_fit.discard_miri_groups(ramp_data)
+        miri_ans = discard_miri_groups(ramp_data)
         # The function returns False if the removed groups leaves no data to be
         # processed.  If this is the case, return None for all expected
         # variables returned by ramp_fit
