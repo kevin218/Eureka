@@ -166,8 +166,8 @@ In Stage 5:
 
    - If ``isplots_S5`` = 3: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise, plot the normalized residual distribution, and plot the fitting chains for each channel. If fitting a sinusoid_pc model, another zoomed-in figure with binned data in front of the unbinned data will be made to emphasize the phase variations.
 
-   .. figure:: ../media/S5_out/fig5301_ch0_allanplot_emcee.png
-      :alt: Stage 5 RMS deviation plot
+   .. figure:: ../media/S5_out/fig5301_ch0_RMS_TimeAveraging_emcee.png
+      :alt: Stage 5 RMS time-averaging plot
 
       Fig 5301: RMS Deviation Plot
 
