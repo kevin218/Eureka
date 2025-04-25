@@ -238,7 +238,8 @@ class S3MetaClass(MetaClass):
         self.bg_x1 = getattr(self, 'bg_x1', None)
         self.bg_x2 = getattr(self, 'bg_x2', None)
         self.bg_method = getattr(self, 'bg_method', 'median')
-        if not self.skip_apphot_bg and self.bg_method not in ['mean', 'median']:
+        if (not self.skip_apphot_bg and
+                self.bg_method not in ['mean', 'median']):
             raise ValueError(f'bg_method must be "mean" or "median", but got '
                              f'{self.bg_method}')
         self.p3thresh = getattr(self, 'p3thresh', 5)
@@ -329,8 +330,8 @@ class S3MetaClass(MetaClass):
                       "to the nearest integer.")
                 self.subarray_halfwidth = round(self.subarray_halfwidth)
             if self.subarray_halfwidth < 0:
-                raise ValueError(f'meta.subarray_halfwidth must be >= 0, but got '
-                                 f'{self.subarray_halfwidth}')
+                raise ValueError(f'meta.subarray_halfwidth must be >= 0, but '
+                                 f'got {self.subarray_halfwidth}')
 
             # Get the centroid position and the subarray size
             with CubeModel(self.segment_list[0]) as model:
