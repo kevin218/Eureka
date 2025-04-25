@@ -230,7 +230,7 @@ class S3MetaClass(MetaClass):
         self.skyin = getattr(self, 'skyin')
         self.skywidth = getattr(self, 'skywidth')
         self.minskyfrac = getattr(self, 'minskyfrac', 0.1)
-        if ~self.skip_apphot_bg and not (0 < self.minskyfrac <= 1):
+        if not self.skip_apphot_bg and not (0 < self.minskyfrac <= 1):
             raise ValueError(f'skyfrac is {self.minskyfrac} but must be in '
                              'range (0,1]')
 
@@ -238,7 +238,7 @@ class S3MetaClass(MetaClass):
         self.bg_x1 = getattr(self, 'bg_x1', None)
         self.bg_x2 = getattr(self, 'bg_x2', None)
         self.bg_method = getattr(self, 'bg_method', 'median')
-        if ~self.skip_apphot_bg and self.bg_method not in ['mean', 'median']:
+        if not self.skip_apphot_bg and self.bg_method not in ['mean', 'median']:
             raise ValueError(f'bg_method must be "mean" or "median", but got '
                              f'{self.bg_method}')
         self.p3thresh = getattr(self, 'p3thresh', 5)
