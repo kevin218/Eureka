@@ -131,14 +131,14 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         if meta.t14 is None:
             meta.t14 = p/np.pi*np.arcsin(
                 1/ars*np.sqrt(((1 + rprs)**2 - (ars*cosi)**2)/(1 - cosi**2)))
-            if ~np.isfinite(meta.t14):
+            if not np.isfinite(meta.t14):
                 raise Exception("t14 is not finite. Check your system " +
                                 "parameters.")
         # Full occultation duration
         if meta.t23 is None:
             meta.t23 = p/np.pi*np.arcsin(
                 1/ars*np.sqrt(((1 - rprs)**2 - (ars*cosi)**2)/(1 - cosi**2)))
-            if ~np.isfinite(meta.t23):
+            if not np.isfinite(meta.t23):
                 raise Exception("t23 is not finite. Check your system " +
                                 "parameters or planet may be grazing.")
         # Indices for first through fourth contact

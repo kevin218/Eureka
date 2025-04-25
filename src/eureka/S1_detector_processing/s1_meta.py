@@ -78,6 +78,8 @@ class S1MetaClass(MetaClass):
         self.skip_jump = getattr(self, 'skip_jump', False)
         self.skip_ramp_fitting = getattr(self, 'skip_ramp_fitting', False)
         self.skip_gain_scale = getattr(self, 'skip_gain_scale', False)
+        self.skip_clean_flicker_noise = getattr(
+            self, 'skip_clean_flicker_noise', True)
 
         # CR sigma rejection threshold
         self.jump_rejection_threshold = getattr(self,
@@ -214,7 +216,9 @@ class S1MetaClass(MetaClass):
 
         #####
 
-        # OLS/OLS_C ramp fitting settings
+        # Ramp fitting settings if ram_fit_algorithm is set to OLS_C or OLS,
+        # where OLS stands for Ordinary Least Squares and OLS_C is the same
+        # underlying algorithm but coded in C for faster execution.
         # Options are "default"/"optimal", "unweighted", "fixed",
         # "interpolated", "uniform", or "custom"
         self.default_ramp_fit_weighting = getattr(

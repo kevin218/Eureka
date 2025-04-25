@@ -172,7 +172,7 @@ class Parameters:
             if not os.path.exists(os.path.join(param_path, param_file)):
                 raise FileNotFoundError(
                     f"The Eureka! Parameter File:\n"
-                    f"{os.path.join(param_path,param_file)}\n"
+                    f"{os.path.join(param_path, param_file)}\n"
                     f"does not exist. Make sure to update the fit_par setting"
                     f" in your Stage 5 ECF to point to the EPF file you've "
                     f"made.")
