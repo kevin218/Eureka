@@ -216,7 +216,7 @@ class S1MetaClass(MetaClass):
 
         #####
 
-        # OLS/OLS_C ramp fitting settings
+        # Ramp fitting settings if ram_fit_algorithm is set to OLS_C or OLS
         # Options are "default"/"optimal", "unweighted", "fixed",
         # "interpolated", "uniform", or "custom"
         self.default_ramp_fit_weighting = getattr(

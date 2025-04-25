@@ -317,21 +317,39 @@ class S3MetaClass(MetaClass):
 
         # Auto-populate the xwindow and ywindow if any elements are None
         if None in [*self.xwindow, *self.ywindow]:
+            # If any of the xwindow or ywindow elements are None, then
+            # set them to default values based on the specified
+            # subarray size. By default use a 151x151 subarray centered on the
+            # centroid
+            self.subarray_halfwidth = getattr(self, 'subarray_halfwidth', 75)
+            if not isinstance(self.subarray_halfwidth, [int, np.int16,
+                                                        np.int32, np.int64]):
+                print("Warning: meta.subarray_halfwidth is not an integer! "
+                      f"Rounding the input value of {self.subarray_halfwidth} "
+                      "to the nearest integer.")
+                self.subarray_halfwidth = round(self.subarray_halfwidth)
+            if self.subarray_halfwidth < 0:
+                raise ValueError(f'meta.subarray_halfwidth must be >= 0, but got '
+                                 f'{self.subarray_halfwidth}')
+
             # Get the centroid position and the subarray size
             with CubeModel(self.segment_list[0]) as model:
                 guess = [model.meta.wcsinfo.crpix1,
                          model.meta.wcsinfo.crpix2]
                 ysize, xsize = model.data.shape[1:]
 
-            # By default use a 150x150 subarray centered on the centroid
             if self.xwindow[0] is None:
-                self.xwindow[0] = max(0, int(np.ceil(guess[0])-75))
+                self.xwindow[0] = max(0, round(guess[0] -
+                                               self.subarray_halfwidth))
             if self.xwindow[1] is None:
-                self.xwindow[1] = min(xsize, int(np.floor(guess[0])+75))
+                self.xwindow[1] = min(xsize, round(guess[0] +
+                                                   self.subarray_halfwidth+1))
             if self.ywindow[0] is None:
-                self.ywindow[0] = max(0, int(np.floor(guess[1])-75))
+                self.ywindow[0] = max(0, round(guess[1] -
+                                               self.subarray_halfwidth))
             if self.ywindow[1] is None:
-                self.ywindow[1] = min(ysize, int(np.ceil(guess[1])+75))
+                self.ywindow[1] = min(ysize, round(guess[1] +
+                                                   self.subarray_halfwidth+1))
 
         self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 10)
         self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)

@@ -33,15 +33,15 @@ and ``'LIKELY'`` (which uses a maximum likelihood estimator). The default is ``'
 
 ramp_fit_firstgroup
 '''''''''''''''''''
-An integer which specifies the first group to use for all pixels when fitting the slopes of the ramps. If set to ``None``, the first group will be used (unless marked as DO_NOT_USE by another step). By default is set to ``None``.
+A zero-indexed integer that specifies the first group to use for all pixels when fitting the slopes of the ramps. If set to ``None`` or ``0``, the first group will be used (unless marked as DO_NOT_USE by another step). By default is set to ``None``.
 
 ramp_fit_lastgroup
 ''''''''''''''''''
-An integer which specifies the last group to use for all pixels when fitting the slopes of the ramps. If set to ``None``, the last group will be used (unless marked as DO_NOT_USE by another step). By default is set to ``None``.
+A zero-indexed integer that specifies the last group to use for all pixels when fitting the slopes of the ramps. If set to ``None`` or the number of groups minus 1, the last group will be used (unless marked as DO_NOT_USE by another step). By default is set to ``None``.
 
 ramp_fit_suppress_one_group
 '''''''''''''''''''''''''''
-A boolean which specifies whether the slope should be set to zero or estimated for pixels with either a single group or the single frame zero value. By default is set to ``True`` which sets the slopes of such pixels to zero.
+A boolean that specifies whether the slope should be set to zero or estimated for pixels with either a single group or the single frame zero value. By default is set to ``True`` which sets the slopes of such pixels to zero.
 
 
 maximum_cores
@@ -65,8 +65,8 @@ If True, skip the named step.
 
 emicorr_algorithm
 '''''''''''''''''
-A string which specifies the ``jwst`` EMI-correction algorithm to use is ``skip_emicorr`` is set to ``False``. The options are ``'joint'`` (default) which should work well for all observations (even with few groups per integration)
-and ``'sequential'`` which is the legacy algorithm and works poorly on observations with few groups per integration.
+A string that specifies the ``jwst`` EMI-correction algorithm to use if ``skip_emicorr`` is set to ``False``. The options are ``'joint'`` (default), which should work well for all observations (even with few groups per integration),
+and ``'sequential'``, which is the legacy algorithm and works poorly on observations with few groups per integration.
 
 custom_linearity
 ''''''''''''''''
@@ -428,7 +428,11 @@ Below an example with the following setting:
 
 Everything outside of the box will be discarded and not used in the analysis.
 
-For most datasets, any element of xwindow or ywindow can be set to None to use the full frame in that direction. However, for MIRI photometry, any element of xwindow or ywindow that is set to None will be repalced by a default of 150x150 pixel box around the approximate centroid (since the MIRI full frame images are very large and it is generally helpful and faster to zoom-in on the science target).
+For most datasets, any element of xwindow or ywindow can be set to None to use the full frame in that direction. However, for MIRI photometry, any element of xwindow or ywindow that is set to None will be replaced by a default based on the value of ``subarray_halfwidth`` (described below).
+
+subarray_halfwidth
+''''''''''''''''''
+Only used if any element of xwindow or ywindow is set to None, and only used for MIRI photometry data. This sets the half-width of the xwindow, ywindow subarray in pixels and is centered on the approximate centroid position. For MIRI photometry, the default is 75 pixels, which is a good value for most datasets since the MIRI full frame images are very large and it is generally helpful and faster to zoom-in on the science target.
 
 src_pos_type
 ''''''''''''
@@ -1282,7 +1286,7 @@ Available fitting parameters are:
       - ``a`` or ``ars`` - a/R*, the ratio of the semimajor axis to the stellar radius
       - ``ecc`` and ``w`` - orbital eccentricity (unitless) and argument of periapsis (degrees)
 
-        - OR, ``ecosw`` and ``esinw`` - the orbital eccentricity and artument of periapsis converted into a basis in which you can apply [0,1] uniform priors without biasing your results away from ``ecc ~ 0``.
+        - OR, ``ecosw`` and ``esinw`` - the orbital eccentricity and argument of periapsis converted into a basis in which you can apply [0,1] uniform priors without biasing your results away from ``ecc ~ 0``.
       - ``t_secondary`` - (optional) time of secondary eclipse
       - ``Rs`` - the host star's radius in units of solar radii.
 
