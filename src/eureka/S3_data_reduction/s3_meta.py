@@ -323,8 +323,8 @@ class S3MetaClass(MetaClass):
             # subarray size. By default use a 151x151 subarray centered on the
             # centroid
             self.subarray_halfwidth = getattr(self, 'subarray_halfwidth', 75)
-            if not isinstance(self.subarray_halfwidth, [int, np.int16,
-                                                        np.int32, np.int64]):
+            if not isinstance(self.subarray_halfwidth, (int, np.int16,
+                                                        np.int32, np.int64)):
                 print("Warning: meta.subarray_halfwidth is not an integer! "
                       f"Rounding the input value of {self.subarray_halfwidth} "
                       "to the nearest integer.")
