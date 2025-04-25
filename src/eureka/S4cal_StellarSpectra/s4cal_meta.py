@@ -55,6 +55,11 @@ class S4cal_MetaClass(MetaClass):
         # Diagnostics
         self.isplots_S4cal = getattr(self, 'isplots_S4cal', 3)
         self.nbin_plot = getattr(self, 'nbin_plot', 100)
+        self.s4cal_plotErrorType = getattr(self, 's4cal_plotErrorType', 'stderr')
+        if self.s4cal_plotErrorType not in ['stderr', 'stddev']:
+            raise ValueError("Unknown s4cal_plotErrorType value: "
+                             f"{self.s4cal_plotErrorType} is not one of "
+                             "'stderr' or 'stddev'")
         self.hide_plots = getattr(self, 'hide_plots', False)
         self.verbose = getattr(self, 'verbose', True)
 

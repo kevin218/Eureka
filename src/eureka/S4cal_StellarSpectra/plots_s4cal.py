@@ -94,14 +94,25 @@ def plot_stellarSpec(meta, ds):
     ds : Xarray DataSet
         The DataSet object containing the extracted flux values.
     '''
+    if meta.s4cal_plotErrorType == 'stderr':
+        # Use the standard error of the mean
+        base_err = ds.base_ferr
+        ecl_err = ds.ecl_ferr
+    elif meta.s4cal_plotErrorType == 'stddev':
+        # Use the standard deviation
+        base_err = ds.base_fstd
+        ecl_err = ds.ecl_fstd
+    else:
+        raise ValueError(f"Unknown error type: {meta.s4cal_plotErrorType}")
+
     fig = plt.figure(4201, figsize=(8, 5))
     plt.clf()
     ax = fig.subplots(1, 1)
     for i in range(len(ds.time)):
-        ax.errorbar(ds.wavelength, ds.base_flux[:, i], ds.base_ferr[:, i],
+        ax.errorbar(ds.wavelength, ds.base_flux[:, i], base_err[:, i],
                     fmt='.', capsize=2, ms=2, color=colors[1],
                     label=f'Baseline ({ds.time.values[i]})')
-        ax.errorbar(ds.wavelength, ds.ecl_flux[:, i], ds.ecl_ferr[:, i],
+        ax.errorbar(ds.wavelength, ds.ecl_flux[:, i], ecl_err[:, i],
                     fmt='.', capsize=2, ms=2, color=colors[0],
                     label=f'In-Occultation ({ds.time.values[i]})')
 

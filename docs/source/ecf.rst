@@ -974,9 +974,13 @@ nbin_plot
 '''''''''
 The number of bins that should be used for figures 5104 and 5304. Defaults to 100.
 
+s4cal_plotErrorType
+'''''''''''''''''''
+The type of error bar to be plotted in Figure 4201. The currently supported options are: 'stderr' (the standard error of the mean), and 'stddev' (the standard deviation of the data). Defaults to 'stderr'.
+The standard error of the mean is the standard deviation of the sample divided by the square root of the number of samples.
 
 hide_plots
-^^^^^^^^^^
+''''''''''
 If True, plots will automatically be closed rather than popping up on the screen.
 
 
