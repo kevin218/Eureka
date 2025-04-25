@@ -150,7 +150,7 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         eclipse_maps = map_soln['map'][np.newaxis]
         plots.plot_eclipse_map(lc, eclipse_maps, meta, fitter=calling_function)
 
-    # Plot Allan plot
+    # Make RMS time-averaging plot
     if meta.isplots_S5 >= 3 and calling_function == 'exoplanet':
         # This plot is only really useful if you're actually using the
         # exoplanet fitter, otherwise don't make it
@@ -348,7 +348,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
             sample=("chain", "draw"))['map'][:], [2, 0, 1])
         plots.plot_eclipse_map(lc, eclipse_maps, meta, fitter='nuts')
 
-    # Plot Allan plot
+    # Make RMS time-averaging plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='nuts')
 
