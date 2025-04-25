@@ -186,7 +186,7 @@ class Eureka_RampFitStep(Step):
                 elif self.weighting == 'unweighted':
                     # Want to use the officially-supported unweighted weighting
                     # FINDME: I think this may be the same as our 'uniform'...
-                    self.weighting = 'unweighted'
+                    pass
                 elif self.weighting == 'fixed':
                     # Want to use default weighting, but don't want to
                     # change exponent between pixels.
