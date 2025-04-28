@@ -97,9 +97,22 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                  f"- {np.max(spec.time.values)}")
 
     # Flag outliers in time
-    mask = sigrej(spec.optspec.values, meta.sigma_thresh,
-                  mask=spec.optmask.values, axis=0)
-    optspec = np.ma.masked_array(spec.optspec.values, mask)
+    if meta.photometry:
+        mask = sigrej(spec.aplev.values, meta.sigma_thresh)
+        optspec = np.ma.masked_where(mask, spec.aplev.values)
+        flux_units = spec.aplev.flux_units
+        wave_units = spec.wave_1d.wave_units
+        time_units = spec.aplev.time_units
+    else:
+        mask = sigrej(spec.optspec.values, meta.sigma_thresh,
+                      mask=spec.optmask.values, axis=0)
+        optspec = np.ma.masked_array(spec.optspec.values, mask)
+        flux_units = spec.optspec.flux_units
+        wave_units = spec.optspec.wave_units
+        time_units = spec.optspec.time_units
+
+    # Apply aperture correction
+    optspec *= meta.apcorr
 
     if isinstance(meta.t0, float):
         meta.t0 = [meta.t0]
@@ -118,14 +131,14 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         if meta.t14 is None:
             meta.t14 = p/np.pi*np.arcsin(
                 1/ars*np.sqrt(((1 + rprs)**2 - (ars*cosi)**2)/(1 - cosi**2)))
-            if ~np.isfinite(meta.t14):
+            if not np.isfinite(meta.t14):
                 raise Exception("t14 is not finite. Check your system " +
                                 "parameters.")
         # Full occultation duration
         if meta.t23 is None:
             meta.t23 = p/np.pi*np.arcsin(
                 1/ars*np.sqrt(((1 - rprs)**2 - (ars*cosi)**2)/(1 - cosi**2)))
-            if ~np.isfinite(meta.t23):
+            if not np.isfinite(meta.t23):
                 raise Exception("t23 is not finite. Check your system " +
                                 "parameters or planet may be grazing.")
         # Indices for first through fourth contact
@@ -158,51 +171,57 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             (optspec[it0:it1], optspec[it4:it5])), axis=0)
         std_baseline = np.ma.std(np.ma.concatenate(
             (optspec[it0:it1], optspec[it4:it5])), axis=0)
-        # Mask outliers along wavelength axis
-        tck = spi.splrep(wave, spec_baseline, w=1/std_baseline, k=3,
-                         s=meta.smoothing)
-        spline = spi.splev(wave, tck)
-        mask = sigrej(spec_baseline - spline, meta.sigma_thresh)
-        igood = np.where(~mask)[0]
+
+        if not meta.photometry:
+            # Mask outliers along wavelength axis
+            tck = spi.splrep(wave, spec_baseline, w=1/std_baseline, k=3,
+                             s=meta.smoothing)
+            spline = spi.splev(wave, tck)
+            mask = sigrej(spec_baseline - spline, meta.sigma_thresh)
+            igood = np.where(~mask)[0]
+        else:
+            spec_baseline = np.array([spec_baseline, ])
+            std_baseline = np.array([std_baseline, ])
+            igood = np.zeros(1, dtype=int)
         # Create XArray data arrays
         base_flux = xrio.makeLCDA(spec_baseline[igood, np.newaxis],
                                   wave[igood], [t0],
-                                  spec.optspec.flux_units,
-                                  spec.optspec.wave_units,
-                                  spec.optspec.time_units,
+                                  flux_units, wave_units, time_units,
                                   name='Median Baseline Flux')
         base_fstd = xrio.makeLCDA(std_baseline[igood, np.newaxis],
                                   wave[igood], [t0],
-                                  spec.optspec.flux_units,
-                                  spec.optspec.wave_units,
-                                  spec.optspec.time_units,
+                                  flux_units, wave_units, time_units,
                                   name='Std. Dev. of Baseline Flux')
+        base_ferr = base_fstd.copy()/np.sqrt(it5-it4+it1-it0)
 
         # Median in-occultation flux
         spec_t23 = np.ma.median(optspec[it2:it3+1], axis=0)
         std_t23 = np.ma.std(optspec[it2:it3+1], axis=0)
-        # Mask outliers along wavelength axis
-        tck = spi.splrep(wave, spec_t23, w=1/std_t23, k=3)
-        spline = spi.splev(wave, tck)
-        mask = sigrej(spec_t23 - spline, meta.sigma_thresh)
-        igood = np.where(~mask)[0]
+        if not meta.photometry:
+            # Mask outliers along wavelength axis
+            tck = spi.splrep(wave, spec_t23, w=1/std_t23, k=3)
+            spline = spi.splev(wave, tck)
+            mask = sigrej(spec_t23 - spline, meta.sigma_thresh)
+            igood = np.where(~mask)[0]
+        else:
+            spec_t23 = np.array([spec_t23, ])
+            std_t23 = np.array([std_t23, ])
+            igood = np.zeros(1, dtype=int)
         # Create XArray data arrays
         ecl_flux = xrio.makeLCDA(spec_t23[igood, np.newaxis],
                                  wave[igood], [t0],
-                                 spec.optspec.flux_units,
-                                 spec.optspec.wave_units,
-                                 spec.optspec.time_units,
+                                 flux_units, wave_units, time_units,
                                  name='Median In-Occultation Flux')
         ecl_fstd = xrio.makeLCDA(std_t23[igood, np.newaxis],
                                  wave[igood], [t0],
-                                 spec.optspec.flux_units,
-                                 spec.optspec.wave_units,
-                                 spec.optspec.time_units,
+                                 flux_units, wave_units, time_units,
                                  name='Std. Dev. of In-Occultation Flux')
+        ecl_ferr = ecl_fstd.copy()/np.sqrt(it3-it2+1)
 
         # Create XArray dataset
         ds = dict(base_flux=base_flux, base_fstd=base_fstd,
-                  ecl_flux=ecl_flux, ecl_fstd=ecl_fstd)
+                  base_ferr=base_ferr, ecl_flux=ecl_flux,
+                  ecl_fstd=ecl_fstd, ecl_ferr=ecl_ferr)
         ds = xrio.makeDataset(ds)
         batch.append(ds)
 

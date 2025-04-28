@@ -1573,14 +1573,14 @@ def compute_scale_height(meta, log):
                                             constants.R_sun)).si.value
     meta.planet_g = ((constants.G*meta.planet_Mass*constants.M_jup) /
                      (meta.planet_Rad*constants.R_jup)**2).si.value
-    log.writelog(f'  Calculated g={np.round(meta.planet_g,2)} m/s^2 '
+    log.writelog(f'  Calculated g={np.round(meta.planet_g, 2)} m/s^2 '
                  f'with Rp={np.round(meta.planet_Rad, 2)} R_jup '
                  f'and Mp={meta.planet_Mass} M_jup')
     scale_height = (constants.k_B*(meta.planet_Teq*units.K) /
                     ((meta.planet_mu*units.u) *
                      (meta.planet_g*units.m/units.s**2)))
     scale_height = scale_height.si.to('km')
-    log.writelog(f'  Calculated H={np.round(scale_height,2)} with '
+    log.writelog(f'  Calculated H={np.round(scale_height, 2)} with '
                  f'g={np.round(meta.planet_g, 2)} m/s^2, '
                  f'Teq={meta.planet_Teq} K, and '
                  f'mu={meta.planet_mu} u')

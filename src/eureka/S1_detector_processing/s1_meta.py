@@ -61,8 +61,11 @@ class S1MetaClass(MetaClass):
         self.maximum_cores = getattr(self, 'maximum_cores', 'half')
 
         # Control ramp fitting method
-        self.ramp_fit_algorithm = getattr(self, 'ramp_fit_algorithm',
-                                          'default')
+        self.ramp_fit_algorithm = getattr(self, 'ramp_fit_algorithm', 'OLS_C')
+        self.ramp_fit_firstgroup = getattr(self, 'ramp_fit_firstgroup', None)
+        self.ramp_fit_lastgroup = getattr(self, 'ramp_fit_lastgroup', None)
+        self.ramp_fit_suppress_one_group = getattr(
+            self, 'ramp_fit_suppress_one_group', True)
 
         # Pipeline steps
         self.skip_group_scale = getattr(self, 'skip_group_scale', False)
@@ -75,6 +78,8 @@ class S1MetaClass(MetaClass):
         self.skip_jump = getattr(self, 'skip_jump', False)
         self.skip_ramp_fitting = getattr(self, 'skip_ramp_fitting', False)
         self.skip_gain_scale = getattr(self, 'skip_gain_scale', False)
+        self.skip_clean_flicker_noise = getattr(
+            self, 'skip_clean_flicker_noise', True)
 
         # CR sigma rejection threshold
         self.jump_rejection_threshold = getattr(self,
@@ -187,7 +192,7 @@ class S1MetaClass(MetaClass):
             # Row-by-row BG subtraction (only useful for NIRCam)
             self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
             self.orders = getattr(self, 'orders', None)
-            self.src_ypos = getattr(self, 'src_ypos', 15)
+            self.src_ypos = getattr(self, 'src_ypos', None)
         # bg_x1 and bg_x2 also need to be defined if meta.masktrace is True
         # Left edge of exclusion region for row-by-row BG subtraction
         self.bg_x1 = getattr(self, 'bg_x1', None)
@@ -211,15 +216,17 @@ class S1MetaClass(MetaClass):
 
         #####
 
-        # "Default" ramp fitting settings
-        # Options are "default", "fixed", "interpolated", "flat", or "custom"
-        self.default_ramp_fit_weighting = 'default'
+        # Ramp fitting settings if ram_fit_algorithm is set to OLS_C or OLS,
+        # where OLS stands for Ordinary Least Squares and OLS_C is the same
+        # underlying algorithm but coded in C for faster execution.
+        # Options are "default"/"optimal", "unweighted", "fixed",
+        # "interpolated", "uniform", or "custom"
+        self.default_ramp_fit_weighting = getattr(
+            self, 'default_ramp_fit_weighting', 'default')
         if self.default_ramp_fit_weighting == 'fixed':
-            # Force this to be specified if fixed weighting
             self.default_ramp_fit_fixed_exponent = getattr(
                 self, 'default_ramp_fit_fixed_exponent', 10)
         elif self.default_ramp_fit_weighting == 'custom':
-            # Force these to be specified if custom weighting
             self.default_ramp_fit_custom_snr_bounds = getattr(
                 self, 'default_ramp_fit_custom_snr_bounds',
                 [5, 10, 20, 50, 100])
@@ -248,7 +255,11 @@ class S1MetaClass(MetaClass):
         self.skip_reset = getattr(self, 'skip_reset', False)
         # jwst skips by default for MIRI TSO.
         self.skip_rscd = getattr(self, 'skip_rscd', True)
+        # Skip since pretty time consuming and testing has shown it has
+        # negligible effect on the data.
         self.skip_emicorr = getattr(self, 'skip_emicorr', True)
+        # If running emicorr, set the algorithm to use the newer joint method
+        self.emicorr_algorithm = getattr(self, 'emicorr_algorithm', 'joint')
 
         # Remove the 390 Hz periodic noise in MIRI/LRS SLITLESSPRISM
         # group-level data?

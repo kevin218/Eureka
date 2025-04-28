@@ -9,14 +9,19 @@ import warnings
 
 from stcal.ramp_fitting import ramp_fit, utils
 import stcal.ramp_fitting.ols_fit
+from stcal.ramp_fitting.ramp_fit import suppress_one_good_group_ramps
+from stcal.ramp_fitting.ols_fit import discard_miri_groups, \
+    find_0th_one_good_group
+
+from stcal.ramp_fitting.likely_fit import LIKELY_MIN_NGROUPS
 
 from jwst.stpipe import Step
 from jwst import datamodels
 
 from jwst.datamodels import dqflags
 
-from jwst.lib import reffile_utils
-from jwst.lib import pipe_utils
+from jwst.ramp_fitting.ramp_fit_step import get_reference_file_subarrays, \
+    create_image_model, create_integration_model, set_groupdq
 
 from jwst.firstframe.firstframe_step import FirstFrameStep
 from jwst.lastframe.lastframe_step import LastFrameStep
@@ -38,15 +43,18 @@ class Eureka_RampFitStep(Step):
     """
 
     spec = """
+        algorithm = option('OLS', 'OLS_C', 'LIKELY', 'mean', 'differenced', default='OLS_C') # 'OLS' and 'OLS_C' use the same underlying algorithm, but OLS_C is implemented in C
         int_name = string(default='')
         save_opt = boolean(default=False) # Save optional output
         opt_name = string(default='')
-        maximum_cores = option('none', 'quarter', 'half', 'all', \
-default='none') # max number of processes to create
-    """
+        suppress_one_group = boolean(default=True)  # Suppress saturated ramps with good 0th group
+        firstgroup = integer(default=None)   # Ignore groups before this one (zero indexed)
+        lastgroup = integer(default=None)   # Ignore groups after this one (zero indexed)
+        maximum_cores = string(default='1') # cores for multiprocessing. Can be an integer, 'half', 'quarter', or 'all'
+    """  # noqa: E501
 
-    algorithm = 'differenced'  # default
-    weighting = 'optimal'  # Only weighting allowed for Build 7.1
+    algorithm = 'OLS_C'  # default
+    weighting = 'optimal'  # default
     maximum_cores = 1  # default
 
     reference_file_types = ['readnoise', 'gain']
@@ -60,38 +68,16 @@ default='none') # max number of processes to create
 
         Parameters
         ----------
-        input : str, tuple, `~astropy.io.fits.HDUList`, ndarray, dict, None
-
-            - None: Create a default data model with no shape.
-
-            - tuple: Shape of the data array.
-              Initialize with empty data array with shape specified by the.
-
-            - file path: Initialize from the given file (FITS or ASDF)
-
-            - readable file object: Initialize from the given file
-              object
-
-            - `~astropy.io.fits.HDUList`: Initialize from the given
-              `~astropy.io.fits.HDUList`.
-
-            - A numpy array: Used to initialize the data array
+        input : RampModel
+            The input ramp model to fit the ramps.
 
         Returns
         -------
-        out_model : jwst.datamodels.ImageModel
-            The output ImageModel to be returned from the ramp fit step.
-        int_model : jwst.datamodels.CubeModel
-            The output CubeModel to be returned from the ramp fit step.
+        out_model : ImageModel
+            The output 2-D image model with the fit ramps.
 
-        Notes
-        -----
-        History:
-
-        - October 2021 Aarynn Carter and Eva-Maria Ahrer
-            Initial version
-        - February 2022 Aarynn Carter and Eva-Maria Ahrer
-            Updated for JWST version 1.3.3, code restructure
+        int_model : CubeModel
+            The output 3-D image model with the fit ramps for each integration.
         '''
         with datamodels.RampModel(input) as input_model:
 
@@ -138,9 +124,21 @@ default='none') # max number of processes to create
                                                self.s1_log,
                                                self.s1_meta)
 
+            max_cores = self.maximum_cores
             readnoise_filename = self.get_reference_file(input_model,
                                                          'readnoise')
             gain_filename = self.get_reference_file(input_model, 'gain')
+
+            ngroups = input_model.data.shape[1]
+            if (self.algorithm.upper() == "LIKELY" and
+                    ngroups < LIKELY_MIN_NGROUPS):
+                log.info(
+                    f"When selecting the LIKELY ramp fitting algorithm the"
+                    f" ngroups needs to be a minimum of {LIKELY_MIN_NGROUPS},"
+                    f" but ngroups = {ngroups}.  Due to this, the ramp fitting"
+                    f" algorithm is being changed to OLS_C"
+                )
+                self.algorithm = "OLS_C"
 
             log.info('Using READNOISE reference file: %s', readnoise_filename)
             log.info('Using GAIN reference file: %s', gain_filename)
@@ -158,26 +156,36 @@ default='none') # max number of processes to create
                         gain_model.meta.exposure.gain_factor
 
                 # Get gain arrays, subarrays if desired.
-                frames_per_group = input_model.meta.exposure.nframes
                 readnoise_2d, gain_2d = get_reference_file_subarrays(
-                    input_model, readnoise_model, gain_model, frames_per_group)
+                    input_model, readnoise_model, gain_model)
 
-            log.info('Using algorithm = %s' % self.algorithm)
-            log.info('Using weighting = %s' % self.weighting)
+            log.info(f"Using algorithm = {self.algorithm}")
+            log.info(f"Using weighting = {self.weighting}")
 
             buffsize = ramp_fit.BUFSIZE
-            if pipe_utils.is_tso(input_model) and hasattr(input_model,
-                                                          'int_times'):
-                input_model.int_times = input_model.int_times
-            else:
-                input_model.int_times = None
+            if self.algorithm == "GLS":
+                buffsize //= 10
+
+            int_times = input_model.int_times
+
+            # Set the DO_NOT_USE bit in the groupdq values for groups before
+            # firstgroup and groups after lastgroup
+            firstgroup = self.firstgroup
+            lastgroup = self.lastgroup
+            groupdqflags = dqflags.group
+
+            if firstgroup is not None or lastgroup is not None:
+                set_groupdq(firstgroup, lastgroup, ngroups,
+                            input_model.groupdq, groupdqflags)
 
             # DEFAULT RAMP FITTING ALGORITHM
-            if self.algorithm == 'default':
-                # In our case, default just means Optimal Least Squares
-                self.algorithm = 'OLS'
-                if self.weighting == 'default':
+            if self.algorithm in ['OLS', 'OLS_C']:
+                if self.weighting in ['default', 'optimal']:
                     # Want to use the default optimal weighting
+                    self.weighting = 'optimal'
+                elif self.weighting == 'unweighted':
+                    # Want to use the officially-supported unweighted weighting
+                    # FINDME: I think this may be the same as our 'uniform'...
                     pass
                 elif self.weighting == 'fixed':
                     # Want to use default weighting, but don't want to
@@ -223,36 +231,49 @@ default='none') # max number of processes to create
                 # it's underlying functionality.
                 self.weighting = 'optimal'
 
-                image_info, integ_info, _, _ = \
-                    ramp_fit.ramp_fit(input_model, buffsize, self.save_opt,
-                                      readnoise_2d, gain_2d, self.algorithm,
-                                      self.weighting, self.maximum_cores,
-                                      dqflags.pixel)
+                image_info, integ_info, _, _ = ramp_fit.ramp_fit(
+                    input_model, buffsize, self.save_opt, readnoise_2d,
+                    gain_2d, self.algorithm, self.weighting, max_cores,
+                    dqflags.pixel, self.suppress_one_group)
+            elif self.algorithm.lower() == 'likely':
+                # Want to use the newer likelihood-based ramp fitting algorithm
+                self.algorithm = 'LIKELY'
+                image_info, integ_info, _, _ = ramp_fit.ramp_fit(
+                    input_model, buffsize, self.save_opt, readnoise_2d,
+                    gain_2d, self.algorithm, self.weighting, max_cores,
+                    dqflags.pixel, self.suppress_one_group)
             # FUTURE IMPROVEMENT, WFC3-like differenced frames.
             elif self.algorithm == 'differenced':
                 raise ValueError("I can't handle differenced frames yet.")
             # PRIMARILY FOR TESTING, MEAN OF RAMP
             elif self.algorithm == 'mean':
                 image_info, integ_info, _ = \
-                    mean_ramp_fit_single(input_model, buffsize, self.save_opt,
-                                         readnoise_2d, gain_2d, self.algorithm,
-                                         self.weighting, self.maximum_cores,
-                                         dqflags.pixel)
+                    mean_ramp_fit(input_model, buffsize, self.save_opt,
+                                  readnoise_2d, gain_2d, self.algorithm,
+                                  self.weighting, max_cores, dqflags.pixel,
+                                  suppress_one_group=self.suppress_one_group)
             else:
                 raise ValueError(f'Ramp fitting algorithm "{self.algorithm}"' +
                                  ' not implemented.')
 
-        if image_info is not None:
+        out_model, int_model = None, None
+        # Create models from possibly updated info
+        if image_info is not None and integ_info is not None:
             out_model = create_image_model(input_model, image_info)
-            out_model.meta.bunit_data = 'DN/s'
-            out_model.meta.bunit_err = 'DN/s'
-            out_model.meta.cal_step.ramp_fit = 'COMPLETE'
+            out_model.meta.bunit_data = "DN/s"
+            out_model.meta.bunit_err = "DN/s"
+            out_model.meta.cal_step.ramp_fit = "COMPLETE"
+            if (input_model.meta.exposure.type in ["NRS_IFU", "MIR_MRS"]) or (
+                input_model.meta.exposure.type in ["NRS_AUTOWAVE", "NRS_LAMP"]
+                and input_model.meta.instrument.lamp_mode == "IFU"
+            ):
+                out_model = datamodels.IFUImageModel(out_model)
 
-        if integ_info is not None:
-            int_model = create_integration_model(input_model, integ_info)
-            int_model.meta.bunit_data = 'DN/s'
-            int_model.meta.bunit_err = 'DN/s'
-            int_model.meta.cal_step.ramp_fit = 'COMPLETE'
+            int_model = create_integration_model(input_model, integ_info,
+                                                 int_times)
+            int_model.meta.bunit_data = "DN/s"
+            int_model.meta.bunit_err = "DN/s"
+            int_model.meta.cal_step.ramp_fit = "COMPLETE"
 
         return out_model, int_model
 
@@ -509,8 +530,9 @@ def calc_opt_sums_uniform_weight(ramp_data, rn_sect, gain_sect, data_masked,
     return sumx, sumxx, sumxy, sumy, nreads_wtd, xvalues
 
 
-def mean_ramp_fit_single(model, buffsize, save_opt, readnoise_2d, gain_2d,
-                         algorithm, weighting, max_cores, dqflags):
+def mean_ramp_fit(model, buffsize, save_opt, readnoise_2d, gain_2d,
+                  algorithm, weighting, max_cores, dqflags,
+                  suppress_one_group):
     """Fit a ramp using average.
 
     Calculate the count rate for each pixel in all data cube sections and all
@@ -520,23 +542,27 @@ def mean_ramp_fit_single(model, buffsize, save_opt, readnoise_2d, gain_2d,
     Parameters
     ----------
     model : data model
-        Input data model.
+        Input data model, assumed to be of type RampModel
     buffsize : int
-        Unused. The working buffer size.
+        Unused. Size of data section (buffer) in bytes
     save_opt : bool
-        Whether to return the optional output model.
+       Calculate optional fitting results
     readnoise_2d : ndarray
-        The read noise of each pixel.
+        2-D array readnoise for all pixels
     gain_2d : ndarray
-        The gain of each pixel.
-    algorithm : type
-        Unused.
+        2-D array gain for all pixels
+    algorithm : str
+        Unused, since algorithm is always 'mean' in this function.
     weighting : str
-        'optimal' is the only valid value.
+        Unused.
     max_cores : str
-        The number of CPU cores to used.
+        Unused.
     dqflags : dict
-        The data quality flags needed for ramp fitting.
+        A dictionary with at least the following keywords:
+        DO_NOT_USE, SATURATED, JUMP_DET, NO_GAIN_VALUE, UNRELIABLE_SLOPE
+    suppress_one_group : bool
+        Find ramps with only one good group and treat it like it has zero good
+        groups.
 
     Returns
     -------
@@ -547,11 +573,16 @@ def mean_ramp_fit_single(model, buffsize, save_opt, readnoise_2d, gain_2d,
     opt_info : tuple
         The tuple of computed optional results arrays for fitting.
     """
-    ramp_data = ramp_fit.create_ramp_fit_class(model, dqflags)
+    ramp_data = ramp_fit.create_ramp_fit_class(model, 'mean', dqflags,
+                                               suppress_one_group)
     # Get readnoise array for calculation of variance of noiseless ramps, and
     #   gain array in case optimal weighting is to be done
     nframes = ramp_data.nframes
     readnoise_2d *= gain_2d / np.sqrt(2. * nframes)
+
+    # Suppress one group ramps, if desired.
+    if ramp_data.suppress_one_group_ramps:
+        suppress_one_good_group_ramps(ramp_data)
 
     # For MIRI datasets having >1 group, if all pixels in the final group are
     #   flagged as DO_NOT_USE, resize the input model arrays to exclude the
@@ -560,59 +591,35 @@ def mean_ramp_fit_single(model, buffsize, save_opt, readnoise_2d, gain_2d,
     #   and the input model arrays will be resized appropriately. If all
     #   pixels in all groups are flagged, return None for the models.
     if ramp_data.instrument_name == 'MIRI' and ramp_data.data.shape[1] > 1:
-        miri_ans = stcal.ramp_fitting.ols_fit.discard_miri_groups(ramp_data)
+        miri_ans = discard_miri_groups(ramp_data)
         # The function returns False if the removed groups leaves no data to be
         # processed.  If this is the case, return None for all expected
         # variables returned by ramp_fit
         if miri_ans is not True:
             return [None] * 3
 
-    # Save original shapes for writing to log file, as the may change for MIRI
-    n_int, ngroups, nrows, ncols = ramp_data.data.shape
-
+    ngroups = ramp_data.data.shape[1]
     if ngroups == 1:
         log.warning('Dataset has NGROUPS=1, so count rates for each\n' +
                     'integration will be calculated as the value of that\n' +
                     '1 group divided by the group exposure time.')
 
-    image_info, integ_info, opt_info = \
-        ramp_fit_mean(ramp_data, gain_2d, readnoise_2d, save_opt, weighting)
+    if not ramp_data.suppress_one_group_ramps:
+        # This must be done before the ZEROFRAME replacements to prevent
+        # ZEROFRAME replacement being confused for one good group ramps
+        # in the 0th group.
+        if ramp_data.nframes > 1:
+            find_0th_one_good_group(ramp_data)
 
-    return image_info, integ_info, opt_info
+        if ramp_data.zeroframe is not None:
+            zframe_mat, zframe_locs, cnt = \
+                utils.use_zeroframe_for_saturated_ramps(ramp_data)
+            ramp_data.zframe_mat = zframe_mat
+            ramp_data.zframe_locs = zframe_locs
+            ramp_data.cnt = cnt
 
-
-def ramp_fit_mean(ramp_data, gain_2d, readnoise_2d, save_opt, weighting):
-    """Calculate effective integration time (once EFFINTIM has been populated
-    accessible, will use that instead), and other keywords that will needed if
-    the pedestal calculation is requested. Note 'nframes' is the number of
-    given by the NFRAMES keyword, and is the number of frames averaged
-    on-board for a group, i.e., it does not include the groupgap.
-
-    Parameters
-    ----------
-    ramp_data : RampData
-        Input data necessary for computing ramp fitting.
-    gain_2d : ndarrays
-        gain for all pixels
-    readnoise_2d : ndarrays
-        readnoise for all pixels
-    save_opt : bool
-       calculate optional fitting results
-    weighting : str
-        Unused.
-
-    Returns
-    -------
-    image_info : tuple
-        The tuple of computed ramp fitting arrays.
-    integ_info : tuple
-        The tuple of computed integration fitting arrays.
-    opt_info : tuple
-        The tuple of computed optional results arrays for fitting.
-    """
     # Get image data information
     data = ramp_data.data
-    err = ramp_data.err
     groupdq = ramp_data.groupdq
     inpixeldq = ramp_data.pixeldq
 
@@ -637,6 +644,9 @@ def ramp_fit_mean(ramp_data, gain_2d, readnoise_2d, save_opt, weighting):
 
         return image_info, integ_info, opt_info
 
+    # Compute differences between groups for each pixel in the data cube
+    differences = np.diff(data, axis=1)
+
     # Calculate effective integration time (once EFFINTIM has been populated
     #   and accessible, will use that instead), and other keywords that will
     #   needed if the pedestal calculation is requested. Note 'nframes'
@@ -644,164 +654,18 @@ def ramp_fit_mean(ramp_data, gain_2d, readnoise_2d, save_opt, weighting):
     #   frames averaged on-board for a group, i.e., it does not include the
     #   groupgap.
     effintim = (nframes + groupgap) * frame_time
-    print(effintim)
-    integ_err = np.sqrt(np.sum(err**2, axis=1))
     # Compute the final 2D array of differences; create rate array
-    print(data.shape)
-    sum_int = np.sum(data, axis=1)
+    sum_int = np.sum(differences, axis=1)
+    integ_err = 1/np.sqrt(sum_int)
     mean_2d = np.average(sum_int, axis=0)
-    print(mean_2d.shape)
     var_2d_poisson = 1/mean_2d
     var_poisson = 1/sum_int
     var_rnoise = np.std(readnoise_2d, axis=0)**2*np.ones(sum_int.shape)
     var_2d_rnoise = np.std(readnoise_2d, axis=0)**2*np.ones(mean_2d.shape)
     c_rates = mean_2d / effintim
     image_err = np.sqrt(var_2d_poisson + var_2d_rnoise)
-    # del median_diffs_2d
-    # del first_diffs_sect
     integ_dq = np.sum(groupdq, axis=1)
-    groupdq = np.average(integ_dq, axis=0)
-    ramp_data.data = data
-    ramp_data.err = err
-    ramp_data.groupdq = groupdq
-    ramp_data.pixeldq = inpixeldq
-    image_info = (c_rates, groupdq, var_2d_poisson, var_2d_rnoise, image_err)
+    image_info = (c_rates, inpixeldq, var_2d_poisson, var_2d_rnoise, image_err)
     integ_info = (sum_int, integ_dq, var_poisson, var_rnoise, integ_err)
 
     return image_info, integ_info, None
-
-
-#####################################
-#    NOTE FOR FUTURE (11/05/2021)   #
-#####################################
-'''
-Space telescope is currently changing the ramp fitting structure on Github
-# The following functions:
-
-get_reference_file_subarrays()
-create_integration_model()
-create_image_model()
-
-Will *not* need to be directly included in this file, we can instead simply
-import them from ramp_fitting.ramp_fit_step
-
-i.e.
-
-from ramp_fitting.ramp_fit_step import xxx
-
-However, this has yet incorporated in the pypi repository, so can't do things
-straight away.
-'''
-
-
-def get_reference_file_subarrays(model, readnoise_model, gain_model, nframes):
-    """Get readnoise array for calculation of variance of noiseless ramps, and
-    the gain array in case optimal weighting is to be done.
-
-    The returned readnoise has been multiplied by the gain.
-
-    Parameters
-    ----------
-    model : data model
-        Input data model, assumed to be of type RampModel
-    readnoise_model : instance of data Model
-        Readnoise for all pixels
-    gain_model : instance of gain Model
-        Gain for all pixels
-    nframes : int
-        Unused. Number of frames averaged per group; from the NFRAMES keyword.
-        Does not contain the groupgap.
-
-    Returns
-    -------
-    readnoise_2d : float, 2D array
-        Readnoise subarray
-    gain_2d : float, 2D array
-        Gain subarray
-    """
-    if reffile_utils.ref_matches_sci(model, gain_model):
-        gain_2d = gain_model.data
-    else:
-        log.info('Extracting gain subarray to match science data')
-        gain_2d = reffile_utils.get_subarray_data(model, gain_model)
-
-    if reffile_utils.ref_matches_sci(model, readnoise_model):
-        readnoise_2d = readnoise_model.data.copy()
-    else:
-        log.info('Extracting readnoise subarray to match science data')
-        readnoise_2d = reffile_utils.get_subarray_data(model, readnoise_model)
-
-    return readnoise_2d, gain_2d
-
-
-def create_image_model(input_model, image_info):
-    """Creates an ImageModel from the computed arrays from ramp_fit.
-
-    Parameters
-    ----------
-    input_model : RampModel
-        Input RampModel for which the output ImageModel is created.
-    image_info : tuple
-        The ramp fitting arrays needed for the ImageModel.
-
-    Returns
-    -------
-    out_model : jwst.datamodels.ImageModel
-        The output ImageModel to be returned from the ramp fit step.
-    """
-    data, dq, var_poisson, var_rnoise, err = image_info
-
-    # Create output datamodel
-    out_model = datamodels.ImageModel(data.shape)
-
-    # ... and add all keys from input
-    out_model.update(input_model)
-
-    # Populate with output arrays
-    out_model.data = data
-    out_model.dq = dq
-    out_model.var_poisson = var_poisson
-    out_model.var_rnoise = var_rnoise
-    out_model.err = err
-    out_model.int_times = input_model.int_times
-
-    return out_model
-
-
-def create_integration_model(input_model, integ_info):
-    """Creates an CubeModel from the computed arrays from ramp_fit.
-
-    Parameters
-    ----------
-    input_model : RampModel
-        Input RampModel for which the output CubeModel is created.
-    integ_info : tuple
-        The ramp fitting arrays needed for the CubeModel for each integration.
-
-    Returns
-    -------
-    int_model : CubeModel
-        The output CubeModel to be returned from the ramp fit step.
-    """
-    data, dq, var_poisson, var_rnoise, err = integ_info
-    int_model = datamodels.CubeModel(
-        data=np.zeros(data.shape, dtype=np.float32),
-        dq=np.zeros(data.shape, dtype=np.uint32),
-        var_poisson=np.zeros(data.shape, dtype=np.float32),
-        var_rnoise=np.zeros(data.shape, dtype=np.float32),
-        err=np.zeros(data.shape, dtype=np.float32))
-
-    int_model.update(input_model)  # ... and add all keys from input
-
-    int_model.data = data
-    int_model.dq = dq
-    int_model.var_poisson = var_poisson
-    int_model.var_rnoise = var_rnoise
-    int_model.err = err
-    int_model.int_times = input_model.int_times
-
-    return int_model
-
-############################################################
-#        SEE NOTE ON LINE ~110 FOR ABOVE FUNCTIONS         #
-############################################################

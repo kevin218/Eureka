@@ -26,7 +26,22 @@ Optional. If you want to use a specific CRDS context pmap (e.g. to reproduce som
 
 ramp_fit_algorithm
 ''''''''''''''''''
-Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
+Algorithm to use to fit a ramp to the frame-level images of uncalibrated files.
+The current options offerered by the JWST pipeline are ``'OLS_C'`` (Ordinary Least-Squares, which can also be specified as ``'default'``),
+``'OLS'`` (which is the same as ``'OLS_C'`` but only uses python),
+and ``'LIKELY'`` (which uses a maximum likelihood estimator). The default is ``'OLS_C'``.
+
+ramp_fit_firstgroup
+'''''''''''''''''''
+A zero-indexed integer that specifies the first group to use for all pixels when fitting the slopes of the ramps. If set to ``None`` or ``0``, the first group will be used (unless marked as DO_NOT_USE by another step). By default is set to ``None``.
+
+ramp_fit_lastgroup
+''''''''''''''''''
+A zero-indexed integer that specifies the last group to use for all pixels when fitting the slopes of the ramps. If set to ``None`` or the number of groups minus 1, the last group will be used (unless marked as DO_NOT_USE by another step). By default is set to ``None``.
+
+ramp_fit_suppress_one_group
+'''''''''''''''''''''''''''
+A boolean that specifies whether the slope should be set to zero or estimated for pixels with either a single group or the single frame zero value. By default is set to ``True`` which sets the slopes of such pixels to zero.
 
 
 maximum_cores
@@ -48,6 +63,11 @@ If True, skip the named step.
 .. note::
    Note that some instruments and observing modes might skip a step either way! See the `calwebb_detector1 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
 
+emicorr_algorithm
+'''''''''''''''''
+A string that specifies the ``jwst`` EMI-correction algorithm to use if ``skip_emicorr`` is set to ``False``. The options are ``'joint'`` (default), which should work well for all observations (even with few groups per integration),
+and ``'sequential'``, which is the legacy algorithm and works poorly on observations with few groups per integration.
+
 custom_linearity
 ''''''''''''''''
 Boolean. If True, allows user to supply a custom linearity correction file and overwrite the default file.
@@ -62,7 +82,7 @@ Boolean. If True, allows user to supply a custom bad pixel mask file and overwri
 
 mask_file
 '''''''''
-The fully qualified path to the custom bad pixel mask file to use if custom_mask is True. The mask file should be a FITS file that is formatted like the ``mask`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/dq_init/reference_files.html#mask-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__ with any additional bad pixels marked by changing the pixel value to the "DO_NOT_USE" value (see `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags>`__ for more details on data quality flags)
+The fully qualified path to the custom bad pixel mask file to use if custom_mask is True. The mask file should be a FITS file that is formatted like the ``mask`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/dq_init/reference_files.html#mask-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__ with any additional bad pixels marked by changing the pixel value to the "DO_NOT_USE" value (see `the data quality flags documentation <https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags>`__ for more details on data quality flags)
 
 bias_correction
 '''''''''''''''
@@ -211,14 +231,18 @@ testing_S1
 ''''''''''
 If True, only a single file will be used, outputs won't be saved, and plots won't be made. Useful for making sure most of the code can run.
 
+
+
 default_ramp_fit_weighting
 ''''''''''''''''''''''''''
-Define the method by which individual frame pixels will be weighted during the default ramp fitting process. The is specifically for the case where ``ramp_fit_algorithm`` is ``default``. Options are ``default``, ``fixed``, ``interpolated``, ``flat``, or ``custom``.
+Define the method by which individual frame pixels will be weighted during the ramp fitting process. The is specifically for the case where ``ramp_fit_algorithm`` is ``'OLS_C'`` / ``default`` or ``'OLS'``. Options are ``default``, ``unweighted``, ``fixed``, ``interpolated``, ``uniform``, or ``custom``.
 
 
-``default``: Slope estimation using a least-squares algorithm with an "optimal" weighting, see the `ramp_fitting docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`__.
+``default``: Algorithm provided by the ``jwst`` pipeline. Slope estimation using a least-squares algorithm with an "optimal" weighting, see the `ramp_fitting docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`__.
 
 In short this weights each pixel, :math:`i`, within a slope following :math:`w_i = (i - i_{midpoint})^P`, where the exponent :math:`P` is selected depending on the estimated signal-to-noise ratio of each pixel (see link above).
+
+``unweighted``: Algorithm provided by the ``jwst`` pipeline. Slope estimation using a least-squares algorithm with no weighting.
 
 
 ``fixed``: As with default, except the weighting exponent :math:`P` is fixed to a precise value through the ``default_ramp_fit_fixed_exponent`` entry
@@ -404,6 +428,12 @@ Below an example with the following setting:
 
 Everything outside of the box will be discarded and not used in the analysis.
 
+For most datasets, any element of xwindow or ywindow can be set to None to use the full frame in that direction. However, for MIRI photometry, any element of xwindow or ywindow that is set to None will be replaced by a default based on the value of ``subarray_halfwidth`` (described below).
+
+subarray_halfwidth
+''''''''''''''''''
+Only used if any element of xwindow or ywindow is set to None, and only used for MIRI photometry data. This sets the half-width of the xwindow, ywindow subarray in pixels and is centered on the approximate centroid position. For MIRI photometry, the default is 75 pixels, which is a good value for most datasets since the MIRI full frame images are very large and it is generally helpful and faster to zoom-in on the science target.
+
 src_pos_type
 ''''''''''''
 Determine the source position on the detector. Options: header, gaussian, weighted, max, or hst. The value 'header' uses the value of SRCYPOS in the FITS header.
@@ -569,7 +599,7 @@ Only used for photometry analyses. Selects the method used for determining the c
 
 ctr_guess
 '''''''''
-Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess.
+Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess. If set to 'fits', the code will use the approximate centroid position information contained in the FITS header as an starting point. If set to None, the code will first perform centroiding on whole frame (which can sometimes fail).
 
 ctr_cutout_size
 '''''''''''''''
@@ -924,6 +954,12 @@ base_dur
 Baseline duration used before t1 and after t4 (in days).  Flux for the baseline region combines data points from (t1 - base_dur) to t1 and from t4 to (t4 + base_dur).
 
 
+apcorr
+''''''
+Float specifying the multiplicative scalar necessary for correcting extracted imaging and spectroscopic photometry to the equivalent of an infinite aperture.
+By default is set to `1.0`, but if set to this you will need to manually estimate the aperture correction value yourself by repeating the same procedure on one or (ideally) many calibrator targets and comparing the extracted flux to a stellar model.
+Aperture corrections are also hosted on `CRDS <https://jwst-crds.stsci.edu/>`_, and you can learn more about the `APCORR reference file here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/apcorr_reffile.html>`_.
+
 sigma_thresh
 ''''''''''''
 Sigma threshold when flagging outliers along the wavelength axis.  Process is performed X times, where X is the length of the list. Defaults to [4, 4, 4].
@@ -938,9 +974,13 @@ nbin_plot
 '''''''''
 The number of bins that should be used for figures 5104 and 5304. Defaults to 100.
 
+s4cal_plotErrorType
+'''''''''''''''''''
+The type of error bar to be plotted in Figure 4201. The currently supported options are: 'stderr' (the standard error of the mean), and 'stddev' (the standard deviation of the data). Defaults to 'stderr'.
+The standard error of the mean is the standard deviation of the sample divided by the square root of the number of samples.
 
 hide_plots
-^^^^^^^^^^
+''''''''''
 If True, plots will automatically be closed rather than popping up on the screen.
 
 
@@ -1245,9 +1285,12 @@ Available fitting parameters are:
       - ``t0`` - transit time (in the same units as your input data - most likely BMJD_TDB)
       - ``time_offset`` - (optional), the absolute time offset of your time-series data (in days)
       - ``inc`` - orbital inclination (in degrees)
+
+        - OR, ``b`` - orbital impact parameter (unitless)
       - ``a`` or ``ars`` - a/R*, the ratio of the semimajor axis to the stellar radius
-      - ``ecc`` - orbital eccentricity
-      - ``w`` - argument of periapsis (degrees)
+      - ``ecc`` and ``w`` - orbital eccentricity (unitless) and argument of periapsis (degrees)
+
+        - OR, ``ecosw`` and ``esinw`` - the orbital eccentricity and argument of periapsis converted into a basis in which you can apply [0,1] uniform priors without biasing your results away from ``ecc ~ 0``.
       - ``t_secondary`` - (optional) time of secondary eclipse
       - ``Rs`` - the host star's radius in units of solar radii.
 
