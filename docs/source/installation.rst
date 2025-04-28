@@ -21,7 +21,7 @@ new environment by doing:
 
 .. code-block:: bash
 
-	conda create -n eureka python==3.11.0
+	conda create -n eureka python==3.13.0
 	conda activate eureka
 
 Alternatively, if you are following the "Installing with a ``conda`` environment.yml file" instructions below,
