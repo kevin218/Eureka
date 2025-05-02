@@ -1,0 +1,59 @@
+name: jwebbinar41
+channels:
+    - conda-forge
+    - defaults
+dependencies:
+    - python==3.12.0
+    - astropy
+    - astroquery
+    - batman-package
+    - bokeh[version='<3.0']
+    - boto3
+    - ccdproc
+    - corner
+    - dynesty[version='>1.0'] # Lower limit needed for specific arguments
+    - emcee[version='>3.0.0'] # Lower limit needed for specific arguments
+    - flake8 # Needed for testing
+    - h5py
+    - ipykernel
+    - ipympl # Needed for the interactive matplotlib backend
+    - ipython
+    - jupyter
+    - lmfit
+    - matplotlib[version='>=3.6'] # Lower limit needed for set_layout_engine()
+    - nbsphinx # Needed for documentation
+    - numpy[version='>=1.20.0,<2']
+    - numpydoc # Needed for documentation
+    - pandas
+    - photutils
+    - pip # required for the pip installs below
+    - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest, an asdf package, and something in the pymc3 set of installs. Needed for testing
+    - pytest-cov # Needed for testing
+    - pytest-doctestplus # Needed for testing
+    - requests
+    - scipy[version='>=1.8.0'] # Lower limit needed for scipy.spatial.QhullError
+    - shapely
+    - sphinx # Needed for documentation
+    - sphinx-automodapi # Needed for documentation
+    - tqdm
+    - pip:
+        - astraeus@git+https://github.com/kevin218/Astraeus@main
+        - boto3
+        - catwoman@git+https://github.com/taylorbell57/catwoman@master
+        - celerite2 # Needed for GP
+        - crds
+        - exotic-ld==3.2.0 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
+        - fleck
+        - george # Needed for GP
+        - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
+        - jwst==1.18.0
+        - mc3 # Needed for uncertainties in the RMS time-averaging plots in S5
+        - myst-parser # Needed for documentation
+        - numpy>=1.20.0
+        - pastasoss>=1.2.2
+        - scipy>=1.8.0 # Lower limit needed for scipy.spatial.QhullError
+        - setuptools_scm # Needed for version number
+        - sphinx-rtd-theme # Needed for documentation
+        - stcal>=1.0.0 # Lower limit needed for our create_integration_model function
+        - stdatamodels
+        - svo_filters
