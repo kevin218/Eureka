@@ -367,7 +367,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 save_table(meta, log)
 
             # Copy S5 text files to a single h5 file
-            convert_s5_LC(meta, log)
+            meta, lc = convert_s5_LC(meta, log)
 
             # make citations for current stage
             util.make_citations(meta, 6)
@@ -383,7 +383,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
             log.closelog()
 
-    return meta
+    return meta, lc
 
 
 def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
@@ -659,11 +659,11 @@ def convert_s5_LC(meta, log):
         dict[colnames[i]] = lc_da[-1]
 
     # Create Xarray Dataset
-    ds = xrio.makeDataset(dict)
+    lc = xrio.makeDataset(dict)
     # Write to file
     meta.lc_filename_s6 = (meta.outputdir+'S6_'+event_ap_bg + "_LC")
-    xrio.writeXR(meta.lc_filename_s6, ds)
-    return meta
+    xrio.writeXR(meta.lc_filename_s6, lc)
+    return meta, lc
 
 
 def load_s5_saves(meta, log, fit_methods):
