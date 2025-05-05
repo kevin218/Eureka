@@ -157,6 +157,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter=calling_function)
 
+    # Plot Harmonica string
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta, fitter=calling_function)
+
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
         plots.plot_GP_components(lc, model, meta, fitter=calling_function)
@@ -445,6 +449,10 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter='emcee')
+
+    # Plot Harmonica string
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta, fitter='emcee')
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
@@ -968,6 +976,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter='dynesty')
 
+    # Plot Harmonica string
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta, fitter='dynesty')
+
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
         plots.plot_GP_components(lc, model, meta, fitter='dynesty')
@@ -1090,6 +1102,10 @@ def lmfitter(lc, model, meta, log, **kwargs):
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter='lmfitter')
+
+    # Plot Harmonica string
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta, fitter='lmfitter')
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:

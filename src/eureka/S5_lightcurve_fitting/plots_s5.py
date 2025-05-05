@@ -18,6 +18,11 @@ try:
 except ModuleNotFoundError:
     # PyMC3 hasn't been installed
     pass
+try:
+    from harmonica import HarmonicaTransit
+except ModuleNotFoundError:
+    # Harmonica hasn't been installed
+    pass
 import warnings
 warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
                                           'this call because figure with num')
@@ -1038,3 +1043,73 @@ def plot_starry_star(lc, model, meta, fitter):
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
+
+
+def plot_harmonica_string(lc, model, meta, fitter, isTitle=True):
+    """Plot the Harmonica string (Figs 5309)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    isTitle : bool; optional
+        Should figure have a title. Defaults to True.
+    """
+    for c in range(lc.nchannel_fitted):
+        channel = lc.fitted_channels[c]
+        if lc.nchannel_fitted > 1:
+            chan = channel
+        else:
+            chan = 0
+
+        # Initialize PlanetParams object
+        pl_params = PlanetParams(model, 0, chan)
+
+        # Make the transit model
+        ht = HarmonicaTransit(lc.time)
+        ht.set_orbit(t0=pl_params.t0,
+                        period=pl_params.per,
+                        a=pl_params.a,
+                        inc=pl_params.inc * np.pi / 180.,
+                        ecc=pl_params.ecc,
+                        omega=pl_params.w)
+        ht.set_stellar_limb_darkening(
+            pl_params.u, limb_dark_law=pl_params.limb_dark)
+        ht.set_planet_transmission_string(pl_params.ab)
+
+        # Compute the transmission string
+        theta = np.linspace(-np.pi, np.pi, 1000)
+        string = ht.get_planet_transmission_string(theta)
+
+        fig = plt.figure(5309, figsize=(8, 6))
+        plt.clf()
+        ax = fig.gca()
+        ax.set_aspect("equal", "datalim")
+        if isTitle:
+            ax.set_title(f'{meta.eventlabel} - Channel {channel} - '
+                            f'{fitter}')
+        plt.plot(string*np.cos(theta), string*np.sin(theta),
+                 c='C0', lw=2.5, label="Transmission string")
+        plt.plot(pl_params.ab[0] * np.cos(theta),
+                 pl_params.ab[0] * np.sin(theta),
+                 c='0.7', ls="--", label="Reference circle")
+        plt.xlabel("Planet x / Stellar Radius", fontsize=12)
+        plt.ylabel("Planet y / Stellar Radius", fontsize=12)
+
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5309_{fname_tag}_harmonica_string_{fitter}'
+                 + plots.figure_filetype)
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+

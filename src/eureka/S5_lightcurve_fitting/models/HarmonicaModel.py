@@ -7,6 +7,7 @@ except ImportError:
 
 from .BatmanModels import BatmanTransitModel
 from .AstroModel import PlanetParams
+from ...lib.split_channels import split
 
 
 class HarmonicaTransitModel(BatmanTransitModel):
@@ -27,13 +28,6 @@ class HarmonicaTransitModel(BatmanTransitModel):
         self.name = 'harmonica transit'
         # Define transit model to be used
         self.transit_model = partial(HarmonicaTransit)
-
-        # len_params = len(inspect.signature(ld_func).parameters)
-
-        # if ('rp2' not in self.longparamlist[0]
-        #         and 'rprs2' not in self.longparamlist[0]):
-        #     raise AssertionError('You must include an rp2 parameter in your '
-        #                          'EPF when using catwoman.')
 
     def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
