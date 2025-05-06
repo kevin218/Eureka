@@ -9,7 +9,6 @@ from glob import glob
 from tqdm import tqdm
 import re
 from matplotlib.pyplot import rcParams
-import h5py
 from astraeus import xarrayIO as xrio
 
 try:
@@ -795,7 +794,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in a0):
         # The parameter could not be found - skip it
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters')
+                     'fitted parameters')
         log.writelog(f'  Skipping {y_param}')
         return meta
     n_samples = len(a0[0])
@@ -806,7 +805,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in a1):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assumed to be 0.')
+                     'fitted parameters, assumed to be 0.')
 
     # Load b1 string coefficients
     meta.y_param = 'b1'+suffix
@@ -814,7 +813,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in b1):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assumed to be 0.')
+                     'fitted parameters, assumed to be 0.')
 
     # Load a2 string coefficients
     meta.y_param = 'a2'+suffix
@@ -822,7 +821,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in a2):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assumed to be 0.')
+                     'fitted parameters, assumed to be 0.')
 
     # Load b2 string coefficients
     meta.y_param = 'b2'+suffix
@@ -830,7 +829,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in b2):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assumed to be 0.')
+                     'fitted parameters, assumed to be 0.')
 
     # Load a3 string coefficients
     meta.y_param = 'a3'+suffix
@@ -838,7 +837,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in a3):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assumed to be 0.')
+                     'fitted parameters, assumed to be 0.')
 
     # Load b3 string coefficients
     meta.y_param = 'b3'+suffix
@@ -846,7 +845,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in b3):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assumed to be 0.')
+                     'fitted parameters, assumed to be 0.')
 
     # Reset meta.y_param
     meta.y_param = y_param
