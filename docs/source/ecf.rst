@@ -972,7 +972,7 @@ run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
+[batman_tr, batman_ecl, harmonica_tr, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
 For theano-based differentiable functions, this can be one or more of the following:
 [starry, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
@@ -1384,8 +1384,9 @@ timescales. It is also possible to plot
 'fn' (the nightside flux from a sinusoidal phase curve),
 'pc_offset' (the sinusoidal offset of the phase curve),
 'pc_amp' (the sinusoidal amplitude of the phase curve),
-'offset_order1' or 'offset_order2' (the first or second order sinusoidal offset of the phase curve), and
-'amp_order1' or 'amp_order2' (the first or second order sinusoidal amplitude of the phase curve).
+'offset_order1' or 'offset_order2' (the first or second order sinusoidal offset of the phase curve),
+'amp_order1' or 'amp_order2' (the first or second order sinusoidal amplitude of the phase curve), and
+'morning' or 'evening' (the morning and evening terminators when using Harmonica).
 y_params can also be formatted as a list to make many different plots. A "cleaned" version
 of y_params will be used in the filenames of the figures and save files relevant for that y_param
 (e.g. '1/r1' would not work in a filename, so it becomes '1-r1').
@@ -1423,6 +1424,14 @@ The number of time steps used to sample the phase variation when computing the p
 pc_stepsize
 '''''''''''
 Computing uncertainties on the phase curve amplitude and offset can be slow; however, thinning the number of MCMC samples will speed up the calculation.  Increasing ``pc_stepsize`` to larger integer values will steadily decrease the computation time at the cost of accuracy.  Defaults to 50.  Use 1 for no thinning.
+
+strings_stepsize
+'''''''''''
+Same as ``pc_stepsize`` but applied to the Harmonica strings morning/evening limb calculation.  Defaults to 50.  Use 1 for no thinning.
+
+strings_angle
+'''''
+Harmonica strings angle (in degrees) to include in morning/evening limb calculation. The default angle of 60 degrees will span -30 to +30 degrees for the morning limb and 150 to 210 degrees for the evening limb.
 
 ncol
 ''''

@@ -806,7 +806,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in a1):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assuming to be 0.')
+                        'fitted parameters, assumed to be 0.')
 
     # Load b1 string coefficients
     meta.y_param = 'b1'+suffix
@@ -814,7 +814,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in b1):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assuming to be 0.')
+                        'fitted parameters, assumed to be 0.')
 
     # Load a2 string coefficients
     meta.y_param = 'a2'+suffix
@@ -822,7 +822,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in a2):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assuming to be 0.')
+                        'fitted parameters, assumed to be 0.')
 
     # Load b2 string coefficients
     meta.y_param = 'b2'+suffix
@@ -830,7 +830,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in b2):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assuming to be 0.')
+                        'fitted parameters, assumed to be 0.')
 
     # Load a3 string coefficients
     meta.y_param = 'a3'+suffix
@@ -838,7 +838,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in a3):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assuming to be 0.')
+                        'fitted parameters, assumed to be 0.')
 
     # Load b3 string coefficients
     meta.y_param = 'b3'+suffix
@@ -846,7 +846,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if all(np.all(v == 0) for v in b3):
         # The parameter could not be found - assume fixed to 0
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters, assuming to be 0.')
+                        'fitted parameters, assumed to be 0.')
 
     # Reset meta.y_param
     meta.y_param = y_param
@@ -854,7 +854,9 @@ def compute_strings(meta, log, fit_methods, limb):
     meta.spectrum_median = []
     meta.spectrum_err = []
 
-    rad = meta.angle*np.pi/180
+    # Convert full angle in degrees to half angle in radians
+    # e.g., an angle of 60 degrees spans -30 to +30 degrees
+    rad = meta.strings_angle*np.pi/360
     if limb == 'morning':
         theta = np.linspace(-rad, rad, 100)
     elif limb == 'evening':
@@ -864,11 +866,8 @@ def compute_strings(meta, log, fit_methods, limb):
         # North, South poles?
         return meta
 
-    # Choose a subset of samples if there are >10k steps
-    if len(a0[0]) > 10000:
-        ii = np.random.randint(0, len(a0[0]), 5000)
-    else:
-        ii = range(len(a0[0]))
+    # Choose a subset of samples
+    ss = meta.strings_stepsize
 
     ht = HarmonicaTransit()
     for i in tqdm(range(meta.nspecchan)):
@@ -877,11 +876,11 @@ def compute_strings(meta, log, fit_methods, limb):
             meta.spectrum_median.append(np.nan)
             meta.spectrum_err.append([np.nan, np.nan])
         else:
-            # Compute
-            ab = np.array([a0[i][ii],
-                        a1[i][ii], b1[i][ii],
-                        a2[i][ii], b2[i][ii],
-                        a3[i][ii], b3[i][ii]]).T
+            # Compute transmission string
+            ab = np.array([a0[i][::ss],
+                           a1[i][::ss], b1[i][::ss],
+                           a2[i][::ss], b2[i][::ss],
+                           a3[i][::ss], b3[i][::ss]]).T
             ht.set_planet_transmission_string(ab)
             samples = ht.get_planet_transmission_string(theta)
             sm_16, sm_50, sm_84 = np.percentile(samples**2,
