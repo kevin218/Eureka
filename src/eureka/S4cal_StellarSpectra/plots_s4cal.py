@@ -12,9 +12,9 @@ def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
 
     Parameters
     ----------
-    optspec : Xarray DataArray
-        The optimally extracted spectrum.
-    time : Xarray DataArray
+    optspec : np.ndarray
+        The optimally extracted lightcurve(s).
+    time : np.ndarray
         The time array.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
@@ -36,10 +36,21 @@ def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
     it0, it1, it2, it3, it4, it5 = meta.it
 
     # Created binned white LC
-    lc = np.ma.sum(optspec, axis=1)
-    lc /= np.mean(lc)
-    lc_bin = util.binData_time(lc, time, nbin=meta.nbin_plot)
-    time_bin = util.binData_time(time, time, nbin=meta.nbin_plot)
+    if meta.photometry:
+        lc = np.ma.copy(optspec)
+    else:
+        lc = np.ma.sum(optspec, axis=1)
+    lc /= np.ma.mean(lc)
+
+    # Get binned data and times
+    if not meta.nbin_plot or meta.nbin_plot > len(time):
+        lc_bin = lc
+        time_bin = time
+    else:
+        lc_bin = util.binData_time(lc, time, mask=np.ma.getmaskarray(lc),
+                                   nbin=meta.nbin_plot)
+        time_bin = util.binData_time(time, time, mask=np.ma.getmaskarray(lc),
+                                     nbin=meta.nbin_plot)
 
     if i == 0:
         fig = plt.figure(4202, figsize=(8, 5))
@@ -83,14 +94,26 @@ def plot_stellarSpec(meta, ds):
     ds : Xarray DataSet
         The DataSet object containing the extracted flux values.
     '''
+    if meta.s4cal_plotErrorType == 'stderr':
+        # Use the standard error of the mean
+        base_err = ds.base_ferr
+        ecl_err = ds.ecl_ferr
+    elif meta.s4cal_plotErrorType == 'stddev':
+        # Use the standard deviation
+        base_err = ds.base_fstd
+        ecl_err = ds.ecl_fstd
+    else:
+        raise ValueError(f"Unknown error type: {meta.s4cal_plotErrorType}")
+
     fig = plt.figure(4201, figsize=(8, 5))
     plt.clf()
     ax = fig.subplots(1, 1)
     for i in range(len(ds.time)):
-        ax.errorbar(ds.wavelength, ds.base_flux[:, i], ds.base_fstd[:, i],
-                    fmt='.', ms=2, label=f'Baseline ({ds.time.values[i]})')
-        ax.errorbar(ds.wavelength, ds.ecl_flux[:, i], ds.ecl_fstd[:, i],
-                    fmt='.', ms=2,
+        ax.errorbar(ds.wavelength, ds.base_flux[:, i], base_err[:, i],
+                    fmt='.', capsize=2, ms=2, color=colors[1],
+                    label=f'Baseline ({ds.time.values[i]})')
+        ax.errorbar(ds.wavelength, ds.ecl_flux[:, i], ecl_err[:, i],
+                    fmt='.', capsize=2, ms=2, color=colors[0],
                     label=f'In-Occultation ({ds.time.values[i]})')
 
     ax.legend(loc='best')

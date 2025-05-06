@@ -29,6 +29,7 @@ from copy import deepcopy
 import astraeus.xarrayIO as xrio
 from tqdm import tqdm
 import psutil
+from stdatamodels.jwst.datamodels import CubeModel
 
 from . import optspex
 from . import plots_s3, source_pos
@@ -124,10 +125,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             meta.eventlabel = eventlabel
             if not isinstance(bg_hw_val, str):
                 # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+                if isinstance(bg_hw_val, float):
+                    bg_hw_val /= meta.expand
+                else:
+                    bg_hw_val //= meta.expand
+            if isinstance(spec_hw_val, float):
+                spec_hw_val /= meta.expand
+            else:
+                spec_hw_val //= meta.expand
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
-                                             ap=spec_hw_val//meta.expand,
-                                             bg=bg_hw_val)
+                                             ap=spec_hw_val, bg=bg_hw_val)
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
@@ -138,10 +145,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             meta.spec_hw = spec_hw_val
             meta.bg_hw = bg_hw_val
             # Directory structure should not use expanded HW values
-            spec_hw_val //= meta.expand
+            if isinstance(spec_hw_val, float):
+                spec_hw_val /= meta.expand
+            else:
+                spec_hw_val //= meta.expand
             if not isinstance(bg_hw_val, str):
                 # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+                if isinstance(bg_hw_val, float):
+                    bg_hw_val /= meta.expand
+                else:
+                    bg_hw_val //= meta.expand
             meta.outputdir = util.pathdirectory(meta, 'S3', meta.run_s3,
                                                 ap=spec_hw_val,
                                                 bg=bg_hw_val)
@@ -213,12 +226,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
             saved_refrence_tilt_frame = None
             saved_ref_median_frame = None
+            saved_photometric_profile = None
 
             for m in range(meta.nbatch):
                 # Reset saved median frame if meta.indep_batches
                 if meta.indep_batches:
                     saved_ref_median_frame = None
                     saved_refrence_tilt_frame = None
+                    saved_photometric_profile = None
 
                 first_file = m*meta.files_per_batch
                 last_file = min([meta.num_data_files,
@@ -439,7 +454,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 else:  # Do Photometry reduction
                     meta.photap = meta.spec_hw
                     meta.skyin, meta.skyout = np.array(meta.bg_hw.split('_')
-                                                       ).astype(int)
+                                                       ).astype(float)
+                    if meta.skyin == int(meta.skyin):
+                        meta.skyin = int(meta.skyin)
+                    if meta.skyout == int(meta.skyout):
+                        meta.skyout = int(meta.skyout)
 
                     if meta.calibrated_spectra:
                         # Instrument-specific steps for generating
@@ -450,124 +469,128 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         # (eg. MJy/sr -> DN -> Electrons)
                         data, meta = b2f.convert_to_e(data, meta, log)
 
-                    # Do outlier reduction along time axis for
+                    # Do outlier rejection along time axis for
                     # each individual pixel
-                    if meta.flag_bg:
-                        data = inst.flag_bg_phot(data, meta, log)
+                    if meta.ff_outlier:
+                        data = inst.flag_ff(data, meta, log)
 
                     # Setting up arrays for photometry reduction
                     data = util.phot_arrays(data)
 
                     # Compute the median frame
-                    # and position of first centroid guess
-                    # for mgmc method
-                    if meta.ctr_guess is not None:
-                        guess = np.array(meta.ctr_guess)[::-1]
-                        trim = np.array([meta.ywindow[0], meta.xwindow[0]])
+                    if saved_ref_median_frame is None:
+                        data = inst.clean_median_flux(data, meta, log, m)
+                        saved_ref_median_frame = deepcopy(data.medflux)
+                    else:
+                        # Load the original median frame
+                        data['medflux'] = deepcopy(saved_ref_median_frame)
+
+                    # Determine coarse centroid position. We do this twice:
+                    # first a coarse estimation, then a more precise one.
+                    if (isinstance(meta.ctr_guess, str)
+                            and meta.ctr_guess == 'fits'):
+                        log.writelog('  Using approximate centroid position '
+                                     'from FITS header for initial centroid '
+                                     'estimate', mute=(not meta.verbose))
+                        with CubeModel(meta.segment_list[0]) as model:
+                            guess = [model.meta.wcsinfo.crpix1,
+                                     model.meta.wcsinfo.crpix2]
+                        trim = np.array([meta.xwindow[0], meta.ywindow[0]])
                         position_pri = guess - trim
+                        data.centroid_x.values[:] = position_pri[0]
+                        data.centroid_y.values[:] = position_pri[1]
+                    elif isinstance(meta.ctr_guess, list):
+                        log.writelog('  Using ctr_guess for initial centroid '
+                                     'estimate', mute=(not meta.verbose))
+                        # Use the provided initial guess
+                        guess = np.array(meta.ctr_guess)
+                        trim = np.array([meta.xwindow[0], meta.ywindow[0]])
+                        position_pri = guess - trim
+                        data.centroid_x.values[:] = position_pri[0]
+                        data.centroid_y.values[:] = position_pri[1]
                     elif meta.centroid_method == 'mgmc':
-                        position_pri, extra, refrence_median_frame = \
-                            centerdriver.centerdriver(
-                                'mgmc_pri', data.flux.values, guess=1, trim=0,
-                                radius=None, size=None, meta=meta, i=None,
-                                m=None, mask=data.mask.values,
-                                saved_ref_median_frame=saved_ref_median_frame)
-                        if saved_ref_median_frame is None:
-                            saved_ref_median_frame = refrence_median_frame
-
-                    # for loop for integrations
-                    for i in tqdm(range(len(data.time)),
-                                  desc='  Looping over Integrations'):
-                        if (meta.isplots_S3 >= 3
-                                and meta.oneoverf_corr is not None):
-                            # save current flux into an array for
-                            # plotting 1/f correction comparison
-                            flux_w_oneoverf = np.copy(data.flux.values[i])
-
-                        # Determine centroid position
-                        # We do this twice. First a coarse estimation,
-                        # then a more precise one.
+                        log.writelog('  Doing first round of mgmc centroiding'
+                                     '...', mute=(not meta.verbose))
+                        # Do mgmc fit to the whole median frame
+                        data = centerdriver.centerdriver('mgmc_pri', data,
+                                                         meta)
+                    elif meta.centroid_method == 'fgc':
                         # Use the center of the frame as an initial guess
-                        if (meta.centroid_method == 'fgc' and
-                                meta.ctr_guess is None):
-                            centroid_guess = [data.flux.shape[1]//2,
-                                              data.flux.shape[2]//2]
-                            # Do a 2D gaussian fit to the whole frame
-                            position_pri, extra = \
-                                centerdriver.centerdriver(
-                                    'fgc', data.flux.values[i], centroid_guess,
-                                    0, 0, 0, mask=data.mask.values[i],
-                                    uncd=None, fitbg=1, maskstar=True,
-                                    expand=1.0, psf=None, psfctr=None, i=i,
-                                    m=m, meta=meta)
+                        centroid_guess = [data.flux.shape[2]//2,
+                                          data.flux.shape[1]//2]
+                        data.centroid_x.values[:] = centroid_guess[0]
+                        data.centroid_y.values[:] = centroid_guess[1]
+                        log.writelog('  Doing first round of fgc centroiding'
+                                     '...', mute=(not meta.verbose))
+                        for i in range(len(data.time)):
+                            # Do fgc fit to each whole frame
+                            data = centerdriver.centerdriver('fgc_pri', data,
+                                                             meta, i)
 
-                        if meta.oneoverf_corr is not None:
-                            # Correct for 1/f
-                            data = \
-                                inst.do_oneoverf_corr(data, meta, i,
-                                                      position_pri[1], log)
+                    if meta.oneoverf_corr is not None:
+                        message = '  Correcting for 1/f noise'
+                        log.writelog(message+'...', mute=True)
+                        for i in tqdm(range(len(data.time)),
+                                      desc=message):
+                            if meta.isplots_S3 >= 3:
+                                # save original flux for showing impact of
+                                # 1/f correction
+                                flux_w_oneoverf = np.copy(data.flux.values[i])
+                            # Correct for 1/f noise
+                            data = inst.do_oneoverf_corr(
+                                data, meta, i,
+                                np.median(data.centroid_x.values), log)
                             if meta.isplots_S3 >= 3 and i < meta.nplots:
                                 plots_s3.phot_2d_frame_oneoverf(
                                     data, meta, m, i, flux_w_oneoverf)
 
-                        # Use the determined centroid and
-                        # cut out ctr_cutout_size pixels around it
-                        # Then perform another 2D gaussian fit
-                        position, extra, refrence_median_frame = \
-                            centerdriver.centerdriver(
-                                meta.centroid_method+'_sec',
-                                data.flux.values[i],
-                                guess=position_pri,
-                                trim=meta.ctr_cutout_size,
-                                radius=0, size=0,
-                                mask=data.mask.values[i],
-                                uncd=None, fitbg=1,
-                                maskstar=True, expand=1, psf=None,
-                                psfctr=None, i=i, m=m, meta=meta,
-                                saved_ref_median_frame=saved_ref_median_frame)
+                    # Interpolate masked pixels before we perform
+                    # aperture photometry
+                    if meta.interp_method is not None:
+                        data = util.interp_masked(data, meta, log)
 
-                        # Store centroid positions and
-                        # the Gaussian 1-sigma half-widths
-                        data['centroid_y'][i], data['centroid_x'][i] = position
-                        data['centroid_sy'][i], data['centroid_sx'][i] = extra
+                    # Use the estimated centroid and cut out ctr_cutout_size
+                    # pixels around it. Then do another round of centroiding
+                    log.writelog('  Doing second round of '
+                                 f'{meta.centroid_method} centroiding...',
+                                 mute=(not meta.verbose))
+                    for i in range(len(data.time)):
+                        data = centerdriver.centerdriver(
+                            meta.centroid_method+'_sec', data, meta, i=i, m=m)
 
                         # Plot 2D frame, the centroid and the centroid position
                         if meta.isplots_S3 >= 3 and i < meta.nplots:
                             plots_s3.phot_2d_frame(data, meta, m, i)
 
-                        # Interpolate masked pixels before we perform
-                        # aperture photometry
-                        if meta.interp_method is not None:
-                            util.interp_masked(data, meta, i, log)
+                    # Do outlier rejection along time axis for
+                    # only background pixels
+                    if not meta.ff_outlier:
+                        # This requires centroid positions, so must be done
+                        # later than inst.flag_ff
+                        data = inst.flag_bg_phot(data, meta, log)
 
-                        # Calculate flux in aperture and subtract
-                        # background flux
-                        aphot = apphot.apphot(
-                            meta, image=data.flux[i].values,
-                            ctr=position, photap=meta.photap,
-                            skyin=meta.skyin, skyout=meta.skyout,
-                            betahw=1, targpos=position,
-                            mask=data.mask[i].values,
-                            imerr=data.err[i].values,
-                            skyfrac=0.1, med=True, expand=1,
-                            isbeta=False, nochecks=False,
-                            aperr=True, nappix=True, skylev=True,
-                            skyerr=True, nskypix=True,
-                            nskyideal=True, status=True,
-                            betaper=True, aperture_shape=meta.aperture_shape)
-                        # Save results into arrays
-                        (data['aplev'][i], data['aperr'][i],
-                            data['nappix'][i], data['skylev'][i],
-                            data['skyerr'][i], data['nskypix'][i],
-                            data['nskyideal'][i], data['status'][i],
-                            data['betaper'][i]) = aphot
+                    # Calculate flux in aperture and subtract background flux
+                    log.writelog('  Doing photometric extraction...',
+                                 mute=(not meta.verbose))
+                    for i in range(len(data.time)):
+                        if meta.phot_method == 'optimal':
+                            data, saved_photometric_profile = apphot.optphot(
+                                data, meta, i, saved_photometric_profile)
+                        elif meta.phot_method == 'poet':
+                            data = apphot.apphot(data, meta, i)
+                        elif meta.phot_method == 'photutils':
+                            data = apphot.photutils_apphot(data, meta, i)
+                        else:
+                            raise ValueError('Unknown phot_method '
+                                             f'"{meta.phot_method}"')
 
                 # plot tilt events
                 if meta.isplots_S3 >= 5 and meta.inst == 'nircam' and \
                    meta.photometry:
+                    position = [np.median(data.centroid_x.values),
+                                np.median(data.centroid_y.values)]
                     refrence_tilt_frame = \
-                        plots_s3.tilt_events(meta, data, log, m,
-                                             position,
+                        plots_s3.tilt_events(meta, data, log, m, position,
                                              saved_refrence_tilt_frame)
 
                     if saved_refrence_tilt_frame is not None:
@@ -642,20 +665,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             # make citations for current stage
             util.make_citations(meta, 3)
 
-            # Save Dataset object containing time-series of 1D spectra
-            if meta.save_output:
-                meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
-                                             "_SpecData.h5")
-
-                # Save Meta information to attributes of Xarray
-                util.add_meta_to_xarray(meta, spec)
-
-                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
-                                       verbose=True)
-
-                if not success:
-                    raise OSError('Failed to write S3_SpecData.')
-
             # Compute MAD value
             scandir = getattr(spec, 'scandir', None)
             if not meta.photometry:
@@ -687,6 +696,20 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 except:
                     log.writelog("Could not compute Stage 3 MAD")
                     meta.mad_s3[i] = 0
+
+            # Save Dataset object containing time-series of 1D spectra
+            if meta.save_output:
+                meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
+                                             "_SpecData.h5")
+
+                # Save Meta information to attributes of Xarray
+                util.add_meta_to_xarray(meta, spec)
+
+                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
+                                       verbose=True)
+
+                if not success:
+                    raise OSError('Failed to write S3_SpecData.')
 
             if meta.isplots_S3 >= 1 and not meta.photometry:
                 log.writelog('Generating figures')

@@ -266,8 +266,8 @@ class LightCurve(m.Model):
                 fig.clf()
                 # Draw the data
                 ax = fig.gca()
-                ax.plot(time, flux, '.', color=self.colors[i], zorder=0,
-                        alpha=0.01)
+                ax.errorbar(time, flux, unc, fmt='.', color=self.colors[i],
+                            zorder=0, alpha=0.1)
                 ax.errorbar(binned_time, binned_flux, binned_unc, fmt='.',
                             color=self.colors[i], zorder=1)
 

@@ -72,6 +72,7 @@ class PlanetParams():
         self.rp2 = None
         self.phi = 90.
         self.inc = None
+        self.b = None
         self.ars = None
         self.a = None
         self.per = None
@@ -228,6 +229,25 @@ class PlanetParams():
             if eval:
                 value = value.value
             self.a = value
+        # Allow for inc or b
+        if (self.b is None) and ('inc' in model.parameters.dict.keys()):
+            item0 = 'inc' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            inc_value = getattr(parameterObject, item0)
+            a_value = self.a
+            if eval:
+                inc_value = inc_value.value
+            self.b = a_value*lib.cos(inc_value*np.pi/180)
+        if (self.inc is None) and ('b' in model.parameters.dict.keys()):
+            item0 = 'b' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            b_value = getattr(parameterObject, item0)
+            a_value = self.a
+            if eval:
+                b_value = b_value.value
+            self.inc = lib.arccos(b_value/a_value)*180/np.pi
         # Allow for (ecc, w) or (ecosw, esinw)
         if (self.ecosw is None) and self.ecc == 0:
             self.ecosw = 0.
