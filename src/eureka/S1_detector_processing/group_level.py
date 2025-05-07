@@ -10,6 +10,7 @@ import scipy.signal as sgn
 import scipy.ndimage as spn
 
 from ..S3_data_reduction import background as bkg
+from ..S3_data_reduction import source_pos
 import astraeus.xarrayIO as xrio
 
 
@@ -69,6 +70,9 @@ def GLBS(input_model, log, meta):
         data['mask'] = (['time', 'y', 'x'], grp_mask)
         data.attrs['intstart'] = meta.intstart
         meta.bg_dir = 'CxC'
+
+        if meta.src_ypos is None:
+            data, meta, log = source_pos.source_pos_wrapper(data, meta, log, meta.m)
 
         # Only show plots for the last group
         if ngrp == all_data.shape[1]-1:
