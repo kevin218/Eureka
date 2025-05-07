@@ -49,8 +49,8 @@ def test_NIRCam(capsys):
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
-    s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
-                              s5_meta=s5_meta)
+    s6_meta, s6_lc = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
+                                     s5_meta=s5_meta)
 
     # run assertions for S3
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
@@ -104,8 +104,34 @@ def test_NIRCam(capsys):
 
     ecf_path = f'.{os.sep}NIRCam_ecfs{os.sep}POET{os.sep}'
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=None)
-    s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
-                              s5_meta=s5_meta)
+    s6_meta, s6_lc = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
+                                     s5_meta=s5_meta)
+
+    # run assertions for S5
+    meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
+                          f'Stage5{os.sep}')
+    name = pathdirectory(meta, 'S5', 1, ap=8, bg=12,
+                         old_datetime=s5_meta.datetime)
+    assert os.path.exists(name)
+    assert os.path.exists(name+os.sep+'figs')
+
+    # run assertions for S6
+    meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
+                          f'Stage6{os.sep}')
+    name = pathdirectory(meta, 'S6', 1, ap=8, bg=12,
+                         old_datetime=s6_meta.datetime)
+    assert os.path.exists(name)
+    assert os.path.exists(name+os.sep+'figs')
+
+    # Rerun Stages 5 and 6 using Harmonica
+    # remove Stage 5 and 6 temporary files
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage5")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage6")
+
+    ecf_path = f'.{os.sep}NIRCam_ecfs{os.sep}Harmonica{os.sep}'
+    s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=None)
+    s6_meta, s6_lc = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
+                                     s5_meta=s5_meta)
 
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
