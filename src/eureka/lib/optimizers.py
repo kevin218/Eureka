@@ -828,10 +828,8 @@ def parametric_sweep_dqmask(
                 best_params = dqmask_value
 
         except Exception as e:
-            print(
-                f"Could not calculate fitness score for dqmask={dqmask_value
-                                                                }. Error: {e}"
-            )
+            print("Could not calculate fitness score for dqmask.") 
+            print(f"Error: {e}")
             continue
 
     # If valid fitness scores were found, 
@@ -922,11 +920,9 @@ def parametric_sweep_bg_method_s1(
                 best_params = bg_method_value
 
         except Exception as e:
-            print(
-                f"Could not calculate fitness score for bg_method={
-                    bg_method_value}. Error: {e}"
-            )
-            continue
+            print("Could not calculate fitness score for bg_method.") 
+            print(f"Error: {e}")
+            continue 
 
     return best_params, best_fitness
 
@@ -1006,11 +1002,9 @@ def parametric_sweep_bg_method(
                 best_params = bg_method_value
 
         except Exception as e:
-            print(
-                f"Could not calculate fitness score for bg_method={
-                    bg_method_value}. Error: {e}"
-            )
-            continue
+            print("Could not calculate fitness score for bg_method.") 
+            print(f"Error: {e}")
+            continue 
 
     return best_params, best_fitness
 
