@@ -1274,7 +1274,8 @@ This file describes the transit/eclipse and systematics parameters and their pri
 Available fitting parameters are:
 
    - Transit and Eclipse Depth Parameters
-      - ``rp`` or ``rprs`` - planet-to-star radius ratio, for the transit models.
+      - ``rp`` or ``rprs`` - planet-to-star radius ratio, for most transit models.
+      - ``a0`` - planet-to-star radius ratio for Harmonica.  Add  ``a1`` to fit different morning/evening limbs.  Add ``b1`` to fit different north/south limbs.  Higher-order harmonics (up to ``n=3``) are also available.
       - ``fp`` or ``fpfs`` - planet-to-star flux ratio, for the eclipse models.
       - ``rp2`` or ``rprs2`` - an additional planet-to-star radius ratio for use with the catwoman transit model to model transit limb-asymmetries.
       - ``phi`` - the angle (in degrees) of the line separating the semi-circles defined by ``rp`` and ``rp2`` in the catwoman transit model. If ``phi`` is set to 90 degrees (the parameter's default value), the ``rp`` is the trailing hemisphere and ``rp2`` is the leading hemisphere. If ``phi`` is set to 0, then ``rp`` is the northern hemisphere and ``rp2`` is the southern hemisphere.

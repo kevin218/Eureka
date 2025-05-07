@@ -179,8 +179,8 @@ def test_MIRI(capsys):
 
     ecf_path = f'.{os.sep}MIRI_ecfs{os.sep}POET{os.sep}'
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=None)
-    s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
-                              s5_meta=s5_meta)
+    s6_meta, s6_lc = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
+                                     s5_meta=s5_meta)
 
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
