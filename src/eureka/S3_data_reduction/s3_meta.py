@@ -70,12 +70,12 @@ class S3MetaClass(MetaClass):
             self.xwindow[0] = 0
         if self.xwindow[1] is None:
             with JwstDataModel(self.segment_list[0]) as model:
-                self.xwindow[1] = model.data.shape[2]
+                self.xwindow[1] = model.data.shape[2]-1
         if self.ywindow[0] is None:
             self.ywindow[0] = 0
         if self.ywindow[1] is None:
             with JwstDataModel(self.segment_list[0]) as model:
-                self.ywindow[1] = model.data.shape[1]
+                self.ywindow[1] = model.data.shape[1]-1
 
         self.src_pos_type = getattr(self, 'src_pos_type', 'gaussian')
         self.record_ypos = getattr(self, 'record_ypos', True)
