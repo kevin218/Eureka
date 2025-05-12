@@ -5,8 +5,8 @@ try:
     imported_image_registration = True
 except ModuleNotFoundError:
     imported_image_registration = False
-from ..lib import centerdriver
-from ..lib.util import supersample
+from ..lib import centroid
+
 
 def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
                   POSTARG2, meta, log):
@@ -62,21 +62,12 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
     guess = guess[::-1]
 
     for i in range(nfiles):
-        with fits.open(filenames[i].rstrip()) as file:
-            image = file['SCI'].data
-            dq = file['DQ'].data
-            calhdr0 = file[0].header
-            calhdr1 = file[1].header
-
-        reset_nint = not hasattr(meta, 'n_int')
-        if reset_nint:
-            meta.n_int = nfiles
-        position, _, _ = centerdriver.centerdriver('fgc_sec', image, guess,
-                                                   trim, i, 0, meta, maskstar=True)
-        centers.append(position)
-        if reset_nint:
-            delattr(meta, 'n_int')
-
+        image = fits.getdata(filenames[i].rstrip())
+        calhdr0 = fits.getheader(filenames[i].rstrip(), 0)
+        calhdr1 = fits.getheader(filenames[i].rstrip(), 1)
+        # Calculate centroid, correct for difference in image size, if any
+        centers.append(centroid.ctrgauss(image, guess=guess, trim=trim) -
+                       (image.shape[0]-ny)/2.)
         xoffset = (CRPIX1 - calhdr1['CRPIX1'] +
                    (POSTARG1[i] - calhdr0['POSTARG1'])/0.135)
         yoffset = (CRPIX2 - calhdr1['CRPIX2'] +
@@ -269,7 +260,7 @@ def calibrateLambda(x, centroid, grism):
 
 
 def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
-              sigma=5, expand=1):
+              sigma=5, isplots=0):
     '''Makes master flatfield image and new mask for WFC3 data.
 
     Parameters
@@ -284,10 +275,8 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
         Array containing image limits in spatial direction.
     n_spec : int
         Number of spectra.
-    sigma : float; optional
-        Sigma rejection level. Defaults to 5.
-    expand : int; optional
-        Super-sampling factor along the given axis. Defaults to 1.
+    sigma : float
+        Sigma rejection level.
 
     Returns
     -------
@@ -319,8 +308,8 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
         # Select windowed region containing the data
         x = (wave[i] - wmin)/(wmax - wmin)
 
-        ylower = int(ywindow[i][0]//expand+flatoffset[i][0])
-        yupper = int(ywindow[i][1]//expand+flatoffset[i][0])
+        ylower = int(ywindow[i][0]+flatoffset[i][0])
+        yupper = int(ywindow[i][1]+flatoffset[i][0])
         xlower = int(xwindow[i][0]+flatoffset[i][1])
         xupper = int(xwindow[i][1]+flatoffset[i][1])
         # flat_window += hdulist[j].data[ylower:yupper,xlower:xupper]*x**j
@@ -369,15 +358,6 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
             ibadpix = np.where((flat_norm[ihi]-1) > sigma*std)
             flat_norm[ihi[0][ibadpix], ihi[1][ibadpix]] = 1.
             mask_window[ihi[0][ibadpix], ihi[1][ibadpix]] = True
-
-        # Increase pixel resolution along cross-dispersion direction
-        if expand > 1:
-            # Want to use 'wave' type supersampling to not divide the flat
-            # values by expand
-            flat_norm = supersample(flat_norm, expand, 'wave', axis=0)
-            # Want to use 'cal' type supersampling so that the same mask value
-            # is applied to all supersampled pixels
-            mask_window = supersample(mask_window, expand, 'cal', axis=0)
 
         # Put the subframes back in the full frames
         flat_new = np.ones((ny, nx), dtype=np.float32)

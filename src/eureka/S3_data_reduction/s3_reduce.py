@@ -328,14 +328,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                                    log, name='V0')
 
                 # Start masking pixels based on DQ flags
-                if meta.dqmask and meta.inst == 'wfc3':
-                    # https://hst-docs.stsci.edu/wfc3ihb/appendix-e-reduction-and-calibration-of-wfc3-data/e-2-the-stsci-reduction-and-calibration-pipeline#E.2TheSTScIReductionandCalibrationPipeline-table-dq_flags
-                    # Non-zero numbers in HST data array are bad pixels.
-                    dqmask = np.where(data.dq.values != 0)
-                    data.mask.values[dqmask] = True
-                elif meta.dqmask:
-                    # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
-                    # Odd numbers in JWST DQ array are bad pixels.
+                # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
+                # Odd numbers in DQ array are bad pixels. Do not use.
+                if meta.dqmask:
                     dqmask = np.where(data.dq.values % 2 == 1)
                     data.mask.values[dqmask] = True
 

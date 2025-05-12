@@ -70,7 +70,7 @@ def minfunc(params, frame, x, y, x_mean, y_mean):
     return np.ma.mean((model_gauss-frame)**2)
 
 
-def pri_cent(img, mask, meta, saved_ref_median_frame=None):
+def pri_cent(img, mask, meta, saved_ref_median_frame):
     """
     Create initial centroid guess based off of median frame of data.
 
@@ -83,9 +83,8 @@ def pri_cent(img, mask, meta, saved_ref_median_frame=None):
         data.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    saved_ref_median_frame : ndarray; optional
-        The stored median frame of the first batch. Defaults to None, in which
-        case a new reference frame will be computed.
+    saved_ref_median_frame : ndarray
+        The stored median frame of the first batch.
 
     Returns
     -------

@@ -13,7 +13,6 @@ from . import sigrej, source_pos, background, plots_s3, nircam
 from . import hst_scan as hst
 from . import bright2flux as b2f
 from ..lib import suntimecorr, utc_tt, util
-from ..lib.util import supersample
 
 
 def preparation_step(meta, log):
@@ -468,19 +467,6 @@ def read(filename, data, meta, log):
             jd[j] = (2400000.5+hdulist['SCI', rd].header['ROUTTIME']
                      - 0.5*hdulist['SCI', rd].header['DELTATIM']/3600/24)
 
-    # Increase pixel resolution along cross-dispersion direction
-    if meta.expand > 1:
-        if meta.firstInBatch:
-            # This is the first log after "Reading file 1...", so we need
-            # to write a newline to avoid overwriting that
-            log.writelog(f'\n    Super-sampling y axis from {sci.shape[1]} ' +
-                         f'to {sci.shape[1]*meta.expand} pixels...',
-                         mute=(not meta.verbose))
-        sci = supersample(sci, meta.expand, 'flux', axis=1)
-        err = supersample(err, meta.expand, 'err', axis=1)
-        dq = supersample(dq, meta.expand, 'cal', axis=1)
-        meta.ny *= meta.expand
-
     # Find the indices where there were actually reads (to use lower down)
     goodInds = ~np.all(np.isnan(sci), axis=(1, 2))
 
@@ -512,12 +498,7 @@ def read(filename, data, meta, log):
         time_units = 'BJD_TDB'
     else:
         if meta.firstFile:
-            start = ''
-            if meta.expand == 1:
-                # This is the first log after "Reading file 1...", so we need
-                # to write a newline to avoid overwriting that
-                start = '\n'
-            log.writelog("    WARNING: No Horizons file found. Using HJD_UTC "
+            log.writelog("WARNING: No Horizons file found. Using HJD_UTC "
                          "rather than BJD_TDB.")
         time = jd
         time_units = 'HJD_UTC'
@@ -544,13 +525,8 @@ def read(filename, data, meta, log):
 
     # Calculate trace
     if meta.firstInBatch:
-        start = ''
-        if meta.expand == 1 and time_units == 'BJD_TDB':
-            # This is the first log after "Reading file 1...", so we need
-            # to write a newline to avoid overwriting that
-            start = '\n'
-        log.writelog(start+f"    Calculating wavelength assuming {meta.filter}"
-                     f" filter/grism...", mute=(not meta.verbose))
+        log.writelog(f"\n  Calculating wavelength assuming {meta.filter} "
+                     f"filter/grism...", mute=(not meta.verbose))
     xrange = np.arange(0, meta.nx)
     # wavelength in microns
     wave = hst.calibrateLambda(xrange, centroids[goodInds][0], meta.filter)/1e4
@@ -562,7 +538,7 @@ def read(filename, data, meta, log):
 
     # Divide data by flat field
     if meta.flatfile is None and meta.firstFile:
-        log.writelog('    No flat frames found.')
+        log.writelog('No flat frames found.')
     else:
         data, meta, log = flatfield(data, meta, log)
 
@@ -625,11 +601,12 @@ def flatfield(data, meta, log):
     log : logedit.Logedit
         The current log.
     '''
+    if meta.firstInBatch:
+        log.writelog(f'  Performing flat fielding using:\n'
+                     f'    {meta.flatfile}',
+                     mute=(not meta.verbose))
     flatfile_path = os.path.join(meta.hst_cal,
                                  *meta.flatfile.split(os.sep))
-    if meta.firstInBatch:
-        log.writelog(f'    Performing flat fielding using: {flatfile_path}',
-                     mute=(not meta.verbose))
     # Make list of master flat field frames
     tempflat, tempmask = hst.makeflats(flatfile_path,
                                        [np.mean(data.wave_2d.values,
@@ -637,7 +614,7 @@ def flatfield(data, meta, log):
                                        [[0, meta.nx], ], [[0, meta.ny], ],
                                        meta.flatoffset, 1, meta.ny, meta.nx,
                                        sigma=meta.flatsigma,
-                                       expand=meta.expand)
+                                       isplots=meta.isplots_S3)
     subflat = tempflat[0]
     flatmask = tempmask[0]
 
@@ -678,7 +655,7 @@ def difference_frames(data, meta, log):
     if meta.nreads_full > 1:
         # Subtract pairs of subframes
         if meta.firstInBatch:
-            log.writelog('    Differencing non-destructive reads...',
+            log.writelog('  Differencing non-destructive reads...',
                          mute=(not meta.verbose))
 
         difftime = data.time[:-1] + 0.5*np.ediff1d(data.time)
@@ -725,7 +702,7 @@ def difference_frames(data, meta, log):
 
     # Compute full scan length
     if meta.firstInBatch:
-        log.writelog('    Computing scan height...',
+        log.writelog('  Computing scan height...',
                      mute=(not meta.verbose))
     scanHeight = np.zeros(meta.nreads)
     for i in range(meta.nreads):
