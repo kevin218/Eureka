@@ -1,5 +1,4 @@
 import numpy as np
-from functools import partial
 try:
     from harmonica import HarmonicaTransit
 except ImportError:
@@ -27,7 +26,7 @@ class HarmonicaTransitModel(BatmanTransitModel):
         super().__init__(**kwargs)
         self.name = 'harmonica transit'
         # Define transit model to be used
-        self.transit_model = partial(HarmonicaTransit)
+        self.transit_model = HarmonicaTransit
 
     def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.

@@ -208,11 +208,11 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 elif 'pc_amp' in meta.y_param:
                     # Compute phase curve amplitude from all orders
                     meta = compute_pc_amp(meta, log, fit_methods)
-                elif 'morning' in meta.y_param:
+                elif 'morning_limb' in meta.y_param:
                     # Compute Harmonica's planet transmission strings
                     meta = compute_strings(meta, log, fit_methods,
                                            limb='morning')
-                elif 'evening' in meta.y_param:
+                elif 'evening_limb' in meta.y_param:
                     # Compute Harmonica's planet transmission strings
                     meta = compute_strings(meta, log, fit_methods,
                                            limb='evening')
@@ -618,6 +618,13 @@ def convert_s5_LC(meta, log):
         The current meta data object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated meta data object.
+    lc : Astreaus object
+        Data object of time-like arrays (light curve).
     '''
     event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
                    str(meta.bg_hw_val))
@@ -778,6 +785,11 @@ def compute_strings(meta, log, fit_methods, limb):
         The type of uncertainty fitting method used in Stage 5.
     limb : string
         Can be either 'morning' or 'evening'
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated meta data object.
     """
     # Save meta.y_param
     y_param = meta.y_param
@@ -799,53 +811,15 @@ def compute_strings(meta, log, fit_methods, limb):
         return meta
     n_samples = len(a0[0])
 
-    # Load a1 string coefficients
-    meta.y_param = 'a1'+suffix
-    a1 = load_s5_saves(meta, log, fit_methods, n_samples=n_samples)
-    if all(np.all(v == 0) for v in a1):
-        # The parameter could not be found - assume fixed to 0
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters, assumed to be 0.')
-
-    # Load b1 string coefficients
-    meta.y_param = 'b1'+suffix
-    b1 = load_s5_saves(meta, log, fit_methods, n_samples=n_samples)
-    if all(np.all(v == 0) for v in b1):
-        # The parameter could not be found - assume fixed to 0
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters, assumed to be 0.')
-
-    # Load a2 string coefficients
-    meta.y_param = 'a2'+suffix
-    a2 = load_s5_saves(meta, log, fit_methods, n_samples=n_samples)
-    if all(np.all(v == 0) for v in a2):
-        # The parameter could not be found - assume fixed to 0
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters, assumed to be 0.')
-
-    # Load b2 string coefficients
-    meta.y_param = 'b2'+suffix
-    b2 = load_s5_saves(meta, log, fit_methods, n_samples=n_samples)
-    if all(np.all(v == 0) for v in b2):
-        # The parameter could not be found - assume fixed to 0
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters, assumed to be 0.')
-
-    # Load a3 string coefficients
-    meta.y_param = 'a3'+suffix
-    a3 = load_s5_saves(meta, log, fit_methods, n_samples=n_samples)
-    if all(np.all(v == 0) for v in a3):
-        # The parameter could not be found - assume fixed to 0
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters, assumed to be 0.')
-
-    # Load b3 string coefficients
-    meta.y_param = 'b3'+suffix
-    b3 = load_s5_saves(meta, log, fit_methods, n_samples=n_samples)
-    if all(np.all(v == 0) for v in b3):
-        # The parameter could not be found - assume fixed to 0
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters, assumed to be 0.')
+    # Load string coefficients
+    coeffs = ['a1', 'b1', 'a2', 'b2', 'a3', 'b3']
+    for coeff in coeffs:
+        meta.y_param = coeff+suffix
+        vals = load_s5_saves(meta, log, fit_methods, n_samples=n_samples)
+        if all(np.all(v == 0) for v in vals):
+            # The parameter could not be found - assume fixed to 0
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters, assumed to be 0.')
 
     # Reset meta.y_param
     meta.y_param = y_param
@@ -860,10 +834,6 @@ def compute_strings(meta, log, fit_methods, limb):
         theta = np.linspace(-rad, rad, 100)
     elif limb == 'evening':
         theta = np.linspace(np.pi-rad, np.pi+rad, 100)
-    else:
-        # Future development for custom angular range
-        # North, South poles?
-        return meta
 
     # Choose a subset of samples
     ss = meta.strings_stepsize

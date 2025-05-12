@@ -1275,7 +1275,7 @@ Available fitting parameters are:
 
    - Transit and Eclipse Depth Parameters
       - ``rp`` or ``rprs`` - planet-to-star radius ratio, for most transit models.
-      - ``a0`` - planet-to-star radius ratio for Harmonica.  Add  ``a1`` to fit different morning/evening limbs.  Add ``b1`` to fit different north/south limbs.  Higher-order harmonics (up to ``n=3``) are also available.
+      - ``a0`` - planet-to-star radius ratio for Harmonica.  Add  ``a1`` to fit different morning/evening limbs.  Add ``b1`` to fit different north/south limbs.  Higher-order harmonics (up to ``n=3``) are also available.  We recommend starting with ``a0`` and ``a1`` as free parameters. See the `Harmonica documentation <https://harmonica.readthedocs.io/en/latest/views/transmission_strings.html#>`__ for a detailed description of transmission strings and the Fourier series used to parameterize them.
       - ``fp`` or ``fpfs`` - planet-to-star flux ratio, for the eclipse models.
       - ``rp2`` or ``rprs2`` - an additional planet-to-star radius ratio for use with the catwoman transit model to model transit limb-asymmetries.
       - ``phi`` - the angle (in degrees) of the line separating the semi-circles defined by ``rp`` and ``rp2`` in the catwoman transit model. If ``phi`` is set to 90 degrees (the parameter's default value), the ``rp`` is the trailing hemisphere and ``rp2`` is the leading hemisphere. If ``phi`` is set to 0, then ``rp`` is the northern hemisphere and ``rp2`` is the southern hemisphere.
@@ -1450,7 +1450,7 @@ timescales. It is also possible to plot
 'pc_amp' (the sinusoidal amplitude of the phase curve),
 'offset_order1' or 'offset_order2' (the first or second order sinusoidal offset of the phase curve),
 'amp_order1' or 'amp_order2' (the first or second order sinusoidal amplitude of the phase curve), and
-'morning' or 'evening' (the morning and evening terminators when using Harmonica).
+'morning_limb' or 'evening_limb' (the Harmonica transmission spectrum for the morning or evening limb).
 y_params can also be formatted as a list to make many different plots. A "cleaned" version
 of y_params will be used in the filenames of the figures and save files relevant for that y_param
 (e.g. '1/r1' would not work in a filename, so it becomes '1-r1').
@@ -1490,11 +1490,11 @@ pc_stepsize
 Computing uncertainties on the phase curve amplitude and offset can be slow; however, thinning the number of MCMC samples will speed up the calculation.  Increasing ``pc_stepsize`` to larger integer values will steadily decrease the computation time at the cost of accuracy.  Defaults to 50.  Use 1 for no thinning.
 
 strings_stepsize
-'''''''''''
+''''''''''''''''
 Same as ``pc_stepsize`` but applied to the Harmonica strings morning/evening limb calculation.  Defaults to 50.  Use 1 for no thinning.
 
 strings_angle
-'''''
+'''''''''''''
 Harmonica strings angle (in degrees) to include in morning/evening limb calculation. The default angle of 60 degrees will span -30 to +30 degrees for the morning limb and 150 to 210 degrees for the evening limb.
 
 ncol
