@@ -128,7 +128,8 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     if hasattr(data, 'medflux'):
         data['medflux'] -= np.median(data.bg, axis=0)
 
-    if (meta.bg_dir == 'CxC') and (meta.inst != 'wfc3'):
+    if ('uncal' not in meta.suffix and meta.bg_dir == 'CxC' and
+            meta.inst != 'wfc3'):
         # Save BG value at source position and BG stddev (no outlier rejection)
         coords = list(data.coords.keys())
         coords.remove('y')
