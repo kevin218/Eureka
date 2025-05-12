@@ -813,6 +813,7 @@ def compute_strings(meta, log, fit_methods, limb):
 
     # Load string coefficients
     coeffs = ['a1', 'b1', 'a2', 'b2', 'a3', 'b3']
+    ab_list = []
     for coeff in coeffs:
         meta.y_param = coeff+suffix
         vals = load_s5_saves(meta, log, fit_methods, n_samples=n_samples)
@@ -820,6 +821,8 @@ def compute_strings(meta, log, fit_methods, limb):
             # The parameter could not be found - assume fixed to 0
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters, assumed to be 0.')
+        ab_list.append(vals)
+    a1, b1, a2, b2, a3, b3 = ab_list
 
     # Reset meta.y_param
     meta.y_param = y_param
