@@ -59,7 +59,9 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     # First apply any instrument-specific defaults
     if meta.inst == 'miri':
         meta.set_MIRI_defaults()
-    elif meta.inst in ['nircam', 'nirspec', 'niriss']:
+    elif meta.inst == 'niriss':
+        meta.set_NIRISS_defaults()
+    elif meta.inst in ['nircam', 'nirspec']:
         meta.set_NIR_defaults()
     # Then apply instrument-agnostic defaults
     meta.set_defaults()

@@ -291,3 +291,10 @@ class S1MetaClass(MetaClass):
         if self.remove_390hz:
             raise AssertionError('remove_390hz cannot be set to True for NIR '
                                  'instruments!')
+
+    def set_NIRISS_defaults(self):
+        '''Set Stage 1 specific defaults for NIRISS.
+        '''
+        self.orders = getattr(self, 'orders', [1, 2])
+
+        self.set_NIR_defaults()
