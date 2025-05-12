@@ -6,7 +6,7 @@ from matplotlib import rcParams
 try:
     from mc3.stats import time_avg
 except ModuleNotFoundError:
-    print("Could not import MC3. No Allan variance plots will be produced.")
+    print("Could not import MC3. No RMS time-averaging plots will be made.")
 import corner
 from scipy import stats
 import fleck
@@ -18,6 +18,9 @@ try:
 except ModuleNotFoundError:
     # PyMC3 hasn't been installed
     pass
+import warnings
+warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
+                                          'this call because figure with num')
 
 from ..lib import plots, util
 from ..lib.split_channels import split
@@ -39,17 +42,6 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         The name of the fitter (for plot filename).
     isTitle : bool; optional
         Should figure have a title. Defaults to True.
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved plotting code to a separate function.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter
     """
     if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
@@ -108,12 +100,12 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             binned_res = residuals
         else:
             nbin_plot = meta.nbin_plot
-            binned_time = util.binData_time(time, time, nbin_plot)
-            binned_flux = util.binData_time(flux, time, nbin_plot)
-            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+            binned_time = util.binData_time(time, time, nbin=nbin_plot)
+            binned_flux = util.binData_time(flux, time, nbin=nbin_plot)
+            binned_unc = util.binData_time(unc, time, nbin=nbin_plot, err=True)
             binned_normflux = util.binData_time(flux/model_sys - gp, time,
-                                                nbin_plot)
-            binned_res = util.binData_time(residuals, time, nbin_plot)
+                                                nbin=nbin_plot)
+            binned_res = util.binData_time(residuals, time, nbin=nbin_plot)
 
         fig = plt.figure(5101, figsize=(8, 6))
         plt.clf()
@@ -170,13 +162,6 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         The name of the fitter (for plot filename).
     isTitle : bool; optional
         Should figure have a title. Defaults to True.
-
-    Notes
-    -----
-    History:
-
-    - September 12, 2022 Taylor Bell
-        Initial version.
     """
     if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
@@ -238,9 +223,9 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             binned_unc = unc
         else:
             nbin_plot = meta.nbin_plot
-            binned_time = util.binData_time(time, time, nbin_plot)
-            binned_flux = util.binData_time(flux, time, nbin_plot)
-            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+            binned_time = util.binData_time(time, time, nbin=nbin_plot)
+            binned_flux = util.binData_time(flux, time, nbin=nbin_plot)
+            binned_unc = util.binData_time(unc, time, nbin=nbin_plot, err=True)
 
         # Setup the figure
         fig = plt.figure(5104, figsize=(8, 6))
@@ -316,7 +301,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
 
 
 def plot_rms(lc, model, meta, fitter):
-    """Create an Allan variance plot to look for red noise. (Figs 5301)
+    """Create a RMS time-averaging plot to look for red noise. (Figs 5301)
 
     Parameters
     ----------
@@ -328,15 +313,6 @@ def plot_rms(lc, model, meta, fitter):
         The metadata object.
     fitter : str
         The name of the fitter (for plot filename).
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved plotting code to a separate function.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
     """
     if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
@@ -418,7 +394,7 @@ def plot_rms(lc, model, meta, fitter):
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
-        fname = (f'figs{os.sep}fig5301_{fname_tag}_allanplot_{fitter}'
+        fname = (f'figs{os.sep}fig5301_{fname_tag}_RMS_TimeAveraging_{fitter}'
                  + plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
@@ -440,13 +416,6 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         The metadata object.
     fitter : str
         The name of the fitter (for plot filename).
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved plotting code to a separate function.
     """
     ndim = len(freenames)+1  # One extra for the 1D histogram
 
@@ -513,13 +482,6 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
     nthin : int; optional
         If >1, the plot will use every nthin point to help speed up
         computation and reduce clutter on the plot. Defaults to 1.
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved plotting code to a separate function.
     """
     nsubplots = nrows*ncols
     nplots = int(np.ceil(len(freenames)/nsubplots))
@@ -606,13 +568,6 @@ def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
         Plot multidimensional variables in a single plot. Defailts to False.
     **kwargs : dict
         Additional keyword arguments to pass to pm.traceplot.
-
-    Notes
-    -----
-    History:
-
-    - November 22, 2022 Taylor Bell
-        Initial version.
     """
 
     max_subplots = az_rcParams['plot.max_subplots'] // 2
@@ -656,13 +611,6 @@ def plot_res_distr(lc, model, meta, fitter):
         The metadata object.
     fitter : str
         The name of the fitter (for plot filename).
-
-    Notes
-    -----
-    History:
-
-    - February 18, 2022 Caroline Piaulet
-        Created function
     """
     if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
@@ -721,15 +669,6 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         The name of the fitter (for plot filename).
     isTitle : bool; optional
         Should figure have a title. Defaults to True.
-
-    Notes
-    -----
-    History:
-
-    - February 28, 2022 Eva-Maria Ahrer
-        Written function
-    - March 9, 2022 Eva-Maria Ahrer
-        Adapted with shared parameters
     """
     if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '

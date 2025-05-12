@@ -5,113 +5,89 @@ from . import gaussian_min as gmin
 from ..S3_data_reduction import plots_s3
 
 
-def centerdriver(method, data, guess, trim, i, m, meta,
-                 saved_ref_median_frame=None,
-                 mask=None, uncd=None, fitbg=1, maskstar=True,
-                 expand=1):
+def centerdriver(method, data, meta, i=None, m=None):
     """
-    Use the center method to find the center of a star in data, starting
+    Use the center method to find the center of a star, starting
     from position guess.
 
     Parameters
     ----------
     method : string
         Name of the centering method to use.
-    data : 2D ndarray
-        Array containing the star image.
-    guess : 2 elements 1D array
-        y, x initial guess position of the target.
-    trim : integer
-        Semi-lenght of the box around the target that will be trimmed.
-    mask : 2D ndarray
-        A boolean mask array of bad pixels (marked with True). Same shape as
-        data. Defaults to only masking non-finite vaules.
-    uncd : 2D ndarray
-        An array containing the uncertainty values of data.
-        Same shape of data.
-    saved_ref_median_frame : ndarray; optional
-        Stored median frame of the first batch. Defaults to None, in which
-        case a new reference frame will be computed.
+    data : Xarray Dataset
+        The Dataset object in which the centroid data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    i : int; optional
+        The current integration. Defaults to None.
+    m : int; optional
+        The file number. Defaults to None.
 
     Returns
     -------
-    tuple
-        A (y,x) tuple (scalars) with the coordinates of center of the target
-        in data.
-    ndarray
-        The median of the first batch to be used as the refrence
-        frame for the first centroid location guess in the mgmc method.
-
-    Notes
-    -----
-    History:
-
-    23-11-2010 patricio   Written by Patricio Cubillos
-                          pcubillos@fulbrightmail.org
-    2-24-2023  Isaac      Edited by Isaac edelman
-                          Added new centroiding method
-                          called mgmc_pri and mgmc_sec
+    data : Xarray Dataset
+        The updated Dataset object with the centroid data stored inside.
     """
-
-    extra = []
-
-    # Default mask: only non-finite values are bad
-    if mask is None:
-        mask = ~np.isfinite(data)
-
     # Apply the mask
-    data = np.ma.masked_where(mask, data)
+    mask = data.mask.values[i]
+    flux = np.ma.masked_where(mask, data.flux.values[i])
+    err = np.ma.masked_where(mask, data.err.values[i])
+    saved_ref_median_frame = data.medflux.values
 
-    # Default uncertainties: flat image
-    if uncd is None:
-        uncd = np.ones(np.shape(data))
+    yxguess = [data.centroid_y.values[i], data.centroid_x.values[i]]
 
-    if method in ['fgc', 'fgc_sec']:
+    if method[-4:] == '_sec':
+        trim = meta.ctr_cutout_size
+    else:
+        trim = 0
+
+    if method in ['fgc_pri', 'fgc_sec']:
         # Trim the image if requested
         if trim != 0:
             # Integer part of center
-            cen = np.rint(guess)
+            cen = np.rint(yxguess)
             # Center in the trimed image
             loc = (trim, trim)
             # Do the trim:
-            img, msk, err = ie.trimimage(data, cen, loc, mask=mask, uncd=uncd)
+            flux, mask, err = ie.trimimage(flux, cen, loc, mask=mask, uncd=err)
         else:
             cen = np.array([0, 0])
-            loc = np.rint(guess)
-            img, msk, err = data, mask, uncd
+            loc = np.rint(yxguess)
         weights = 1.0 / np.abs(err)
     else:
         trim = 0
-        img, msk, err = data, mask, uncd
-        loc = guess
+        loc = yxguess
         cen = np.array([0, 0])
         # Subtract median BG because photutils sometimes has a hard time
         # fitting for a constant offset
-        img -= np.ma.median(img)
+        flux -= np.ma.median(flux)
 
     # If all data is bad:
-    if np.all(msk):
+    if np.all(mask):
         raise Exception('Bad Frame Exception!')
 
     # Get the center with one of the methods:
-    refrence_median_frame = None
-    if method in ['fgc', 'fgc_sec']:
-        sy, sx, y, x = g.fitgaussian(img, yxguess=loc, mask=msk,
+    if method in ['fgc_pri', 'fgc_sec']:
+        sy, sx, y, x = g.fitgaussian(flux, yxguess=loc, mask=mask,
                                      weights=weights,
-                                     fitbg=fitbg, maskg=maskstar)[0][0:4]
-        extra = sy, sx  # Gaussian 1-sigma half-widths
+                                     fitbg=1, maskg=False)[0][0:4]
     elif method == 'mgmc_pri':
         # Median frame creation + first centroid
-        x, y, refrence_median_frame = gmin.pri_cent(img, msk, meta,
-                                                    saved_ref_median_frame)
+        x, y = gmin.pri_cent(flux, mask, meta, saved_ref_median_frame)
+        sy, sx = np.nan, np.nan
     elif method == 'mgmc_sec':
         # Second enhanced centroid position + gaussian widths
-        sy, sx, y, x = gmin.mingauss(img, msk, yxguess=loc, meta=meta)
-        extra = sy, sx  # Gaussian 1-sigma half-widths
+        sy, sx, y, x = gmin.mingauss(flux, mask, yxguess=loc, meta=meta)
 
     # only plot when we do the second fit
-    if (meta.isplots_S3 >= 5 and method[-4:] == '_sec' and i < meta.nplots):
-        plots_s3.phot_centroid_fgc(img, msk, x, y, sx, sy, i, m, meta)
+    if (meta.isplots_S3 >= 3 and method[-4:] == '_sec' and i < meta.nplots):
+        plots_s3.phot_centroid_fgc(flux, mask, x, y, sx, sy, i, m, meta)
 
-    # Make trimming correction and return
-    return ((y, x) + cen - trim), extra, refrence_median_frame
+    # Make trimming correction, then store centroid positions and
+    # the Gaussian 1-sigma half-widths
+    data.centroid_x.values[i] = x + cen[1] - trim
+    data.centroid_y.values[i] = y + cen[0] - trim
+    data.centroid_sx.values[i] = sx
+    data.centroid_sy.values[i] = sy
+
+    return data

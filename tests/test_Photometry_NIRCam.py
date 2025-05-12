@@ -1,5 +1,3 @@
-# Last Updated: 2023-03-04
-
 import sys
 import os
 from importlib import reload

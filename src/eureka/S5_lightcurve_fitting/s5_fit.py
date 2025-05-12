@@ -124,15 +124,21 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     # Search
                     path = glob(path+os.sep+f'**{os.sep}*LCData.h5',
                                 recursive=True)
+
+                    # Get lightcurve file with latest modified time
+                    path = np.unique([os.sep.join(fname.split(os.sep))
+                                      for fname in path])
+
                     if len(path) == 0:
                         raise AssertionError(
                             'Unable to find any LCData save files at '
                             f'{path}')
                     elif len(path) > 1:
-                        print(f'WARNING: Found {len(path)} LCData save '
-                              f'files... Using {path[0]}')
-                    # Use the first file found
-                    path = path[0]
+                        print(f'WARNING: Found {len(path)} LCData save files'
+                              f'... Using {max(path, key=os.path.getmtime)}')
+
+                    # Use the latest file found
+                    path = max(path, key=os.path.getmtime)
                     lc_hold = xrio.readXR(path)
                     meta.wave_low = np.append(meta.wave_low,
                                               lc_hold.wave_low.values)
@@ -352,7 +358,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     err_temp = np.ma.masked_where(
                         mask, lc_whites[pi].err.values[0, :])
                     flux_temp, err_temp = util.normalize_spectrum(
-                        meta, flux_temp, err_temp, mask)
+                        meta, flux_temp, err_temp, mask,
+                        scandir=getattr(lc_whites[pi], 'scandir', None))
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
                     time = np.ma.append(time, time_temp)
@@ -916,7 +923,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         t_GP = GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
                        parameters=params, fmt='r--', log=log,
                        time=time, time_units=time_units,
-                       gp_code=meta.GP_package,
+                       gp_code_name=meta.GP_package,
                        useHODLR=meta.useHODLR,
                        freenames=freenames,
                        longparamlist=lc_model.longparamlist,

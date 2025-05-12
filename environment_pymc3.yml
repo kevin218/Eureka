@@ -17,16 +17,16 @@ dependencies:
     - george # Needed for GP
     - h5py
     - ipykernel
+    - ipympl # Needed for the interactive matplotlib backend
     - ipython
     - jupyter
     - lmfit
     - matplotlib[version='>=3.6'] # Lower limit needed for set_layout_engine()
-    - mkl-service
+    - mkl-service # Note, only allowed for intel processors...
     - nbsphinx # Needed for documentation
-    - numpy[version='>=1.20.0,<1.22'] # Upper limit needed for Apple silicon and for theano, starry, and pymc3
+    - numpy[version='>=1.20.0,<1.22'] # Upper limit needed for theano, starry, and pymc3
     - numpydoc # Needed for documentation
     - pandas
-    - pastasoss
     - photutils
     - pip # required for the pip installs below
     - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest, an asdf package, and something in the pymc3 set of installs. Needed for testing
@@ -34,6 +34,7 @@ dependencies:
     - pytest-doctestplus # Needed for testing
     - requests
     - scipy[version='>=1.8.0'] # Lower limit needed for scipy.spatial.QhullError
+    - shapely
     - sphinx # Needed for documentation
     - sphinx-automodapi # Needed for documentation
     - tqdm
@@ -42,17 +43,18 @@ dependencies:
         - astraeus@git+https://github.com/kevin218/Astraeus@main
         - catwoman@git+https://github.com/taylorbell57/catwoman@master
         - celerite2 # Needed for GP
-        - crds<12 # Upper limit needed to avoid bugs with crds.get_context_name
+        - crds
         - exoplanet
         - exoplanet-core
         - exotic-ld==3.2.0 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
         - fleck
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
         - jwst==1.11.4
-        - mc3 # Needed for uncertainties in the Allan variance plots in S5
+        - mc3 # Needed for uncertainties in the RMS time-averaging plots in S5
         - myst-parser # Needed for documentation
-        - numpy>=1.20.0,<1.22 # Upper limit needed for Apple silicon and for theano, starry, and pymc3
+        - numpy>=1.20.0,<1.22 # Upper limit needed for theano, starry, and pymc3
         - opencv-python-headless<4.8 # Upper limit needed for numpy<1.22
+        - pastasoss>=1.2.2
         - pymc3
         - scipy>=1.8.0 # Lower limit needed for scipy.spatial.QhullError
         - setuptools_scm # Needed for version number

@@ -1,4 +1,5 @@
 import numpy as np
+from stdatamodels.jwst.datamodels import CubeModel
 
 from ..lib.readECF import MetaClass
 
@@ -8,13 +9,6 @@ class S3MetaClass(MetaClass):
 
     This class loads a Stage 3 Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-03 Taylor J Bell
-        Made specific S3 class based on MetaClass
     '''
 
     def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
@@ -34,25 +28,11 @@ class S3MetaClass(MetaClass):
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version.
         '''
         super().__init__(folder, file, eventlabel, stage=3, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for any instrument.
         '''
         # Data file suffix
         self.suffix = getattr(self, 'suffix', 'calints')
@@ -78,18 +58,35 @@ class S3MetaClass(MetaClass):
 
         # Subarray region of interest
         # Require these to be set in the ECF
-        self.ywindow = getattr(self, 'ywindow')
-        self.xwindow = getattr(self, 'xwindow')
+        self.ywindow = getattr(self, 'ywindow', [None, None])
+        self.xwindow = getattr(self, 'xwindow', [None, None])
+        if self.xwindow is None:
+            self.xwindow = [None, None]
+        if self.ywindow is None:
+            self.ywindow = [None, None]
+
+        # Auto-populate the xwindow and ywindow if they are None
+        if self.xwindow[0] is None:
+            self.xwindow[0] = 0
+        if self.xwindow[1] is None:
+            with CubeModel(self.segment_list[0]) as model:
+                self.xwindow[1] = model.data.shape[2]
+        if self.ywindow[0] is None:
+            self.ywindow[0] = 0
+        if self.ywindow[1] is None:
+            with CubeModel(self.segment_list[0]) as model:
+                self.ywindow[1] = model.data.shape[1]
 
         self.src_pos_type = getattr(self, 'src_pos_type', 'gaussian')
         self.record_ypos = getattr(self, 'record_ypos', True)
         self.dqmask = getattr(self, 'dqmask', True)
         self.manmask = getattr(self, 'manmask', None)
         self.expand = getattr(self, 'expand', 1)
-        if int(self.expand) != self.expand:
-            print('WARNING: meta.expand must be set to an integer. Rounding '
-                  f'{self.expand} to {int(np.round(self.expand))}')
-        self.expand = int(np.round(self.expand))
+        if self.expand != int(self.expand) or self.expand < 1:
+            raise ValueError('meta.expand must be an integer >= 1, but got '
+                             f'{self.expand}')
+        else:
+            self.expand = int(self.expand)
 
         # Outlier rejection along time axis
         self.ff_outlier = getattr(self, 'ff_outlier', False)
@@ -122,13 +119,6 @@ class S3MetaClass(MetaClass):
 
     def set_spectral_defaults(self):
         '''Set Stage 3 specific defaults for generic spectroscopic data.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for any spectroscopic data.
         '''
         # Spectral extraction parameters
         # Require this parameter to be set
@@ -169,65 +159,98 @@ class S3MetaClass(MetaClass):
 
     def set_photometric_defaults(self):
         '''Set Stage 3 specific defaults for generic photometric data.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for any photometric data.
         '''
         self.expand = getattr(self, 'expand', 1)
         if self.expand > 1:
-            # Super sampling not supported for photometry
-            # This is here just in case someone tries to super sample
-            print("Super sampling not supported for photometry."
+            # FINDME: We should soon be able to support expand != 1
+            # for photometry
+            print("Super sampling is not currently supported for photometry. "
                   "Setting meta.expand to 1.")
             self.expand = 1
 
-        self.flag_bg = getattr(self, 'flag_bg', True)
-        self.interp_method = getattr(self, 'interp_method', 'cubic')
-        self.ctr_guess = getattr(self, 'ctr_guess', None)
-        self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
-        self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
+        self.ff_outlier = getattr(self, 'ff_outlier', False)
+
+        # Require window_len to be set to 0 to avoid smoothing in
+        # optspex.get_clean
+        self.window_len = getattr(self, 'window_len', 0)
+        if self.window_len != 0:
+            print("Warning: meta.window_len is not 0 which is not permitted "
+                  "for photometric data! Setting it to 0.")
+            self.window_len = 0
+
+        # Centroiding parameters
         self.centroid_method = getattr(self, 'centroid_method', 'fgc')
         if self.centroid_method == 'mgmc':
             self.centroid_tech = getattr(self, 'centroid_tech', 'com')
             self.gauss_frame = getattr(self, 'gauss_frame', 15)
-        self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
+        self.ctr_guess = getattr(self, 'ctr_guess', None)
+        self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
+
+        self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
+
+        # Photometric extraction parameters
+        self.phot_method = getattr(self, 'phot_method', 'poet')
         self.aperture_shape = getattr(self, 'aperture_shape', 'circle')
+        if self.phot_method in ['photutils', 'optimal']:
+            self.aperture_edge = getattr(self, 'aperture_edge', 'center')
+            if self.aperture_edge not in ['center', 'exact']:
+                raise ValueError('aperture_edge must be "center" or "exact", '
+                                 f'but got {self.aperture_edge}')
+            if self.aperture_shape not in ['circle', 'ellipse', 'rectangle']:
+                raise ValueError('aperture_shape must be "circle", "ellipse", '
+                                 'or "rectangle", but got '
+                                 f'{self.aperture_shape}')
+            if self.aperture_shape != 'circle':
+                self.photap_b = getattr(self, 'photap_b', self.photap)
+                self.photap_theta = getattr(self, 'photap_theta', 0)
+            else:
+                self.photap_b = self.photap
+                self.photap_theta = 0
+        elif self.phot_method == 'poet':
+            self.aperture_edge = getattr(self, 'aperture_edge', 'center')
+            if self.aperture_edge != 'center':
+                raise ValueError('aperture_edge must be "center" for poet, '
+                                 f'but got {self.aperture_edge}')
+            if self.aperture_shape not in ['circle', 'hexagon']:
+                raise ValueError('aperture_shape must be "circle" or '
+                                 f'"hexagon", but got {self.aperture_shape}')
+            self.betahw = getattr(self, 'betahw', None)
+            if self.betahw is not None and self.betahw <= 0:
+                raise ValueError(f'betahw must be > 0, but got {self.betahw}')
+            elif self.betahw is not None and self.betahw != int(self.betahw):
+                raise ValueError(f'betahw must be an integer, but got '
+                                 f'{self.betahw}')
+            elif self.betahw is not None:
+                self.betahw = int(self.betahw)
+        self.moving_centroid = getattr(self, 'moving_centroid', False)
+        self.interp_method = getattr(self, 'interp_method', 'cubic')
+        self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
         # Require these parameters to be set
         self.photap = getattr(self, 'photap')
         self.skyin = getattr(self, 'skyin')
         self.skywidth = getattr(self, 'skywidth')
+        self.minskyfrac = getattr(self, 'minskyfrac', 0.1)
+        if not self.skip_apphot_bg and not (0 < self.minskyfrac <= 1):
+            raise ValueError(f'skyfrac is {self.minskyfrac} but must be in '
+                             'range (0,1]')
 
         self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
         self.bg_x1 = getattr(self, 'bg_x1', None)
         self.bg_x2 = getattr(self, 'bg_x2', None)
-        self.bg_method = getattr(self, 'bg_method', 'mean')
+        self.bg_method = getattr(self, 'bg_method', 'median')
+        if (not self.skip_apphot_bg and
+                self.bg_method not in ['mean', 'median']):
+            raise ValueError(f'bg_method must be "mean" or "median", but got '
+                             f'{self.bg_method}')
         self.p3thresh = getattr(self, 'p3thresh', 5)
 
     def set_MIRI_defaults(self):
         '''Set Stage 3 specific defaults for MIRI.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for MIRI.
         '''
         self.set_spectral_defaults()
 
     def set_NIRCam_defaults(self):
         '''Set Stage 3 specific defaults for NIRCam.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRCam.
         '''
         self.poly_wavelength = getattr(self, 'poly_wavelength', False)
         self.wave_pixel_offset = getattr(self, 'wave_pixel_offset', None)
@@ -237,27 +260,16 @@ class S3MetaClass(MetaClass):
 
     def set_NIRSpec_defaults(self):
         '''Set Stage 3 specific defaults for NIRSpec.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRSpec.
         '''
         self.curvature = getattr(self, 'curvature', True)
+        # When calibrated_spectra is True, flux values above the cutoff
+        # will be set to zero.
+        self.cutoff = getattr(self, 'cutoff', 1e-4)
 
         self.set_spectral_defaults()
 
     def set_NIRISS_defaults(self):
         '''Set Stage 3 specific defaults for NIRISS.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRISS.
         '''
         self.curvature = getattr(self, 'curvature', True)
         self.src_ypos = getattr(self, 'src_ypos', [35, 80])
@@ -268,13 +280,6 @@ class S3MetaClass(MetaClass):
 
     def set_WFC3_defaults(self):
         '''Set Stage 3 specific defaults for WFC3.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for WFC3.
         '''
         self.iref = getattr(self, 'iref', [2, 3])
         self.horizonsfile = getattr(self, 'horizonsfile', None)
@@ -290,13 +295,6 @@ class S3MetaClass(MetaClass):
 
     def set_NIRCam_Photometry_defaults(self):
         '''Set Stage 3 specific defaults for NIRCam Photometry.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRCam Photometry.
         '''
         self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
         self.oneoverf_corr = getattr(self, 'oneoverf_corr', 'median')
@@ -310,14 +308,50 @@ class S3MetaClass(MetaClass):
 
     def set_MIRI_Photometry_defaults(self):
         '''Set Stage 3 specific defaults for MIRI Photometry.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for MIRI Photometry.
         '''
+        self.xwindow = getattr(self, 'xwindow', [None, None])
+        self.ywindow = getattr(self, 'ywindow', [None, None])
+        if self.xwindow is None:
+            self.xwindow = [None, None]
+        if self.ywindow is None:
+            self.ywindow = [None, None]
+
+        # Auto-populate the xwindow and ywindow if any elements are None
+        if None in [*self.xwindow, *self.ywindow]:
+            # If any of the xwindow or ywindow elements are None, then
+            # set them to default values based on the specified
+            # subarray size. By default use a 151x151 subarray centered on the
+            # centroid
+            self.subarray_halfwidth = getattr(self, 'subarray_halfwidth', 75)
+            if not isinstance(self.subarray_halfwidth, (int, np.int16,
+                                                        np.int32, np.int64)):
+                print("Warning: meta.subarray_halfwidth is not an integer! "
+                      f"Rounding the input value of {self.subarray_halfwidth} "
+                      "to the nearest integer.")
+                self.subarray_halfwidth = round(self.subarray_halfwidth)
+            if self.subarray_halfwidth < 0:
+                raise ValueError(f'meta.subarray_halfwidth must be >= 0, but '
+                                 f'got {self.subarray_halfwidth}')
+
+            # Get the centroid position and the subarray size
+            with CubeModel(self.segment_list[0]) as model:
+                guess = [model.meta.wcsinfo.crpix1,
+                         model.meta.wcsinfo.crpix2]
+                ysize, xsize = model.data.shape[1:]
+
+            if self.xwindow[0] is None:
+                self.xwindow[0] = max(0, round(guess[0] -
+                                               self.subarray_halfwidth))
+            if self.xwindow[1] is None:
+                self.xwindow[1] = min(xsize, round(guess[0] +
+                                                   self.subarray_halfwidth+1))
+            if self.ywindow[0] is None:
+                self.ywindow[0] = max(0, round(guess[1] -
+                                               self.subarray_halfwidth))
+            if self.ywindow[1] is None:
+                self.ywindow[1] = min(ysize, round(guess[1] +
+                                                   self.subarray_halfwidth+1))
+
         self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 10)
         self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
         if self.oneoverf_corr is not None:
@@ -331,7 +365,7 @@ class S3MetaClass(MetaClass):
         self.set_photometric_defaults()
 
     def setup_aperture_radii(self):
-        '''
+        '''A function to set up the spectral and background aperture radii.
         '''
         # check for range of spectral apertures
         if self.photometry:
@@ -353,7 +387,38 @@ class S3MetaClass(MetaClass):
             self.spec_hw_range *= self.expand
 
         # check for range of background apertures
-        if hasattr(self, 'bg_hw'):
+        if hasattr(self, 'skyin') and hasattr(self, 'skywidth'):
+            # E.g., if skyin = 90 and skywidth = 60, then the
+            # directory will use "bg90_150"
+            if not isinstance(self.skyin, list):
+                self.skyin = [self.skyin]
+            else:
+                self.skyin = np.arange(self.skyin[0],
+                                       self.skyin[1]+self.skyin[2],
+                                       self.skyin[2])
+            if not isinstance(self.skywidth, list):
+                self.skywidth = [self.skywidth]
+            else:
+                self.skywidth = np.arange(self.skywidth[0],
+                                          self.skywidth[1]+self.skywidth[2],
+                                          self.skywidth[2])
+
+            self.bg_hw_range = []
+            for skyin in self.skyin:
+                for skywidth in self.skywidth:
+                    skyout = skyin + skywidth
+                    if isinstance(skyout, float):
+                        # Avoid annoying floating point precision issues
+                        # by rounding to the same number of decimal places
+                        # as the input values
+                        ndecimals_skyin = len(str(float(skyin)).split('.')[1])
+                        ndecimals_skywidth = len(str(float(skywidth)
+                                                     ).split('.')[1])
+                        ndecimals_skyout = max(ndecimals_skyin,
+                                               ndecimals_skywidth)
+                        skyout = np.round(skyout, ndecimals_skyout)
+                    self.bg_hw_range.append(f'{skyin}_{skyout}')
+        elif hasattr(self, 'bg_hw'):
             if isinstance(self.bg_hw, list):
                 self.bg_hw_range = np.arange(self.bg_hw[0],
                                              self.bg_hw[1]+self.bg_hw[2],
@@ -361,21 +426,3 @@ class S3MetaClass(MetaClass):
             else:
                 self.bg_hw_range = np.array([self.bg_hw])
             self.bg_hw_range *= self.expand
-        elif hasattr(self, 'skyin') and hasattr(self, 'skywidth'):
-            # E.g., if skyin = 90 and skywidth = 60, then the
-            # directory will use "bg90_150"
-            if not isinstance(self.skyin, list):
-                self.skyin = [self.skyin]
-            else:
-                self.skyin = range(self.skyin[0],
-                                   self.skyin[1]+self.skyin[2],
-                                   self.skyin[2])
-            if not isinstance(self.skywidth, list):
-                self.skywidth = [self.skywidth]
-            else:
-                self.skywidth = range(self.skywidth[0],
-                                      self.skywidth[1]+self.skywidth[2],
-                                      self.skywidth[2])
-            self.bg_hw_range = [f'{skyin}_{skyin+skywidth}'
-                                for skyin in self.skyin
-                                for skywidth in self.skywidth]

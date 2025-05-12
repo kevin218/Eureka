@@ -72,6 +72,7 @@ class PlanetParams():
         self.rp2 = None
         self.phi = 90.
         self.inc = None
+        self.b = None
         self.ars = None
         self.a = None
         self.per = None
@@ -220,6 +221,25 @@ class PlanetParams():
             if eval:
                 value = value.value
             self.a = value
+        # Allow for inc or b
+        if (self.b is None) and ('inc' in model.parameters.dict.keys()):
+            item0 = 'inc' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            inc_value = getattr(parameterObject, item0)
+            a_value = self.a
+            if eval:
+                inc_value = inc_value.value
+            self.b = a_value*lib.cos(inc_value*np.pi/180)
+        if (self.inc is None) and ('b' in model.parameters.dict.keys()):
+            item0 = 'b' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            b_value = getattr(parameterObject, item0)
+            a_value = self.a
+            if eval:
+                b_value = b_value.value
+            self.inc = lib.arccos(b_value/a_value)*180/np.pi
         # Allow for (ecc, w) or (ecosw, esinw)
         if (self.ecosw is None) and self.ecc == 0:
             self.ecosw = 0.
@@ -537,13 +557,6 @@ def true_anomaly(model, t, lib=np, xtol=1e-10):
     -------
     ndarray
         The true anomaly in radians.
-
-    Notes
-    -----
-    History:
-
-    - March 2023 Taylor Bell
-        Based on Bell_EBM code, but modified to enable theano code.
     """
     return 2.*lib.arctan(lib.sqrt((1.+model.ecc)/(1.-model.ecc)) *
                          lib.tan(eccentric_anomaly(model, t, lib,
@@ -569,13 +582,6 @@ def eccentric_anomaly(model, t, lib=np, xtol=1e-10):
     -------
     ndarray
         The eccentric anomaly in radians.
-
-    Notes
-    -----
-    History:
-
-    - March 2023 Taylor Bell
-        Based on Bell_EBM code, but modified to enable theano code.
     """
     ta_peri = np.pi/2.-model.w*np.pi/180.
     ea_peri = 2.*lib.arctan(lib.sqrt((1.-model.ecc)/(1.+model.ecc)) *
@@ -616,13 +622,6 @@ def FSSI_Eccentric_Inverse(model, M, lib=np, xtol=1e-10):
     -------
     ndarray
         The eccentric anomaly in radians.
-
-    Notes
-    -----
-    History:
-
-    - March 2023 Taylor Bell
-        Based on Bell_EBM code, but modified to enable theano code.
     """
     xtol = np.max([1e-15, xtol])
     nGrid = (xtol/100.)**(-1./4.)
@@ -659,13 +658,6 @@ def FSSI(Y, x, f, fP, lib=np):
     -------
     ndarray
         The numerical approximation of f^-(y).
-
-    Notes
-    -----
-    History:
-
-    - March 2023 Taylor Bell
-        Based on Bell_EBM code, but modified to enable theano code.
     """
     y = f(x)
     d = 1./fP(x)
@@ -724,15 +716,6 @@ def correct_light_travel_time(time, pl_params):
         Updated times that can be put into batman transit and eclipse functions
         that will give the expected results assuming a finite light travel
         speed.
-
-    Notes
-    -----
-    History:
-
-    - 2022-03-31 Taylor J Bell
-        Initial version based on the Bell_EMB KeplerOrbit.py file by
-        Taylor J Bell and the light travel time calculations of SPIDERMAN's
-        web.c file by Tom Louden
     '''
     # Need to convert from a/Rs to a in meters
     a = pl_params.a * (pl_params.Rs*const.R_sun.value)
@@ -748,7 +731,7 @@ def correct_light_travel_time(time, pl_params):
     else:
         # No need to solve Kepler's equation for circular orbits, so save
         # some computation time
-        transit_x = a*np.sin(pl_params.inc)
+        transit_x = a*np.sin(pl_params.inc*np.pi/180)
         old_x = transit_x*np.cos(2*np.pi*(time-pl_params.t0)/pl_params.per)
 
     # Get the radial distance variations of the planet

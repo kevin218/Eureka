@@ -266,7 +266,7 @@ def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
     if len(sci_table) > 0 and len(sci_table2) > 0:
         # Concatenate tables one row at a time, checking for uniqueness
         for row in range(len(table2)):
-            if (~(table['obsID'] == table2['obsID'][row])).all():
+            if ((table['obsID'] != table2['obsID'][row])).all():
                 table.add_row(table2[row])
     elif len(sci_table2) > 0:
         table = table2

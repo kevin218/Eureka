@@ -265,6 +265,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                    wave_units, time_units, name='mask')
             lc = xrio.makeDataset({'data': lcdata, 'err': lcerr,
                                    'mask': lcmask})
+            lc.attrs['data_format'] = meta.data_format
             if 'skylev' in list(spec.keys()):
                 # if bg level/error was saved in S3, make bg lightcurves
                 lc['skylev'] = (['wavelength', 'time'],
