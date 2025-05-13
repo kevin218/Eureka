@@ -1018,15 +1018,15 @@ def plot_harmonica_string(lc, model, meta, fitter, isTitle=True):
         pl_params = PlanetParams(model, 0, chan)
 
         # Make the transit model
-        ht = HarmonicaTransit(lc.time)
-        ht.set_orbit(t0=pl_params.t0,
-                     period=pl_params.per,
-                     a=pl_params.a,
-                     inc=pl_params.inc * np.pi / 180.,
-                     ecc=pl_params.ecc,
-                     omega=pl_params.w)
-        ht.set_stellar_limb_darkening(
-            pl_params.u, limb_dark_law=pl_params.limb_dark)
+        ht = HarmonicaTransit()
+        # ht.set_orbit(t0=pl_params.t0,
+        #              period=pl_params.per,
+        #              a=pl_params.a,
+        #              inc=pl_params.inc * np.pi / 180.,
+        #              ecc=pl_params.ecc,
+        #              omega=pl_params.w)
+        # ht.set_stellar_limb_darkening(
+        #     pl_params.u, limb_dark_law=pl_params.limb_dark)
         ht.set_planet_transmission_string(pl_params.ab)
 
         # Compute the transmission string

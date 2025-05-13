@@ -1495,7 +1495,9 @@ Same as ``pc_stepsize`` but applied to the Harmonica strings morning/evening lim
 
 strings_angle
 '''''''''''''
-Harmonica strings angle (in degrees) to include in morning/evening limb calculation. The default angle of 60 degrees will span 0+/-30 degrees for the morning limb and 180+/-30 degrees for the evening limb.
+Harmonica strings angle (in degrees) to include in morning/evening limb calculation. As shown in the figure below, the default angle of 60 degrees will span 0+/-30 degrees for the morning limb and 180+/-30 degrees for the evening limb.
+
+.. image:: ../media/HarmonicaStringAngle_60.png
 
 ncol
 ''''
