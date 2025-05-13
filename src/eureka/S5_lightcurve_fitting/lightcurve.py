@@ -97,7 +97,7 @@ class LightCurve(m.Model):
             self.unc = unc
         else:
             self.unc = np.array([np.nan]*len(self.time))
-        self.unc_fit = np.ma.copy(self.unc)
+        self.unc_fit = deepcopy(self.unc)
 
         if hasattr(parameters, 'scatter_mult'):
             for chan in range(self.nchannel_fitted):
@@ -186,9 +186,9 @@ class LightCurve(m.Model):
         """
         # Make the figure
         for i, channel in enumerate(self.fitted_channels):
-            flux = np.ma.copy(self.flux)
-            unc = np.ma.copy(self.unc_fit)
-            time = np.ma.copy(self.time)
+            flux = deepcopy(self.flux)
+            unc = deepcopy(self.unc_fit)
+            time = deepcopy(self.time)
 
             if self.share and not meta.multwhite:
                 # Split the arrays that have lengths of the original time axis
