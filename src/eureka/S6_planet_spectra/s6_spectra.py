@@ -9,13 +9,17 @@ from glob import glob
 from tqdm import tqdm
 import re
 from matplotlib.pyplot import rcParams
-import h5py
 from astraeus import xarrayIO as xrio
 
 try:
     import starry
 except ModuleNotFoundError:
     # starry hasn't been installed
+    pass
+try:
+    from harmonica import HarmonicaTransit
+except ModuleNotFoundError:
+    # Harmonica hasn't been installed
     pass
 
 from .s6_meta import S6MetaClass
@@ -47,6 +51,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S6.
+    lc : Astreaus object
+        Data object of time-like arrays (light curve).
     '''
     s5_meta = deepcopy(s5_meta)
     input_meta = deepcopy(input_meta)
@@ -204,6 +210,14 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 elif 'pc_amp' in meta.y_param:
                     # Compute phase curve amplitude from all orders
                     meta = compute_pc_amp(meta, log, fit_methods)
+                elif 'morning_limb' in meta.y_param:
+                    # Compute Harmonica's planet transmission strings
+                    meta = compute_strings(meta, log, fit_methods,
+                                           limb='morning')
+                elif 'evening_limb' in meta.y_param:
+                    # Compute Harmonica's planet transmission strings
+                    meta = compute_strings(meta, log, fit_methods,
+                                           limb='evening')
                 else:
                     # Just load the parameter
                     if meta.sharedp:
@@ -367,7 +381,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 save_table(meta, log)
 
             # Copy S5 text files to a single h5 file
-            convert_s5_LC(meta, log)
+            meta, lc = convert_s5_LC(meta, log)
 
             # make citations for current stage
             util.make_citations(meta, 6)
@@ -383,7 +397,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
             log.closelog()
 
-    return meta
+    return meta, lc
 
 
 def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
@@ -599,6 +613,20 @@ def convert_s5_LC(meta, log):
     '''
     Loads spectroscopic light curves save files from S5 and write as
     single Xarray save file.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated meta data object.
+    lc : Astreaus object
+        Data object of time-like arrays (light curve).
     '''
     event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
                    str(meta.bg_hw_val))
@@ -659,14 +687,34 @@ def convert_s5_LC(meta, log):
         dict[colnames[i]] = lc_da[-1]
 
     # Create Xarray Dataset
-    ds = xrio.makeDataset(dict)
+    lc = xrio.makeDataset(dict)
     # Write to file
     meta.lc_filename_s6 = (meta.outputdir+'S6_'+event_ap_bg + "_LC")
-    xrio.writeXR(meta.lc_filename_s6, ds)
-    return meta
+    xrio.writeXR(meta.lc_filename_s6, lc)
+    return meta, lc
 
 
-def load_s5_saves(meta, log, fit_methods):
+def load_s5_saves(meta, log, fit_methods, n_samples=1):
+    """
+    Return samples from Stage 5 uncertainty fits.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    fit_methods : string
+        The type of uncertainty fitting method used in Stage 5.
+    n_samples : int; optional
+        The number of samples used when parameter is not found.
+        Default is 1.
+
+    Returns
+    -------
+    samples : list
+        A list of sample arrays, one for each channel.
+    """
     if 'dynesty' in fit_methods:
         fitter = 'dynesty'
     elif 'emcee' in fit_methods:
@@ -703,22 +751,14 @@ def load_s5_saves(meta, log, fit_methods):
             full_fname = meta.inputdir+fname+'.h5'
             ds = xrio.readXR(full_fname, verbose=False)
             if ds is None:
-                # Working with an old save file
-                with h5py.File(full_fname, 'r') as hf:
-                    sample = hf['samples'][:]
-                # Need to figure out which columns are which
-                fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
-                fitted_values = pd.read_csv(meta.inputdir+fname,
-                                            escapechar='#',
-                                            skipinitialspace=True)
-                full_keys = np.array(fitted_values["Parameter"])
-                ind = np.where(full_keys == meta.y_param)[0]
-                sample = sample[:, ind].flatten()
+                sample = np.zeros(n_samples)
             else:
                 if meta.y_param in list(ds._variables):
                     sample = ds[meta.y_param].values
+                    if ch == 0:
+                        n_samples = len(sample)
                 else:
-                    sample = np.zeros(1)
+                    sample = np.zeros(n_samples)
             samples.append(sample)
     else:
         # No samples for lsq, so just shape it as a single value
@@ -731,6 +771,109 @@ def load_s5_saves(meta, log, fit_methods):
             samples = np.zeros((meta.nspecchan, 1))
 
     return samples
+
+
+def compute_strings(meta, log, fit_methods, limb):
+    """
+    Compute transit depth at morning/evening limb.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    fit_methods : string
+        The type of uncertainty fitting method used in Stage 5.
+    limb : string
+        Can be either 'morning' or 'evening'
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated meta data object.
+    """
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    suffix = ''
+    if meta.planetNumber > 0:
+        suffix += f'_pl{meta.planetNumber}'
+    if meta.channelNumber > 0:
+        suffix += f'_ch{meta.channelNumber}'
+
+    # Load a0 string coefficients
+    meta.y_param = 'a0'+suffix
+    a0 = load_s5_saves(meta, log, fit_methods)
+    if all(np.all(v == 0) for v in a0):
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    n_samples = len(a0[0])
+
+    # Load string coefficients
+    coeffs = ['a1', 'b1', 'a2', 'b2', 'a3', 'b3']
+    ab_list = []
+    for coeff in coeffs:
+        meta.y_param = coeff+suffix
+        vals = load_s5_saves(meta, log, fit_methods, n_samples=n_samples)
+        if all(np.all(v == 0) for v in vals):
+            # The parameter could not be found - assume fixed to 0
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters, assumed to be 0.')
+        ab_list.append(vals)
+    a1, b1, a2, b2, a3, b3 = ab_list
+
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+
+    # Convert full angle in degrees to half angle in radians
+    # e.g., an angle of 60 degrees spans -30 to +30 degrees
+    rad = meta.strings_angle*np.pi/360
+    if limb == 'morning':
+        theta = np.linspace(-rad, rad, 100)
+    elif limb == 'evening':
+        theta = np.linspace(np.pi-rad, np.pi+rad, 100)
+
+    # Choose a subset of samples
+    ss = meta.strings_stepsize
+
+    ht = HarmonicaTransit()
+    for i in tqdm(range(meta.nspecchan)):
+        if np.all(a0[i] == 0):
+            # Channel wasn't found
+            meta.spectrum_median.append(np.nan)
+            meta.spectrum_err.append([np.nan, np.nan])
+        else:
+            # Compute transmission string
+            ab = np.array([a0[i][::ss],
+                           a1[i][::ss], b1[i][::ss],
+                           a2[i][::ss], b2[i][::ss],
+                           a3[i][::ss], b3[i][::ss]]).T
+            ht.set_planet_transmission_string(ab)
+            samples = ht.get_planet_transmission_string(theta)
+            sm_16, sm_50, sm_84 = np.percentile(samples**2,
+                                                [16., 50., 84.], axis=0)
+            # Mean transit depth over range of angles
+            sm_mean = np.mean(sm_50)
+            meta.spectrum_median.append(sm_mean)
+            # Two-sided uncertainty over range of angles
+            meta.spectrum_err.append([np.mean(sm_84)-sm_mean,
+                                     sm_mean-np.mean(sm_16)])
+
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+
+    return meta
 
 
 def compute_offset(meta, log, fit_methods):

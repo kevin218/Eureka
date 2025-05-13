@@ -186,6 +186,11 @@ In Stage 5:
 
    Fig 5304: *(Demo figure to come)* Zoomed-in Figure Emphasizing Phase Variations Using Temporally Binned Data Over Unbinned Data.
 
+   .. figure:: ../media/S5_out/fig5309_ch00_harmonica_string_emcee.png
+      :alt: Stage 5 Harmonica transmission string
+
+   Fig 5309: Harmonica transmission string. The blue solid line depicts the measured shape of the planet.  Any deviation from the reference circle (gray dashed line) points to a non-spherical planet.  The morning limb is on the right; the evening limb is on the left.
+
    - If ``isplots_S5`` = 5, and if ``emcee`` or ``dynesty`` were used as the fitter: ``Eureka!`` will plot a corner plot for each channel.
 
    .. figure:: ../media/S5_out/fig5501_ch0_corner_emcee.png

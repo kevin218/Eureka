@@ -1032,7 +1032,7 @@ run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
+[batman_tr, batman_ecl, harmonica_tr, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
 For theano-based differentiable functions, this can be one or more of the following:
 [starry, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
@@ -1274,7 +1274,8 @@ This file describes the transit/eclipse and systematics parameters and their pri
 Available fitting parameters are:
 
    - Transit and Eclipse Depth Parameters
-      - ``rp`` or ``rprs`` - planet-to-star radius ratio, for the transit models.
+      - ``rp`` or ``rprs`` - planet-to-star radius ratio, for all transit models.
+      - ``a#`` and/or ``b#`` - nth harmonic amplitude (Harmonica only).  Add  ``a1`` to fit different morning/evening limbs.  Add ``b1`` to fit different north/south limbs.  Higher-order harmonics (up to ``n=3``) are also available.  We recommend starting with ``rp`` and ``a1`` as free parameters. See the `Harmonica documentation <https://harmonica.readthedocs.io/en/latest/views/transmission_strings.html#>`__ for a detailed description of transmission strings and the Fourier series used to parameterize them.
       - ``fp`` or ``fpfs`` - planet-to-star flux ratio, for the eclipse models.
       - ``rp2`` or ``rprs2`` - an additional planet-to-star radius ratio for use with the catwoman transit model to model transit limb-asymmetries.
       - ``phi`` - the angle (in degrees) of the line separating the semi-circles defined by ``rp`` and ``rp2`` in the catwoman transit model. If ``phi`` is set to 90 degrees (the parameter's default value), the ``rp`` is the trailing hemisphere and ``rp2`` is the leading hemisphere. If ``phi`` is set to 0, then ``rp`` is the northern hemisphere and ``rp2`` is the southern hemisphere.
@@ -1447,8 +1448,9 @@ timescales. It is also possible to plot
 'fn' (the nightside flux from a sinusoidal phase curve),
 'pc_offset' (the sinusoidal offset of the phase curve),
 'pc_amp' (the sinusoidal amplitude of the phase curve),
-'offset_order1' or 'offset_order2' (the first or second order sinusoidal offset of the phase curve), and
-'amp_order1' or 'amp_order2' (the first or second order sinusoidal amplitude of the phase curve).
+'offset_order1' or 'offset_order2' (the first or second order sinusoidal offset of the phase curve),
+'amp_order1' or 'amp_order2' (the first or second order sinusoidal amplitude of the phase curve), and
+'morning_limb' or 'evening_limb' (the Harmonica transmission spectrum for the morning or evening limb).
 y_params can also be formatted as a list to make many different plots. A "cleaned" version
 of y_params will be used in the filenames of the figures and save files relevant for that y_param
 (e.g. '1/r1' would not work in a filename, so it becomes '1-r1').
@@ -1486,6 +1488,16 @@ The number of time steps used to sample the phase variation when computing the p
 pc_stepsize
 '''''''''''
 Computing uncertainties on the phase curve amplitude and offset can be slow; however, thinning the number of MCMC samples will speed up the calculation.  Increasing ``pc_stepsize`` to larger integer values will steadily decrease the computation time at the cost of accuracy.  Defaults to 50.  Use 1 for no thinning.
+
+strings_stepsize
+''''''''''''''''
+Same as ``pc_stepsize`` but applied to the Harmonica strings morning/evening limb calculation.  Defaults to 50.  Use 1 for no thinning.
+
+strings_angle
+'''''''''''''
+Harmonica strings angle (in degrees) to include in morning/evening limb calculation. As shown in the figure below, the default angle of 60 degrees will span 0+/-30 degrees for the morning limb and 180+/-30 degrees for the evening limb.
+
+.. image:: ../media/HarmonicaStringAngle_60.png
 
 ncol
 ''''

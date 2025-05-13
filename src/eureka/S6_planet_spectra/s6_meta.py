@@ -113,6 +113,11 @@ class S6MetaClass(MetaClass):
         self.pc_nstep = getattr(self, 'pc_nstep', 1000)
         # Sample spacing between independent MCMC steps
         self.pc_stepsize = getattr(self, 'pc_stepsize', 50)
+        self.strings_stepsize = getattr(self, 'strings_stepsize', 50)
+        # Harmonica strings angle (in degrees) to include in morning/evening
+        # limb calculation. An angle of 60 degrees will span -30 to +30 degrees
+        # for the morning limb.
+        self.strings_angle = getattr(self, 'strings_angle', 60)
 
         # Tabulating parameters
         self.ncols = getattr(self, 'ncols', 4)
