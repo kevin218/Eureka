@@ -51,6 +51,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S6.
+    lc : Astreaus object
+        Data object of time-like arrays (light curve).
     '''
     s5_meta = deepcopy(s5_meta)
     input_meta = deepcopy(input_meta)

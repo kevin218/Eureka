@@ -80,7 +80,7 @@ class HarmonicaTransitModel(BatmanTransitModel):
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
 
-                # Enforce physicality to avoid crashes from batman by returning
+                # Enforce physicality to avoid crashes from Harmonica by returning
                 # something that should be a horrible fit
                 if (not ((0 < pl_params.per) and (0 < pl_params.inc <= 90) and
                          (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and

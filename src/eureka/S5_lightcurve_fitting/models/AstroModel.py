@@ -84,7 +84,6 @@ class PlanetParams():
         self.fp = None
         self.t_secondary = None
         # Harmonica parameters
-        self.a0 = 0
         self.a1 = 0
         self.b1 = 0
         self.a2 = 0
@@ -350,7 +349,7 @@ class PlanetParams():
                 self.u = np.array([u1, u2])
 
         # Nicely packaging Harmonica coefficients
-        self.ab = np.array([self.a0,
+        self.ab = np.array([self.rp,
                             self.a1, self.b1,
                             self.a2, self.b2,
                             self.a3, self.b3])
