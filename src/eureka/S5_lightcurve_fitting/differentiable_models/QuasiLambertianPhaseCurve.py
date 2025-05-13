@@ -86,7 +86,7 @@ class QuasiLambertianPhaseCurve(PyMC3Model):
 
             for pid in pid_iter:
                 # Initialize model
-                pl_params = PlanetParams(model, pid, chan, eval=eval)
+                pl_params = PlanetParams(model, pid, chan, eval=eval, lib=lib)
 
                 if (eval and pl_params.quasi_gamma == 0):
                     # Don't waste time running the following code

@@ -1,6 +1,7 @@
 import os
 import sys
 import numpy as np
+from copy import deepcopy
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 try:
@@ -55,10 +56,10 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     model_eval = model_noGP+model_gp
 
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(lc.unc_fit)
-        model_lc = np.ma.copy(model_eval)
-        gp = np.ma.copy(model_gp)
+        flux = deepcopy(lc.flux)
+        unc = deepcopy(lc.unc_fit)
+        model_lc = deepcopy(model_eval)
+        gp = deepcopy(model_gp)
         model_sys = model_sys_full
         model_phys = model_phys_full
         color = lc.colors[i]
@@ -173,8 +174,8 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
     model_phys_full, new_time, nints_interp = \
         model.physeval(interp=meta.interp)
 
-    flux_full = np.ma.copy(lc.flux)
-    unc_full = np.ma.copy(lc.unc_fit)
+    flux_full = deepcopy(lc.flux)
+    unc_full = deepcopy(lc.unc_fit)
     flux_full = flux_full/model_sys-model_gp
 
     # Normalize to zero flux at eclipse
@@ -187,9 +188,9 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
     unc_full *= 1e6
 
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.ma.copy(flux_full)
-        unc = np.ma.copy(unc_full)
-        model_phys = np.ma.copy(model_phys_full)
+        flux = deepcopy(flux_full)
+        unc = deepcopy(unc_full)
+        model_phys = deepcopy(model_phys_full)
         color = lc.colors[i]
 
         if lc.share and not meta.multwhite:
@@ -324,8 +325,8 @@ def plot_rms(lc, model, meta, fitter):
         if 'mc3.stats' not in sys.modules:
             # If MC3 failed to load, exit for loop
             break
-        flux = np.ma.copy(lc.flux)
-        model_lc = np.ma.copy(model_eval)
+        flux = deepcopy(lc.flux)
+        model_lc = deepcopy(model_eval)
 
         if lc.share and not meta.multwhite:
             time = lc.time
@@ -622,9 +623,9 @@ def plot_res_distr(lc, model, meta, fitter):
         plt.figure(5302, figsize=(8, 6))
         plt.clf()
 
-        flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(lc.unc_fit)
-        model_lc = np.ma.copy(model_eval)
+        flux = deepcopy(lc.flux)
+        unc = deepcopy(lc.unc_fit)
+        model_lc = deepcopy(model_eval)
 
         if lc.share or meta.multwhite:
             # Split the arrays that have lengths of the original time axis
@@ -679,10 +680,10 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     model_with_GP = model_eval + model_GP
 
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(lc.unc_fit)
-        model_lc = np.ma.copy(model_with_GP)
-        model_GP_component = np.ma.copy(model_GP)
+        flux = deepcopy(lc.flux)
+        unc = deepcopy(lc.unc_fit)
+        model_lc = deepcopy(model_with_GP)
+        model_GP_component = deepcopy(model_GP)
         color = lc.colors[i]
 
         if lc.share and not meta.multwhite:

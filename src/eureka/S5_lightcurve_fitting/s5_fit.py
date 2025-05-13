@@ -13,6 +13,11 @@ try:
 except ModuleNotFoundError:
     # PyMC3 hasn't been installed
     dm = None
+try:
+    from . import jax_models as jm
+except ModuleNotFoundError:
+    # jax hasn't been installed
+    jm = None
 from ..lib import manageevent as me
 from ..lib import util, logedit
 from ..lib.readEPF import Parameters
@@ -561,10 +566,35 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         GPModel = dm.GPModel
         AstroModel = dm.AstroModel
         CompositeModel = dm.CompositePyMC3Model
+    elif 'jaxoplanet' in meta.run_myfuncs:
+        AstroModel = jm.AstroModel
+        # CentroidModel = jm.CentroidModel
+        # DampedOscillatorModel = jm.DampedOscillatorModel
+        # ExpRampModel = jm.ExpRampModel
+        # FleckTransitModel = jm.FleckTransitModel
+        # PModel = jm.GPModel
+        # HSTRampModel = jm.HSTRampModel
+        JaxoplanetModel = jm.JaxoplanetModel
+        # LorentzianModel = jm.LorentzianModel
+        PolynomialModel = jm.PolynomialModel
+        # QuasiLambertianPhaseCurve = jm.QuasiLambertianPhaseCurve
+        # SinusoidModel = jm.SinusoidPhaseCurveModel
+        # StepModel = jm.StepModel
+        CompositeModel = jm.CompositeJaxModel
+
+        # Need to replace masked arrays with regular arrays for jax
+        # Will replace masked elements with NaN
+        lc_model.time = lc_model.time.filled(np.nan)
+        lc_model.flux = lc_model.flux.filled(np.nan)
+        lc_model.unc = lc_model.unc.filled(np.nan)
+        time = time.filled(np.nan)
+        flux = flux.filled(np.nan)
+        flux_err = flux_err.filled(np.nan)
     else:
         BatmanTransitModel = m.BatmanTransitModel
         BatmanEclipseModel = m.BatmanEclipseModel
         CatwomanTransitModel = m.CatwomanTransitModel
+        FleckTransitModel = m.FleckTransitModel
         PoetTransitModel = m.PoetTransitModel
         PoetEclipseModel = m.PoetEclipseModel
         PoetPCModel = m.PoetPCModel
@@ -671,6 +701,25 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        nints=lc_model.nints,
                                        num_planets=meta.num_planets)
         modellist.append(t_eclipse)
+    if 'jaxoplanet' in meta.run_myfuncs:
+        t_transit = JaxoplanetModel(parameters=params,
+                                    fmt='r--', log=log, time=time,
+                                    time_units=time_units,
+                                    freenames=freenames,
+                                    longparamlist=lc_model.longparamlist,
+                                    nchannel=chanrng,
+                                    nchannel_fitted=nchannel_fitted,
+                                    fitted_channels=fitted_channels,
+                                    paramtitles=paramtitles,
+                                    ld_from_S4=meta.use_generate_ld,
+                                    ld_from_file=meta.ld_file,
+                                    ld_coeffs=ldcoeffs,
+                                    recenter_ld_prior=meta.recenter_ld_prior,
+                                    compute_ltt=meta.compute_ltt,
+                                    multwhite=lc_model.multwhite,
+                                    nints=lc_model.nints,
+                                    num_planets=meta.num_planets)
+        modellist.append(t_transit)
     if 'catwoman_tr' in meta.run_myfuncs:
         t_transit = CatwomanTransitModel(parameters=params,
                                          fmt='r--', log=log, time=time,
@@ -693,25 +742,25 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          max_err=meta.catwoman_max_err)
         modellist.append(t_transit)
     if 'fleck_tr' in meta.run_myfuncs:
-        t_transit = m.FleckTransitModel(parameters=params,
-                                        fmt='r--', log=log, time=time,
-                                        time_units=time_units,
-                                        freenames=freenames,
-                                        longparamlist=lc_model.longparamlist,
-                                        nchannel=chanrng,
-                                        nchannel_fitted=nchannel_fitted,
-                                        fitted_channels=fitted_channels,
-                                        paramtitles=paramtitles,
-                                        ld_from_S4=meta.use_generate_ld,
-                                        ld_from_file=meta.ld_file,
-                                        ld_coeffs=ldcoeffs,
-                                        recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
-                                        spotcon_file=spotcon_file,
-                                        recenter_spotcon_prior=meta.recenter_spotcon_prior,  # noqa: E501
-                                        compute_ltt=meta.compute_ltt,
-                                        multwhite=lc_model.multwhite,
-                                        nints=lc_model.nints,
-                                        num_planets=meta.num_planets)
+        t_transit = FleckTransitModel(parameters=params,
+                                      fmt='r--', log=log, time=time,
+                                      time_units=time_units,
+                                      freenames=freenames,
+                                      longparamlist=lc_model.longparamlist,
+                                      nchannel=chanrng,
+                                      nchannel_fitted=nchannel_fitted,
+                                      fitted_channels=fitted_channels,
+                                      paramtitles=paramtitles,
+                                      ld_from_S4=meta.use_generate_ld,
+                                      ld_from_file=meta.ld_file,
+                                      ld_coeffs=ldcoeffs,
+                                      recenter_ld_prior=meta.recenter_ld_prior,
+                                      spotcon_file=spotcon_file,
+                                      recenter_spotcon_prior=meta.recenter_spotcon_prior,  # noqa: E501
+                                      compute_ltt=meta.compute_ltt,
+                                      multwhite=lc_model.multwhite,
+                                      nints=lc_model.nints,
+                                      num_planets=meta.num_planets)
         modellist.append(t_transit)
     if 'poet_tr' in meta.run_myfuncs:
         t_poet_tr = PoetTransitModel(parameters=params,
@@ -1006,6 +1055,12 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         model.fitter = 'nuts'
         lc_model.fit(model, meta, log, fitter='nuts')
         log.writelog("Completed PyMC3 NUTS fit.")
+        log.writelog("-------------------------")
+    if 'jaxopt' in meta.fit_method:
+        log.writelog("Starting jaxopt fit.")
+        model.fitter = 'jaxopt'
+        lc_model.fit(model, meta, log, fitter='jaxopt')
+        log.writelog("Completed jaxopt fit.")
         log.writelog("-------------------------")
     log.writelog("=========================")
 

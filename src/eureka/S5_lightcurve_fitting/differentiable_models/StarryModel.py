@@ -153,7 +153,7 @@ class StarryModel(PyMC3Model):
                 chankey = f'_ch{chan}'
 
             # Initialize PlanetParams object
-            pl_params = PlanetParams(self, 0, chan, eval=False)
+            pl_params = PlanetParams(self, 0, chan, eval=False, lib=tt)
 
             if pl_params.nspots > 0:
                 # Check for spots and set spot parameters if needed
@@ -219,7 +219,7 @@ class StarryModel(PyMC3Model):
             planets = []
             for pid in range(self.num_planets):
                 # Initialize PlanetParams object for this planet
-                pl_params = PlanetParams(self, pid, chan, eval=False)
+                pl_params = PlanetParams(self, pid, chan, eval=False, lib=tt)
 
                 # Pixel sampling setup
                 if self.pixelsampling:

@@ -8,6 +8,12 @@ except ModuleNotFoundError:
     # Don't require that the pymc3, starry, and theano packages be installed
     # but also don't raise a warning here to avoid excessive spam
     pass
+try:
+    from . import jax_models
+except ModuleNotFoundError:
+    # Don't require that the jax and jaxoplanet packages be installed
+    # but also don't raise a warning here to avoid excessive spam
+    pass
 
 from . import fitters
 from . import gradient_fitters

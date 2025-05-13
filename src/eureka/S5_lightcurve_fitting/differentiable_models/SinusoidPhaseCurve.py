@@ -83,7 +83,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
 
             for pid in pid_iter:
                 # Initialize model
-                pl_params = PlanetParams(model, pid, chan, eval=eval)
+                pl_params = PlanetParams(model, pid, chan, eval=eval, lib=lib)
 
                 if (eval and pl_params.AmpCos1 == 0 and pl_params.AmpSin1 == 0
                         and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0):

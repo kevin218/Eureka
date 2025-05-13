@@ -1,11 +1,12 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from copy import copy
+from copy import copy, deepcopy
 
 from . import models as m
 from . import fitters
 from . import gradient_fitters
+from . import jax_fitters
 from .utils import COLORS, color_gen
 from ..lib import plots, util
 from ..lib.split_channels import get_trim, split
@@ -109,7 +110,7 @@ class LightCurve(m.Model):
             self.unc = unc
         else:
             self.unc = np.array([np.nan]*len(self.time))
-        self.unc_fit = np.ma.copy(self.unc)
+        self.unc_fit = deepcopy(self.unc)
 
         if hasattr(parameters, 'scatter_mult'):
             for chan in range(self.nchannel_fitted):
@@ -174,6 +175,8 @@ class LightCurve(m.Model):
             self.fitter_func = gradient_fitters.exoplanetfitter
         elif fitter == 'nuts':
             self.fitter_func = gradient_fitters.nutsfitter
+        elif fitter == 'jaxopt':
+            self.fitter_func = jax_fitters.jaxoptfitter
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
 
@@ -196,9 +199,9 @@ class LightCurve(m.Model):
         """
         # Make the figure
         for i, channel in enumerate(self.fitted_channels):
-            flux = np.ma.copy(self.flux)
-            unc = np.ma.copy(self.unc_fit)
-            time = np.ma.copy(self.time)
+            flux = deepcopy(self.flux)
+            unc = deepcopy(self.unc_fit)
+            time = deepcopy(self.time)
 
             if self.share and not meta.multwhite:
                 # Split the arrays that have lengths of the original time axis

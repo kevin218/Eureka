@@ -1,6 +1,6 @@
 import numpy as np
 import astropy.constants as const
-from copy import deepcopy
+from copy import copy
 import inspect
 
 try:
@@ -15,6 +15,12 @@ try:
 except ImportError:
     pass
 
+try:
+    import jax
+    jax.config.update("jax_enable_x64", True)
+except ImportError:
+    pass
+
 from .Model import Model
 from .KeplerOrbit import KeplerOrbit
 from ..limb_darkening_fit import ld_profile
@@ -25,7 +31,7 @@ class PlanetParams():
     """
     Define planet parameters.
     """
-    def __init__(self, model, pid=0, channel=0, eval=True):
+    def __init__(self, model, pid=0, channel=0, eval=True, lib=np):
         """
         Set attributes to PlanetParams object.
 
@@ -46,11 +52,9 @@ class PlanetParams():
 
         if eval:
             parameterObject = model.parameters
-            lib = np
         else:
-            # PyMC3 model that is being compiled
+            # Jax/PyMC3 model that is being compiled
             parameterObject = model.model
-            lib = tt
 
         # Planet ID
         self.pid = pid
@@ -449,7 +453,7 @@ class AstroModel(Model):
             nchan = 1
             channels = [channel, ]
 
-        pid_input = deepcopy(pid)
+        pid_input = copy(pid)
         if pid_input is None:
             pid_iter = range(self.num_planets)
         else:
