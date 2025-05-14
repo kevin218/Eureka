@@ -1,5 +1,5 @@
 import numpy as np
-from stdatamodels.jwst.datamodels import CubeModel
+from jwst.datamodels import JwstDataModel
 
 from ..lib.readECF import MetaClass
 
@@ -69,13 +69,13 @@ class S3MetaClass(MetaClass):
         if self.xwindow[0] is None:
             self.xwindow[0] = 0
         if self.xwindow[1] is None:
-            with CubeModel(self.segment_list[0]) as model:
-                self.xwindow[1] = model.data.shape[2]
+            with JwstDataModel(self.segment_list[0]) as model:
+                self.xwindow[1] = model.data.shape[2]-1
         if self.ywindow[0] is None:
             self.ywindow[0] = 0
         if self.ywindow[1] is None:
-            with CubeModel(self.segment_list[0]) as model:
-                self.ywindow[1] = model.data.shape[1]
+            with JwstDataModel(self.segment_list[0]) as model:
+                self.ywindow[1] = model.data.shape[1]-1
 
         self.src_pos_type = getattr(self, 'src_pos_type', 'gaussian')
         self.record_ypos = getattr(self, 'record_ypos', True)
@@ -334,7 +334,7 @@ class S3MetaClass(MetaClass):
                                  f'got {self.subarray_halfwidth}')
 
             # Get the centroid position and the subarray size
-            with CubeModel(self.segment_list[0]) as model:
+            with JwstDataModel(self.segment_list[0]) as model:
                 guess = [model.meta.wcsinfo.crpix1,
                          model.meta.wcsinfo.crpix2]
                 ysize, xsize = model.data.shape[1:]
