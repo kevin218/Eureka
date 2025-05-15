@@ -6,8 +6,9 @@ from copy import deepcopy
 import astraeus.xarrayIO as xrio
 
 from .s5_meta import S5MetaClass
-from . import lightcurve
 from . import models as m
+from . import lightcurve
+from . import jax_lightcurve
 try:
     from . import differentiable_models as dm
 except ModuleNotFoundError:
@@ -538,23 +539,30 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         log.writelog("=========================")
         return meta, params
 
-    # Load the relevant values into the LightCurve model object
-    lc_model = lightcurve.LightCurve(time, flux, chan, chanrng, log,
-                                     longparamlist, params, freenames,
-                                     unc=flux_err, time_units=time_units,
-                                     name=eventlabel, share=meta.sharedp,
-                                     white=white, multwhite=meta.multwhite,
-                                     nints=meta.nints)
+    if 'jaxoplanet' in meta.run_myfuncs:
+        LightCurve = jax_lightcurve.LightCurve
+        AstroModel = jm.AstroModel
+        CentroidModel = jm.CentroidModel
+        # DampedOscillatorModel = jm.DampedOscillatorModel
+        ExpRampModel = jm.ExpRampModel
+        # FleckTransitModel = jm.FleckTransitModel
+        GPModel = jm.GPModel
+        HSTRampModel = jm.HSTRampModel
+        JaxoplanetModel = jm.JaxoplanetModel
+        # LorentzianModel = jm.LorentzianModel
+        PolynomialModel = jm.PolynomialModel
+        QuasiLambertianPhaseCurve = jm.QuasiLambertianPhaseCurve
+        SinusoidModel = jm.SinusoidPhaseCurveModel
+        StepModel = jm.StepModel
+        CompositeModel = jm.CompositeJaxModel
 
-    nchannel_fitted = lc_model.nchannel_fitted
-    fitted_channels = lc_model.fitted_channels
-
-    if white:
-        spotcon_file = meta.spotcon_file_white
-    else:
-        spotcon_file = meta.spotcon_file
-
-    if 'starry' in meta.run_myfuncs:
+        # Need to replace masked arrays with regular arrays for jax
+        # Will replace masked elements with NaN
+        time = time.filled(np.nan)
+        flux = flux.filled(np.nan)
+        flux_err = flux_err.filled(np.nan)
+    elif 'starry' in meta.run_myfuncs:
+        LightCurve = lightcurve.LightCurve
         StarryModel = dm.StarryModel
         SinusoidModel = dm.SinusoidPhaseCurveModel
         QuasiLambertianPhaseCurve = dm.QuasiLambertianPhaseCurve
@@ -566,31 +574,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         GPModel = dm.GPModel
         AstroModel = dm.AstroModel
         CompositeModel = dm.CompositePyMC3Model
-    elif 'jaxoplanet' in meta.run_myfuncs:
-        AstroModel = jm.AstroModel
-        # CentroidModel = jm.CentroidModel
-        # DampedOscillatorModel = jm.DampedOscillatorModel
-        # ExpRampModel = jm.ExpRampModel
-        # FleckTransitModel = jm.FleckTransitModel
-        # PModel = jm.GPModel
-        # HSTRampModel = jm.HSTRampModel
-        JaxoplanetModel = jm.JaxoplanetModel
-        # LorentzianModel = jm.LorentzianModel
-        PolynomialModel = jm.PolynomialModel
-        # QuasiLambertianPhaseCurve = jm.QuasiLambertianPhaseCurve
-        # SinusoidModel = jm.SinusoidPhaseCurveModel
-        # StepModel = jm.StepModel
-        CompositeModel = jm.CompositeJaxModel
-
-        # Need to replace masked arrays with regular arrays for jax
-        # Will replace masked elements with NaN
-        lc_model.time = lc_model.time.filled(np.nan)
-        lc_model.flux = lc_model.flux.filled(np.nan)
-        lc_model.unc = lc_model.unc.filled(np.nan)
-        time = time.filled(np.nan)
-        flux = flux.filled(np.nan)
-        flux_err = flux_err.filled(np.nan)
     else:
+        LightCurve = m.LightCurve
         BatmanTransitModel = m.BatmanTransitModel
         BatmanEclipseModel = m.BatmanEclipseModel
         CatwomanTransitModel = m.CatwomanTransitModel
@@ -610,6 +595,22 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         GPModel = m.GPModel
         AstroModel = m.AstroModel
         CompositeModel = m.CompositeModel
+
+    # Load the relevant values into the LightCurve model object
+    lc_model = LightCurve(time, flux, chan, chanrng, log,
+                          longparamlist, params, freenames,
+                          unc=flux_err, time_units=time_units,
+                          name=eventlabel, share=meta.sharedp,
+                          white=white, multwhite=meta.multwhite,
+                          nints=meta.nints)
+
+    nchannel_fitted = lc_model.nchannel_fitted
+    fitted_channels = lc_model.fitted_channels
+
+    if white:
+        spotcon_file = meta.spotcon_file_white
+    else:
+        spotcon_file = meta.spotcon_file
 
     if meta.testing_model:
         # FINDME: Use this area to add systematics into the data

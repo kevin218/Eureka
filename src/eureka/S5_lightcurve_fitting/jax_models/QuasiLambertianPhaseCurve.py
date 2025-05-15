@@ -1,20 +1,15 @@
 import numpy as np
+import jax
+import jax.numpy as jnp
 
-import theano
-theano.config.gcc__cxxflags += " -fexceptions"
-import theano.tensor as tt
-
-# Avoid tonnes of "Cannot construct a scalar test value" messages
-import logging
-logger = logging.getLogger("theano.tensor.opt")
-logger.setLevel(logging.ERROR)
-
-from . import PyMC3Model
+from . import JaxModel
 from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
 from ...lib.split_channels import split
 
+jax.config.update("jax_enable_x64", True)
 
-class QuasiLambertianPhaseCurve(PyMC3Model):
+
+class QuasiLambertianPhaseCurve(JaxModel):
     """Quasi-Lambertian phase curve based on Agol+2007 for airless planets."""
     def __init__(self, **kwargs):
         """Initialize the model.
@@ -23,9 +18,9 @@ class QuasiLambertianPhaseCurve(PyMC3Model):
         ----------
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
+            eureka.S5_lightcurve_fitting.jax_models.JaxModel.__init__().
         """  # NOQA: E501
-        # Inherit from PyMC3Model class
+        # Inherit from JaxModel class
         super().__init__(**kwargs,
                          name='quasi-lambertian phase curve',
                          modeltype='physical')
@@ -59,15 +54,13 @@ class QuasiLambertianPhaseCurve(PyMC3Model):
             channels = [channel, ]
 
         if eval:
-            lib = np.ma
+            lib = np
             model = self.fit
-            abs = np.ma.abs
         else:
-            lib = tt
+            lib = jnp
             model = self.model
-            abs = tt.abs_
 
-        lcfinal = lib.zeros(0)
+        lcfinal = lib.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -103,7 +96,7 @@ class QuasiLambertianPhaseCurve(PyMC3Model):
                     phi = anom + pl_params.w*np.pi/180 + np.pi/2
 
                 # calculate the phase variations
-                phaseVars = abs(lib.cos(
+                phaseVars = lib.abs(lib.cos(
                     (phi+pl_params.quasi_offset*np.pi/180)/2)
                 )**pl_params.quasi_gamma
 

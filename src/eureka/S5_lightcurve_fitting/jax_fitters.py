@@ -3,7 +3,8 @@ try:
     import jax
     import numpyro
     import numpyro_ext
-    from numpyro import handlers
+
+    jax.config.update("jax_enable_x64", True)
 except ModuleNotFoundError:
     # jax hasn't been installed
     pass
@@ -51,8 +52,6 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
         start[name] = val
 
     # Set the model parameters to their starting values
-    with handlers.seed(rng_seed=0):
-        model.setup(lc.time, lc.flux, lc.unc, freepars)
     model.update(freepars)
 
     # Plot starting point

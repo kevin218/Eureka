@@ -168,7 +168,6 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
 
         self.GP = False
         for component in self.components:
-            component.fit = self.fit
             if component.modeltype == 'GP':
                 self.GP = True
 
@@ -252,6 +251,19 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                                              tau=param.priorpar2,
                                              testval=param.value))
 
+    @property
+    def fit(self):
+        """A getter for the fit."""
+        return self._fit
+
+    @fit.setter
+    def fit(self, fit):
+        """A setter for the model."""
+        self._fit = fit
+        # Update the components' fit
+        for component in self.components:
+            component.fit = fit
+
     def setup(self, time, flux, lc_unc, newparams):
         """Setup a model for evaluation and fitting.
 
@@ -331,7 +343,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                         gps = component.gps
                         gp_component = component
 
-                fit_lc = self.eval(eval=False)
+                fit_lc = self.eval(eval=False, incl_GP=False)
                 for c in range(self.nchannel_fitted):
                     if self.nchannel_fitted > 1:
                         chan = self.fitted_channels[c]

@@ -3,43 +3,27 @@ import jax
 import jax.numpy as jnp
 
 from . import JaxModel
-from ...lib.readEPF import Parameters
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 jax.config.update("jax_enable_x64", True)
 
 
-class PolynomialModel(JaxModel):
-    """Polynomial Model"""
+class ExpRampModel(JaxModel):
     def __init__(self, **kwargs):
-        """Initialize the polynomial model.
+        """Initialize the model.
 
         Parameters
         ----------
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.__init__().
-            Can pass in the parameters, longparamlist, nchan, and
-            paramtitles arguments here.
+            eureka.S5_lightcurve_fitting.jax_models.JaxModel.__init__().
         """
-        # Inherit from Model class
+        # Inherit from JaxModel class
         super().__init__(**kwargs)
-        self.name = 'polynomial'
+        self.name = 'exp. ramp'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
-
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            coeff_dict = kwargs.get('coeff_dict')
-            params = {cN: coeff for cN, coeff in coeff_dict.items()
-                      if cN.startswith('c') and cN[1:].isdigit()}
-            self.parameters = Parameters(**params)
-
-        # Update coefficients
-        self._parse_coeffs()
 
     @property
     def time(self):
@@ -57,15 +41,15 @@ class PolynomialModel(JaxModel):
         if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = np.zeros(0)
+                self.time_local = np.zeros(self.time.shape)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    time = split([self.time,], self.nints, chan)[0]
-                    self.time_local = np.append(
-                        self.time_local, time-np.nanmean(time))
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    time = self.time[trim1:trim2]
+                    self.time_local[trim1:trim2] = time-time[0]
             else:
-                self.time_local = self.time-np.nanmean(self.time)
+                self.time_local = self.time-self.time[0]
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -82,7 +66,7 @@ class PolynomialModel(JaxModel):
 
         Returns
         -------
-        lcfinal : ndarray
+        ndarray
             The value of the model at the times self.time.
         """
         if channel is None:
@@ -92,10 +76,6 @@ class PolynomialModel(JaxModel):
             nchan = 1
             channels = [channel, ]
 
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
-
         if eval:
             lib = np
             model = self.fit
@@ -103,22 +83,22 @@ class PolynomialModel(JaxModel):
             lib = jnp
             model = self.model
 
-        poly_coeffs = np.zeros((nchan, 10)).tolist()
-        # Parse 'c#' keyword arguments as coefficients
+        # Parse model attributes as coefficients
+        ramp_coeffs = np.zeros((nchan, 4)).tolist()
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
             else:
                 chan = 0
-            for i in range(10):
-                if chan == 0:
-                    parname = f'c{i}'
-                else:
-                    parname = f'c{i}_ch{chan}'
-                poly_coeffs[c][i] = getattr(model, parname, 0)
 
-        # Create the polynomial from the coeffs
-        lcfinal = lib.array([])
+            for i in range(4):
+                if chan == 0:
+                    parname = f'r{i}'
+                else:
+                    parname = f'r{i}_ch{chan}'
+                ramp_coeffs[c][i] = getattr(model, parname, 0)
+
+        ramp_flux = lib.zeros(0)
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -130,9 +110,8 @@ class PolynomialModel(JaxModel):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            lcpiece = lib.zeros(len(time))
-            for power in range(len(poly_coeffs[chan])):
-                lcpiece += poly_coeffs[chan][power] * time**power
-            lcfinal = lib.concatenate([lcfinal, lcpiece])
+            r0, r1, r2, r3 = ramp_coeffs[c]
+            lcpiece = (1 + r0*lib.exp(-r1*time) + r2*lib.exp(-r3*time))
+            ramp_flux = lib.concatenate([ramp_flux, lcpiece])
 
-        return lcfinal
+        return ramp_flux

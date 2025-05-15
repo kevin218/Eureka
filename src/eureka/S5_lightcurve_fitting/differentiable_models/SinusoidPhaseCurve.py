@@ -29,19 +29,19 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                          modeltype='physical',
                          name='sinusoid phase curve')
 
-    def eval(self, eval=True, channel=None, pid=None, **kwargs):
+    def eval(self, pid, eval=True, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
+        pid : int
+            Planet ID - must only work on one planet at a time to avoid mixing
+            the signals from different planets.
         eval : bool; optional
             If true evaluate the model, otherwise simply compile the model.
             Defaults to True.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
-        pid : int; optional
-            Planet ID, default is None which combines the models from
-            all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -56,11 +56,6 @@ class SinusoidPhaseCurveModel(PyMC3Model):
         else:
             nchan = 1
             channels = [channel, ]
-
-        if pid is None:
-            pid_iter = range(self.num_planets)
-        else:
-            pid_iter = [pid,]
 
         if eval:
             lib = np.ma
@@ -81,16 +76,14 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            for pid in pid_iter:
-                # Initialize model
-                pl_params = PlanetParams(model, pid, chan, eval=eval, lib=lib)
+            # Initialize model
+            pl_params = PlanetParams(model, pid, chan, eval=eval, lib=lib)
 
-                if (eval and pl_params.AmpCos1 == 0 and pl_params.AmpSin1 == 0
-                        and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0):
-                    # Don't waste time running the following code
-                    phaseVars = np.ma.ones(time.shape)
-                    continue
-
+            if (eval and pl_params.AmpCos1 == 0 and pl_params.AmpSin1 == 0
+                    and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0):
+                # Don't waste time running the following code
+                phaseVars = lib.ones(time.shape)
+            else:
                 if pl_params.t_secondary is None:
                     # If not explicitly fitting for the time of eclipse, get
                     # the time of eclipse from the time of transit, period,

@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 from copy import copy, deepcopy
 
-from . import models as m
+from .models import Model
 from . import fitters
 from . import gradient_fitters
 from . import jax_fitters
@@ -12,7 +12,7 @@ from ..lib import plots, util
 from ..lib.split_channels import get_trim, split
 
 
-class LightCurve(m.Model):
+class LightCurve(Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist,
                  parameters, freenames, unc=None, time_units='BJD',
                  name='My Light Curve', share=False, white=False,
@@ -57,21 +57,9 @@ class LightCurve(m.Model):
             Any parameter named log will not be loaded into the
             LightCurve object as Logedit objects cannot be pickled
             which is required for multiprocessing.
-
-        Notes
-        -----
-
-        History:
-        - Dec 29, 2021 Taylor Bell
-            Allowing for a constant uncertainty to be input with just a float.
-            Added a channel number.
-        - Jan. 15, 2022 Megan Mansfield
-            Added ability to share fit between all channels
-        - Oct. 2022 Erin May
-            Added ability to joint fit WLCs with different time arrays
         """
         # Initialize the model
-        super().__init__(**kwargs)
+        Model.__init__(self, **kwargs)
 
         self.name = name
         self.share = share

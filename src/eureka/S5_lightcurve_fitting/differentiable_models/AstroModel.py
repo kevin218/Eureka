@@ -116,8 +116,10 @@ class AstroModel(PyMC3Model):
 
         if eval:
             lib = np.ma
+            model = self.fit
         else:
             lib = tt
+            model = self.model
 
         # Set all parameters
         lcfinal = lib.zeros(0)
@@ -152,11 +154,16 @@ class AstroModel(PyMC3Model):
                     planetFlux = eclipses[pid]
                 elif len(self.phasevariation_models) > 0:
                     # User is dealing with phase variations of a
-                    # non-eclipsing object
-                    planetFlux = lib.ones(len(time))
+                    # non-eclipsing object. Still require the fp parameter
+                    # for normalization purposes (since not all phase curve
+                    # models have terms that can be used to set the amplitude
+                    # of the model)
+                    pl_params = PlanetParams(model, pid, chan, eval=eval,
+                                             lib=lib)
+                    planetFlux = pl_params.fp
 
                 for model in self.phasevariation_models:
-                    planetFlux *= model.eval(channel=chan, pid=pid, eval=eval,
+                    planetFlux *= model.eval(pid, channel=chan, eval=eval,
                                              **kwargs)
 
                 planetFluxes += planetFlux

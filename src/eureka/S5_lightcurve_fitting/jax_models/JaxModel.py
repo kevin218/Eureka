@@ -4,14 +4,15 @@ import numpy as np
 import jax
 import numpyro
 import jax.numpy as jnp
+jax.config.update("jax_enable_x64", True)
+
+import celerite2.jax as celerite2
 
 from numpyro.distributions import (
     Normal, Uniform, LogUniform, LogNormal, TruncatedNormal)
 
 from ..models import Model, CompositeModel
 from ...lib.split_channels import split, get_trim
-
-jax.config.update("jax_enable_x64", True)
 
 
 class model_class:
@@ -211,13 +212,24 @@ class CompositeJaxModel(JaxModel, CompositeModel):
 
         # Setup Jax model (which will also be stored in components)
         self.model = model_class()
-        self.model.parameters = self.parameters
 
         self.GP = False
         for component in self.components:
-            component.fit = self.fit
             if component.modeltype == 'GP':
                 self.GP = True
+
+    @property
+    def fit(self):
+        """A getter for the fit."""
+        return self._fit
+
+    @fit.setter
+    def fit(self, fit):
+        """A setter for the model."""
+        self._fit = fit
+        # Update the components' fit
+        for component in self.components:
+            component.fit = fit
 
     def setup(self, time, flux, lc_unc, newparams):
         """Setup a model for evaluation and fitting.
@@ -233,15 +245,9 @@ class CompositeJaxModel(JaxModel, CompositeModel):
         newparams : ndarray
             New parameter values.
         """
-        # if self.issetup:
-        #     # Only setup once if trying multiple different fitting algorithms
-        #     return
-
         self.time = time
         self.flux = flux
         self.lc_unc = lc_unc
-
-        self.update(newparams)
 
         # Setup Jax model parameters
         for parname in self.parameters.params:
@@ -346,13 +352,13 @@ class CompositeJaxModel(JaxModel, CompositeModel):
             self.scatter_array = self.lc_unc
 
         for component in self.components:
-            # Do any one-time setup needed after model initialization and
+            # Do any component setup needed after model initialization and
             # before evaluating the model
             component.setup(newparams=newparams)
 
         # This is how we tell jax about our observations;
         # we are assuming they are normally distributed about
-        # the true model. This line effectively defines our
+        # the true model. These blocks effectively define our
         # likelihood function.
         if self.GP:
             for component in self.components:
@@ -360,7 +366,7 @@ class CompositeJaxModel(JaxModel, CompositeModel):
                     gps = component.gps
                     gp_component = component
 
-            fit_lc = self.eval(eval=False)
+            fit_lc = self.eval(eval=False, incl_GP=False)
             for c in range(self.nchannel_fitted):
                 if self.nchannel_fitted > 1:
                     chan = self.fitted_channels[c]
@@ -388,7 +394,9 @@ class CompositeJaxModel(JaxModel, CompositeModel):
 
                 kernel_inputs = gp_component.kernel_inputs[chan][0][good]
                 gps[c].compute(kernel_inputs, yerr=unc_fit)
-                gps[c].marginal(f"obs_ch{c}", observed=residuals)
+                setattr(self.model, f"obs_{c}",
+                        numpyro.sample(f"obs_{c}", gps[c].numpyro_dist(),
+                                       obs=residuals))
         else:
             # The likelihood function assuming Gaussian uncertainty
             self.model.obs = numpyro.sample("obs", Normal(
@@ -635,7 +643,7 @@ class CompositeJaxModel(JaxModel, CompositeModel):
             nints_interp = self.nints
 
         if eval:
-            lib = np.ma
+            lib = np
         else:
             lib = jnp
 
