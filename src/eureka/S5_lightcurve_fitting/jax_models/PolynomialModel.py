@@ -2,7 +2,7 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 
-from .JaxModel import JaxModel
+from . import JaxModel
 from ...lib.readEPF import Parameters
 from ...lib.split_channels import split
 
@@ -49,24 +49,23 @@ class PolynomialModel(JaxModel):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-
         if isinstance(time_array, np.ma.core.MaskedArray):
             # Convert to a numpy array with NaN masking
             time_array = time_array.filled(np.nan)
-
         self._time = time_array
+
         if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = jnp.zeros(0)
+                self.time_local = np.zeros(0)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local = jnp.append(
-                        self.time_local, time-jnp.nanmean(time))
+                    time = split([self.time,], self.nints, chan)[0]
+                    self.time_local = np.append(
+                        self.time_local, time-np.nanmean(time))
             else:
-                self.time_local = self.time - jnp.nanmean(self.time)
+                self.time_local = self.time-np.nanmean(self.time)
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the function with the given values.

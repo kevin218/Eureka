@@ -1,3 +1,4 @@
+import numpy as np
 import jax
 import jax.numpy as jnp
 
@@ -48,11 +49,14 @@ class AstroModel(JaxModel):
         """
         self._components = components
         self.jaxoplanet_model = None
+        self.starry_model = None
         self.phasevariation_models = []
         self.stellar_models = []
         for component in self.components:
             if 'jaxoplanet' in component.name.lower():
                 self.jaxoplanet_model = component
+            elif 'starry' in component.name.lower():
+                self.starry_model = component
             elif 'phase curve' in component.name.lower():
                 self.phasevariation_models.append(component)
             else:
@@ -76,13 +80,16 @@ class AstroModel(JaxModel):
         for component in self.components:
             component.fit = fit
 
-    def eval(self, channel=None, **kwargs):
+    def eval(self, channel=None, eval=True, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -106,6 +113,13 @@ class AstroModel(JaxModel):
         if self.time is None:
             self.time = kwargs.get('time')
 
+        if eval:
+            lib = np
+            model = self.fit
+        else:
+            lib = jnp
+            model = self.model
+
         # Set all parameters
         lcfinal = jnp.zeros(0)
         for c in range(nchan):
@@ -119,21 +133,39 @@ class AstroModel(JaxModel):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            starFlux = jnp.ones(len(time))
+            starFlux = lib.ones(len(time))
             for component in self.stellar_models:
-                starFlux *= component.eval(channel=chan, **kwargs)
+                starFlux *= component.eval(channel=chan, eval=eval, **kwargs)
             if self.jaxoplanet_model is not None:
-                starFlux *= self.jaxoplanet_model.eval(channel=chan,
+                starFlux *= self.jaxoplanet_model.eval(channel=chan, eval=eval,
                                                        **kwargs)
 
-            planetFluxes = jnp.zeros(len(time))
+            planetFluxes = lib.zeros(len(time))
             for pid in pid_iter:
                 # Initial default value
                 planetFlux = 0
 
-                # Placeholder code for planet emitted/reflected fluxes
+                if self.starry_model is not None:
+                    # User is fitting an eclipse model
+                    raise NotImplementedError(
+                        "Eclipse models are not yet implemented in the jax "
+                        "version of the AstroModel. Please use the numpy "
+                        "version of the AstroModel for eclipse models.")
+                elif len(self.phasevariation_models) > 0:
+                    # User is dealing with phase variations of a
+                    # non-eclipsing object. Still require the fp parameter
+                    # for normalization purposes (since not all phase curve
+                    # models have terms that can be used to set the amplitude
+                    # of the model)
+                    pl_params = PlanetParams(model, pid, chan, eval=eval,
+                                             lib=lib)
+                    planetFlux = pl_params.fp
+
+                for model in self.phasevariation_models:
+                    planetFlux *= model.eval(pid, channel=chan, eval=eval,
+                                             **kwargs)
 
                 planetFluxes += planetFlux
 
-            lcfinal = jnp.concatenate([lcfinal, starFlux+planetFluxes])
+            lcfinal = lib.concatenate([lcfinal, starFlux+planetFluxes])
         return lcfinal

@@ -163,7 +163,7 @@ class JaxoplanetModel(JaxModel):
         # pid_iter = range(self.num_planets)
 
         if eval:
-            lib = np.ma
+            lib = np
             systems = self.fit.systems
         else:
             lib = jnp

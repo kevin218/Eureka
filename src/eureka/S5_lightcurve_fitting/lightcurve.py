@@ -11,7 +11,7 @@ from . import models as m
 from .utils import COLORS, color_gen
 
 
-class LightCurve(m.Model):
+class LightCurve(Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist,
                  parameters, freenames, unc=None, time_units='BJD',
                  name='My Light Curve', share=False, white=False,
@@ -58,7 +58,7 @@ class LightCurve(m.Model):
             which is required for multiprocessing.
         """
         # Initialize the model
-        super().__init__(**kwargs)
+        Model.__init__(self, **kwargs)
 
         self.name = name
         self.share = share
