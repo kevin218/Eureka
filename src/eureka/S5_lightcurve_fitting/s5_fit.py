@@ -575,7 +575,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         AstroModel = dm.AstroModel
         CompositeModel = dm.CompositePyMC3Model
     else:
-        LightCurve = m.LightCurve
+        LightCurve = lightcurve.LightCurve
         BatmanTransitModel = m.BatmanTransitModel
         BatmanEclipseModel = m.BatmanEclipseModel
         CatwomanTransitModel = m.CatwomanTransitModel
