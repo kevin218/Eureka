@@ -6,8 +6,6 @@ import numpyro
 import jax.numpy as jnp
 jax.config.update("jax_enable_x64", True)
 
-import celerite2.jax as celerite2
-
 from numpyro.distributions import (
     Normal, Uniform, LogUniform, LogNormal, TruncatedNormal)
 
