@@ -87,6 +87,13 @@ class PlanetParams():
         self.fpfs = None
         self.fp = None
         self.t_secondary = None
+        # Harmonica parameters
+        self.a1 = 0
+        self.b1 = 0
+        self.a2 = 0
+        self.b2 = 0
+        self.a3 = 0
+        self.b3 = 0
         # POET phase curve parameters
         self.cos1_amp = 0.
         self.cos1_off = 0.
@@ -344,6 +351,12 @@ class PlanetParams():
                 u1 = 2*tt.sqrt(self.u1)*self.u2
                 u2 = tt.sqrt(self.u1)*(1-2*self.u2)
                 self.u = np.array([u1, u2])
+
+        # Nicely packaging Harmonica coefficients
+        self.ab = np.array([self.rp,
+                            self.a1, self.b1,
+                            self.a2, self.b2,
+                            self.a3, self.b3])
 
         # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
         if self.ecc is None:
