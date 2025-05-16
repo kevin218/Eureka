@@ -1,13 +1,10 @@
 import numpy as np
-import jax
 import jax.numpy as jnp
 
 from .JaxModel import JaxModel
 # Importing these here to give access to other differentiable models
 from ..models.AstroModel import PlanetParams, get_ecl_midpt, true_anomaly  # NOQA: F401, E501
 from ...lib.split_channels import split
-
-jax.config.update("jax_enable_x64", True)
 
 
 class AstroModel(JaxModel):

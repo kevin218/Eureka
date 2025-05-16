@@ -1,7 +1,6 @@
 import numpy as np
 from astropy import constants as const
 import inspect
-import jax
 import jax.numpy as jnp
 
 from jaxoplanet.orbits.keplerian import Central, System, Body
@@ -11,8 +10,6 @@ from . import JaxModel
 from .AstroModel import PlanetParams
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
-
-jax.config.update("jax_enable_x64", True)
 
 
 class JaxoplanetModel(JaxModel):
@@ -84,7 +81,7 @@ class JaxoplanetModel(JaxModel):
         self.systems = []
         for chan in range(self.nchannel_fitted):
             # Initialize PlanetParams object
-            pl_params = PlanetParams(self, 0, chan, eval=False, lib=jnp)
+            pl_params = PlanetParams(self, 0, chan, eval=False)
 
             # Initialize star object
             star = Central(radius=pl_params.Rs, mass=0.)
@@ -104,7 +101,7 @@ class JaxoplanetModel(JaxModel):
             planets = []
             for pid in range(self.num_planets):
                 # Initialize PlanetParams object for this planet
-                pl_params = PlanetParams(self, pid, chan, eval=False, lib=jnp)
+                pl_params = PlanetParams(self, pid, chan, eval=False)
 
                 # Solve Keplerian orbital period equation for system mass
                 # (otherwise jaxoplanet is going to mess with P or a...)
@@ -181,7 +178,7 @@ class JaxoplanetModel(JaxModel):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            pl_params = PlanetParams(self, 0, chan, eval=eval, lib=lib)
+            pl_params = PlanetParams(self, 0, chan, eval=eval)
             system = systems[chan]
 
             light_curve = 1. + limb_dark_light_curve(system, pl_params.u)(time)

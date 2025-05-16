@@ -14,7 +14,7 @@ class PlanetParams():
     """
     Define planet parameters.
     """
-    def __init__(self, model, pid=0, channel=0, eval=True, lib=np):
+    def __init__(self, model, pid=0, channel=0, eval=True):
         """
         Set attributes to PlanetParams object.
 

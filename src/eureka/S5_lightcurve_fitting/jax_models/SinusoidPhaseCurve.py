@@ -1,12 +1,9 @@
 import numpy as np
-import jax
 import jax.numpy as jnp
 
 from . import JaxModel
 from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
 from ...lib.split_channels import split
-
-jax.config.update("jax_enable_x64", True)
 
 
 class SinusoidPhaseCurveModel(JaxModel):
@@ -70,7 +67,7 @@ class SinusoidPhaseCurveModel(JaxModel):
                 time = split([time, ], self.nints, chan)[0]
 
             # Initialize model
-            pl_params = PlanetParams(self, pid, chan, eval=eval, lib=lib)
+            pl_params = PlanetParams(self, pid, chan, eval=eval)
 
             if (eval and pl_params.AmpCos1 == 0 and pl_params.AmpSin1 == 0
                     and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0):

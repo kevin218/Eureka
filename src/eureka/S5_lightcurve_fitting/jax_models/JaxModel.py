@@ -1,11 +1,7 @@
 from copy import copy
 import numpy as np
-
-import jax
 import numpyro
 import jax.numpy as jnp
-jax.config.update("jax_enable_x64", True)
-
 from numpyro.distributions import (
     Normal, Uniform, LogUniform, LogNormal, TruncatedNormal)
 

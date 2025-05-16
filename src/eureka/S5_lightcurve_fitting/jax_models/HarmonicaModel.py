@@ -96,7 +96,7 @@ class HarmonicaTransitModel(BatmanTransitModel):
             light_curve = lib.ones(len(time))
             for pid in pid_iter:
                 # Initialize planet
-                pl_params = PlanetParams(self, pid, chan, eval=eval, lib=lib)
+                pl_params = PlanetParams(self, pid, chan, eval=eval)
 
                 # Enforce physicality to avoid crashes from Harmonica by
                 # returning something that should be a horrible fit

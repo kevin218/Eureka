@@ -1,5 +1,4 @@
 import numpy as np
-import jax
 import jax.numpy as jnp
 
 import celerite2.jax as celerite2
@@ -7,8 +6,6 @@ import celerite2.jax as celerite2
 from . import JaxModel
 from ..likelihood import update_uncertainty
 from ...lib.split_channels import split
-
-jax.config.update("jax_enable_x64", True)
 
 
 class GPModel(JaxModel):

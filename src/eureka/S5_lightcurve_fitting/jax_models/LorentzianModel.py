@@ -1,11 +1,8 @@
 import numpy as np
-import jax
 import jax.numpy as jnp
 
 from . import JaxModel
 from ...lib.split_channels import split
-
-jax.config.update("jax_enable_x64", True)
 
 
 class Params():

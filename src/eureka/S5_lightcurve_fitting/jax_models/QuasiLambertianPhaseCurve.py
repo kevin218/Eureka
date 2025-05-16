@@ -1,12 +1,9 @@
 import numpy as np
-import jax
 import jax.numpy as jnp
 
 from . import JaxModel
 from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
 from ...lib.split_channels import split
-
-jax.config.update("jax_enable_x64", True)
 
 
 class QuasiLambertianPhaseCurve(JaxModel):
@@ -71,7 +68,7 @@ class QuasiLambertianPhaseCurve(JaxModel):
                 time = split([time, ], self.nints, chan)[0]
 
             # Initialize model
-            pl_params = PlanetParams(self, pid, chan, eval=eval, lib=lib)
+            pl_params = PlanetParams(self, pid, chan, eval=eval)
 
             if (eval and pl_params.quasi_gamma == 0):
                 # Don't waste time running the following code
