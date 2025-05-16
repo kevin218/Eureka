@@ -29,6 +29,9 @@ from ..lib import plots, util
 from ..lib.split_channels import split
 from .models.AstroModel import PlanetParams
 
+# FINDME: Placeholder code until jaxoplanet.starry support is added
+starry = None
+
 
 @plots.apply_style
 def plot_fit(lc, model, meta, fitter, isTitle=True):

@@ -2,6 +2,9 @@ import numpy as np
 
 from ..lib.readECF import MetaClass
 
+# FINDME: Placeholder code until jaxoplanet.starry support is added
+starry = None
+
 
 class S5MetaClass(MetaClass):
     '''A class to hold Eureka! S5 metadata.
