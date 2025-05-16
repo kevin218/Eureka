@@ -216,13 +216,6 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - October 5, 2022 Taylor Bell
-        Initial version.
     """
     # Group the different variable types
     freenames = lc.freenames
