@@ -10,6 +10,7 @@ except ModuleNotFoundError:
     pass
 try:
     from . import jax_models
+    from . import jax_lightcurve
 except ModuleNotFoundError:
     # Don't require that the jax and jaxoplanet packages be installed
     # but also don't raise a warning here to avoid excessive spam
@@ -17,6 +18,7 @@ except ModuleNotFoundError:
 
 from . import fitters
 from . import gradient_fitters
+from . import lightcurve
 from . import likelihood
 from . import limb_darkening_fit
 from . import modelgrid

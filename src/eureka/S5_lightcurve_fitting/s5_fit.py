@@ -8,7 +8,6 @@ import astraeus.xarrayIO as xrio
 from .s5_meta import S5MetaClass
 from . import models as m
 from . import lightcurve
-from . import jax_lightcurve
 try:
     from . import differentiable_models as dm
 except ModuleNotFoundError:
@@ -16,6 +15,7 @@ except ModuleNotFoundError:
     dm = None
 try:
     from . import jax_models as jm
+    from . import jax_lightcurve
 except ModuleNotFoundError:
     # jax hasn't been installed
     jm = None
