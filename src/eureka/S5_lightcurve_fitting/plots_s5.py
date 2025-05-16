@@ -12,9 +12,9 @@ import corner
 from scipy import stats
 import fleck
 import astropy.units as unit
+import arviz as az
+from arviz.rcparams import rcParams as az_rcParams
 try:
-    import arviz as az
-    from arviz.rcparams import rcParams as az_rcParams
     import starry
 except ModuleNotFoundError:
     # PyMC3 hasn't been installed
@@ -557,11 +557,11 @@ def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
 
     Parameters
     ----------
-    trace : pymc3.backends.base.MultiTrace or arviz.InferenceData
-        A ``MultiTrace`` or ArviZ ``InferenceData`` object that contains the
-        samples.
-    model :
-
+    trace : arviz.InferenceData
+        An ArviZ ``InferenceData`` like object that contains the samples.
+    model : Class
+        A model_class instance used to make the plot within the PyMC3/jax
+        model context.
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object.
     freenames : iterable
