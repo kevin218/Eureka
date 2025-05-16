@@ -81,6 +81,11 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
             plots.plot_starry_star(lc, model, meta,
                                    fitter=calling_function+'StartingPoint')
 
+    # Plot Harmonica string starting point
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter=calling_function+'StartingPoint')
+
     def neg_lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
         return -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
     global lsq_t0
@@ -330,6 +335,11 @@ def emceefitter(lc, model, meta, log, **kwargs):
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta,
                                    fitter='emceeStartingPoint')
+
+    # Plot Harmonica string starting point
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter='emceeStartingPoint')
 
     # Initialize tread pool
     if meta.ncpu > 1:
@@ -866,6 +876,11 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta,
                                    fitter='dynestyStartingPoint')
+
+    # Plot Harmonica string starting point
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter='dynestyStartingPoint')
 
     # START DYNESTY
     l_args = [lc, model, freenames]
