@@ -344,13 +344,13 @@ class PlanetParams():
             self.limb_dark = 'quadratic'
             if eval:
                 self.u_original = np.copy(self.u)
-                u1 = 2*np.sqrt(self.u[0])*self.u[1]
-                u2 = np.sqrt(self.u[0])*(1-2*self.u[1])
-                self.u = np.array([u1, u2])
+                self.u1 = 2*np.sqrt(self.u[0])*self.u[1]
+                self.u2 = np.sqrt(self.u[0])*(1-2*self.u[1])
+                self.u = np.array([self.u1, self.u2])
             else:
-                u1 = 2*tt.sqrt(self.u1)*self.u2
-                u2 = tt.sqrt(self.u1)*(1-2*self.u2)
-                self.u = np.array([u1, u2])
+                self.u1 = 2*lib.sqrt(self.u1)*self.u2
+                self.u2 = lib.sqrt(self.u1)*(1-2*self.u2)
+                self.u = np.array([self.u1, self.u2])
 
         # Nicely packaging Harmonica coefficients
         self.ab = np.array([self.rp,
