@@ -9,11 +9,6 @@ from .s5_meta import S5MetaClass
 from . import models as m
 from . import lightcurve
 try:
-    from . import differentiable_models as dm
-except ModuleNotFoundError:
-    # PyMC3 hasn't been installed
-    dm = None
-try:
     from . import jax_models as jm
     from . import jax_lightcurve
 except ModuleNotFoundError:
@@ -75,13 +70,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     meta = S5MetaClass(**me.mergeevents(meta, s4_meta).__dict__)
     meta.set_defaults()
 
-    # Check to make sure that dm is accessible if using dm models/fitters
-    if (dm is None and ('starry' in meta.fit_method or
-                        'exoplanet' in meta.fit_method)):
-        raise AssertionError(f"fit_method is set to {meta.fit_method}, but "
-                             "could not import starry and/or pymc3 related "
-                             "packages. Ensure that you have installed the "
-                             "pymc3-related packages when installing Eureka!.")
+    # Check to make sure that jm is accessible if using jm models/fitters
+    if jm is None and ('jaxopt' in meta.fit_method or
+                       'nuts' in meta.fit_method):
+        raise AssertionError(f"meta.fit_method is set to {meta.fit_method}, "
+                             "but could not import jax-related packages. "
+                             "Ensure that you installed the jax-related "
+                             "packages when installing Eureka!.")
 
     if meta.testing_S5:
         # Only fit a single channel while testing unless doing a shared fit,
@@ -539,7 +534,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         log.writelog("=========================")
         return meta, params
 
-    if 'jaxopt' in meta.fit_method:
+    if 'jaxopt' in meta.fit_method or 'nuts' in meta.fit_method:
         LightCurve = jax_lightcurve.LightCurve
         AstroModel = jm.AstroModel
         CentroidModel = jm.CentroidModel
@@ -554,6 +549,9 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         PolynomialModel = jm.PolynomialModel
         QuasiLambertianPhaseCurve = jm.QuasiLambertianPhaseCurve
         SinusoidModel = jm.SinusoidPhaseCurveModel
+        # FINDME: Temporary place-holder until support for jaxoplanet.starry
+        # is added
+        StarryModel = None
         StepModel = jm.StepModel
         CompositeModel = jm.CompositeJaxModel
 
@@ -562,21 +560,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         time = time.filled(np.nan)
         flux = flux.filled(np.nan)
         flux_err = flux_err.filled(np.nan)
-    elif 'exoplanet' in meta.fit_method or 'nuts' in meta.fit_method:
-        LightCurve = lightcurve.LightCurve
-        AstroModel = dm.AstroModel
-        CentroidModel = dm.CentroidModel
-        # DampedOscillatorModel = dm.DampedOscillatorModel
-        ExpRampModel = dm.ExpRampModel
-        GPModel = dm.GPModel
-        HSTRampModel = dm.HSTRampModel
-        # LorentzianModel = dm.LorentzianModel
-        PolynomialModel = dm.PolynomialModel
-        QuasiLambertianPhaseCurve = dm.QuasiLambertianPhaseCurve
-        SinusoidModel = dm.SinusoidPhaseCurveModel
-        StarryModel = dm.StarryModel
-        StepModel = dm.StepModel
-        CompositeModel = dm.CompositePyMC3Model
     else:
         LightCurve = lightcurve.LightCurve
         AstroModel = m.AstroModel
@@ -1075,10 +1058,10 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         log.writelog("Completed exoplanet fit.")
         log.writelog("-------------------------")
     if 'nuts' in meta.fit_method:
-        log.writelog("Starting PyMC3 NUTS fit.")
+        log.writelog("Starting NUTS fit.")
         model.fitter = 'nuts'
         lc_model.fit(model, meta, log, fitter='nuts')
-        log.writelog("Completed PyMC3 NUTS fit.")
+        log.writelog("Completed NUTS fit.")
         log.writelog("-------------------------")
     if 'jaxopt' in meta.fit_method:
         log.writelog("Starting jaxopt fit.")

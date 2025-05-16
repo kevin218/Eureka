@@ -15,11 +15,6 @@ import astropy.units as unit
 import arviz as az
 from arviz.rcparams import rcParams as az_rcParams
 try:
-    import starry
-except ModuleNotFoundError:
-    # PyMC3 hasn't been installed
-    pass
-try:
     from harmonica import HarmonicaTransit
 except ModuleNotFoundError:
     # Harmonica hasn't been installed
@@ -31,6 +26,9 @@ warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
 from ..lib import plots, util
 from ..lib.split_channels import split
 from .models.AstroModel import PlanetParams
+
+# FINDME: Placeholder code until jaxoplanet.starry support is added
+starry = None
 
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
@@ -560,7 +558,7 @@ def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
     trace : arviz.InferenceData
         An ArviZ ``InferenceData`` like object that contains the samples.
     model : Class
-        A model_class instance used to make the plot within the PyMC3/jax
+        A model_class instance used to make the plot within the jax
         model context.
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object.
@@ -581,10 +579,8 @@ def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
     npanels = min([len(freenames), max_subplots])
 
     for i in range(nplots):
-        with model.model:
-            ax = az.plot_trace(trace,
-                               var_names=freenames[i*npanels:(i+1)*npanels],
-                               compact=compact, show=False, **kwargs)
+        ax = az.plot_trace(trace, var_names=freenames[i*npanels:(i+1)*npanels],
+                           compact=compact, show=False, **kwargs)
         fig = ax[0][0].figure
 
         if lc.white:
@@ -923,7 +919,7 @@ def plot_starry_star(lc, model, meta, fitter):
     ----------
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object.
-    model : eureka.S5_lightcurve_fitting.differentiable_models.CompositePyMC3Model  # noqa: E501
+    model : eureka.S5_lightcurve_fitting.jax_models.CompositeJaxModel
         The fitted composite model.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.

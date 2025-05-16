@@ -1,13 +1,9 @@
 import numpy as np
-try:
-    import starry
-    starry.config.quiet = True
-    starry.config.lazy = True
-except ModuleNotFoundError:
-    # PyMC3 hasn't been installed
-    pass
 
 from ..lib.readECF import MetaClass
+
+# FINDME: Placeholder code until jaxoplanet.starry support is added
+starry = None
 
 
 class S5MetaClass(MetaClass):
@@ -157,14 +153,16 @@ class S5MetaClass(MetaClass):
         self.run_sample = getattr(self, 'run_sample', 'auto')
         self.run_tol = getattr(self, 'run_tol', 0.1)
 
-        # PyMC3 NUTS sampler settings
-        self.exoplanet_first = getattr(self, 'exoplanet_first', False)
+        # numpyro NUTS sampler settings
+        self.jaxopt_first = getattr(self, 'jaxopt_first', False)
         self.chains = getattr(self, 'chains', 3)
-        self.target_accept = getattr(self, 'target_accept', 0.85)
+        # Set this to True if you have really tight covariances or are getting
+        # divergences (will be more RAM and compute intensive)
+        self.dense_mass = getattr(self, 'dense_mass', False)
         if 'nuts' in self.fit_method:
             # Must be provided in the ECF if relevant
-            self.tune = getattr(self, 'tune')
-            self.draws = getattr(self, 'draws')
+            self.run_nsteps = getattr(self, 'run_nsteps')
+            self.run_nburn = getattr(self, 'run_nburn')
 
         # Starry eclipse mapping pixel-sampling parameters
         self.pixelsampling = getattr(self, 'pixelsampling', False)
