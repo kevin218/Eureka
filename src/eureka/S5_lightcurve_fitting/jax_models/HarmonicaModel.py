@@ -2,8 +2,12 @@ import numpy as np
 try:
     import harmonica.jax as harmonica
     import jax.numpy as jnp
-except ImportError:
-    print("Could not import harmonica. Functionality may be limited.")
+except (ImportError, AttributeError):
+    # harmonica.jax is currently broken, so don't throw an error
+    # There's also already a warning printed in the models.harmonica
+    # file in the more general case of harmonica not being installed.
+    # We'll throw an error later if folks try to use this model
+    pass
 
 from ..models.BatmanModels import BatmanTransitModel
 from .AstroModel import PlanetParams
@@ -23,6 +27,11 @@ class HarmonicaTransitModel(BatmanTransitModel):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
+        raise NotImplementedError('There is currently a bug with the '
+                                  'harmonica.jax package. Once that is '
+                                  'resolved, we will enable Eureka!\'s '
+                                  'jax_models.HarmonicaTransitModel.')
+
         # Inherit from BatmanTransitModel class
         super().__init__(**kwargs)
         self.name = 'harmonica transit'
@@ -68,10 +77,8 @@ class HarmonicaTransitModel(BatmanTransitModel):
 
         if eval:
             lib = np
-            model = self.fit
         else:
             lib = jnp
-            model = self.model
 
         # Set all parameters
         lcfinal = lib.array([])
@@ -89,7 +96,7 @@ class HarmonicaTransitModel(BatmanTransitModel):
             light_curve = lib.ones(len(time))
             for pid in pid_iter:
                 # Initialize planet
-                pl_params = PlanetParams(model, pid, chan, eval=eval, lib=lib)
+                pl_params = PlanetParams(self, pid, chan, eval=eval, lib=lib)
 
                 # Enforce physicality to avoid crashes from Harmonica by
                 # returning something that should be a horrible fit

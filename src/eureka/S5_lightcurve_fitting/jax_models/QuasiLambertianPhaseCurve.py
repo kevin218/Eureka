@@ -55,10 +55,8 @@ class QuasiLambertianPhaseCurve(JaxModel):
 
         if eval:
             lib = np
-            model = self.fit
         else:
             lib = jnp
-            model = self.model
 
         lcfinal = lib.array([])
         for c in range(nchan):
@@ -73,7 +71,7 @@ class QuasiLambertianPhaseCurve(JaxModel):
                 time = split([time, ], self.nints, chan)[0]
 
             # Initialize model
-            pl_params = PlanetParams(model, pid, chan, eval=eval, lib=lib)
+            pl_params = PlanetParams(self, pid, chan, eval=eval, lib=lib)
 
             if (eval and pl_params.quasi_gamma == 0):
                 # Don't waste time running the following code

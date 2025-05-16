@@ -54,10 +54,8 @@ class SinusoidPhaseCurveModel(JaxModel):
 
         if eval:
             lib = np
-            model = self.fit
         else:
             lib = jnp
-            model = self.model
 
         lcfinal = lib.zeros(0)
         for c in range(nchan):
@@ -72,7 +70,7 @@ class SinusoidPhaseCurveModel(JaxModel):
                 time = split([time, ], self.nints, chan)[0]
 
             # Initialize model
-            pl_params = PlanetParams(model, pid, chan, eval=eval, lib=lib)
+            pl_params = PlanetParams(self, pid, chan, eval=eval, lib=lib)
 
             if (eval and pl_params.AmpCos1 == 0 and pl_params.AmpSin1 == 0
                     and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0):

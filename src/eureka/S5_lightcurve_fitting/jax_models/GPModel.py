@@ -38,6 +38,11 @@ class GPModel(JaxModel):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """  # noqa: E501
+        raise NotImplementedError('There is currently a bug with the '
+                                  'celerite2.jax package. Once that is '
+                                  'resolved, we will enable Eureka!\'s '
+                                  'jax_models.GPModel.')
+
         # Inherit from JaxModel class
         super().__init__(kernel_types=kernel_types,
                          nkernels=len(kernel_types),
