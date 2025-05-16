@@ -4,20 +4,7 @@ from copy import copy
 import inspect
 
 try:
-    import theano
-    theano.config.gcc__cxxflags += " -fexceptions"
-    import theano.tensor as tt
-
-    # Avoid tonnes of "Cannot construct a scalar test value" messages
-    import logging
-    logger = logging.getLogger("theano.tensor.opt")
-    logger.setLevel(logging.ERROR)
-except ImportError:
-    pass
-
-try:
-    import jax
-    jax.config.update("jax_enable_x64", True)
+    import jax.numpy as jnp
 except ImportError:
     pass
 
@@ -31,7 +18,7 @@ class PlanetParams():
     """
     Define planet parameters.
     """
-    def __init__(self, model, pid=0, channel=0, eval=True, lib=np):
+    def __init__(self, model, pid=0, channel=0, eval=True):
         """
         Set attributes to PlanetParams object.
 
@@ -52,9 +39,11 @@ class PlanetParams():
 
         if eval:
             parameterObject = model.parameters
+            lib = np
         else:
             # Jax/PyMC3 model that is being compiled
             parameterObject = model.model
+            lib = jnp
 
         # Planet ID
         self.pid = pid
@@ -529,8 +518,8 @@ def get_ecl_midpt(params, lib=np):
     params : object
         Contains the physical parameters for the transit model.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
 
     Returns
     -------
@@ -564,8 +553,8 @@ def true_anomaly(model, t, lib=np, xtol=1e-10):
     t : ndarray
         The time in days.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
     xtol : float; optional
         tolarance on error in eccentric anomaly (calculated along the way).
         Defaults to 1e-10.
@@ -590,8 +579,8 @@ def eccentric_anomaly(model, t, lib=np, xtol=1e-10):
     t : ndarray
         The time in days.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
     xtol : float; optional
         tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
@@ -630,8 +619,8 @@ def FSSI_Eccentric_Inverse(model, M, lib=np, xtol=1e-10):
     M : ndarray
         The mean anomaly in radians.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to numpy.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to numpy.
     xtol : float; optional
         tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
@@ -668,8 +657,8 @@ def FSSI(Y, x, f, fP, lib=np):
     fP : callable
         The first derivative of the function f with respect to x.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
 
     Returns
     -------

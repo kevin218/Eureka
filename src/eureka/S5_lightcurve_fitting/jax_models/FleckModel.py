@@ -95,7 +95,7 @@ class FleckTransitModel(m.FleckTransitModel):
             spotlat = lib.array([])
             spotlon = lib.array([])
             spotcon = lib.array([])
-            pl_params = PlanetParams(self, 0, chan, eval=eval, lib=lib)
+            pl_params = PlanetParams(self, 0, chan, eval=eval)
             spotcon0 = getattr(pl_params, 'spotcon')
             for n in range(pl_params.nspots):
                 # read radii, latitudes, longitudes, and contrasts
@@ -123,7 +123,7 @@ class FleckTransitModel(m.FleckTransitModel):
             light_curve = lib.ones(len(time))
             for pid in pid_iter:
                 # Initialize planet
-                pl_params = PlanetParams(self, pid, chan, eval=eval, lib=lib)
+                pl_params = PlanetParams(self, pid, chan, eval=eval)
 
                 # Enforce physicality to avoid crashes from Harmonica by
                 # returning something that should be a horrible fit
