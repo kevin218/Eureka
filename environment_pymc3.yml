@@ -47,7 +47,7 @@ dependencies:
         - exoplanet
         - exoplanet-core
         - exotic-ld==3.2.0 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
-        - fleck
+        - fleck@git+https://github.com/bmorris3/fleck.git@main
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
         - jwst==1.11.4
         - mc3 # Needed for uncertainties in the RMS time-averaging plots in S5
