@@ -157,7 +157,7 @@ class AstroModel(JaxModel):
                     # for normalization purposes (since not all phase curve
                     # models have terms that can be used to set the amplitude
                     # of the model)
-                    pl_params = PlanetParams(model, pid, chan, eval=eval,
+                    pl_params = PlanetParams(self, pid, chan, eval=eval,
                                              lib=lib)
                     planetFlux = pl_params.fp
 

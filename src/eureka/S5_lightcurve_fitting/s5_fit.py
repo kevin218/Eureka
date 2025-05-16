@@ -543,14 +543,14 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         LightCurve = jax_lightcurve.LightCurve
         AstroModel = jm.AstroModel
         CentroidModel = jm.CentroidModel
-        # DampedOscillatorModel = jm.DampedOscillatorModel
+        DampedOscillatorModel = jm.DampedOscillatorModel
         ExpRampModel = jm.ExpRampModel
-        # FleckTransitModel = jm.FleckTransitModel
+        FleckTransitModel = jm.FleckTransitModel
         GPModel = jm.GPModel
         HarmonicaTransitModel = jm.HarmonicaTransitModel
         HSTRampModel = jm.HSTRampModel
         JaxoplanetModel = jm.JaxoplanetModel
-        # LorentzianModel = jm.LorentzianModel
+        LorentzianModel = jm.LorentzianModel
         PolynomialModel = jm.PolynomialModel
         QuasiLambertianPhaseCurve = jm.QuasiLambertianPhaseCurve
         SinusoidModel = jm.SinusoidPhaseCurveModel

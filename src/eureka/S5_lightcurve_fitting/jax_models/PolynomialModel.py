@@ -3,7 +3,6 @@ import jax
 import jax.numpy as jnp
 
 from . import JaxModel
-from ...lib.readEPF import Parameters
 from ...lib.split_channels import split
 
 jax.config.update("jax_enable_x64", True)
@@ -28,18 +27,6 @@ class PolynomialModel(JaxModel):
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
-
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            coeff_dict = kwargs.get('coeff_dict')
-            params = {cN: coeff for cN, coeff in coeff_dict.items()
-                      if cN.startswith('c') and cN[1:].isdigit()}
-            self.parameters = Parameters(**params)
-
-        # Update coefficients
-        self._parse_coeffs()
 
     @property
     def time(self):
