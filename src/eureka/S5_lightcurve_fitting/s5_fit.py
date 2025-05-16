@@ -539,7 +539,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         log.writelog("=========================")
         return meta, params
 
-    if 'jaxoplanet' in meta.run_myfuncs:
+    if 'jaxopt' in meta.fit_method:
         LightCurve = jax_lightcurve.LightCurve
         AstroModel = jm.AstroModel
         CentroidModel = jm.CentroidModel
@@ -562,7 +562,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         time = time.filled(np.nan)
         flux = flux.filled(np.nan)
         flux_err = flux_err.filled(np.nan)
-    elif 'starry' in meta.run_myfuncs:
+    elif 'exoplanet' in meta.fit_method or 'nuts' in meta.fit_method:
         LightCurve = lightcurve.LightCurve
         AstroModel = dm.AstroModel
         CentroidModel = dm.CentroidModel
