@@ -1,12 +1,17 @@
 import numpy as np
-try:
-    import pymc3 as pm
-    import pymc3_ext as pmx
-    import arviz
-except ModuleNotFoundError:
-    # PyMC3 hasn't been installed
-    pass
+import sys
+from io import StringIO
+import arviz
 from astropy import table
+try:
+    import jax
+    import numpyro
+    import numpyro_ext
+    from numpyro.infer import MCMC, NUTS
+except ModuleNotFoundError:
+    # jax hasn't been installed
+    pass
+
 
 from .likelihood import computeRedChiSq, update_uncertainty
 from . import plots_s5 as plots
@@ -14,50 +19,43 @@ from .fitters import group_variables, load_old_fitparams, save_fit
 from ..lib.split_channels import get_trim
 
 
-def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
-                    **kwargs):
-    """Perform sampling using exoplanet.
+def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
+                 **kwargs):
+    """Perform sampling using numpyro_ext.optim.optimize.
 
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object
-    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    model: eureka.S5_lightcurve_fitting.jax_models.CompositeJaxModel
         The composite model to fit
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log: logedit.Logedit
         The open log in which notes from this step can be added.
     calling_function: str, optional
-        The fitter that is being run (e.g. may be 'emcee' if running lsqfitter
-        to initialize emcee walkers). Defailts to 'exoplanet'.
+        The fitter that is being run (e.g., may be 'emcee' if running lsqfitter
+        to initialize emcee walkers). Defailts to 'jaxopt'.
     **kwargs:
         Arbitrary keyword arguments.
 
     Returns
     -------
-    best_model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    best_model: eureka.S5_lightcurve_fitting.jax_models.CompositeJaxModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - April 6, 2022 Taylor Bell
-        Initial version.
     """
     # Group the different variable types
     freenames = lc.freenames
     freepars = group_variables(model)[0]
     if meta.old_fitparams is not None:
-        freepars = load_old_fitparams(lc, meta, log, freenames, 'exoplanet')
-
-    model.setup(lc.time, lc.flux, lc.unc, freepars)
-    model.update(freepars)
+        freepars = load_old_fitparams(lc, meta, log, freenames, 'jaxopt')
 
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
+
+    # Set the model parameters to their starting values
+    model.update(freepars)
 
     # Plot starting point
     if meta.isplots_S5 >= 1:
@@ -68,14 +66,35 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
             plots.plot_GP_components(lc, model, meta,
                                      fitter=calling_function+'StartingPoint')
 
-    # Plot star spots
-    if 'spotrad' in model.longparamlist[0] and meta.isplots_S5 >= 3:
-        plots.plot_starry_star(lc, model, meta,
-                               fitter=calling_function+'StartingPoint')
+    # Plot star spots starting point
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta,
+                              fitter=calling_function+'StartingPoint')
+    if 'jaxoplanet' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta,
+                                   fitter=calling_function+'StartingPoint')
 
-    log.writelog('Running exoplanet optimizer...')
-    with model.model:
-        map_soln = pmx.optimize(start=start)
+    # Plot Harmonica string starting point
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter=calling_function+'StartingPoint')
+
+    # Add some extra fitting controls
+    optimizer = numpyro_ext.optim.JAXOptMinimize(
+        method=meta.lsq_method, tol=meta.lsq_tol,
+        maxiter=meta.lsq_maxiter,
+    )
+    # Initialize the optimizer
+    run_optim = numpyro_ext.optim.optimize(
+        model.setup,
+        init_strategy=numpyro.infer.init_to_value(values=start),
+        optimizer=optimizer
+    )
+
+    log.writelog('Running jaxopt optimizer...')
+    map_soln = run_optim(jax.random.PRNGKey(0),
+                         lc.time, lc.flux, lc.unc, freepars)
 
     # Get the best fit params
     fit_params = np.array([map_soln[name] for name in freenames])
@@ -92,7 +111,7 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
-    log.writelog('\nEXOPLANET RESULTS:')
+    log.writelog('\nJAXOPT RESULTS:')
     for i in range(len(freenames)):
         if 'scatter_mult' in freenames[i]:
             chan = freenames[i].split('_ch')[-1].split('_')[0]
@@ -132,8 +151,17 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         plots.plot_fit(lc, model, meta, fitter=calling_function)
 
     # Plot star spots
-    if 'spotrad' in model.longparamlist[0] and meta.isplots_S5 >= 3:
-        plots.plot_starry_star(lc, model, meta, fitter=calling_function)
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta,
+                              fitter=calling_function)
+    if 'jaxoplanet' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta,
+                                   fitter=calling_function)
+
+    # Plot Harmonica string
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta, fitter=calling_function)
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
@@ -142,22 +170,23 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     # Zoom in on phase variations
     if meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames
                                  or 'sinusoid_pc' in meta.run_myfuncs
-                                 or 'poet_pc' in meta.run_myfuncs
                                  or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
-    if meta.pixelsampling and meta.isplots_S5 >= 1:
-        eclipse_maps = map_soln['map'][np.newaxis]
-        plots.plot_eclipse_map(lc, eclipse_maps, meta, fitter=calling_function)
+    # FINDME: Not yet implemented
+    # if meta.pixelsampling and meta.isplots_S5 >= 1:
+    #     eclipse_maps = map_soln['map'][np.newaxis]
+    #     plots.plot_eclipse_map(lc, eclipse_maps, meta,
+    #                            fitter=calling_function)
 
     # Make RMS time-averaging plot
-    if meta.isplots_S5 >= 3 and calling_function == 'exoplanet':
+    if meta.isplots_S5 >= 3 and calling_function == 'jaxopt':
         # This plot is only really useful if you're actually using the
-        # exoplanet fitter, otherwise don't make it
+        # jaxopt fitter, otherwise don't make it
         plots.plot_rms(lc, model, meta, fitter=calling_function)
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3 and calling_function == 'exoplanet':
+    if meta.isplots_S5 >= 3 and calling_function == 'jaxopt':
         plots.plot_res_distr(lc, model, meta, fitter=calling_function)
 
     # Make a new model instance
@@ -168,7 +197,7 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
 
 
 def nutsfitter(lc, model, meta, log, **kwargs):
-    """Perform sampling using PyMC3 NUTS sampler.
+    """Perform sampling using numpyro's NUTS sampler.
 
     Parameters
     ----------
@@ -187,13 +216,6 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - October 5, 2022 Taylor Bell
-        Initial version.
     """
     # Group the different variable types
     freenames = lc.freenames
@@ -202,15 +224,15 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         freepars = load_old_fitparams(lc, meta, log, freenames, 'nuts')
     ndim = len(freenames)
 
-    model.setup(lc.time, lc.flux, lc.unc, freepars)
+    # Set the model parameters to their starting values
     model.update(freepars)
 
-    if meta.exoplanet_first:
+    if meta.jaxopt_first:
         # Only call exoplanet fitter first if asked
-        log.writelog('\nCalling exoplanetfitter first...')
+        log.writelog('\nCalling jaxoptfitter first...')
         # RUN exoplanet optimizer
-        exo_sol = exoplanetfitter(lc, model, meta, log,
-                                  calling_function='nuts_exoplanet', **kwargs)
+        exo_sol = jaxoptfitter(lc, model, meta, log,
+                               calling_function='nuts_jaxopt', **kwargs)
 
         freepars = exo_sol.fit_params
         model.update(freepars)
@@ -228,25 +250,56 @@ def nutsfitter(lc, model, meta, log, **kwargs):
             plots.plot_GP_components(lc, model, meta,
                                      fitter='nutsStartingPoint')
 
-    # Plot star spots
-    if 'spotrad' in model.longparamlist[0] and meta.isplots_S5 >= 3:
-        plots.plot_starry_star(lc, model, meta, fitter='nutsStartingPoint')
+    # Plot star spots starting point
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta,
+                              fitter='nutsStartingPoint')
+    if 'jaxoplanet' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta,
+                                   fitter='nutsStartingPoint')
 
-    log.writelog('Running PyMC3 NUTS sampler...')
-    with model.model:
-        trace = pmx.sample(tune=meta.tune, draws=meta.draws, start=start,
-                           target_accept=meta.target_accept,
-                           chains=meta.chains, cores=meta.ncpu)
-        print()
+    # Plot Harmonica string starting point
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter='nutsStartingPoint')
 
-        # Log detailed convergence and sampling statistics
-        log.writelog('\nPyMC3 sampling statistics:', mute=(not meta.verbose))
-        log.writelog(pm.summary(trace, var_names=freenames),
-                     mute=(not meta.verbose))
-        log.writelog('', mute=(not meta.verbose))
+    log.writelog('Running numpyro\'s NUTS sampler...')
+    numpyro.set_host_device_count(meta.ncpu)
+    kernel = NUTS(model.setup, dense_mass=meta.dense_mass,
+                  init_strategy=numpyro.infer.init_to_value(values=start))
+    mcmc = MCMC(sampler=kernel, num_warmup=meta.run_nburn,
+                num_samples=meta.run_nsteps, num_chains=meta.chains,
+                chain_method="parallel")
+    mcmc.run(jax.random.PRNGKey(1), lc.time, lc.flux, lc.unc, freepars)
+    samples = mcmc.get_samples()
+    # Wait for multi-threaded execution to finish before continuing
+    jax.block_until_ready(samples)
 
-    trace_az = arviz.from_pymc3(trace, model=model.model)
-    samples = np.hstack([trace[name].reshape(-1, 1) for name in freenames])
+    # Log detailed convergence and sampling statistics
+    sys.stderr.flush()
+    sys.stdout.flush()
+    log.writelog('\n\nNUTS sampling statistics:', mute=(not meta.verbose),
+                 end='')
+    # Need to temporarily redirect stdout since mcmc.print_summary() prints
+    # to stdout rather than returning a string
+    old_stdout = sys.stdout
+    sys.stdout = mystdout = StringIO()
+    mcmc.print_summary()
+    sys.stdout = old_stdout
+    log.writelog(mystdout.getvalue(), mute=(not meta.verbose))
+
+    # FINDME: Currently unused code, but could be used to make some other
+    # potentially helpful figures
+    # (see https://python.arviz.org/en/latest/api/plots.html)
+    # posterior_predictive = numpyro.infer.Predictive(model.setup, samples)(
+    #     jax.random.PRNGKey(2), lc.time, lc.flux, lc.unc, freepars)
+    # prior = numpyro.infer.Predictive(model.setup, num_samples=500)(
+    #     jax.random.PRNGKey(3), lc.time, lc.flux, lc.unc, freepars)
+    # trace_az = arviz.from_numpyro(
+    #     mcmc, prior=prior, posterior_predictive=posterior_predictive)
+    trace_az = arviz.from_numpyro(mcmc)
+    samples = np.hstack([samples[name].reshape(-1, 1) for name in freenames])
 
     # Record median + percentiles
     q = np.percentile(samples, [16, 50, 84], axis=0)
@@ -274,7 +327,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
-    log.writelog('\nPYMC3 NUTS RESULTS:')
+    log.writelog('\nNUTS RESULTS:')
     for i in range(ndim):
         if 'scatter_mult' in freenames[i]:
             chan = freenames[i].split('_ch')[-1].split('_')[0]
@@ -327,9 +380,16 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='nuts')
 
-    # Plot star spots
-    if 'spotrad' in model.longparamlist[0] and meta.isplots_S5 >= 3:
-        plots.plot_starry_star(lc, model, meta, fitter='nuts')
+    # Plot star spots starting point
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta, fitter='nuts')
+    if 'jaxoplanet' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta, fitter='nuts')
+
+    # Plot Harmonica string
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta, fitter='nuts')
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
@@ -338,15 +398,15 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     # Zoom in on phase variations
     if meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames
                                  or 'sinusoid_pc' in meta.run_myfuncs
-                                 or 'poet_pc' in meta.run_myfuncs
                                  or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter='nuts')
 
+    # FINDME: Not yet implemented
     # Show the inferred planetary brightness map
-    if meta.pixelsampling and meta.isplots_S5 >= 1:
-        eclipse_maps = np.transpose(trace_az.posterior.stack(
-            sample=("chain", "draw"))['map'][:], [2, 0, 1])
-        plots.plot_eclipse_map(lc, eclipse_maps, meta, fitter='nuts')
+    # if meta.pixelsampling and meta.isplots_S5 >= 1:
+    #     eclipse_maps = np.transpose(trace_az.posterior.stack(
+    #         sample=("chain", "draw"))['map'][:], [2, 0, 1])
+    #     plots.plot_eclipse_map(lc, eclipse_maps, meta, fitter='nuts')
 
     # Make RMS time-averaging plot
     if meta.isplots_S5 >= 3:
@@ -357,7 +417,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         plots.plot_res_distr(lc, model, meta, fitter='nuts')
 
         # Plot trace evolution
-        plots.plot_trace(trace, model, lc, freenames, meta)
+        plots.plot_trace(trace_az, model, lc, freenames, meta)
 
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='nuts')

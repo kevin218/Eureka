@@ -10,7 +10,7 @@ fit_method      [lsq, emcee, dynesty] #options are: lsq, emcee, dynesty (can lis
 run_myfuncs     [batman_tr, polynomial, GP] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
 
 # Manual clipping in time
-manual_clip     [[None,2],]    # A list of lists specifying the start and end integration numbers for manual removal.
+manual_clip     [[None,1],]    # A list of lists specifying the start and end integration numbers for manual removal.
 
 # Limb darkening controls
 # IMPORTANT: limb-darkening coefficients are not automatically fixed then, change to 'fixed' in .epf file whether they should be fixed or fitted!
@@ -19,7 +19,7 @@ ld_file          None  # Fully qualified path to the location of a limb darkenin
 ld_file_white    None  # Fully qualified path to the location of a limb darkening file that you want to use for the white-light light curve (required if ld_file is not None and any EPF parameters are set to white_free or white_fixed).
 
 #lsq
-lsq_method      'Nelder-Mead' # The scipy.optimize.minimize optimization method to use
+lsq_method      'Powell' # The scipy.optimize.minimize optimization method to use
 lsq_tol         1e-6 # The tolerance for the scipy.optimize.minimize optimization method
 
 #mcmc

@@ -1,17 +1,10 @@
 import numpy as np
 import astropy.constants as const
-from copy import deepcopy
+from copy import copy
 import inspect
 
 try:
-    import theano
-    theano.config.gcc__cxxflags += " -fexceptions"
-    import theano.tensor as tt
-
-    # Avoid tonnes of "Cannot construct a scalar test value" messages
-    import logging
-    logger = logging.getLogger("theano.tensor.opt")
-    logger.setLevel(logging.ERROR)
+    import jax.numpy as jnp
 except ImportError:
     pass
 
@@ -48,9 +41,9 @@ class PlanetParams():
             parameterObject = model.parameters
             lib = np
         else:
-            # PyMC3 model that is being compiled
+            # Jax/PyMC3 model that is being compiled
             parameterObject = model.model
-            lib = tt
+            lib = jnp
 
         # Planet ID
         self.pid = pid
@@ -339,17 +332,17 @@ class PlanetParams():
         elif self.limb_dark == 'kipping2013':
             self.limb_dark = 'quadratic'
             if eval:
-                self.u_original = np.copy(self.u)
-                u1 = 2*np.sqrt(self.u[0])*self.u[1]
-                u2 = np.sqrt(self.u[0])*(1-2*self.u[1])
-                self.u = np.array([u1, u2])
+                self.u_original = copy(self.u)
+                self.u1 = 2*lib.sqrt(self.u[0])*self.u[1]
+                self.u2 = lib.sqrt(self.u[0])*(1-2*self.u[1])
+                self.u = lib.array([self.u1, self.u2])
             else:
-                u1 = 2*tt.sqrt(self.u1)*self.u2
-                u2 = tt.sqrt(self.u1)*(1-2*self.u2)
-                self.u = np.array([u1, u2])
+                self.u1 = 2*lib.sqrt(self.u1)*self.u2
+                self.u2 = lib.sqrt(self.u1)*(1-2*self.u2)
+                self.u = lib.array([self.u1, self.u2])
 
         # Nicely packaging Harmonica coefficients
-        self.ab = np.array([self.rp,
+        self.ab = lib.array([self.rp,
                             self.a1, self.b1,
                             self.a2, self.b2,
                             self.a3, self.b3])
@@ -462,7 +455,7 @@ class AstroModel(Model):
             nchan = 1
             channels = [channel, ]
 
-        pid_input = deepcopy(pid)
+        pid_input = copy(pid)
         if pid_input is None:
             pid_iter = range(self.num_planets)
         else:
@@ -525,8 +518,8 @@ def get_ecl_midpt(params, lib=np):
     params : object
         Contains the physical parameters for the transit model.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
 
     Returns
     -------
@@ -560,8 +553,8 @@ def true_anomaly(model, t, lib=np, xtol=1e-10):
     t : ndarray
         The time in days.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
     xtol : float; optional
         tolarance on error in eccentric anomaly (calculated along the way).
         Defaults to 1e-10.
@@ -586,8 +579,8 @@ def eccentric_anomaly(model, t, lib=np, xtol=1e-10):
     t : ndarray
         The time in days.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
     xtol : float; optional
         tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
@@ -626,8 +619,8 @@ def FSSI_Eccentric_Inverse(model, M, lib=np, xtol=1e-10):
     M : ndarray
         The mean anomaly in radians.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to numpy.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to numpy.
     xtol : float; optional
         tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
@@ -664,8 +657,8 @@ def FSSI(Y, x, f, fP, lib=np):
     fP : callable
         The first derivative of the function f with respect to x.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
 
     Returns
     -------

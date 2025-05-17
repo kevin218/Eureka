@@ -1,21 +1,13 @@
 import numpy as np
+import jax.numpy as jnp
 
-import theano
-theano.config.gcc__cxxflags += " -fexceptions"
-import theano.tensor as tt
-
-# Avoid tonnes of "Cannot construct a scalar test value" messages
-import logging
-logger = logging.getLogger("theano.tensor.opt")
-logger.setLevel(logging.ERROR)
-
-from .PyMC3Models import PyMC3Model
+from .JaxModel import JaxModel
 # Importing these here to give access to other differentiable models
 from ..models.AstroModel import PlanetParams, get_ecl_midpt, true_anomaly  # NOQA: F401, E501
 from ...lib.split_channels import split
 
 
-class AstroModel(PyMC3Model):
+class AstroModel(JaxModel):
     """A model that combines all astrophysical components."""
     def __init__(self, components, **kwargs):
         """Initialize the phase curve model.
@@ -53,11 +45,14 @@ class AstroModel(PyMC3Model):
             The collection of astrophysical model components.
         """
         self._components = components
+        self.jaxoplanet_model = None
         self.starry_model = None
         self.phasevariation_models = []
         self.stellar_models = []
         for component in self.components:
-            if 'starry' in component.name.lower():
+            if 'jaxoplanet' in component.name.lower():
+                self.jaxoplanet_model = component
+            elif 'starry' in component.name.lower():
                 self.starry_model = component
             elif 'phase curve' in component.name.lower():
                 self.phasevariation_models.append(component)
@@ -107,7 +102,8 @@ class AstroModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
-        # Currently can't separate starry models (given mutual occultations)
+        # Can't separately evaluate jaxoplanet models to allow for
+        # mutual occultations
         pid_iter = range(self.num_planets)
 
         # Get the time
@@ -115,12 +111,14 @@ class AstroModel(PyMC3Model):
             self.time = kwargs.get('time')
 
         if eval:
-            lib = np.ma
+            lib = np
+            model = self.fit
         else:
-            lib = tt
+            lib = jnp
+            model = self.model
 
         # Set all parameters
-        lcfinal = lib.zeros(0)
+        lcfinal = jnp.zeros(0)
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -135,12 +133,9 @@ class AstroModel(PyMC3Model):
             starFlux = lib.ones(len(time))
             for component in self.stellar_models:
                 starFlux *= component.eval(channel=chan, eval=eval, **kwargs)
-            if self.starry_model is not None:
-                result = self.starry_model.eval(channel=chan, eval=eval,
-                                                piecewise=True, **kwargs)[0]
-                transits = result.pop(0)
-                eclipses = result
-                starFlux *= transits
+            if self.jaxoplanet_model is not None:
+                starFlux *= self.jaxoplanet_model.eval(channel=chan, eval=eval,
+                                                       **kwargs)
 
             planetFluxes = lib.zeros(len(time))
             for pid in pid_iter:
@@ -149,14 +144,22 @@ class AstroModel(PyMC3Model):
 
                 if self.starry_model is not None:
                     # User is fitting an eclipse model
-                    planetFlux = eclipses[pid]
+                    raise NotImplementedError(
+                        "Eclipse models are not yet implemented in the jax "
+                        "version of the AstroModel. Please use the numpy "
+                        "version of the AstroModel for eclipse models.")
                 elif len(self.phasevariation_models) > 0:
                     # User is dealing with phase variations of a
-                    # non-eclipsing object
-                    planetFlux = lib.ones(len(time))
+                    # non-eclipsing object. Still require the fp parameter
+                    # for normalization purposes (since not all phase curve
+                    # models have terms that can be used to set the amplitude
+                    # of the model)
+                    pl_params = PlanetParams(self, pid, chan, eval=eval,
+                                             lib=lib)
+                    planetFlux = pl_params.fp
 
                 for model in self.phasevariation_models:
-                    planetFlux *= model.eval(channel=chan, pid=pid, eval=eval,
+                    planetFlux *= model.eval(pid, channel=chan, eval=eval,
                                              **kwargs)
 
                 planetFluxes += planetFlux

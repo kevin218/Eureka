@@ -1,23 +1,17 @@
+from copy import copy
 import numpy as np
-import copy
-
-import theano
-theano.config.gcc__cxxflags += " -fexceptions"
-import theano.tensor as tt
-
-# Avoid tonnes of "Cannot construct a scalar test value" messages
-import logging
-logger = logging.getLogger("theano.tensor.opt")
-logger.setLevel(logging.ERROR)
-
-import pymc3 as pm
-BoundedNormal_0 = pm.Bound(pm.Normal, lower=0.0)
-BoundedNormal_0_1 = pm.Bound(pm.Normal, lower=0.0, upper=1.0)
-BoundedNormal_m1_1 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)
-BoundedNormal_90 = pm.Bound(pm.Normal, upper=90.)
+import numpyro
+import jax.numpy as jnp
+from numpyro.distributions import (
+    Normal, Uniform, LogUniform, LogNormal, TruncatedNormal)
 
 from ..models import Model, CompositeModel
 from ...lib.split_channels import split, get_trim
+
+
+class model_class:
+    def __init__(self):
+        pass
 
 
 class fit_class:
@@ -25,19 +19,19 @@ class fit_class:
         pass
 
 
-class PyMC3Model(Model):
+class JaxModel(Model):
     def __init__(self, **kwargs):
         """Create a model instance.
 
         Parameters
         ----------
         **kwargs : dict
-            Parameters to set in the PyMC3Model object.
+            Parameters to set in the PyMC3JaxModelModel object.
             Any parameter named log will not be loaded into the
-            PyMC3Model object as Logedit objects cannot be pickled
+            JaxModel object as Logedit objects cannot be pickled
             which is required for multiprocessing.
         """
-        self.default_name = 'New PyMC3Model'
+        self.default_name = 'New JaxModel'
         # Set up PyMC3-specific default attributes
         kwargs['name'] = kwargs.get('name', self.default_name)
 
@@ -56,12 +50,12 @@ class PyMC3Model(Model):
 
         Parameters
         ----------
-        other : eureka.S5_lightcurve_fitting.models.PyMC3Model
+        other : eureka.S5_lightcurve_fitting.jax_models.JaxModel
             The model to multiply.
 
         Returns
         -------
-        eureka.S5_lightcurve_fitting.models.CompositePyMC3Model
+        eureka.S5_lightcurve_fitting.jax_models.CompositeJaxModel
             The combined model.
         """
         # Make sure it is the right type
@@ -78,9 +72,9 @@ class PyMC3Model(Model):
         else:
             paramtitles = self.paramtitles
 
-        return CompositePyMC3Model([copy.copy(self), other],
-                                   parameters=parameters,
-                                   paramtitles=paramtitles)
+        return CompositeJaxModel([copy(self), other],
+                                 parameters=parameters,
+                                 paramtitles=paramtitles)
 
     @property
     def model(self):
@@ -94,6 +88,54 @@ class PyMC3Model(Model):
         # Update the components' model
         for component in self.components:
             component.model = model
+
+    @property
+    def flux(self):
+        """A getter for the flux."""
+        return self._flux
+
+    @flux.setter
+    def flux(self, flux_array):
+        """A setter for the flux
+
+        Parameters
+        ----------
+        flux_array : sequence
+            The flux array
+        """
+        # Check the type
+        if not isinstance(flux_array, (np.ndarray, tuple, list, type(None))):
+            raise TypeError("flux axis must be a tuple, list, or numpy array.")
+
+        if isinstance(flux_array, np.ma.core.MaskedArray):
+            # Convert to a numpy array with NaN masking
+            flux_array = flux_array.filled(np.nan)
+
+        # Set the array
+        self._flux = flux_array
+
+    @property
+    def time(self):
+        """A getter for the time"""
+        return self._time
+
+    @time.setter
+    def time(self, time_array):
+        """A setter for the time"""
+        # Check the type
+        if not isinstance(time_array, (np.ndarray, tuple, list, type(None))):
+            raise TypeError("Time axis must be a tuple, list, or numpy array.")
+
+        if isinstance(time_array, np.ma.core.MaskedArray):
+            # Convert to a numpy array with NaN masking
+            time_array = time_array.filled(np.nan)
+
+        # Set the array
+        self._time = time_array
+
+        # Set the array for the components
+        for component in self.components:
+            component.time = time_array
 
     def interp(self, new_time, nints, eval=True, channel=None, **kwargs):
         """Evaluate the model over a different time array.
@@ -113,7 +155,7 @@ class PyMC3Model(Model):
         **kwargs : dict
             Additional parameters to pass to self.eval().
         """
-        # Inherit from Model class but add the eval argument for PyMC3 models
+        # Inherit from Model class but add the eval argument for jax models
         return super().interp(new_time, nints, eval=eval, channel=channel,
                               **kwargs)
 
@@ -126,7 +168,7 @@ class PyMC3Model(Model):
             New parameter values.
         **kwargs : dict
             Unused by the base
-            eureka.S5_lightcurve_fitting.diferentiable_models.PyMC3Model class.
+            eureka.S5_lightcurve_fitting.jax_models.JaxModel class.
         """
         for val, arg in zip(newparams, self.freenames):
             # For now, the dict and Parameter are separate
@@ -144,7 +186,7 @@ class PyMC3Model(Model):
             component.setup(**kwargs)
 
 
-class CompositePyMC3Model(PyMC3Model, CompositeModel):
+class CompositeJaxModel(JaxModel, CompositeModel):
     """A class to create composite models."""
     def __init__(self, components, **kwargs):
         """Initialize the composite model.
@@ -155,102 +197,33 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             The list of model components.
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
+            eureka.S5_lightcurve_fitting.jax_models.JaxModel.__init__().
         """
-        self.issetup = False
+        # self.issetup = False
 
-        # Inherit from PyMC3Model class
-        PyMC3Model.__init__(self, components=components, **kwargs)
+        # Inherit from JaxModel class
+        JaxModel.__init__(self, components=components, **kwargs)
 
-        # Setup PyMC3 model (which will also be stored in components)
-        self.model = pm.Model()
-        self.model.parameters = self.parameters
+        # Setup Jax model (which will also be stored in components)
+        self.model = model_class()
 
         self.GP = False
         for component in self.components:
-            component.fit = self.fit
             if component.modeltype == 'GP':
                 self.GP = True
 
-        # Setup PyMC3 model parameters
-        with self.model:
-            for parname in self.parameters.params:
-                param = getattr(self.parameters, parname)
-                if param.ptype in ['fixed', 'independent']:
-                    setattr(self.model, parname, param.value)
-                    self.model.named_vars[parname] = param.value
-                elif param.ptype not in ['free', 'shared', 'white_free',
-                                         'white_fixed', 'independent']:
-                    message = (f'ptype {param.ptype} for parameter '
-                               f'{param.name} is not recognized.')
-                    raise ValueError(message)
-                else:
-                    if param.prior == 'U':
-                        setattr(self.model, parname,
-                                pm.Uniform(parname,
-                                           lower=param.priorpar1,
-                                           upper=param.priorpar2,
-                                           testval=param.value))
-                    elif param.prior == 'N':
-                        if any(substring in parname
-                               for substring in ['ecosw', 'esinw']):
-                            # ecosw and esinw are defined on [-1,1]
-                            setattr(self.model, parname,
-                                    BoundedNormal_m1_1(
-                                        parname,
-                                        mu=param.priorpar1,
-                                        sigma=param.priorpar2,
-                                        testval=param.value))
-                        elif ('ecc' in parname or
-                                (any(substring in parname
-                                     for substring in ['u1', 'u2'])
-                                 and self.parameters.limb_dark.value ==
-                                    'kipping2013')):
-                            # Kipping2013 parameters are only on [0,1]
-                            # Eccentricity is only [0,1]
-                            setattr(self.model, parname,
-                                    BoundedNormal_0_1(
-                                        parname,
-                                        mu=param.priorpar1,
-                                        sigma=param.priorpar2,
-                                        testval=param.value))
-                        elif any(substring in parname
-                                 for substring in ['per', 'scatter_mult',
-                                                   'scatter_ppm', 'c0',
-                                                   'r1', 'r3']):
-                            setattr(self.model, parname,
-                                    BoundedNormal_0(
-                                        parname,
-                                        mu=param.priorpar1,
-                                        sigma=param.priorpar2,
-                                        testval=param.value))
-                        elif 'inc' in parname:
-                            # An inclination > 90 is not meaningful
-                            setattr(self.model, parname,
-                                    BoundedNormal_90(
-                                        parname,
-                                        mu=param.priorpar1,
-                                        sigma=param.priorpar2,
-                                        testval=param.value))
-                        else:
-                            setattr(self.model, parname,
-                                    pm.Normal(parname,
-                                              mu=param.priorpar1,
-                                              sigma=param.priorpar2,
-                                              testval=param.value))
-                    elif param.prior == 'LU':
-                        setattr(self.model, parname,
-                                tt.exp(pm.Uniform(
-                                    parname,
-                                    lower=param.priorpar1,
-                                    upper=param.priorpar2,
-                                    testval=param.value)))
-                    elif param.prior == 'LN':
-                        setattr(self.model, parname,
-                                pm.Lognormal(parname,
-                                             mu=param.priorpar1,
-                                             tau=param.priorpar2,
-                                             testval=param.value))
+    @property
+    def fit(self):
+        """A getter for the fit."""
+        return self._fit
+
+    @fit.setter
+    def fit(self, fit):
+        """A setter for the model."""
+        self._fit = fit
+        # Update the components' fit
+        for component in self.components:
+            component.fit = fit
 
     def setup(self, time, flux, lc_unc, newparams):
         """Setup a model for evaluation and fitting.
@@ -266,106 +239,162 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
         newparams : ndarray
             New parameter values.
         """
-        if self.issetup:
-            # Only setup once if trying multiple different fitting algorithms
-            return
-
         self.time = time
         self.flux = flux
         self.lc_unc = lc_unc
 
-        with self.model:
-            if hasattr(self.model, 'scatter_ppm'):
-                for c in range(self.nchannel_fitted):
-                    if c == 0:
-                        parname_temp = 'scatter_ppm'
-                    else:
-                        parname_temp = f'scatter_ppm_ch{c}'
-
-                    if self.multwhite:
-                        size = self.nints[c]
-                    else:
-                        size = self.time.size
-                    unc = getattr(self.model, parname_temp)*tt.ones(size)/1e6
-
-                    if c == 0:
-                        self.scatter_array = unc
-                    else:
-                        self.scatter_array = \
-                            tt.concatenate([self.scatter_array, unc])
-            elif hasattr(self.model, 'scatter_mult'):
-                # Fitting the noise level as a multiplier
-                for c in range(self.nchannel_fitted):
-                    if c == 0:
-                        parname_temp = 'scatter_mult'
-                    else:
-                        parname_temp = f'scatter_mult_ch{c}'
-
-                    chan = self.fitted_channels[c]
-                    trim1, trim2 = get_trim(self.nints, chan)
-                    unc = self.lc_unc[trim1:trim2]
-
-                    scatter_mult = getattr(self.model, parname_temp)
-                    if c == 0:
-                        self.scatter_array = unc*scatter_mult
-                    else:
-                        self.scatter_array = \
-                            tt.concatenate([self.scatter_array,
-                                            unc*scatter_mult])
+        # Setup Jax model parameters
+        for parname in self.parameters.params:
+            param = getattr(self.parameters, parname)
+            if param.ptype in ['fixed', 'independent']:
+                setattr(self.model, parname, param.value)
+            elif param.ptype not in ['free', 'shared', 'white_free',
+                                     'white_fixed', 'independent']:
+                message = (f'ptype {param.ptype} for parameter '
+                           f'{param.name} is not recognized.')
+                raise ValueError(message)
             else:
-                # Not fitting the noise level
-                self.scatter_array = self.lc_unc
+                if param.prior == 'U':
+                    setattr(self.model, parname, numpyro.sample(
+                        parname, Uniform(low=param.priorpar1,
+                                         high=param.priorpar2)))
+                elif param.prior == 'N':
+                    if any(substring in parname
+                            for substring in ['ecosw', 'esinw']):
+                        # ecosw and esinw are defined on [-1,1]
+                        setattr(self.model, parname, numpyro.sample(
+                            parname, TruncatedNormal(loc=param.priorpar1,
+                                                     scale=param.priorpar2,
+                                                     low=-1.0, high=1.0)))
+                    elif ('ecc' in parname or
+                            (any(substring in parname
+                                 for substring in ['u1', 'u2'])
+                             and self.parameters.limb_dark.value ==
+                             'kipping2013')):
+                        # Kipping2013 parameters are only on [0,1]
+                        # Eccentricity is only [0,1]
+                        setattr(self.model, parname, numpyro.sample(
+                            parname, TruncatedNormal(loc=param.priorpar1,
+                                                     scale=param.priorpar2,
+                                                     low=0., high=1.)))
+                    elif any(substring in parname
+                             for substring in ['per', 'scatter_mult',
+                                               'scatter_ppm', 'c0',
+                                               'r1', 'r3']):
+                        setattr(self.model, parname, numpyro.sample(
+                            parname, TruncatedNormal(loc=param.priorpar1,
+                                                     scale=param.priorpar2,
+                                                     low=0.)))
+                    elif 'inc' in parname:
+                        # An inclination > 90 is not meaningful
+                        setattr(self.model, parname, numpyro.sample(
+                            parname, TruncatedNormal(loc=param.priorpar1,
+                                                     scale=param.priorpar2,
+                                                     high=90.)))
+                    else:
+                        setattr(self.model, parname, numpyro.sample(
+                            parname, Normal(loc=param.priorpar1,
+                                            scale=param.priorpar2)))
+                elif param.prior == 'LU':
+                    setattr(self.model, parname, numpyro.sample(
+                            parname, LogUniform(low=param.priorpar1,
+                                                high=param.priorpar2)))
+                elif param.prior == 'LN':
+                    setattr(self.model, parname, numpyro.sample(
+                            parname, LogNormal(loc=param.priorpar1,
+                                               scale=param.priorpar2)))
 
+        if hasattr(self.model, 'scatter_ppm'):
+            for c in range(self.nchannel_fitted):
+                if c == 0:
+                    parname_temp = 'scatter_ppm'
+                else:
+                    parname_temp = f'scatter_ppm_ch{c}'
+
+                if self.multwhite:
+                    size = self.nints[c]
+                else:
+                    size = self.time.size
+                unc = getattr(self.model, parname_temp)*jnp.ones(size)/1e6
+
+                if c == 0:
+                    self.scatter_array = unc
+                else:
+                    self.scatter_array = \
+                        jnp.concatenate([self.scatter_array, unc])
+        elif hasattr(self.model, 'scatter_mult'):
+            # Fitting the noise level as a multiplier
+            for c in range(self.nchannel_fitted):
+                if c == 0:
+                    parname_temp = 'scatter_mult'
+                else:
+                    parname_temp = f'scatter_mult_ch{c}'
+
+                chan = self.fitted_channels[c]
+                trim1, trim2 = get_trim(self.nints, chan)
+                unc = self.lc_unc[trim1:trim2]
+
+                scatter_mult = getattr(self.model, parname_temp)
+                if c == 0:
+                    self.scatter_array = unc*scatter_mult
+                else:
+                    self.scatter_array = \
+                        jnp.concatenate([self.scatter_array,
+                                         unc*scatter_mult])
+        else:
+            # Not fitting the noise level
+            self.scatter_array = self.lc_unc
+
+        for component in self.components:
+            # Do any component setup needed after model initialization and
+            # before evaluating the model
+            component.setup(newparams=newparams)
+
+        # This is how we tell jax about our observations;
+        # we are assuming they are normally distributed about
+        # the true model. These blocks effectively define our
+        # likelihood function.
+        if self.GP:
             for component in self.components:
-                # Do any one-time setup needed after model initialization and
-                # before evaluating the model
-                component.setup(newparams=newparams)
+                if component.modeltype == 'GP':
+                    gps = component.gps
+                    gp_component = component
 
-            # This is how we tell pymc3 about our observations;
-            # we are assuming they are normally distributed about
-            # the true model. This line effectively defines our
-            # likelihood function.
-            if self.GP:
-                for component in self.components:
-                    if component.modeltype == 'GP':
-                        gps = component.gps
-                        gp_component = component
-
-                fit_lc = self.eval(eval=False)
-                for c in range(self.nchannel_fitted):
-                    if self.nchannel_fitted > 1:
-                        chan = self.fitted_channels[c]
-                        # get flux and uncertainties for current channel
-                        flux, unc_fit, fit_temp = split(
-                            [self.flux, self.scatter_array, fit_lc],
-                            self.nints, chan)
-                        if self.multwhite:
-                            time = split([self.time], self.nints, chan)[0]
-                        else:
-                            time = self.time
+            fit_lc = self.eval(eval=False, incl_GP=False)
+            for c in range(self.nchannel_fitted):
+                if self.nchannel_fitted > 1:
+                    chan = self.fitted_channels[c]
+                    # get flux and uncertainties for current channel
+                    flux, unc_fit, fit_temp = split(
+                        [self.flux, self.scatter_array, fit_lc],
+                        self.nints, chan)
+                    if self.multwhite:
+                        time = split([self.time], self.nints, chan)[0]
                     else:
-                        chan = 0
-                        # get flux and uncertainties for current channel
-                        flux = self.flux
-                        unc_fit = self.scatter_array
-                        fit_temp = fit_lc
                         time = self.time
-                    residuals = flux-fit_temp
+                else:
+                    chan = 0
+                    # get flux and uncertainties for current channel
+                    flux = self.flux
+                    unc_fit = self.scatter_array
+                    fit_temp = fit_lc
+                    time = self.time
+                residuals = flux-fit_temp
 
-                    # Remove poorly handled masked values
-                    good = ~np.ma.getmaskarray(time)
-                    unc_fit = unc_fit[good]
-                    residuals = residuals[good]
+                # Remove poorly handled masked values
+                good = jnp.isfinite(time)
+                unc_fit = unc_fit[good]
+                residuals = residuals[good]
 
-                    kernel_inputs = gp_component.kernel_inputs[chan][0][good]
-                    gps[c].compute(kernel_inputs, yerr=unc_fit)
-                    gps[c].marginal(f"obs_ch{c}", observed=residuals)
-            else:
-                pm.Normal("obs", mu=self.eval(eval=False),
-                          sd=self.scatter_array,
-                          observed=self.flux)
-
-        self.issetup = True
+                kernel_inputs = gp_component.kernel_inputs[chan][0][good]
+                gps[c].compute(kernel_inputs, yerr=unc_fit)
+                setattr(self.model, f"obs_{c}",
+                        numpyro.sample(f"obs_{c}", gps[c].numpyro_dist(),
+                                       obs=residuals))
+        else:
+            # The likelihood function assuming Gaussian uncertainty
+            self.model.obs = numpyro.sample("obs", Normal(
+                self.eval(eval=False), self.scatter_array), obs=self.flux)
 
     def eval(self, channel=None, incl_GP=False, eval=True, **kwargs):
         """Evaluate the model components.
@@ -409,9 +438,9 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             flux_length = len(self.time)*nchan
 
         if eval:
-            flux = np.ma.ones(flux_length)
+            flux = np.ones(flux_length)
         else:
-            flux = tt.ones(flux_length)
+            flux = jnp.ones(flux_length)
 
         # Evaluate flux of each component
         for component in self.components:
@@ -463,10 +492,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             # Evaluating a non-multwhite fit (individual or shared)
             flux_length = len(self.time)*nchan
 
-        if eval:
-            flux = np.ma.ones(flux_length)
-        else:
-            flux = tt.ones(flux_length)
+        flux = jnp.ones(flux_length)
 
         # Evaluate flux at each component
         for component in self.components:
@@ -519,10 +545,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             # Evaluating a non-multwhite fit (individual or shared)
             flux_length = len(self.time)*nchan
 
-        if eval:
-            flux = np.ma.zeros(flux_length)
-        else:
-            flux = tt.zeros(flux_length)
+        flux = jnp.zeros(flux_length)
 
         # Evaluate flux
         for component in self.components:
@@ -579,32 +602,33 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
 
                     # Remove masked points at the start or end to avoid
                     # extrapolating out to those points
-                    time = time[~np.ma.getmaskarray(time)]
+                    time = time[jnp.isfinite(time)]
 
                     # Get time step on full time array to ensure good steps
-                    dt = np.min(np.diff(time))
+                    dt = jnp.min(jnp.diff(time))
 
                     # Interpolate as needed
-                    steps = int(np.round((time[-1]-time[0])/dt+1))
+                    steps = int(jnp.round((time[-1]-time[0])/dt+1))
                     nints_interp.append(steps)
-                    new_time.extend(np.linspace(time[0], time[-1], steps,
-                                                endpoint=True))
-                new_time = np.array(new_time)
+                    new_time.extend(jnp.linspace(time[0], time[-1], steps,
+                                                 endpoint=True))
+                new_time = jnp.array(new_time)
             else:
                 time = self.time
 
                 # Remove masked points at the start or end to avoid
                 # extrapolating out to those points
-                time = time[~np.ma.getmaskarray(time)]
+                time = time[jnp.isfinite(time)]
 
                 # Get time step on full time array to ensure good steps
-                dt = np.min(np.diff(time))
+                dt = jnp.min(jnp.diff(time))
 
                 # Interpolate as needed
                 dt = time[1]-time[0]
-                steps = int(np.round((time[-1]-time[0])/dt+1))
-                nints_interp = np.ones(nchan)*steps
-                new_time = np.linspace(time[0], time[-1], steps, endpoint=True)
+                steps = int(jnp.round((time[-1]-time[0])/dt+1))
+                nints_interp = jnp.ones(nchan)*steps
+                new_time = jnp.linspace(time[0], time[-1], steps,
+                                        endpoint=True)
         else:
             new_time = self.time
             if self.multwhite and channel is not None:
@@ -613,9 +637,9 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             nints_interp = self.nints
 
         if eval:
-            lib = np.ma
+            lib = np
         else:
-            lib = tt
+            lib = jnp
 
         # Setup the flux array
         if self.multwhite:
@@ -655,4 +679,5 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
         # Evaluate flux at each model
         for component in self.components:
             if component.name == 'starry':
+
                 return component.compute_fp(theta=theta)
