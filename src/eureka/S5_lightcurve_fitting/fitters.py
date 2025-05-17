@@ -86,6 +86,11 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_harmonica_string(lc, model, meta,
                                     fitter=calling_function+'StartingPoint')
 
+    if not np.isfinite(start_lnprob):
+        raise AssertionError(
+            'The starting lnprob value must be finite. Most likely, one of '
+            'your priors is outside of its bounds.')
+
     def neg_lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
         return -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
     global lsq_t0
