@@ -90,6 +90,7 @@ class S4MetaClass(MetaClass):
 
         # Spectral binning/trimming control
         self.nspecchan = getattr(self, 'nspecchan', None)
+        self.npixelbins = getattr(self, 'npixelbins', None)
         self.compute_white = getattr(self, 'compute_white', True)
         self.wave_input = getattr(self, 'wave_input', None)
         self.wave_min = getattr(self, 'wave_min', None)
