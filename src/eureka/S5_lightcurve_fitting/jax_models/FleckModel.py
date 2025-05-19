@@ -3,7 +3,7 @@ try:
     import fleck.jax as fleck
     import jax.numpy as jnp
 except ImportError:
-    print("Could not import harmonica. Functionality may be limited.")
+    print("Could not import fleck.jax. Functionality may be limited.")
 
 from .. import models as m
 from .AstroModel import PlanetParams
