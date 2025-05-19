@@ -77,12 +77,12 @@ class PlanetParams():
         self.fp = None
         self.t_secondary = None
         # Harmonica parameters
-        self.a1 = 0
-        self.b1 = 0
-        self.a2 = 0
-        self.b2 = 0
-        self.a3 = 0
-        self.b3 = 0
+        self.a1 = 0.
+        self.b1 = 0.
+        self.a2 = 0.
+        self.b2 = 0.
+        self.a3 = 0.
+        self.b3 = 0.
         # POET phase curve parameters
         self.cos1_amp = 0.
         self.cos1_off = 0.
@@ -112,11 +112,12 @@ class PlanetParams():
         for n in range(1, self.nspots):
             # read radii, latitudes, longitudes, and contrasts
             spot_id = f'{n}'
-            setattr(self, f'spotrad{spot_id}', 0)
-            setattr(self, f'spotlat{spot_id}', 0)
-            setattr(self, f'spotlon{spot_id}', 0)
-            setattr(self, f'spotcon{spot_id}', 0)
-        self.spotstari = 90
+            setattr(self, f'spotrad{spot_id}', 0.)
+            setattr(self, f'spotlat{spot_id}', 0.)
+            setattr(self, f'spotlon{spot_id}', 0.)
+            setattr(self, f'spotcon{spot_id}', 0.)
+        self.spotstari = 90.
+        self.spotstarobl = 0.
         self.spotrot = None
         self.spotnpts = None
 
@@ -128,7 +129,7 @@ class PlanetParams():
             pixname = 'pixel'
             if pix > 0:
                 pixname += f'{pix}'
-            setattr(self, pixname, 0)
+            setattr(self, pixname, 0.)
 
         # Figure out how many planet Ylm spherical harmonics
         ylm_params = np.where(['Y' == par[0] and par[1].isnumeric()
@@ -140,7 +141,7 @@ class PlanetParams():
             self.ydeg = max(l_vals)
             for ell in range(1, self.ydeg+1):
                 for m in range(-ell, ell+1):
-                    setattr(self, f'Y{ell}{m}', 0)
+                    setattr(self, f'Y{ell}{m}', 0.)
         else:
             self.ydeg = 0
 
@@ -349,14 +350,14 @@ class PlanetParams():
 
         # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
         if self.ecc is None:
-            self.ecc = 0
+            self.ecc = 0.
             self.w = 180.
-            self.ecosw = 0
-            self.esinw = 0
+            self.ecosw = 0.
+            self.esinw = 0.
 
         if self.spotrot is None:
             # spotrot will default to 10k years (important if t0 is not ~0)
-            self.spotrot = 3650000
+            self.spotrot = 3650000.
             self.fleck_fast = True
 
 
