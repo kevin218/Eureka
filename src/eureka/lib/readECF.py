@@ -7,6 +7,9 @@ import numpy as np
 
 from ..version import version
 
+# A boolean to track if a Eureka! version mis-match warning has been issued
+warned = False
+
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -80,6 +83,7 @@ class MetaClass:
                 setattr(self, param, value)
 
         self.version = version
+        self.stage = stage
         self.eventlabel = eventlabel
         self.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -154,7 +158,7 @@ class MetaClass:
             self.__dict__[item] = value
             return
 
-        if item == 'inst' and value == 'wfc3':
+        if self.stage < 4 and item == 'inst' and value == 'wfc3':
             # Fix issues with CRDS server set for JWST
             if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for JWST and not HST.'
@@ -170,7 +174,7 @@ class MetaClass:
             self.pmap = getattr(self, 'pmap',
                                 crds.get_context_name('hst')[4:-5])
             os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
-        elif item == 'inst' and value is not None:
+        elif self.stage < 4 and item == 'inst' and value is not None:
             # Fix issues with CRDS server set for HST
             if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for HST and not JWST.'
@@ -187,14 +191,16 @@ class MetaClass:
                                 crds.get_context_name('jwst')[5:-5])
             os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
 
-        if ((item == 'pmap') and hasattr(self, 'pmap') and
+        if (self.stage < 4 and (item == 'pmap') and hasattr(self, 'pmap') and
                 (self.pmap is not None) and (self.pmap != value)):
             print(f'WARNING: pmap was set to {self.pmap} in the previous stage'
                   f' but is now set to {value} in this stage. This may cause '
                   'unexpected or undesireable behaviors.')
 
-        if ((item == 'version') and hasattr(self, 'version') and
+        global warned
+        if (not warned and (item == 'version') and hasattr(self, 'version') and
                 (self.version is not None) and (self.version != value)):
+            warned = True
             print(f'WARNING: The Eureka! version was {self.version} in the '
                   f'previous stage but is now {value} in this stage. This may '
                   'cause unexpected or undesireable behaviors.')
