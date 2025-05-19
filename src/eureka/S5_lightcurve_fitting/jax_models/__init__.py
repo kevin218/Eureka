@@ -8,6 +8,7 @@ from .GPModel import GPModel
 from .HarmonicaModel import HarmonicaTransitModel
 from .HSTRampModel import HSTRampModel
 from .JaxoplanetModels import JaxoplanetModel
+from .JaxoplanetStarryModels import JaxoplanetStarryModel
 from .LorentzianModel import LorentzianModel
 from .PolynomialModel import PolynomialModel
 from .QuasiLambertianPhaseCurve import QuasiLambertianPhaseCurve
