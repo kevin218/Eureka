@@ -549,9 +549,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         PolynomialModel = jm.PolynomialModel
         QuasiLambertianPhaseCurve = jm.QuasiLambertianPhaseCurve
         SinusoidModel = jm.SinusoidPhaseCurveModel
-        # FINDME: Temporary place-holder until support for jaxoplanet.starry
-        # is added
-        StarryModel = None
+        StarryModel = jm.JaxoplanetStarryModel
         StepModel = jm.StepModel
         CompositeModel = jm.CompositeJaxModel
 
@@ -622,14 +620,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     # Make the astrophysical and detector models
     modellist = []
     if 'starry' in meta.run_myfuncs:
-        # Fixed any masked uncertainties
-        masked = np.logical_or(np.ma.getmaskarray(flux),
-                               np.ma.getmaskarray(flux_err))
-        lc_model.unc[masked] = np.ma.median(lc_model.unc)
-        lc_model.unc_fit[masked] = np.ma.median(lc_model.unc_fit)
-        lc_model.unc.mask = False
-        lc_model.unc_fit.mask = False
-
         t_starry = StarryModel(parameters=params,
                                fmt='r--', log=log,
                                time=time, time_units=time_units,

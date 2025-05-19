@@ -136,6 +136,12 @@ class AstroModel(JaxModel):
             if self.jaxoplanet_model is not None:
                 starFlux *= self.jaxoplanet_model.eval(channel=chan, eval=eval,
                                                        **kwargs)
+            if self.starry_model is not None:
+                result = self.starry_model.eval(channel=chan, eval=eval,
+                                                piecewise=True, **kwargs)[0]
+                transits = result.pop(0)
+                eclipses = result
+                starFlux *= transits
 
             planetFluxes = lib.zeros(len(time))
             for pid in pid_iter:
@@ -144,10 +150,7 @@ class AstroModel(JaxModel):
 
                 if self.starry_model is not None:
                     # User is fitting an eclipse model
-                    raise NotImplementedError(
-                        "Eclipse models are not yet implemented in the jax "
-                        "version of the AstroModel. Please use the numpy "
-                        "version of the AstroModel for eclipse models.")
+                    planetFlux = eclipses[pid]
                 elif len(self.phasevariation_models) > 0:
                     # User is dealing with phase variations of a
                     # non-eclipsing object. Still require the fp parameter
