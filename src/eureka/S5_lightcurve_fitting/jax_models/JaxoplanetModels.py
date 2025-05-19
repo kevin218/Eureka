@@ -34,6 +34,16 @@ class JaxoplanetModel(JaxModel):
 
         log = kwargs.get('log')
 
+        required = np.array(['Rs',])
+        missing = np.array([name not in self.paramtitles for name in required])
+        if np.any(missing):
+            message = (f'Missing required params {required[missing]} in your '
+                       'EPF. Make sure it is not set to \'independent\' as '
+                       'this is no longer a supported option; you can set '
+                       'these parameters to fixed if you want to maintain the '
+                       'old \'independent\' behavior.')
+            raise AssertionError(message)
+
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
         ld_func = ld_profile(self.parameters.limb_dark.value,
@@ -112,11 +122,11 @@ class JaxoplanetModel(JaxModel):
                 # Initialize planet object
                 planet = Body(
                     mass=Mp,
-                    # Convert radius ratio to R_star units
-                    radius=pl_params.rp*pl_params.Rs,
+                    # Convert Rp/Rs to R_star units
+                    radius=jnp.abs(pl_params.rp*pl_params.Rs),
+                    # Convert a/Rs to R_star units
                     semimajor=pl_params.a*pl_params.Rs,
                     inclination=pl_params.inc*np.pi/180,
-                    # period=pl_params.per,
                     time_transit=pl_params.t0,
                     eccentricity=pl_params.ecc,
                     omega_peri=pl_params.w*np.pi/180,
@@ -234,11 +244,11 @@ class JaxoplanetModel(JaxModel):
                 # Initialize planet object
                 planet = Body(
                     mass=Mp,
-                    # Convert radius ratio to R_star units
-                    radius=pl_params.rp*pl_params.Rs,
+                    # Convert Rp/Rs to R_star units
+                    radius=np.abs(pl_params.rp*pl_params.Rs),
+                    # Convert a/Rs to R_star units
                     semimajor=pl_params.a*pl_params.Rs,
                     inclination=pl_params.inc*np.pi/180,
-                    # period=pl_params.per,
                     time_transit=pl_params.t0,
                     eccentricity=pl_params.ecc,
                     omega_peri=pl_params.w*np.pi/180,
