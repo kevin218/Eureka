@@ -211,6 +211,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 # User wants bins defined by the given number of pixels
                 istart = np.where(wave_1d >= meta.wave_min)[0][0]
                 iend = np.where(wave_1d >= meta.wave_max)[0][0]
+                # Shift bins by some number of pixels (only useful for MIRI)
+                istart += meta.npixelshift
+                iend += meta.npixelshift
                 edges = wave_1d[istart:iend+meta.npixelbins:meta.npixelbins]
                 dwav = np.ediff1d(
                     wave_1d[istart:iend+meta.npixelbins])[::meta.npixelbins]/2
