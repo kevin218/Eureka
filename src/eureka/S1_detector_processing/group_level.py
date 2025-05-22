@@ -47,8 +47,6 @@ def GLBS(input_model, log, meta):
         meta.int_end = meta.n_int
     else:
         meta.int_end = meta.int_start+meta.nplots
-    if meta.inst == 'miri':
-        meta.isrotate = 0
 
     for ngrp in range(all_data.shape[1]):
         log.writelog(f'  Starting group {ngrp}.')
@@ -69,9 +67,13 @@ def GLBS(input_model, log, meta):
         data['mask'] = (['time', 'y', 'x'], grp_mask)
         data.attrs['intstart'] = meta.intstart
         meta.bg_dir = 'CxC'
+        if meta.inst == 'miri':
+            meta.isrotate = 0
 
-        # Only show plots for the last group
-        if ngrp == all_data.shape[1]-1:
+        # Only show plots for the last good group
+        if meta.inst == 'miri' and ngrp == all_data.shape[1]-2:
+            isplots_S1 = meta.isplots_S1
+        elif meta.inst != 'miri' and ngrp == all_data.shape[1]-1:
             isplots_S1 = meta.isplots_S1
         else:
             isplots_S1 = 0
@@ -81,7 +83,13 @@ def GLBS(input_model, log, meta):
         # (only useful for NIRCam data)
         if meta.bg_row_by_row:
             meta.bg_dir = 'RxR'
-            if ngrp == all_data.shape[1]-1:
+            if meta.inst == 'miri':
+                meta.isrotate = 2
+                if ngrp == all_data.shape[1]-2:
+                    isplots_S1 = meta.isplots_S1
+                else:
+                    isplots_S1 = 0
+            elif ngrp == all_data.shape[1]-1:
                 isplots_S1 = meta.isplots_S1
             else:
                 isplots_S1 = 0
