@@ -67,6 +67,8 @@ def GLBS(input_model, log, meta):
         data['mask'] = (['time', 'y', 'x'], grp_mask)
         data.attrs['intstart'] = meta.intstart
         meta.bg_dir = 'CxC'
+        if meta.inst == 'miri':
+            meta.isrotate = 0
 
         if meta.isplots_S1 == 4:
             # Plot all groups
@@ -85,6 +87,8 @@ def GLBS(input_model, log, meta):
         # (only useful for NIRCam data)
         if meta.bg_row_by_row:
             meta.bg_dir = 'RxR'
+            if meta.inst == 'miri':
+                meta.isrotate = 2
             if meta.isplots_S1 == 4:
                 # Plot all groups
                 isplots_S1 = meta.isplots_S1

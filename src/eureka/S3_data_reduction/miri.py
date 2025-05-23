@@ -358,12 +358,10 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     """
     if meta.bg_dir == 'RxR':
         y1, y2 = meta.bg_x1, meta.bg_x2
-        isrotate = 2
     else:
         y1, y2 = meta.bg_y1, meta.bg_y2
-        isrotate = 0
     bg, mask = background.fitbg(dataim, meta, datamask, y1, y2, deg=meta.bg_deg,
-                                threshold=meta.p3thresh, isrotate=isrotate,
+                                threshold=meta.p3thresh, isrotate=meta.isrotate,
                                 isplots=isplots)
     return bg, mask, n
 
