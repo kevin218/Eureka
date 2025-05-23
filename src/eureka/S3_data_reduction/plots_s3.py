@@ -136,7 +136,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
         plt.pause(0.2)
 
 
-def image_and_background(data, meta, log, m, order=None):
+def image_and_background(data, meta, log, m, order=None, group=None):
     '''Make image+background plot. (Figs 3301)
 
     Parameters
@@ -150,7 +150,9 @@ def image_and_background(data, meta, log, m, order=None):
     m : int
         The file number.
     order : int; optional
-        Spectral order. Default is None
+        Spectral order. Default is None.
+    group : int; optional
+        The group number (only applies to Stage 1).  Default is None.
     '''
     log.writelog('  Creating figures for background subtraction...',
                  mute=(not meta.verbose))
@@ -210,9 +212,13 @@ def image_and_background(data, meta, log, m, order=None):
             orderkey = ''
         else:
             orderkey = f'_order{order}'
+        if group is None:
+            groupkey = ''
+        else:
+            groupkey = f'_group{group}'
         fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
-                 f'{orderkey}' + '_' + meta.bg_dir + '_ImageAndBackground' +
-                 plots.figure_filetype)
+                 f'{orderkey}' + f'{groupkey}' + '_' + meta.bg_dir +
+                 '_ImageAndBackground' + plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
