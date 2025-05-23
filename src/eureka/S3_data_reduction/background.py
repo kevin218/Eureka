@@ -11,7 +11,7 @@ from . import plots_s3
 __all__ = ['BGsubtraction', 'fitbg', 'fitbg2']
 
 
-def BGsubtraction(data, meta, log, m, isplots=0):
+def BGsubtraction(data, meta, log, m, isplots=0, group=None):
     """Does background subtraction using inst.fit_bg & background.fitbg
 
     Parameters
@@ -28,6 +28,8 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     isplots : bool; optional
        Plots intermediate steps for the background fitting routine.
        Default is False.
+    group : int; optional
+        The group number (only applies to Stage 1).  Default is None.
 
     Returns
     -------
@@ -151,11 +153,11 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     # Make image+background plots
     if isplots >= 3:
         if meta.orders is None:
-            plots_s3.image_and_background(data, meta, log, m)
+            plots_s3.image_and_background(data, meta, log, m, group=group)
         else:
             for order in meta.orders:
                 plots_s3.image_and_background(data.sel(order=order), meta,
-                                              log, m, order=order)
+                                              log, m, order=order, group=group)
 
     return data
 
