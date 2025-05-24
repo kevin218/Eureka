@@ -74,6 +74,15 @@ class MetaClass:
             raise ValueError(f"The file {os.path.join(folder, file)} "
                              "does not exist.")
 
+        self.version = version
+        if stage is not None:
+            self.stage = stage
+        self.eventlabel = eventlabel
+        self.datetime = time_pkg.strftime('%Y-%m-%d')
+
+        # If the data format hasn't been specified, must be eureka output
+        self.data_format = getattr(self, 'data_format', 'eureka')
+
         if kwargs is not None:
             # Add any kwargs to the parameter dict
             self.params.update(kwargs)
@@ -81,14 +90,6 @@ class MetaClass:
             # Store each as an attribute
             for param, value in kwargs.items():
                 setattr(self, param, value)
-
-        self.version = version
-        self.stage = stage
-        self.eventlabel = eventlabel
-        self.datetime = time_pkg.strftime('%Y-%m-%d')
-
-        # If the data format hasn't been specified, must be eureka output
-        self.data_format = getattr(self, 'data_format', 'eureka')
 
     def __str__(self):
         '''A function to nicely format some outputs when a MetaClass object is
@@ -158,7 +159,13 @@ class MetaClass:
             self.__dict__[item] = value
             return
 
-        if self.stage < 4 and item == 'inst' and value == 'wfc3':
+        # Stage may not be set yet, if not set, default to 0
+        if hasattr(self, 'stage'):
+            stage = self.stage
+        else:
+            stage = 0
+
+        if item == 'inst' and value == 'wfc3' and stage < 4:
             # Fix issues with CRDS server set for JWST
             if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for JWST and not HST.'
@@ -174,7 +181,7 @@ class MetaClass:
             self.pmap = getattr(self, 'pmap',
                                 crds.get_context_name('hst')[4:-5])
             os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
-        elif self.stage < 4 and item == 'inst' and value is not None:
+        elif item == 'inst' and value is not None and stage < 4:
             # Fix issues with CRDS server set for HST
             if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for HST and not JWST.'
@@ -191,8 +198,9 @@ class MetaClass:
                                 crds.get_context_name('jwst')[5:-5])
             os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
 
-        if (self.stage < 4 and (item == 'pmap') and hasattr(self, 'pmap') and
-                (self.pmap is not None) and (self.pmap != value)):
+        if ((item == 'pmap') and hasattr(self, 'pmap') and
+                (self.pmap is not None) and (self.pmap != value) and
+                (stage < 4)):
             print(f'WARNING: pmap was set to {self.pmap} in the previous stage'
                   f' but is now set to {value} in this stage. This may cause '
                   'unexpected or undesireable behaviors.')
