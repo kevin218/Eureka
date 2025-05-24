@@ -18,6 +18,7 @@ from . import plots_s5 as plots
 from .fitters import group_variables, load_old_fitparams, save_fit
 from ..lib.split_channels import get_trim
 
+from .likelihood import lnprob
 
 def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
                  **kwargs):
@@ -46,7 +47,8 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
     """
     # Group the different variable types
     freenames = lc.freenames
-    freepars = group_variables(model)[0]
+    freepars, prior1, prior2, priortype, indep_vars = \
+        group_variables(model)
     if meta.old_fitparams is not None:
         freepars = load_old_fitparams(lc, meta, log, freenames, 'jaxopt')
 
@@ -56,6 +58,10 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
 
     # Set the model parameters to their starting values
     model.update(freepars)
+
+    start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype,
+                          freenames)
+    log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
     # Plot starting point
     if meta.isplots_S5 >= 1:
@@ -107,6 +113,10 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
 
     # Save the fit ASAP
     save_fit(meta, lc, model, calling_function, t_results, freenames)
+
+    end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype,
+                        freenames)
+    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)

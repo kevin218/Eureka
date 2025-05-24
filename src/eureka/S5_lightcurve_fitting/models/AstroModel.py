@@ -360,6 +360,9 @@ class PlanetParams():
             self.spotrot = 3650000.
             self.fleck_fast = True
 
+        self.inc_rad = self.inc * np.pi / 180
+        self.w_rad = self.w * np.pi / 180
+
 
 class AstroModel(Model):
     """A model that combines all astrophysical components."""
