@@ -34,7 +34,7 @@ class GPModel(JaxModel):
             eureka.S5_lightcurve_fitting.jax_models.JaxModel.__init__().
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
-        """  # noqa: E501
+        """
         raise NotImplementedError('There is currently a bug with the '
                                   'celerite2.jax package. Once that is '
                                   'resolved, we will enable Eureka!\'s '
@@ -159,7 +159,7 @@ class GPModel(JaxModel):
                 time = self.time
 
             # Remove poorly handled invalid values
-            good = lib.isfinite(time)
+            good = np.isfinite(time) & np.isfinite(flux)
             unc_fit = unc_fit[good]
             residuals = residuals[good]
 
@@ -305,14 +305,11 @@ class GPModel(JaxModel):
             The requested kernel.
         """
         # get metric and amplitude for the current kernel and channel
-        amp = lib.exp(coeffs[k][0])
+        sigma = lib.sqrt(lib.exp(coeffs[k][0]))
         metric = lib.exp(coeffs[k][1])
 
         # Currently only the Matern32 kernel is supported
-        kernel = celerite2.terms.Matern32Term(sigma=1, rho=metric)
-
-        # Setting the amplitude
-        kernel *= celerite2.terms.RealTerm(a=amp, c=0)
+        kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=metric)
 
         return kernel
 
@@ -364,7 +361,7 @@ class GPModel(JaxModel):
                 time = self.time
 
             # Remove poorly handled invalid values
-            good = np.isfinite(time)
+            good = np.isfinite(time) & np.isfinite(flux)
             unc_fit = unc_fit[good]
             residuals = residuals[good]
 

@@ -4,6 +4,7 @@ import numpyro
 import jax.numpy as jnp
 from numpyro.distributions import (
     Normal, Uniform, LogUniform, LogNormal, TruncatedNormal)
+from celerite2.jax.distribution import CeleriteNormal
 
 from ..models import Model, CompositeModel
 from ...lib.split_channels import split, get_trim
@@ -382,14 +383,14 @@ class CompositeJaxModel(JaxModel, CompositeModel):
                 residuals = flux-fit_temp
 
                 # Remove poorly handled masked values
-                good = jnp.isfinite(time)
+                good = np.isfinite(time) & np.isfinite(flux)
                 unc_fit = unc_fit[good]
                 residuals = residuals[good]
 
                 kernel_inputs = gp_component.kernel_inputs[chan][0][good]
                 gps[c].compute(kernel_inputs, yerr=unc_fit)
                 setattr(self.model, f"obs_{c}",
-                        numpyro.sample(f"obs_{c}", gps[c].numpyro_dist(),
+                        numpyro.sample(f"obs_{c}", CeleriteNormal(gps[c]),
                                        obs=residuals))
         else:
             # The likelihood function assuming Gaussian uncertainty
