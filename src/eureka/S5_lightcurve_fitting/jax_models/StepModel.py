@@ -1,19 +1,11 @@
 import numpy as np
+import jax.numpy as jnp
 
-import theano
-theano.config.gcc__cxxflags += " -fexceptions"
-import theano.tensor as tt
-
-# Avoid tonnes of "Cannot construct a scalar test value" messages
-import logging
-logger = logging.getLogger("theano.tensor.opt")
-logger.setLevel(logging.ERROR)
-
-from . import PyMC3Model
+from . import JaxModel
 from ...lib.split_channels import split
 
 
-class StepModel(PyMC3Model):
+class StepModel(JaxModel):
     def __init__(self, **kwargs):
         """Initialize the model.
 
@@ -21,9 +13,9 @@ class StepModel(PyMC3Model):
         ----------
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
+            eureka.S5_lightcurve_fitting.jax_models.JaxModel.__init__().
         """
-        # Inherit from PyMC3Model class
+        # Inherit from JaxModel class
         super().__init__(**kwargs)
         self.name = 'step'
 
@@ -59,10 +51,10 @@ class StepModel(PyMC3Model):
         steptimes = np.zeros((nchan, 10)).tolist()
 
         if eval:
-            lib = np.ma
+            lib = np
             model = self.fit
         else:
-            lib = tt
+            lib = jnp
             model = self.model
 
         # Parse 'c#' keyword arguments as coefficients
