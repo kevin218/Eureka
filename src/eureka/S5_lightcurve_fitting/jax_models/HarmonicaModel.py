@@ -1,4 +1,5 @@
 import numpy as np
+import inspect
 try:
     import harmonica.jax as harmonica
     import jax.numpy as jnp
@@ -9,12 +10,13 @@ except (ImportError, AttributeError):
     # We'll throw an error later if folks try to use this model
     pass
 
-from ..models.BatmanModels import BatmanTransitModel
+from . import JaxModel
 from .AstroModel import PlanetParams
+from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
 
-class HarmonicaTransitModel(BatmanTransitModel):
+class HarmonicaTransitModel(JaxModel):
     """Transit Model"""
     def __init__(self, **kwargs):
         """Initialize the transit model
@@ -27,16 +29,55 @@ class HarmonicaTransitModel(BatmanTransitModel):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        raise NotImplementedError('There is currently a bug with the '
-                                  'harmonica.jax package. Once that is '
-                                  'resolved, we will enable Eureka!\'s '
-                                  'jax_models.HarmonicaTransitModel.')
+        # raise NotImplementedError('There is currently a bug with the '
+        #                           'harmonica.jax package. Once that is '
+        #                           'resolved, we will enable Eureka!\'s '
+        #                           'jax_models.HarmonicaTransitModel.')
 
-        # Inherit from BatmanTransitModel class
+        # Inherit from Model class
         super().__init__(**kwargs)
         self.name = 'harmonica transit'
-        # Define transit model to be used
-        self.transit_model = None
+
+        # Define model type (physical, systematic, other)
+        self.modeltype = 'physical'
+
+        log = kwargs.get('log')
+
+        # Store the ld_profile
+        self.ld_from_S4 = kwargs.get('ld_from_S4')
+        ld_func = ld_profile(self.parameters.limb_dark.value,
+                             use_gen_ld=self.ld_from_S4)
+        len_params = len(inspect.signature(ld_func).parameters)
+        self.coeffs = ['u{}'.format(n) for n in range(1, len_params)]
+
+        self.ld_from_file = kwargs.get('ld_from_file')
+
+        # Replace u parameters with generated limb-darkening values
+        if self.ld_from_S4 or self.ld_from_file:
+            log.writelog("Using the following limb-darkening values:")
+            self.ld_array = kwargs.get('ld_coeffs')
+            for c in range(self.nchannel_fitted):
+                chan = self.fitted_channels[c]
+                if self.ld_from_S4:
+                    ld_array = self.ld_array[len_params-2]
+                else:
+                    ld_array = self.ld_array
+                for u in self.coeffs:
+                    index = np.where(np.array(self.paramtitles) == u)[0]
+                    if len(index) != 0:
+                        item = self.longparamlist[c][index[0]]
+                        param = int(item.split('_')[0][-1])
+                        ld_val = ld_array[chan][param-1]
+                        log.writelog(f"{item}: {ld_val}")
+                        # Use the file value as the starting guess
+                        self.parameters.dict[item][0] = ld_val
+                        # In a normal prior, center at the file value
+                        if (self.parameters.dict[item][-1] == 'N' and
+                                self.recenter_ld_prior):
+                            self.parameters.dict[item][-3] = ld_val
+                        # Update the non-dictionary form as well
+                        setattr(self.parameters, item,
+                                self.parameters.dict[item])
 
     def eval(self, eval=True, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
@@ -70,10 +111,6 @@ class HarmonicaTransitModel(BatmanTransitModel):
             pid_iter = range(self.num_planets)
         else:
             pid_iter = [pid,]
-
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
 
         if eval:
             lib = np
