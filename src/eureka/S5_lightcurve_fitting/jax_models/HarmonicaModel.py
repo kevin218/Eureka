@@ -29,11 +29,6 @@ class HarmonicaTransitModel(JaxModel):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # raise NotImplementedError('There is currently a bug with the '
-        #                           'harmonica.jax package. Once that is '
-        #                           'resolved, we will enable Eureka!\'s '
-        #                           'jax_models.HarmonicaTransitModel.')
-
         # Inherit from Model class
         super().__init__(**kwargs)
         self.name = 'harmonica transit'
@@ -79,6 +74,15 @@ class HarmonicaTransitModel(JaxModel):
                         setattr(self.parameters, item,
                                 self.parameters.dict[item])
 
+        # Determine how many Fourier terms to keep (a1, b1, a2, b2, ...)
+        # We'll store this as `self.max_fourier_term` to be used in eval
+        self.max_fourier_term = 1
+        for term in ['a3', 'b3', 'a2', 'b2', 'a1', 'b1']:
+            if any(term in p for p in self.paramtitles):
+                self.max_fourier_term = 2 * int(term[1])+1  # e.g., "a3" → 2*3+1 = 7
+                break  # Keep highest used term only
+        print(f"Using {self.max_fourier_term} Fourier terms in the model.")
+
     def eval(self, eval=True, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
@@ -118,7 +122,7 @@ class HarmonicaTransitModel(JaxModel):
             lib = jnp
 
         # Set all parameters
-        lcfinal = lib.array([])
+        light_curves = []
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -134,39 +138,30 @@ class HarmonicaTransitModel(JaxModel):
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan, eval=eval)
-
-                # Enforce physicality to avoid crashes from Harmonica by
-                # returning something that should be a horrible fit
-                if (not ((0 < pl_params.per) and (0 < pl_params.inc <= 90) and
-                         (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
-                         (-1 <= pl_params.esinw <= 1))
-                    or (self.parameters.limb_dark.value == 'kipping2013' and
-                        pl_params.u_original[0] <= 0)):
-                    # Returning nans or infs breaks the fits, so this was the
-                    # best I could think of
-                    light_curve = 1e6*lib.ones(time.shape)
-                    continue
+                ab = pl_params.ab[:self.max_fourier_term]
 
                 if self.parameters.limb_dark.value in ['uniform', 'linear',
                                                        'quadratic',
                                                        'kipping2013']:
                     light_curve *= harmonica.harmonica_transit_quad_ld(
                         time, t0=pl_params.t0, period=pl_params.per,
-                        a=pl_params.a, inc=pl_params.inc, ecc=pl_params.ecc,
-                        omega=pl_params.w, u1=pl_params.u1, u2=pl_params.u2,
-                        r=pl_params.ab)
+                        a=pl_params.a, inc=pl_params.inc_rad,
+                        ecc=pl_params.ecc, omega=pl_params.w_rad,
+                        u1=pl_params.u1, u2=pl_params.u2, r=ab)
                 elif self.parameters.limb_dark.value == 'nonlinear':
                     light_curve *= harmonica.harmonica_transit_nonlinear_ld(
                         time, t0=pl_params.t0, period=pl_params.per,
-                        a=pl_params.a, inc=pl_params.inc, ecc=pl_params.ecc,
-                        omega=pl_params.w, u1=pl_params.u1, u2=pl_params.u2,
-                        u3=pl_params.u3, u4=pl_params.u4, r=pl_params.ab)
+                        a=pl_params.a, inc=pl_params.inc_rad,
+                        ecc=pl_params.ecc, omega=pl_params.w_rad,
+                        u1=pl_params.u1, u2=pl_params.u2,
+                        u3=pl_params.u3, u4=pl_params.u4, r=ab)
                 else:
                     raise NotImplementedError(
                         'The requested limb-darkening model '
                         f'{self.parameters.limb_dark.value} is not supported '
                         'by the HarmonicaTransitModel.')
 
-            lcfinal = lib.append(lcfinal, light_curve)
+            light_curves.append(light_curve)
+        lcfinal = lib.concatenate(light_curves)
 
         return lcfinal

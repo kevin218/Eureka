@@ -315,6 +315,9 @@ class PlanetParams():
         self.inc_rad = self.inc * np.pi / 180
         self.w_rad = self.w * np.pi / 180
 
+        self.inc_rad = self.inc * np.pi / 180
+        self.w_rad = self.w * np.pi / 180
+
 
 class AstroModel(Model):
     """A model that combines all astrophysical components."""
