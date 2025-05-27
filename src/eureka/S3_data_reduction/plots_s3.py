@@ -160,9 +160,11 @@ def image_and_background(data, meta, log, m, order=None, group=None):
     # If need be, transpose array so that largest dimension is on x axis
     if len(data.x) < len(data.y):
         data = data.transpose('time', 'x', 'y')
-        xmin, xmax, ymin, ymax = get_bounds(data.flux.y.values, data.flux.x.values)
+        xmin, xmax, ymin, ymax = get_bounds(data.flux.y.values,
+                                            data.flux.x.values)
     else:
-        xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
+        xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values,
+                                            data.flux.y.values)
 
     intstart = data.attrs['intstart']
     subdata = np.ma.masked_invalid(data.flux.values)
