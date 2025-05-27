@@ -802,16 +802,16 @@ def compute_strings(meta, log, fit_methods, limb):
     if meta.channelNumber > 0:
         suffix += f'_ch{meta.channelNumber}'
 
-    # Load a0 string coefficients
-    meta.y_param = 'a0'+suffix
-    a0 = load_s5_saves(meta, log, fit_methods)
-    if all(np.all(v == 0) for v in a0):
+    # Load rp string coefficients
+    meta.y_param = 'rp'+suffix
+    rp = load_s5_saves(meta, log, fit_methods)
+    if all(np.all(v == 0) for v in rp):
         # The parameter could not be found - skip it
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                      'fitted parameters')
         log.writelog(f'  Skipping {y_param}')
         return meta
-    n_samples = len(a0[0])
+    n_samples = len(rp[0])
 
     # Load string coefficients
     coeffs = ['a1', 'b1', 'a2', 'b2', 'a3', 'b3']
@@ -845,13 +845,13 @@ def compute_strings(meta, log, fit_methods, limb):
 
     ht = HarmonicaTransit()
     for i in tqdm(range(meta.nspecchan)):
-        if np.all(a0[i] == 0):
+        if np.all(rp[i] == 0):
             # Channel wasn't found
             meta.spectrum_median.append(np.nan)
             meta.spectrum_err.append([np.nan, np.nan])
         else:
             # Compute transmission string
-            ab = np.array([a0[i][::ss],
+            ab = np.array([rp[i][::ss],
                            a1[i][::ss], b1[i][::ss],
                            a2[i][::ss], b2[i][::ss],
                            a3[i][::ss], b3[i][::ss]]).T
