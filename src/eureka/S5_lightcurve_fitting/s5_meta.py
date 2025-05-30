@@ -174,6 +174,9 @@ class S5MetaClass(MetaClass):
         self.GP_package = getattr(self, 'GP_package', 'celerite')
         self.useHODLR = getattr(self, 'useHODLR', False)
 
+        # Plotting controls
+        self.interp = getattr(self, 'interp', True)
+
         # Diagnostics
         self.isplots_S5 = getattr(self, 'isplots_S5', 3)
         self.nbin_plot = getattr(self, 'nbin_plot', None)
