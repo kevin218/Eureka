@@ -248,6 +248,9 @@ class S3MetaClass(MetaClass):
         '''Set Stage 3 specific defaults for MIRI.
         '''
         self.set_spectral_defaults()
+        self.isrotate = 2
+        self.bg_dir = 'CxC'
+        self.bg_row_by_row = False
 
     def set_NIRCam_defaults(self):
         '''Set Stage 3 specific defaults for NIRCam.
