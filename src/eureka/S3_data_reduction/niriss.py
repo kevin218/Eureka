@@ -188,11 +188,18 @@ def mask_other_orders(data, meta):
         other_orders.remove(order)
         for other_order in other_orders:
             if other_order in meta.orders:
+                other_trace = np.round(
+                    data.trace.sel(order=other_order).values).astype(int)
                 # Loop over valid wavelengths in current order
                 for j in np.where(~np.isnan(wave))[0]:
-                    ymin = np.max((0, trace[j] - meta.spec_hw))
-                    ymax = np.min((trace[j] + meta.spec_hw + 1,
-                                   len(data.y) + 1))
+                    ymin = np.max((0,
+                                   trace[j] - meta.spec_hw,
+                                   other_trace[j] + meta.bg_hw + 1))
+                    ymax = np.min((len(data.y) + 1,
+                                   trace[j] + meta.spec_hw + 1))
+                    # print(j, trace[j] - meta.spec_hw,
+                    #       other_trace[j] + meta.bg_hw)
+                    # FINDME: verify this works for substrip256
                     # Mask extraction region for 'order' in 'other_order'
                     data['mask'].sel(order=other_order)[:, ymin:ymax, j] = True
     return data
@@ -236,24 +243,12 @@ def straighten_trace(data, meta, log, m):
         new_center = meta.src_ypos[k]
         new_shifts = new_center - shifts
 
-        # import matplotlib.pyplot as plt
-        # plt.figure(1)   #FINDME
-        # plt.clf()
-        # plt.plot(new_shifts, '-')
-        # print(f"Order {order}, Shifts:")
-        # print(new_shifts)
-
         # Keep shifts from exceeding the height of the detector
         # This only happens with SUBSTRIP96 and Order 2,
         # which is not recommended.
         ymax = data.flux.shape[1]
         new_shifts[np.where(new_shifts > ymax)] = ymax
         new_shifts[np.where(new_shifts < -ymax)] = -ymax
-
-        # print(f"Order {order}, New Shifts:")
-        # print(new_shifts)
-        # plt.plot(new_shifts, '--')
-        # plt.savefig(f"Order{order}.png")
 
         # broadcast the shifts to the number of integrations
         new_shifts = np.reshape(np.repeat(new_shifts,
