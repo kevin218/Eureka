@@ -82,7 +82,7 @@ def read(filename, data, meta, log):
     # Duplicate science arrays for each order to be analyzed
     if isinstance(meta.orders, int):
         meta.orders = [meta.orders]
-    norders = len(meta.all_orders)  # FINDME: temp fix
+    norders = len(meta.all_orders)
     sci = np.repeat(sci[:, :, :, np.newaxis], norders, axis=3)
     err = np.repeat(err[:, :, :, np.newaxis], norders, axis=3)
     dq = np.repeat(dq[:, :, :, np.newaxis], norders, axis=3)
@@ -145,7 +145,7 @@ def get_wave(data, meta, log):
         # Get trace for the given order and pupil position
         trace = get_soss_traces(pwcpos=pwcpos, order=str(order), interp=True)
         if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96' and \
-            meta.trace_offset is None:
+                meta.trace_offset is None:
             # PASTASOSS doesn't account for different substrip starting rows;
             # therefore, reset default trace offset to -10 pixels.
             # SUBSTRIP96: SUBSTRT2 = 1803
@@ -197,9 +197,6 @@ def mask_other_orders(data, meta):
                                    other_trace[j] + meta.bg_hw + 1))
                     ymax = np.min((len(data.y) + 1,
                                    trace[j] + meta.spec_hw + 1))
-                    # print(j, trace[j] - meta.spec_hw,
-                    #       other_trace[j] + meta.bg_hw)
-                    # FINDME: verify this works for substrip256
                     # Mask extraction region for 'order' in 'other_order'
                     data['mask'].sel(order=other_order)[:, ymin:ymax, j] = True
     return data
