@@ -144,6 +144,18 @@ def get_wave(data, meta, log):
     for order in meta.orders:
         # Get trace for the given order and pupil position
         trace = get_soss_traces(pwcpos=pwcpos, order=str(order), interp=True)
+        if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96' and \
+            meta.trace_offset is None:
+            # PASTASOSS doesn't account for different substrip starting rows;
+            # therefore, reset default trace offset to -10 pixels.
+            # SUBSTRIP96: SUBSTRT2 = 1803
+            # SUBSTRIP256: SUBSTRT2 = 1793
+            meta.trace_offset = -10
+        if meta.trace_offset is not None:
+            trace.y += meta.trace_offset
+            subarray = data.attrs['mhdr']['SUBARRAY']
+            log.writelog(f"  Shifting trace by {meta.trace_offset} pixels "
+                         f"for {subarray}.", mute=(not meta.verbose))
         # Assign trace and wavelength for given order
         ind1 = np.nonzero(np.in1d(trace.x, data.x.values))[0]
         ind2 = np.nonzero(np.in1d(data.x.values, trace.x))[0]
