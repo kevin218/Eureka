@@ -274,6 +274,7 @@ class S3MetaClass(MetaClass):
         self.curvature = getattr(self, 'curvature', True)
         self.src_ypos = getattr(self, 'src_ypos', [35, 80])
         self.orders = getattr(self, 'orders', [1, 2])
+        self.all_orders = getattr(self, 'all_orders', [1, 2])
         self.record_ypos = getattr(self, 'record_ypos', False)
         self.trace_offset = getattr(self, 'trace_offset', None)
 
