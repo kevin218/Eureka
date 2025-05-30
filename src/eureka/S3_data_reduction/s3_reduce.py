@@ -397,16 +397,21 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                      'curved and may benefit from setting '
                                      'meta.curvature to "correct".')
 
-                    # Perform outlier rejection of
-                    # sky background along time axis
-                    meta.bg_y2 = meta.src_ypos + meta.bg_hw + 1
-                    meta.bg_y1 = meta.src_ypos - meta.bg_hw
-                    if not meta.ff_outlier:
-                        data = inst.flag_bg(data, meta, log)
+                    if not meta.skip_bg:
+                        # Perform outlier rejection of bg pix along time axis
+                        meta.bg_y2 = meta.src_ypos + meta.bg_hw + 1
+                        meta.bg_y1 = meta.src_ypos - meta.bg_hw
+                        if not meta.ff_outlier:
+                            data = inst.flag_bg(data, meta, log)
 
-                    # Do the background subtraction
-                    data = bg.BGsubtraction(data, meta, log,
-                                            m, meta.isplots_S3)
+                        # Do the background subtraction
+                        data = bg.BGsubtraction(data, meta, log,
+                                                m, meta.isplots_S3)
+                    else:
+                        data['bg'] = data.flux.copy()
+                        data.bg.values[:] = 0
+                        data.bg.attrs['bg_units'] = \
+                            data.flux.attrs['flux_units']
 
                     # Calulate and correct for 2D drift
                     if hasattr(inst, 'correct_drift2D'):

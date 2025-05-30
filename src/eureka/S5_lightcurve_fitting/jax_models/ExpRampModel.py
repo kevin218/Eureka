@@ -1,20 +1,11 @@
 import numpy as np
+import jax.numpy as jnp
 
-import theano
-theano.config.gcc__cxxflags += " -fexceptions"
-import theano.tensor as tt
-
-# Avoid tonnes of "Cannot construct a scalar test value" messages
-import logging
-logger = logging.getLogger("theano.tensor.opt")
-logger.setLevel(logging.ERROR)
-
-from . import PyMC3Model
+from . import JaxModel
 from ...lib.split_channels import split, get_trim
 
 
-class HSTRampModel(PyMC3Model):
-    """Model for HST orbit-long exponential plus quadratic ramps"""
+class ExpRampModel(JaxModel):
     def __init__(self, **kwargs):
         """Initialize the model.
 
@@ -22,11 +13,11 @@ class HSTRampModel(PyMC3Model):
         ----------
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
+            eureka.S5_lightcurve_fitting.jax_models.JaxModel.__init__().
         """
-        # Inherit from PyMC3Model class
+        # Inherit from JaxModel class
         super().__init__(**kwargs)
-        self.name = 'hst ramp'
+        self.name = 'exp. ramp'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -39,11 +30,15 @@ class HSTRampModel(PyMC3Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        self._time = np.ma.masked_invalid(time_array)
+        if isinstance(time_array, np.ma.core.MaskedArray):
+            # Convert to a numpy array with NaN masking
+            time_array = time_array.filled(np.nan)
+        self._time = time_array
+
         if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = np.ma.zeros(self.time.shape)
+                self.time_local = np.zeros(self.time.shape)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
@@ -51,7 +46,7 @@ class HSTRampModel(PyMC3Model):
                     time = self.time[trim1:trim2]
                     self.time_local[trim1:trim2] = time-time[0]
             else:
-                self.time_local = self.time - self.time[0]
+                self.time_local = self.time-self.time[0]
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -78,29 +73,29 @@ class HSTRampModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
-        hst_coeffs = np.zeros((nchan, 6)).tolist()
-
         if eval:
-            lib = np.ma
+            lib = np
             model = self.fit
         else:
-            lib = tt
+            lib = jnp
             model = self.model
 
-        # Parse 'h#' keyword arguments as coefficients
+        # Parse model attributes as coefficients
+        ramp_coeffs = np.zeros((nchan, 4)).tolist()
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
             else:
                 chan = 0
 
-            for i in range(6):
+            for i in range(4):
                 if chan == 0:
-                    hst_coeffs[c][i] = getattr(model, f'h{i}', 0)
+                    parname = f'r{i}'
                 else:
-                    hst_coeffs[c][i] = getattr(model, f'h{i}_ch{chan}', 0)
+                    parname = f'r{i}_ch{chan}'
+                ramp_coeffs[c][i] = getattr(model, parname, 0)
 
-        hst_flux = lib.zeros(0)
+        ramp_flux = lib.zeros(0)
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -112,14 +107,8 @@ class HSTRampModel(PyMC3Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            h0, h1, h2, h3, h4, h5 = hst_coeffs[c]
-            # Batch time is relative to the start of each HST orbit
-            # h4 is the orbital period of HST (~96 minutes)
-            self.time_batch = (time - h5) % h4
-            lcpiece = (1 +
-                       h0*lib.exp(-h1*self.time_batch) +
-                       h2*self.time_batch +
-                       h3*self.time_batch**2)
-            hst_flux = lib.concatenate([hst_flux, lcpiece])
+            r0, r1, r2, r3 = ramp_coeffs[c]
+            lcpiece = (1 + r0*lib.exp(-r1*time) + r2*lib.exp(-r3*time))
+            ramp_flux = lib.concatenate([ramp_flux, lcpiece])
 
-        return hst_flux
+        return ramp_flux

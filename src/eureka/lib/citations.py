@@ -682,40 +682,6 @@ CITATIONS = {
                 url = {{https://github.com/keflavich/image\_registration}}
                 }"""
              ],
-    "pymc3": [r"""@article{pymc3,
-                title={Probabilistic programming in Python using PyMC3},
-                author={Salvatier, John and Wiecki, Thomas V and Fonnesbeck,
-                        Christopher},
-                journal={PeerJ Computer Science},
-                volume={2},
-                pages={e55},
-                year={2016},
-                publisher={PeerJ Inc.},
-                doi = {10.7717/peerj-cs.55},
-                url = {https://doi.org/10.7717/peerj-cs.55}
-                }"""
-              ],
-    "exoplanet": [r"""@article{exoplanet:joss,
-                    author = {{Foreman-Mackey}, Daniel and {Luger}, Rodrigo and {Agol}, Eric
-                            and {Barclay}, Thomas and {Bouma}, Luke G. and {Brandt},
-                            Timothy D. and {Czekala}, Ian and {David}, Trevor J. and
-                            {Dong}, Jiayin and {Gilbert}, Emily A. and {Gordon}, Tyler A.
-                            and {Hedges}, Christina and {Hey}, Daniel R. and {Morris},
-                            Brett M. and {Price-Whelan}, Adrian M. and {Savel}, Arjun B.},
-                    title = "{exoplanet: Gradient-based probabilistic inference for
-                            exoplanet data \& other astronomical time series}",
-                    journal = {arXiv e-prints},
-                    year = 2021,
-                    month = may,
-                    eid = {arXiv:2105.01994},
-                    pages = {arXiv:2105.01994},
-                    archivePrefix = {arXiv},
-                    eprint = {2105.01994},
-                    primaryClass = {astro-ph.IM},
-                    adsurl = {https://ui.adsabs.harvard.edu/abs/2021arXiv210501994F},
-                    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-                    }"""
-                  ],
     "starry": [r"""@ARTICLE{starry,
                     author = {{Luger}, Rodrigo and {Agol}, Eric and {Foreman-Mackey}, Daniel and {Fleming}, David P. and {Lustig-Yaeger}, Jacob and {Deitrick}, Russell},
                     title = "{starry: Analytic Occultation Light Curves}",
