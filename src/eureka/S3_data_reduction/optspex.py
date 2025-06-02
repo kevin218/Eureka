@@ -4,6 +4,7 @@ import scipy.interpolate as spi
 import scipy.ndimage as spn
 from astropy.stats import sigma_clip
 from tqdm import tqdm
+import multiprocessing as mp
 
 from ..lib import gaussian as g
 from ..lib import smooth
@@ -640,36 +641,79 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
     data['optmask'].attrs['time_units'] = data.flux.attrs['time_units']
     data['optmask'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
 
-    # Perform optimal extraction on each of the frames
+    # Write optimal extraction results
+    def writeOptSpex(arg):
+        optspec, opterr, _, n, _ = arg
+        data['optspec'][n] = optspec
+        data['opterr'][n] = opterr
+        return
+
+    # Write optimal extraction results for detectors with multiple orders
+    def writeOptSpexMultiOrder(arg):
+        optspec, opterr, _, n, k = arg
+        data['optspec'][n, :, k] = optspec
+        data['opterr'][n, :, k] = opterr
+        return
+
+    # Perform optimal extraction on each of the integrations
     iterfn = range(meta.int_start, meta.n_int)
-    if meta.verbose:
-        iterfn = tqdm(iterfn)
-    if meta.orders is None:
-        for n in iterfn:
-            data['optspec'][n], data['opterr'][n], _ = \
-                optimize(meta, apdata[n], apmask[n], apbg[n],
-                         data.stdspec[n].values, gain, apv0[n],
-                         p5thresh=meta.p5thresh,
-                         p7thresh=meta.p7thresh,
-                         fittype=meta.fittype,
-                         window_len=meta.window_len,
-                         deg=meta.prof_deg, windowtype=windowtype,
-                         n=n, m=m, meddata=apmedflux)
+    if meta.ncpu == 1:
+        # Only 1 CPU
+        if meta.verbose:
+            iterfn = tqdm(iterfn)
+        if meta.orders is None:
+            for n in iterfn:
+                writeOptSpex(optimize(
+                    meta, apdata[n], apmask[n], apbg[n],
+                    data.stdspec[n].values, gain, apv0[n],
+                    p5thresh=meta.p5thresh, p7thresh=meta.p7thresh,
+                    fittype=meta.fittype, window_len=meta.window_len,
+                    deg=meta.prof_deg, windowtype=windowtype,
+                    n=n, m=m, meddata=apmedflux))
+        else:
+            norders = len(meta.orders)
+            for n in iterfn:
+                for k in range(norders):
+                    writeOptSpexMultiOrder(optimize(
+                        meta, apdata[n, :, :, k], apmask[n, :, :, k],
+                        apbg[n, :, :, k], data.stdspec[n, :, k].values,
+                        gain, apv0[n, :, :, k], p5thresh=meta.p5thresh,
+                        p7thresh=meta.p7thresh, fittype=meta.fittype,
+                        window_len=meta.window_len, deg=meta.prof_deg,
+                        windowtype=windowtype, n=n, m=m,
+                        meddata=apmedflux[:, :, k], order=meta.orders[k]))
     else:
-        norders = len(meta.orders)
-        for n in iterfn:
-            for k in range(norders):
-                data['optspec'][n, :, k], data['opterr'][n, :, k], _ = \
-                    optimize(meta, apdata[n, :, :, k], apmask[n, :, :, k],
-                             apbg[n, :, :, k], data.stdspec[n, :, k].values,
-                             gain, apv0[n, :, :, k],
-                             p5thresh=meta.p5thresh,
-                             p7thresh=meta.p7thresh,
-                             fittype=meta.fittype,
-                             window_len=meta.window_len,
-                             deg=meta.prof_deg, windowtype=windowtype,
-                             n=n, m=m, meddata=apmedflux[:, :, k],
-                             order=meta.orders[k])
+        # Multiple CPU threads
+        pool = mp.Pool(meta.ncpu)
+        jobs = []
+        if meta.orders is None:
+            for n in iterfn:
+                job = pool.apply_async(func=optimize, args=(
+                    meta, apdata[n], apmask[n], apbg[n],
+                    data.stdspec[n].values, gain, apv0[n],
+                    meta.p5thresh, meta.p7thresh,
+                    meta.fittype, meta.window_len,
+                    meta.prof_deg, windowtype,
+                    n, m, apmedflux), callback=writeOptSpex)
+                jobs.append(job)
+        else:
+            norders = len(meta.orders)
+            for n in iterfn:
+                for k in range(norders):
+                    job = pool.apply_async(func=optimize, args=(
+                        meta, apdata[n, :, :, k], apmask[n, :, :, k],
+                        apbg[n, :, :, k], data.stdspec[n, :, k].values,
+                        gain, apv0[n, :, :, k], meta.p5thresh,
+                        meta.p7thresh, meta.fittype, meta.window_len,
+                        meta.prof_deg, windowtype, n, m, apmedflux[:, :, k],
+                        meta.orders[k]), callback=writeOptSpexMultiOrder)
+                    jobs.append(job)
+        pool.close()
+        iterfn = jobs
+        if meta.verbose:
+            iterfn = tqdm(iterfn)
+        for job in iterfn:
+            job.get()
 
     # Mask out NaNs and Infs
     optspec_ma = np.ma.masked_invalid(data.optspec.values)
@@ -736,6 +780,10 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         The standard deviation on the spectrum.
     submask : ndarray
         The mask array.
+    n : int
+        The input integration number (useful for multiprocessing)
+    order : int
+        The input spectral order number (useful for multiprocessing)
     '''
     submask = np.copy(mask)
     ny, nx = subdata.shape
@@ -831,4 +879,4 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
     specvar = np.ma.sum(profile*~submask, axis=0) / denom
 
     # Return spectrum and uncertainties
-    return spectrum, np.sqrt(specvar), submask
+    return spectrum, np.sqrt(specvar), submask, n
