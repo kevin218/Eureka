@@ -149,28 +149,30 @@ class PlanetParams():
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
             try:
-                if model.parameters.dict[item0][1] == 'free':
-                    item0 += self.channel_id
+                item_temp = item0 + self.channel_id
+                if item_temp in model.parameters.dict.keys():
+                    item0 = item_temp
                 value = getattr(parameterObject, item0)
                 if eval:
                     value = value.value
                 setattr(self, item, value)
-            except KeyError:
+            except (KeyError, AttributeError):
+                # Item not in model.parameters, so check for some special cases
                 if (item in [f'u{i}' for i in range(1, 5)] or
                         'spot' == item[:4]):
                     # Limb darkening and spots probably don't vary with planet
                     try:
                         item0 = item
-                        if model.parameters.dict[item0][1] == 'free':
-                            item0 += self.channel_id
+                        item_temp = item0 + self.channel_id
+                        if item_temp in model.parameters.dict.keys():
+                            item0 = item_temp
                         value = getattr(parameterObject, item0)
                         if eval:
                             value = value.value
                         setattr(self, item, value)
-                    except KeyError:
+                    except (KeyError, AttributeError):
+                        # Item not in model.parameters, so leave it as default
                         pass
-                else:
-                    pass
         # Allow for rp or rprs
         if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
             item0 = 'rp' + self.pid_id
@@ -359,6 +361,8 @@ class PlanetParams():
             # spotrot will default to 10k years (important if t0 is not ~0)
             self.spotrot = 3650000.
             self.fleck_fast = True
+        else:
+            self.fleck_fast = False
 
         self.inc_rad = self.inc * np.pi / 180
         self.w_rad = self.w * np.pi / 180
