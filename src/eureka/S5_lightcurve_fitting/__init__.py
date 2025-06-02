@@ -1,14 +1,6 @@
 """
 Package to fit models to light curve data
 """
-# Do some checks here to avoid spamming these warnings
-try:
-    from . import differentiable_models
-except ModuleNotFoundError:
-    # Don't require that the pymc3, starry, and theano packages be installed
-    # but also don't raise a warning here to avoid excessive spam
-    pass
-
 from . import fitters
 from . import lightcurve
 from . import likelihood
