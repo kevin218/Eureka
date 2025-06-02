@@ -1,52 +1,23 @@
 # Eureka! Control File for Stage 5: Lightcurve Fitting
 
-ncpu            6 # The number of CPU threads to use when running emcee or dynesty in parallel
+ncpu            1 # The number of CPU threads to use when running emcee or dynesty in parallel
 
-allapers        True # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
+allapers        False # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
 
 fit_par         ./S5_Harmonica.epf # What fitting epf do you want to use?
 verbose         True  # If True, more details will be printed about steps
 fit_method      [lsq] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
 run_myfuncs     [harmonica_tr, polynomial] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
 
-# Manual clipping in time
-manual_clip     None    # A list of lists specifying the start and end integration numbers for manual removal.
-
-# Limb darkening controls
-# IMPORTANT: limb-darkening coefficients are not automatically fixed then, change to 'fixed' in .epf file whether they should be fixed or fitted!
-use_generate_ld  None  # use the generated limb-darkening coefficients from Stage 4? Options: exotic-ld, None. For exotic-ld, the limb-darkening laws available are linear, quadratic, 3-parameter and 4-parameter non-linear.
-ld_file          None  # Fully qualified path to the location of a limb darkening file that you want to use
-ld_file_white    None  # Fully qualified path to the location of a limb darkening file that you want to use for the white-light light curve (required if ld_file is not None and any EPF parameters are set to white_free or white_fixed).
-
 #lsq
 lsq_method      'Powell' # The scipy.optimize.minimize optimization method to use
 lsq_tol         1e-6 # The tolerance for the scipy.optimize.minimize optimization method
-
-#mcmc
-old_chain       None # Output folder relative to topdir that contains an old emcee chain to resume where you left off (set to None to start from scratch)
-lsq_first       True    # Initialize with an initial lsq call (can help shorten burn-in, but turn off if lsq fails). Only used if old_chain is None
-run_nsteps      100 # For testing, set to something quick
-run_nwalkers    32
-run_nburn       10 # For testing, set to something quick
-
-#dynesty
-run_nlive       64 # Must be > ndim * (ndim + 1) // 2
-run_bound       'multi'
-run_sample      'auto'
-run_tol         10 # For testing, set to something dynesty can get to quickly
-
-#GP inputs
-kernel_inputs   ['time'] #options: time
-kernel_class    ['Matern32'] #options: ExpSquared, Matern32, Exp, RationalQuadratic for george, Matern32 for celerite (sums of kernels possible for george separated by commas)
-GP_package      'celerite' #options: george, celerite
 
 # Plotting controls
 interp          True    # Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
 
 # Diagnostics
 isplots_S5      1 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
-testing_S5      False # Boolean, set True to only use the first spectral channel
-testing_model   False # Boolean, set True to only inject a model source of systematics
 hide_plots      True # If True, plots will automatically be closed rather than popping up
 
 # Project directory

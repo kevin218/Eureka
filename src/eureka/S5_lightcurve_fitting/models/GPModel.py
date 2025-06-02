@@ -329,12 +329,10 @@ class GPModel(Model):
                                      'ExpSquared, RationalQuadratic, Exp.')
         elif self.gp_code_name == 'celerite':
             # get metric and amplitude for the current kernel and channel
-            amp = np.exp(self.coeffs[c, k, 0])
+            sigma = np.sqrt(np.exp(self.coeffs[c, k, 0]))
             metric = np.exp(self.coeffs[c, k, 1])
 
-            kernel = celerite2.terms.Matern32Term(sigma=1, rho=metric)
-            # Setting the amplitude
-            kernel *= celerite2.terms.RealTerm(a=amp, c=0)
+            kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=metric)
         elif self.gp_code_name == 'tinygp':
             # get metric and amplitude for the current kernel and channel
             amp = np.exp(self.coeffs[c, k, 0])

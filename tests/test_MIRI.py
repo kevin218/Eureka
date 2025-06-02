@@ -22,10 +22,10 @@ from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
 
 try:
-    from eureka.S5_lightcurve_fitting import differentiable_models
-    pymc3_installed = True
+    import starry  # FINDME: later replace with jaxoplanet.starry
+    starry_installed = True
 except ModuleNotFoundError:
-    pymc3_installed = False
+    starry_installed = False
 
 
 def test_MIRI(capsys):
@@ -85,10 +85,10 @@ def test_MIRI(capsys):
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
     # Test differentiable models if pymc3 related dependencies are installed
-    if pymc3_installed:
+    if starry_installed:
         # Copy the S5 meta and manually edit some settings
         s5_meta2 = deepcopy(s5_meta)
-        s5_meta2.fit_method = '[exoplanet,nuts]'
+        s5_meta2.fit_method = '[jaxopt,nuts]'
         s5_meta2.run_myfuncs = s5_meta2.run_myfuncs.replace(
             'fleck_tr,batman_ecl,sinusoid_pc', 'starry')
         s5_meta2.fit_par = './s5_fit_par_starry.epf'
@@ -156,9 +156,9 @@ def test_MIRI(capsys):
                           ["dynesty", "batman", "fleck"])
     assert np.array_equal(s5_meta.citations, s5_cites)
 
-    if pymc3_installed:
+    if starry_installed:
         s5_cites2 = np.union1d(s4_cites, COMMON_IMPORTS[4] +
-                               ["pymc3", "exoplanet", "starry"])
+                               ["jax", "numpyro", "jaxoplanet", "starry"])
         assert np.array_equal(s5_meta2.citations, s5_cites2)
 
     # run assertions for S6
