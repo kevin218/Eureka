@@ -879,4 +879,4 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
     specvar = np.ma.sum(profile*~submask, axis=0) / denom
 
     # Return spectrum and uncertainties
-    return spectrum, np.sqrt(specvar), submask, n
+    return spectrum, np.sqrt(specvar), submask, n, order
