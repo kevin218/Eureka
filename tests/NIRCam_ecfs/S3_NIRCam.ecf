@@ -1,17 +1,22 @@
 # Eureka! Control File for Stage 3: Data Reduction
 
+# Stage 3 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-3
+
 ncpu        1           # Number of CPUs
 nfiles      1           # The number of data files to analyze simultaneously
 max_memory  0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
+indep_batches   False       # Independently treat each batch of files? Strongly recommended to leave this as False unless you have a clear reason to set it to True.
 suffix      calints     # Data file suffix
 
-convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+calibrated_spectra  False   # Set True to generate flux-calibrated spectra/photometry in mJy
+                            # Set False to convert to electrons
 
 # Subarray region of interest
 ywindow         [5,64]      # Vertical axis as seen in DS9
 xwindow         [100,1700]  # Horizontal axis as seen in DS9
 src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
 record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
+poly_wavelength	True		# Use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI
 dqmask          True        # Mask pixels with an odd entry in the DQ array
 expand          2           # Super-sampling factor along cross-dispersion direction
 
@@ -23,6 +28,7 @@ bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rej
 # Background parameters
 bg_hw           12          # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_deg          0           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
+bg_method       median        # Options: std (Standard Deviation), median (Median Absolute Deviation), mean (Mean Absolute Deviation)
 p3thresh        5           # X-sigma threshold for outlier rejection during background subtraction
 bg_row_by_row   True        # Row-by-row BG subtraction (only useful for NIRCam)
 bg_x1           28          # Left edge of exclusion region for row-by-row BG subtraction
@@ -31,11 +37,14 @@ bg_x2           1840        # Right edge of exclusion region for row-by-row BG s
 # Spectral extraction parameters
 spec_hw         8			# Half-width of aperture region for spectral extraction (relative to source position)
 fittype         meddata     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
-median_thresh   5           # X-sigma threshold when flagging outliers in median frame
+median_thresh   10          # X-sigma threshold when flagging outliers in median frame
 window_len      13          # Smoothing window length, for median frame or when fittype = smooth
 prof_deg        3           # Polynomial degree, when fittype = poly
 p5thresh        10          # X-sigma threshold for outlier rejection while constructing spatial profile
 p7thresh        10          # X-sigma threshold for outlier rejection during optimal spectral extraction
+
+# Curvature treatment
+curvature       None     # How to manage the curved trace on the detector (Options: None, correct)
 
 # Diagnostics
 isplots_S3  3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
@@ -43,7 +52,7 @@ nplots      5           # How many of each type of figure do you want to make pe
 vmin        0.97        # Sets the vmin of the color bar for Figure 3101.
 vmax        1.03        # Sets the vmax of the color bar for Figure 3101.
 time_axis   'x'         # Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x')
-testing_S3  True        # Boolean, set True to only use last file and generate select figures
+testing_S3  False        # Boolean, set True to only use last file and generate select figures
 hide_plots  True        # If True, plots will automatically be closed rather than popping up
 save_output True        # Save outputs for use in S4
 verbose     True        # If True, more details will be printed about steps

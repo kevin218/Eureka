@@ -31,4 +31,4 @@ if __name__ == '__main__':
 
     meta = s5.fitlc(eventlabel, ecf_path=ecf_path)
 
-    meta = s6.plot_spectra(eventlabel, ecf_path=ecf_path)
+    meta, lc = s6.plot_spectra(eventlabel, ecf_path=ecf_path)

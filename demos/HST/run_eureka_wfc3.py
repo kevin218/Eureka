@@ -16,10 +16,10 @@ if __name__ == '__main__':
     # To skip one or more stages that were already run,
     # just comment them out below
 
-    s3.reduce(eventlabel, ecf_path=ecf_path)
+    spec, meta = s3.reduce(eventlabel, ecf_path=ecf_path)
 
-    s4.genlc(eventlabel, ecf_path=ecf_path)
+    spec, lc, meta = s4.genlc(eventlabel, ecf_path=ecf_path)
 
-    s5.fitlc(eventlabel, ecf_path=ecf_path)
+    meta = s5.fitlc(eventlabel, ecf_path=ecf_path)
 
-    s6.plot_spectra(eventlabel, ecf_path=ecf_path)
+    meta, lc = s6.plot_spectra(eventlabel, ecf_path=ecf_path)
