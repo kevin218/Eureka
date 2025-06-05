@@ -33,12 +33,12 @@ class S1MetaClass(MetaClass):
 
         super().__init__(folder, file, eventlabel, stage=1, **kwargs)
 
+        # Set a default data file suffix
+        self.suffix = getattr(self, 'suffix', 'uncal')
+
     def set_defaults(self):
         '''Set Stage 1 specific defaults for generic instruments.
         '''
-        # Data file suffix
-        self.suffix = getattr(self, 'suffix', 'uncal')
-
         # Control parallelization
         # (Options are 'none', quarter', 'half', 'all', or any integer)
         self.maximum_cores = getattr(self, 'maximum_cores', 'half')

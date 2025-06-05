@@ -32,12 +32,12 @@ class S2MetaClass(MetaClass):
 
         super().__init__(folder, file, eventlabel, stage=2, **kwargs)
 
+        # Set a default data file suffix
+        self.suffix = getattr(self, 'suffix', 'rateints')
+
     def set_defaults(self):
         '''Set Stage 2 specific defaults for generic instruments.
         '''
-        # Data file suffix
-        self.suffix = getattr(self, 'suffix', 'rateints')
-
         # Generic pipeline steps that'd usually be run for TSO data
         # Run by default for instruments that call the function, but not all
         # instruments call it so True is a safe default
