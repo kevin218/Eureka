@@ -966,8 +966,6 @@ def make_citations(meta, stage=None):
             other_cites = other_cites + ["emcee"]
         if "dynesty" in meta.fit_method:
             other_cites = other_cites + ["dynesty"]
-        if "nuts" in meta.fit_method:
-            other_cites = other_cites + ["pymc3"]
         if "exoplanet" in meta.fit_method:
             other_cites = other_cites + ["exoplanet"]
 
