@@ -35,12 +35,12 @@ class S3MetaClass(MetaClass):
 
         super().__init__(folder, file, eventlabel, stage=3, **kwargs)
 
+        # Set a default data file suffix
+        self.suffix = getattr(self, 'suffix', 'calints')
+
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.
         '''
-        # Data file suffix
-        self.suffix = getattr(self, 'suffix', 'calints')
-
         # Make sure the inst, filt, and src_ypos attributes are at
         # least initialized
         self.inst = getattr(self, 'inst', None)
