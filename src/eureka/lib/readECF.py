@@ -165,7 +165,8 @@ class MetaClass:
         else:
             stage = 0
 
-        if item == 'inst' and value == 'wfc3' and stage < 4:
+        if (item == 'inst' and value == 'wfc3' and stage != '4cal'
+                and stage < 4):
             # Fix issues with CRDS server set for JWST
             if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for JWST and not HST.'
@@ -181,7 +182,8 @@ class MetaClass:
             self.pmap = getattr(self, 'pmap',
                                 crds.get_context_name('hst')[4:-5])
             os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
-        elif item == 'inst' and value is not None and stage < 4:
+        elif (item == 'inst' and value is not None and stage != '4cal'
+              and stage < 4):
             # Fix issues with CRDS server set for HST
             if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for HST and not JWST.'
@@ -200,7 +202,7 @@ class MetaClass:
 
         if ((item == 'pmap') and hasattr(self, 'pmap') and
                 (self.pmap is not None) and (self.pmap != value) and
-                (stage < 4)):
+                (stage != '4cal') and (stage < 4)):
             print(f'WARNING: pmap was set to {self.pmap} in the previous stage'
                   f' but is now set to {value} in this stage. This may cause '
                   'unexpected or undesireable behaviors.')
