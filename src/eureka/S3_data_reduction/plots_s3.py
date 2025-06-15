@@ -1515,9 +1515,9 @@ def get_bounds(x, y=None):
     Parameters
     ----------
     x : 1D array
-        Pixel indeces along x axis.
+        Pixel indices along x axis.
     y : 1D array, optional
-        Pixel indeces along y axis.
+        Pixel indices along y axis.
 
     Returns
     -------

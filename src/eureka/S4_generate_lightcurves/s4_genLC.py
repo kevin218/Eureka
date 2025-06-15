@@ -453,10 +453,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     log.writelog(f"  Bandpass {i} = "
                                  f"{lc.wave_low.values[i]:.3f} - "
                                  f"{lc.wave_hi.values[i]:.3f}")
-                    # Compute valid indeces within wavelength range
+                    # Compute valid indices within wavelength range
                     index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
                                      (spec.wave_1d < lc.wave_hi.values[i]))[0]
-                    log.writelog(f"    Indeces {index[0]} - {index[-1]}, "
+                    log.writelog(f"    indices {index[0]} - {index[-1]}, "
                                  f"{len(index)} in total")
                     # Make masked arrays for easy summing
                     optspec_ma = np.ma.masked_where(
@@ -518,7 +518,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if meta.compute_white and not meta.photometry:
                 log.writelog("Generating white-light light curve")
 
-                # Compute valid indeces within wavelength range
+                # Compute valid indices within wavelength range
                 index = np.where((spec.wave_1d >= meta.wave_min) *
                                  (spec.wave_1d < meta.wave_max))[0]
                 central_wavelength = np.mean(spec.wave_1d[index].values)
