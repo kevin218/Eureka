@@ -47,8 +47,6 @@ def GLBS(input_model, log, meta):
         meta.int_end = meta.n_int
     else:
         meta.int_end = meta.int_start+meta.nplots
-    if meta.inst == 'miri':
-        meta.isrotate = 0
 
     for ngrp in range(all_data.shape[1]):
         log.writelog(f'  Starting group {ngrp}.')
@@ -69,23 +67,40 @@ def GLBS(input_model, log, meta):
         data['mask'] = (['time', 'y', 'x'], grp_mask)
         data.attrs['intstart'] = meta.intstart
         meta.bg_dir = 'CxC'
+        if meta.inst == 'miri':
+            meta.isrotate = 0
 
-        # Only show plots for the last group
-        if ngrp == all_data.shape[1]-1:
+        if meta.isplots_S1 == 4:
+            # Plot all groups
+            isplots_S1 = meta.isplots_S1
+        # Otherwise, only show plots for the last good group
+        elif meta.inst == 'miri' and ngrp == all_data.shape[1]-2:
+            isplots_S1 = meta.isplots_S1
+        elif meta.inst != 'miri' and ngrp == all_data.shape[1]-1:
             isplots_S1 = meta.isplots_S1
         else:
             isplots_S1 = 0
-        data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1)
+        data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1,
+                                 group=ngrp)
 
         # Perform BG subtraction along dispersion direction
         # (only useful for NIRCam data)
         if meta.bg_row_by_row:
             meta.bg_dir = 'RxR'
-            if ngrp == all_data.shape[1]-1:
+            if meta.inst == 'miri':
+                meta.isrotate = 2
+            if meta.isplots_S1 == 4:
+                # Plot all groups
+                isplots_S1 = meta.isplots_S1
+            # Otherwise, only show plots for the last good group
+            elif meta.inst == 'miri' and ngrp == all_data.shape[1]-2:
+                isplots_S1 = meta.isplots_S1
+            elif meta.inst != 'miri' and ngrp == all_data.shape[1]-1:
                 isplots_S1 = meta.isplots_S1
             else:
                 isplots_S1 = 0
-            data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1)
+            data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1,
+                                     group=ngrp)
 
         # Overwrite values in all_data
         all_data[:, ngrp, :, :] = data['flux'].values
