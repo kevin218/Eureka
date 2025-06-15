@@ -15,6 +15,7 @@ calibrated_spectra  False   # Set True to generate flux-calibrated spectra/photo
 ywindow         [1,250]     # Vertical axis as seen in DS9
 xwindow         [6,2043]    # Horizontal axis as seen in DS9
 orders          [1,2]       # Spectral order(s)
+trace_offset    None        # Manually adjust trace position for SUBSTRIP96 mode
 src_ypos        [35,90]     # Spectral trace will be shifted to given vertical position.  Must be same size as meta.orders.
 dqmask          True        # Mask pixels with an odd entry in the DQ array
 expand          1           # Super-sampling factor along cross-dispersion direction
