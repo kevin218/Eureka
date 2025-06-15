@@ -147,10 +147,8 @@ def get_wave(data, meta, log):
         if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96' and \
                 meta.trace_offset is None:
             # PASTASOSS doesn't account for different substrip starting rows;
-            # therefore, reset default trace offset to -10 pixels.
-            # SUBSTRIP96: SUBSTRT2 = 1803
-            # SUBSTRIP256: SUBSTRT2 = 1793
-            meta.trace_offset = -10
+            # therefore, set trace offset to best guess (-12 pixels).
+            meta.trace_offset = -12
         if meta.trace_offset is not None:
             trace.y += meta.trace_offset
             subarray = data.attrs['mhdr']['SUBARRAY']
