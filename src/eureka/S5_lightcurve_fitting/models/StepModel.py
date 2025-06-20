@@ -2,7 +2,7 @@ import numpy as np
 
 from .Model import Model
 from ...lib.readEPF import Parameters
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class StepModel(Model):
@@ -45,14 +45,38 @@ class StepModel(Model):
         self.keys = [key for key in self.keys if key.startswith('step')]
         self._parse_coeffs()
 
+    @property
+    def time(self):
+        """A getter for the time."""
+        return self._time
+
+    @time.setter
+    def time(self, time_array):
+        """A setter for the time."""
+        if time_array is not None:
+            self._time = np.ma.masked_invalid(time_array)
+            # Convert to local time
+            if self.multwhite:
+                self.time_local = np.ma.zeros(self.time.shape)
+                for chan in self.fitted_channels:
+                    # Split the arrays that have lengths
+                    # of the original time axis
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    time = self.time[trim1:trim2]
+                    self.time_local[trim1:trim2] = time-time.data[0]
+            else:
+                self.time_local = self.time - self.time.data[0]
+
+
+
     def _parse_coeffs(self):
         """Convert dictionary of parameters into an array.
-
+        
         Converts dict of 'step#' coefficients into an array
         of coefficients in increasing order, i.e. ['step0', 'step1'].
         Also converts dict of 'steptime#' coefficients into an array
         of times in increasing order, i.e. ['steptime0', 'steptime1'].
-
+        
         Returns
         -------
         np.ndarray
@@ -106,8 +130,9 @@ class StepModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Create the ramp from the coeffs
-        lcfinal = np.ma.ones((nchan, len(self.time)))
+
+        lcfinal = np.array([])
+
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -120,6 +145,8 @@ class StepModel(Model):
                 time = split([time, ], self.nints, chan)[0]
 
             for s in np.where(self.steps[c] != 0)[0]:
-                lcfinal[c, time >= self.steptimes[c, s]] += \
+                lcpiece = np.ma.ones(len(time)) 
+                lcpiece[time >= self.steptimes[c, s]] += \
                     self.steps[c, s]
-        return lcfinal.flatten()
+                lcfinal = np.append(lcfinal, lcpiece)
+        return lcfinal
