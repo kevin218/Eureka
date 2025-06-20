@@ -34,7 +34,7 @@ class StepModel(Model):
             params = {key: coeff for key, coeff in steps_dict.items()
                       if key.startswith('step') and key[4:].isdigit()}
             params.update({key: coeff for key, coeff in steptimes_dict.items()
-                           if (key.startswith('steptime') and 
+                           if (key.startswith('steptime') and
                                key[9:].isdigit())})
             self.parameters = Parameters(**params)
 
@@ -88,7 +88,7 @@ class StepModel(Model):
 
         - 2022 July 14, Taylor J Bell
             Initial version.
-        """    
+        """
         for key in self.keys:
             split_key = key.split('_')
             if len(split_key) == 1:
@@ -102,7 +102,7 @@ class StepModel(Model):
             else:
                 # Get the steptime number and update self.steptimes
                 self.steptimes[chan, int(split_key[0][8:])] = \
-                    self.parameters.dict[key][0]            
+                    self.parameters.dict[key][0]
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
