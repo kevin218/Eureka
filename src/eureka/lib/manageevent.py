@@ -113,21 +113,6 @@ def loadevent(filename, load=[], loadfilename=None):
         raise AssertionError(f'Unrecognized metadata save file {filename}'
                              'contains neither "_Meta_Save" or "SpecData".')
 
-    # FINDME: Do we really need this following code anymore?
-    if load != []:
-        if loadfilename is None:
-            loadfilename = filename
-
-        with h5.File(loadfilename + '.h5', 'r') as handle:
-            for param in load:
-                exec('event.' + param + ' = handle["' + param + '"][:]')
-                # calibration data:
-                if event.havecalaor:
-                    exec('event.pre' + param + ' = handle["pre' + param +
-                         '"][:]')
-                    exec('event.post' + param + ' = handle["post' + param +
-                         '"][:]')
-
     return event
 
 
