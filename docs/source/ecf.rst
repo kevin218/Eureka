@@ -440,11 +440,11 @@ Only used for NIRISS. List of spectral orders to be reduced.
 
 trace_offset
 ''''''''''''
-Only used for NIRISS. Manually adjust trace position for SUBSTRIP96 mode.  Default is -10 pixels.
+Only used for NIRISS. PASTASOSS v1.2 doesn't correctly compute the trace position for SUBSTRIP96 mode; therefore, we have to apply a manual offset in the cross-dispersion direction.  The default is -12 pixels for SUBSTRIP96 and should be good to within a pixel or two.  If you see in Fig. 3304 that the spectrum is not quite centered, you should adjust the ``trace_offset`` accordingly.
 
 src_ypos
 ''''''''
-Only used for NIRISS. Spectral trace will be shifted to given vertical position.  Must be same size as meta.orders.
+The user should only specify this parameter for NIRISS data. Spectral trace will be shifted to given vertical position.  Must be same size as meta.orders.
 
 src_pos_type
 ''''''''''''
