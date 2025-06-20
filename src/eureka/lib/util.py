@@ -639,7 +639,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
         The current log.
     wave_1d : ndarray
         Wavelength array (nx) with trimmed edges depending on xwindow and
-        ywindow which have been set in the S3 ecf
+        ywindow which have been set in the S3 ecf.
     optspec : ndarray
         Optimally extracted spectra, 2D array (time, nx)
     optmask : ndarray (1D); optional
@@ -649,7 +649,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     wave_min : float; optional
         Minimum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose a lower limit.
-    wave_maxf : float; optional
+    wave_max : float; optional
         Maximum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose an upper limit.
     scandir : ndarray; optional
@@ -662,6 +662,12 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     mad : float
         Single MAD value in ppm
     """
+    # Make sure wavelengths are in ascending order
+    if wave_1d[0] > wave_1d[-1]:
+        wave_1d = wave_1d[::-1]
+        optspec = optspec[::-1]
+        optmask = optmask[::-1]
+
     optspec = np.ma.masked_invalid(optspec)
     optspec = np.ma.masked_where(optmask, optspec)
 
