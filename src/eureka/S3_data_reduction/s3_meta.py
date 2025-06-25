@@ -253,6 +253,9 @@ class S3MetaClass(MetaClass):
         '''Set Stage 3 specific defaults for MIRI.
         '''
         self.set_spectral_defaults()
+        self.isrotate = 2
+        self.bg_dir = 'CxC'
+        self.bg_row_by_row = False
 
     def set_NIRCam_defaults(self):
         '''Set Stage 3 specific defaults for NIRCam.
@@ -279,7 +282,9 @@ class S3MetaClass(MetaClass):
         self.curvature = getattr(self, 'curvature', True)
         self.src_ypos = getattr(self, 'src_ypos', [35, 80])
         self.orders = getattr(self, 'orders', [1, 2])
+        self.all_orders = getattr(self, 'all_orders', [1, 2])
         self.record_ypos = getattr(self, 'record_ypos', False)
+        self.trace_offset = getattr(self, 'trace_offset', None)
 
         self.set_spectral_defaults()
 

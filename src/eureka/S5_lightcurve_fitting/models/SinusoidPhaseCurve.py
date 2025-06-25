@@ -114,6 +114,7 @@ class SinusoidPhaseCurveModel(Model):
                         phaseVars2 = (1 +
                                       pl_params.AmpCos1*(np.ma.cos(phi2)-1) +
                                       pl_params.AmpSin1*np.ma.sin(phi2))
+                        min_val = np.ma.min(phaseVars2)
                 else:
                     phaseVars = (1 +
                                  pl_params.AmpCos1*(np.ma.cos(phi)-1) +
@@ -126,12 +127,13 @@ class SinusoidPhaseCurveModel(Model):
                                       pl_params.AmpSin1*np.ma.sin(phi2) +
                                       pl_params.AmpCos2*(np.ma.cos(2*phi2)-1) +
                                       pl_params.AmpSin2*np.ma.sin(2*phi2))
+                        min_val = np.ma.min(phaseVars2)
 
                 # If requested, force positive phase variations
-                if self.force_positivity and np.ma.any(phaseVars2 <= 0):
+                if self.force_positivity and min_val < 0:
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    phaseVars = 1e6*np.ma.ones(time.shape)
+                    phaseVars = 1e6*np.ma.ones(time.shape)*np.abs(min_val)
 
             lcfinal = np.ma.append(lcfinal, phaseVars)
 
