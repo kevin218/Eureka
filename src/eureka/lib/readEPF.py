@@ -197,6 +197,10 @@ class Parameters:
         for param, value in self.params.items():
             setattr(self, param, value)
 
+        # Add a default time_offset of 0.
+        if not hasattr(self, 'time_offset'):
+            self.time_offset = [0., 'independent']
+
     def __str__(self):
         '''A function to nicely format some outputs when a Parameters object
         is converted to a string.
