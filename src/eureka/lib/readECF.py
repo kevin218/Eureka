@@ -53,11 +53,15 @@ class MetaClass:
             file = f'S{stage}_{eventlabel}.ecf'
 
         self.params = {}
-        if file is not None and os.path.exists(os.path.join(folder, file)):
+
+        # Determine if a file should be read
+        file_path = os.path.join(folder, file) if file is not None else None
+        if file_path is not None and os.path.exists(file_path):
             self.read(folder, file)
-        elif file is not None:
-            raise ValueError(f"The file {os.path.join(folder, file)} "
-                             "does not exist.")
+        elif file_path is not None and not kwargs:
+            raise ValueError(f"The file {file_path} does not exist and no "
+                             "kwargs were provided.")
+        # else: assume kwargs will populate everything
 
         self.version = version
         if stage is not None:
