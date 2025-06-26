@@ -54,6 +54,12 @@ run_bound       'multi'
 run_sample      'auto'
 run_tol         0.1
 
+# dynamic dynesty fitter (in addition to the dynesty fitter parameters)
+run_dynamic     False    # If False, use only dynesty static fitter; if True, use dynamic dynesty fitter
+run_nlive_init  'min'    # Must be > ndim * (ndim + 1) // 2, which is used if set to 'min'
+run_nlive_batch 'auto'
+run_pfrac        0.5
+
 # PyMC3 NUTS fitter
 exoplanet_first False   # Initialize with an initial exoplanet optimizer call (generally not recommended, but can sometimes be helpful if your initial manual guess is quite poor)
 tune            3000

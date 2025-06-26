@@ -13,7 +13,7 @@ from scipy.optimize import minimize
 import lmfit
 import emcee
 
-from dynesty import NestedSampler
+from dynesty import NestedSampler, DynamicNestedSampler
 from dynesty.utils import resample_equal
 
 from .likelihood import (computeRedChiSq, lnprob, ln_like, ptform,
@@ -264,23 +264,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation. Reduced repeated code.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter. Added statements to avoid some initial
-        state issues.
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-        Record an astropy table for mean, median, percentiles,
-        +/- 1 sigma, all params
     """
     # Group the different variable types
     freenames = lc.freenames
@@ -814,72 +797,52 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     Returns
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The composite model after fitting
+        The composite model after fitting.
 
     Notes
     -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation. Reduced repeated code.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter.
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-        Record an astropy table for mean, median, percentiles,
-        +/- 1 sigma, all params
+    Uses either dynesty's static or dynamic nested sampling based on
+    the `meta.run_dynamic` flag.
     """
+    fittername = 'dynamicdynesty' if meta.run_dynamic else 'dynesty'
+
     # Group the different variable types
     freenames = lc.freenames
-    freepars, prior1, prior2, priortype, indep_vars = \
-        group_variables(model)
+    freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
     if meta.old_fitparams is not None:
-        freepars = load_old_fitparams(lc, meta, log, freenames, 'dynesty')
+        freepars = load_old_fitparams(lc, meta, log, freenames, fittername)
 
-    # DYNESTY
-    nlive = meta.run_nlive  # number of live points
-    bound = meta.run_bound  # use MutliNest algorithm for bounds
-    ndims = len(freepars)  # two parameters
-    sample = meta.run_sample  # uniform sampling
-    tol = meta.run_tol  # the stopping criterion
+    # Set up common dynesty parameters
+    ndims = len(freepars)
+    min_nlive = int(np.ceil(ndims * (ndims + 1) // 2))
+    bound = meta.run_bound
+    sample = meta.run_sample
+    tol = meta.run_tol
+    l_args = [lc, model, freenames]
 
+    # Initial log-likelihood
     start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype,
                           freenames)
     log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
     # Plot starting point
     if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta,
-                       fitter='dynestyStartingPoint')
+        plots.plot_fit(lc, model, meta, fitter=fittername+'StartingPoint')
         # Plot GP starting point
         if model.GP:
             plots.plot_GP_components(lc, model, meta,
-                                     fitter='dynestyStartingPoint')
+                                     fitter=fittername+'StartingPoint')
 
     # Plot star spots starting point
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_fleck_star(lc, model, meta, fitter='dynestyStartingPoint')
+        plots.plot_fleck_star(lc, model, meta,
+                              fitter=fittername+'StartingPoint')
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta,
-                                   fitter='dynestyStartingPoint')
+                                   fitter=fittername+'StartingPoint')
 
-    # START DYNESTY
-    l_args = [lc, model, freenames]
-
-    log.writelog('Running dynesty...')
-
-    min_nlive = int(np.ceil(ndims*(ndims+1)//2))
-    if nlive == 'min':
-        nlive = min_nlive
-        log.writelog(f'Using {nlive} live points...')
-    elif nlive < min_nlive:
-        log.writelog(f'**** WARNING: You should set run_nlive to at least '
-                     f'{min_nlive} ****')
-
+    # Set up multiprocessing if applicable
     if meta.ncpu > 1:
         pool = Pool(meta.ncpu)
         queue_size = meta.ncpu
@@ -887,16 +850,67 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         meta.ncpu = 1
         pool = None
         queue_size = None
-    sampler = NestedSampler(ln_like, ptform, ndims, pool=pool,
-                            queue_size=queue_size, bound=bound, sample=sample,
-                            nlive=nlive, logl_args=l_args,
-                            ptform_args=[prior1, prior2, priortype])
-    sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
-    res = sampler.results  # get results dictionary from sampler
+
+    # Choose between dynamic and static nested sampling
+    if meta.run_dynamic:
+        log.writelog('Using dynamic nested sampling...')
+
+        # Handle 'min' for meta.run_nlive_init
+        nlive_init = meta.run_nlive_init
+        if nlive_init == 'min':
+            nlive_init = min_nlive
+            log.writelog(f'Setting run_nlive_init = {nlive_init} (minimum '
+                         f'recommended for ndim = {ndims})',
+                         mute=(not meta.verbose))
+        elif nlive_init < min_nlive:
+            log.writelog(f'**** WARNING: You should set run_nlive_init to at '
+                         f'least {min_nlive} ****')
+
+        # Handle 'auto' for meta.run_nlive_batch
+        nlive_batch = meta.run_nlive_batch
+        if nlive_batch == 'auto':
+            nlive_batch = max(25, nlive_init // 2)
+            log.writelog(f'Setting run_nlive_batch = {nlive_batch} (auto '
+                         f'default based on run_nlive_init = {nlive_init})',
+                         mute=(not meta.verbose))
+
+        sampler = DynamicNestedSampler(
+            ln_like, ptform, ndims,
+            pool=pool, queue_size=queue_size,
+            bound=bound, sample=sample,
+            nlive_init=nlive_init, nlive_batch=nlive_batch,
+            logl_args=l_args,
+            ptform_args=[prior1, prior2, priortype],
+            wt_kwargs={'pfrac': meta.pfrac}
+        )
+        res = sampler.run_dynamic(dlogz=tol, print_progress=True)
+    else:
+        log.writelog('Using static nested sampling...')
+
+        # Handle 'min' for meta.run_nlive
+        nlive = meta.run_nlive
+        if nlive == 'min':
+            nlive = min_nlive
+            log.writelog(f'Setting run_nlive = {nlive_init} (minimum '
+                         f'recommended for ndim = {ndims})',
+                         mute=(not meta.verbose))
+        elif nlive < min_nlive:
+            log.writelog(f'**** WARNING: You should set run_nlive to at least '
+                         f'{min_nlive} ****')
+
+        sampler = NestedSampler(
+            ln_like, ptform, ndims, pool=pool, queue_size=queue_size,
+            bound=bound, sample=sample, nlive=nlive, logl_args=l_args,
+            ptform_args=[prior1, prior2, priortype])
+        sampler.run_nested(dlogz=tol, print_progress=True)
+        res = sampler.results  # get results dictionary from sampler
+
+    # Clean up pool
     if meta.ncpu > 1:
         pool.close()
         pool.join()
 
+    # Log summary of results
     log.writelog('', mute=(not meta.verbose))
     # Need to temporarily redirect output since res.summar() prints rather
     # than returns a string
@@ -906,10 +920,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     sys.stdout = old_stdout
     log.writelog(mystdout.getvalue(), mute=(not meta.verbose))
 
-    # get function that resamples from the nested samples to give sampler
-    # with equal weight
-    # draw posterior samples
-    weights = np.exp(res['logwt'] - res['logz'][-1])
+    # Extract posterior samples
+    weights = np.exp(res.logwt - res.logz[-1])
     samples = resample_equal(res.samples, weights)
     log.writelog('Number of posterior samples is {}'.format(len(samples)),
                  mute=(not meta.verbose))
@@ -926,17 +938,19 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                             names=("Parameter", "Mean", "-1sigma", "+1sigma",
                                    "16th", "50th", "84th"))
 
-    upper_errs = q[2]-q[1]
-    lower_errs = q[1]-q[0]
+    upper_errs = q[2] - q[1]
+    lower_errs = q[1] - q[0]
 
+    # Update model and uncertainty
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
     lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
                                     lc.nchannel_fitted)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
+    save_fit(meta, lc, model, fittername, t_results, freenames, samples)
 
+    # Final log-likelihood
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype,
                         freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
@@ -944,7 +958,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
-    log.writelog('\nDYNESTY RESULTS:')
+    log.writelog(f'\n{fittername.upper()} RESULTS:')
     for i in range(ndims):
         if 'scatter_mult' in freenames[i]:
             chan = freenames[i].split('_')[-1]
@@ -967,42 +981,42 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter='dynesty')
+        plots.plot_fit(lc, model, meta, fitter=fittername)
 
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_fleck_star(lc, model, meta, fitter='dynesty')
+        plots.plot_fleck_star(lc, model, meta, fitter=fittername)
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter='dynesty')
+            plots.plot_starry_star(lc, model, meta, fitter=fittername)
 
     # Plot Harmonica string
     if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_harmonica_string(lc, model, meta, fitter='dynesty')
+        plots.plot_harmonica_string(lc, model, meta, fitter=fittername)
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
-        plots.plot_GP_components(lc, model, meta, fitter='dynesty')
+        plots.plot_GP_components(lc, model, meta, fitter=fittername)
 
     # Zoom in on phase variations
     if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
                                  or 'poet_pc' in meta.run_myfuncs
                                  or 'quasilambert_pc' in meta.run_myfuncs):
-        plots.plot_phase_variations(lc, model, meta, fitter='dynesty')
+        plots.plot_phase_variations(lc, model, meta, fitter=fittername)
 
     # Make RMS time-averaging plot
     if meta.isplots_S5 >= 3 and np.size(lc.flux) > 20:
         # mc3.stats.time_avg breaks when testing with a small
         # number of integrations
-        plots.plot_rms(lc, model, meta, fitter='dynesty')
+        plots.plot_rms(lc, model, meta, fitter=fittername)
 
     # Plot residuals distribution
     if meta.isplots_S5 >= 3:
-        plots.plot_res_distr(lc, model, meta, fitter='dynesty')
+        plots.plot_res_distr(lc, model, meta, fitter=fittername)
 
     # plot using corner.py
     if meta.isplots_S5 >= 5:
-        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
+        plots.plot_corner(samples, lc, meta, freenames, fitter=fittername)
 
     # Make a new model instance
     best_model = copy.deepcopy(model)
@@ -1033,17 +1047,6 @@ def lmfitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation. Reduced repeated code.
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter.
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-         Record an astropy table for parameter values
     """
     # TODO: Do something so that duplicate param names can all be handled
     # (e.g. two Polynomail models with c0). Perhaps append something to the
@@ -1158,17 +1161,6 @@ def group_variables(model):
         Keywords indicating the type of prior for each free parameter.
     indep_vars : dict
         The frozen variables.
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved code to separate function to reduce repeated code.
-    - January 11, 2022 Megan Mansfield
-        Added ability to have shared parameters
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
     """
     parameters_dict = model.components[0].parameters.dict
     freenames = model.components[0].freenames
@@ -1224,13 +1216,6 @@ def group_variables_lmfit(model):
         The fitted variables.
     indep_vars : dict
         The frozen variables.
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved code to separate function to look similar to other fitters.
     """
     all_params = [i for j in [model.components[n].parameters.dict.items()
                   for n in range(len(model.components))] for i in j]

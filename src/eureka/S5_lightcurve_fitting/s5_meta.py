@@ -151,6 +151,15 @@ class S5MetaClass(MetaClass):
         self.run_sample = getattr(self, 'run_sample', 'auto')
         self.run_tol = getattr(self, 'run_tol', 0.1)
 
+        # dynamic dynesty inputs
+        self.run_dynamic = getattr(self, 'run_dynamic', False)
+        if not isinstance(self.run_dynamic, bool):
+            raise TypeError(
+                'run_dynamic must be a boolean, not a string or other type.')
+        self.run_nlive_init = getattr(self, 'run_nlive_init', 'min')
+        self.run_nlive_batch = getattr(self, 'run_nlive_batch', 'auto')
+        self.run_pfrac = getattr(self, 'run_pfrac', 0.5)
+
         # PyMC3 NUTS sampler settings
         self.exoplanet_first = getattr(self, 'exoplanet_first', False)
         self.chains = getattr(self, 'chains', 3)

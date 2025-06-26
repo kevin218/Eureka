@@ -1212,6 +1212,33 @@ run_tol
 Float. The tolerance for the dynesty run. Determines the stopping criterion. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
 
 
+Dynamic Nested Sampling Parameters
+''''''''''''''''''''''''''''''''''
+The following parameters control dynesty's **dynamic nested sampling** behavior. These are only used if ``run_dynamic`` is set to ``True``. Dynamic nested sampling adaptively allocates live points to focus more efficiently on the posterior distribution. More details are available in the dynesty documentation: https://dynesty.readthedocs.io/en/stable/dynamic.html
+
+If ``run_dynamic`` is set to ``True``, the parameters ``run_nlive_init``, ``run_nlive_batch``, and ``run_pfrac`` are used to control the dynamic behavior. Other static dynesty options such as ``run_bound``, ``run_sample``, and ``run_tol`` still apply and should be provided as usual. The ``run_nlive`` parameter is ignored when using dynamic sampling.
+
+run_dynamic
+^^^^^^^^^^^
+Boolean. If ``True``, dynesty will use its ``DynamicNestedSampler`` instead of ``NestedSampler``. Dynamic nested sampling is often more efficient for complex or multimodal posteriors, as it adapts the number and location of live points throughout the run. If ``False``, static nested sampling will be used with a fixed number of live points (``run_nlive``).
+
+run_nlive_init
+^^^^^^^^^^^^^^
+Integer. The number of live points to use during the initial exploratory phase of dynamic nested sampling. This sets the starting resolution for exploring the parameter space. A reasonable starting value is approximately 10x the number of free parameters. This can also be set to ``'min'`` to automatically use the minimum recommended value, which is ``(ndim * (ndim + 1)) / 2``.
+
+run_nlive_batch
+^^^^^^^^^^^^^^^
+Integer or ``'auto'``. The number of live points to allocate in each subsequent refinement batch during dynamic nested sampling. Controls how many new live points are used to zoom in on high-posterior regions.
+
+Typical values range from one-half to equal the value of ``run_nlive_init``. For example, if ``run_nlive_init = 200``, a common choice for ``run_nlive_batch`` would be between 100 and 200.
+
+If set to ``'auto'``, a safe default of ``max(25, run_nlive_init // 2)`` is used.
+
+run_pfrac
+^^^^^^^^^
+Float (between 0 and 1). The fraction of total samples to draw from the posterior distribution versus the prior. A higher value prioritizes detailed posterior exploration, while a lower value improves evidence (logZ) estimation. Use ``pfrac = 0.5`` for a balanced approach. Increase to ``0.7-0.9`` if you are primarily interested in posterior parameter estimation.
+
+
 NUTS Fitting Parameters
 '''''''''''''''''''''''
 The following set the parameters for running PyMC3's NUTS sampler. These options are described in more detail in: https://docs.pymc.io/en/v3/api/inference.html#pymc3.sampling.sample
