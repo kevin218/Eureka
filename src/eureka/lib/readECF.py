@@ -16,21 +16,6 @@ class MetaClass:
 
     This class loads a Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2009-01-02 Christopher Campo
-        Initial Version.
-    - 2010-03-08 Patricio Cubillos
-        Modified from ccampo version.
-    - 2010-10-27 Patricio Cubillos
-        Docstring updated
-    - 2011-02-12 Patricio Cubillos
-        Merged with ccampo's tepclass.py
-    - 2022-03-24 Taylor J Bell
-        Significantly modified for Eureka
     '''
 
     def __init__(self, folder='.'+os.sep, file=None, eventlabel=None,
@@ -68,11 +53,15 @@ class MetaClass:
             file = f'S{stage}_{eventlabel}.ecf'
 
         self.params = {}
-        if file is not None and os.path.exists(os.path.join(folder, file)):
+
+        # Determine if a file should be read
+        file_path = os.path.join(folder, file) if file is not None else None
+        if file_path is not None and os.path.exists(file_path):
             self.read(folder, file)
-        elif file is not None:
-            raise ValueError(f"The file {os.path.join(folder, file)} "
-                             "does not exist.")
+        elif file_path is not None and not kwargs:
+            raise ValueError(f"The file {file_path} does not exist and no "
+                             "kwargs were provided.")
+        # else: assume kwargs will populate everything
 
         self.version = version
         if stage is not None:
@@ -196,8 +185,10 @@ class MetaClass:
             # If a specific CRDS context is entered in the ECF, apply it.
             # Otherwise, log and fix the default CRDS context to make sure
             # it doesn't change between different segments.
-            self.pmap = getattr(self, 'pmap',
-                                crds.get_context_name('jwst')[5:-5])
+            self.pmap = getattr(self, 'pmap', None)
+            if self.pmap is None:
+                # Only need an internet connection if pmap is None
+                self.pmap = crds.get_context_name('jwst')[5:-5]
             os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
 
         if ((item == 'pmap') and hasattr(self, 'pmap') and

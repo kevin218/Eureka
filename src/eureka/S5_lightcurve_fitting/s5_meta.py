@@ -40,12 +40,6 @@ class S5MetaClass(MetaClass):
     def set_defaults(self):
         '''Set Stage 5 specific defaults for generic instruments.
 
-        Notes
-        -----
-        History:
-
-        - 2024-06 Taylor J Bell
-            Initial version setting defaults for any instrument.
         '''
         # Make sure the S3 expand parameter is defined
         # (to allow resuming from old analyses)
@@ -178,6 +172,7 @@ class S5MetaClass(MetaClass):
         self.interp = getattr(self, 'interp', True)
 
         # Diagnostics
+        self.interp = getattr(self, 'interp', False)
         self.isplots_S5 = getattr(self, 'isplots_S5', 3)
         self.nbin_plot = getattr(self, 'nbin_plot', None)
         self.testing_S5 = getattr(self, 'testing_S5', False)

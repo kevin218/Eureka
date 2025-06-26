@@ -129,15 +129,6 @@ class EurekaS1Pipeline(Detector1Pipeline):
     '''A wrapper class for jwst.pipeline.calwebb_detector1.Detector1Pipeline
 
     This wrapper class allows non-standard changes to Stage 1 for Eureka!.
-
-    Notes
-    -----
-    History:
-
-    - October 2021 Aarynn Carter /  Eva-Maria Ahrer
-        Initial version
-    - February 2022 Aarynn Carter /  Eva-Maria Ahrer
-        Updated for JWST version 1.3.3, code restructure
     '''
 
     def run_eurekaS1(self, filename, meta, log):
@@ -151,22 +142,13 @@ class EurekaS1Pipeline(Detector1Pipeline):
             The metadata object.
         log : logedit.Logedit
             The open log in which notes from this step can be added.
-
-        Notes
-        -----
-        History:
-
-        - October 2021 Aarynn Carter /  Eva-Maria Ahrer
-            Initial version
-        - February 2022 Aarynn Carter /  Eva-Maria Ahrer
-            Updated for JWST version 1.3.3, code restructure
         '''
         # Define superbias offset procedure
         self.superbias = Eureka_SuperBiasStep()
         self.superbias.s1_meta = meta
         self.superbias.s1_log = log
 
-        # Reset suffix and assign whether to save and the output directory
+        # Reset suffix and assign whether to save the output directory
         self.suffix = None
         self.save_results = (not meta.testing_S1)
         self.output_dir = meta.outputdir

@@ -107,26 +107,13 @@ def loadevent(filename, load=[], loadfilename=None):
             # All Eureka! save files should have the data_format,
             # so this must be a custom file
             meta_attrs['data_format'] = 'custom'
+        # Remove the file attribute to avoid reading in the old meta file
+        meta_attrs.pop('file', None)
         # Now create the Meta class and assign attrs
         event = readECF.MetaClass(**meta_attrs)
     else:
         raise AssertionError(f'Unrecognized metadata save file {filename}'
                              'contains neither "_Meta_Save" or "SpecData".')
-
-    # FINDME: Do we really need this following code anymore?
-    if load != []:
-        if loadfilename is None:
-            loadfilename = filename
-
-        with h5.File(loadfilename + '.h5', 'r') as handle:
-            for param in load:
-                exec('event.' + param + ' = handle["' + param + '"][:]')
-                # calibration data:
-                if event.havecalaor:
-                    exec('event.pre' + param + ' = handle["pre' + param +
-                         '"][:]')
-                    exec('event.post' + param + ' = handle["post' + param +
-                         '"][:]')
 
     return event
 

@@ -62,6 +62,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
     Returns
     -------
+    spec : xarray.Dataset
+        The xarray Dataset containing the time-series of 1D spectra.
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S3.
     '''
