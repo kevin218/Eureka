@@ -911,7 +911,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         nlive = meta.run_nlive
         if nlive == 'min':
             nlive = min_nlive
-            log.writelog(f'Setting run_nlive = {nlive_init} (minimum '
+            log.writelog(f'Setting run_nlive = {nlive} (minimum '
                          f'recommended for ndim = {ndims})',
                          mute=(not meta.verbose))
         elif nlive < min_nlive:
