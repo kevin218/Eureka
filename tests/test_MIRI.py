@@ -21,11 +21,8 @@ from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
 
-try:
-    from eureka.S5_lightcurve_fitting import differentiable_models
-    pymc3_installed = True
-except ModuleNotFoundError:
-    pymc3_installed = False
+# Temporary workaround while waiting for jax support to be added
+pymc3_installed = False
 
 
 def test_MIRI(capsys):

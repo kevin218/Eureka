@@ -1,13 +1,9 @@
 import numpy as np
-try:
-    import starry
-    starry.config.quiet = True
-    starry.config.lazy = True
-except ModuleNotFoundError:
-    # PyMC3 hasn't been installed
-    pass
 
 from ..lib.readECF import MetaClass
+
+# FINDME: Placeholder code until jaxoplanet.starry support is added
+starry = None
 
 
 class S5MetaClass(MetaClass):
@@ -15,13 +11,6 @@ class S5MetaClass(MetaClass):
 
     This class loads a Stage 5 Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-06 Taylor J Bell
-        Made specific S5 class based on MetaClass
     '''
 
     def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
@@ -41,14 +30,11 @@ class S5MetaClass(MetaClass):
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - 2024-06 Taylor J Bell
-            Initial version.
         '''
+        # Remove the stage from kwargs if present
+        if 'stage' in kwargs:
+            kwargs.pop('stage')
+
         super().__init__(folder, file, eventlabel, stage=5, **kwargs)
 
     def set_defaults(self):
@@ -160,15 +146,6 @@ class S5MetaClass(MetaClass):
         self.run_nlive_batch = getattr(self, 'run_nlive_batch', 'auto')
         self.run_pfrac = getattr(self, 'run_pfrac', 0.5)
 
-        # PyMC3 NUTS sampler settings
-        self.exoplanet_first = getattr(self, 'exoplanet_first', False)
-        self.chains = getattr(self, 'chains', 3)
-        self.target_accept = getattr(self, 'target_accept', 0.85)
-        if 'nuts' in self.fit_method:
-            # Must be provided in the ECF if relevant
-            self.tune = getattr(self, 'tune')
-            self.draws = getattr(self, 'draws')
-
         # Starry eclipse mapping pixel-sampling parameters
         self.pixelsampling = getattr(self, 'pixelsampling', False)
         self.oversample = getattr(self, 'oversample', 3)
@@ -188,6 +165,9 @@ class S5MetaClass(MetaClass):
         self.kernel_class = getattr(self, 'kernel_class', ['Matern32'])
         self.GP_package = getattr(self, 'GP_package', 'celerite')
         self.useHODLR = getattr(self, 'useHODLR', False)
+
+        # Plotting controls
+        self.interp = getattr(self, 'interp', True)
 
         # Diagnostics
         self.interp = getattr(self, 'interp', False)

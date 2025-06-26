@@ -65,7 +65,6 @@ There are also several optional dependency collections that can be installed wit
 - ``jwst`` which includes the necessary packages to run Stages 1-2 on JWST data.
 - ``hst`` which includes the necessary packages to run Stage 3 on HST/WFC3 data.
 - ``test`` which allows you to run our suite of pytest tests locally.
-- ``pymc3`` which allows you to use the NUTS Hamiltonian Monte Carlo sampler implemented in PyMC3 as well as a gradient based optimizer which benefits from differentiable models. This also allows you to use the starry astrophysical model for modelling exoplanet transits, eclipses (including eclipse mapping signals), and phase curves.
 - ``docs`` which allows you to build the documentation pages locally.
 - ``jupyter`` which includes jupyter and ipykernel for convenience.
 
@@ -73,16 +72,11 @@ In the installation instructions above, the ``jwst`` optional dependency is used
 
 To install with one or more optional dependency collections, the above examples can be generalized upon. For example, to install with just the ``hst`` dependencies, one can replace ``[jwst]`` with ``[hst]``. Or if you want to install with multiple options, you can do things like ``[jwst,hst]``.
 
-.. warning::
-	To install the ``pymc3`` optional dependencies, you also need to install ``mkl-service`` which can only be installed from conda using ``conda install mkl-service``.
-
-	In addition, attempting to specify ``[jwst,pymc3]`` when installing ``Eureka!`` will fail with a dependency conflict, as the newest version of the ``jwst`` pipeline is incompatible with ``pymc3``. Optional NUTS users should only specify ``[pymc3]`` in their installs, which will default to a slightly older version of the ``jwst`` pipeline. Other optional dependencies are currently compatible.
-
 Installing with a ``conda`` environment.yml file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can also download ``Eureka!`` using ``git`` and set up a ``conda`` environment directly from the ``git`` repository if
-you'd prefer not to use ``pip`` to install dependencies. To use the ``pymc3`` optional dependencies, replace ``environment.yml`` with ``environmenmt_pymc3.yml`` in the steps below.
+you'd prefer not to use ``pip`` to install dependencies.
 
 To install using conda:
 

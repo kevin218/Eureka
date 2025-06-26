@@ -39,14 +39,7 @@ In general, we strongly recommend you closely follow the instructions on the :re
 Issues running starry/theano code
 '''''''''''''''''''''''''''''''''
 
-Be sure that you have installed the ``pymc3`` optional dependencies when installing Eureka! as described on the
-:ref:`installation` page. If you're getting an error that includes ``theano/tensor/elemwise.py:264: TypeError``,
-you most likely need to make sure that you have the g++ compiler installed (i.e., do ``sudo apt install g++`` if you're
-on Ubuntu). If you're getting issues stating something like numpy was compiled for a different version, then you likely
-need to make sure you're starting with a new conda environment and use the ``pymc3`` optional dependencies which set a
-more strict upper-limit on the numpy version permitted. If you're getting an error that includes ``ImportError: libGL.so.1``,
-then you either need to start with a new conda environment and make sure that you only install ``opencv-python-headless``
-and not ``opencv-python``, or you need to install libgl1 by doing ``sudo apt install libgl1``.
+Starry and Theano are no longer supported by Eureka! and will not work. If you try to run code that uses these packages, you will get an error message.
 
 
 .. _faq-install:
@@ -122,8 +115,8 @@ Some more permanent solutions would be to:
 
 "ERROR: Inconsistent numbers of reads" when running HST analyses
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-HST observations are usually consistent between scans (i.e. all the spatial scans are the same number of reads), but some observations may modify 
-the number of reads in a scan for timing purposes. Ensure that your datasets have scans of consistent length, or exclude the shorter 
+HST observations are usually consistent between scans (i.e. all the spatial scans are the same number of reads), but some observations may modify
+the number of reads in a scan for timing purposes. Ensure that your datasets have scans of consistent length, or exclude the shorter
 scans at the end of orbits if needed (e.g. by removing those FITS files from your input data directory).
 
 
