@@ -68,7 +68,6 @@ class StepModel(Model):
                 self.time_local = self.time - self.time.data[0]
 
 
-
     def _parse_coeffs(self):
         """Convert dictionary of parameters into an array.
 
@@ -129,7 +128,6 @@ class StepModel(Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-
 
         lcfinal = np.array([])
 
