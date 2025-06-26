@@ -67,7 +67,6 @@ class StepModel(Model):
             else:
                 self.time_local = self.time - self.time.data[0]
 
-
     def _parse_coeffs(self):
         """Convert dictionary of parameters into an array.
 
