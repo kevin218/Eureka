@@ -58,11 +58,10 @@ def set_rc(style='preserve', usetex=False, layout='constrained',
         Ensures that input style is one of: "custom", "eureka",
         "preserve", or "default"
     """
-    global _current_style
-
     if not (isinstance(usetex, (bool, type(None))) and
             isinstance(from_scratch, bool)):
-        raise ValueError('"usetex" and "from_scratch" arguments must be boolean or None.')
+        raise ValueError('"usetex" and "from_scratch" arguments must be '
+                         'boolean or None.')
 
     _current_style.update({
         "style": style,
@@ -74,10 +73,10 @@ def set_rc(style='preserve', usetex=False, layout='constrained',
         "kwargs": kwargs
     })
 
-    _apply_style()
+    _set_style()
 
 
-def _apply_style():
+def _set_style():
     """Apply the currently selected style to matplotlib rcParams."""
     style = _current_style["style"]
     usetex = _current_style["usetex"]
@@ -114,16 +113,14 @@ def _apply_style():
         matplotlib.use(backend)
 
 
-def use_current_style(func):
+def apply_style(func):
     """Decorator to apply the current or default Eureka matplotlib style."""
     @wraps(func)
     def wrapper(*args, **kwargs):
         if _current_style["style"] is None:
             _current_style["style"] = "eureka"
-            _apply_style()
-
         with plt.rc_context():
-            _apply_style()
+            _set_style()
             return func(*args, **kwargs)
     return wrapper
 
