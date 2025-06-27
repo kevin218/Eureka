@@ -15,10 +15,6 @@ from eureka.S5_lightcurve_fitting import s5_fit as s5
 
 
 def test_NIRCamPhotometry(capsys):
-    # Set up some parameters to make plots look nicer.
-    # You can set usetex=True if you have LaTeX installed
-    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
-
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
@@ -85,9 +81,6 @@ def test_NIRCamPhotometry(capsys):
 
 def test_NIRCamPhotometry_hex(capsys):
     # tests hexagonal photometry aperture
-
-    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
-
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests

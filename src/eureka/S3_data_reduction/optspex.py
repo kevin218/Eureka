@@ -6,7 +6,7 @@ from astropy.stats import sigma_clip
 from tqdm import tqdm
 
 from ..lib import gaussian as g
-from ..lib import smooth
+from ..lib import smooth, plots
 from . import plots_s3
 
 
@@ -71,6 +71,7 @@ def standard_spectrum(apdata, apmask, aperr):
     return stdspec, stdvar
 
 
+@plots.apply_style
 def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
     '''Construct normalized spatial profile using polynomial fits along the
     wavelength direction.
@@ -148,6 +149,7 @@ def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
     return profile
 
 
+@plots.apply_style
 def profile_smooth(subdata, mask, threshold=10, window_len=21,
                    windowtype='hanning', isplots=0):
     '''Construct normalized spatial profile using a smoothing function.
@@ -260,6 +262,7 @@ def profile_meddata(meddata):
 
 
 # Construct normalized spatial profile using wavelets
+@plots.apply_style
 def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
     '''This function performs 1D image denoising using BayesShrink
     soft thresholding.
@@ -334,6 +337,7 @@ def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
     return profile
 
 
+@plots.apply_style
 def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
     '''Construct normalized spatial profile using wavelets
 
@@ -416,6 +420,7 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
     return profile
 
 
+@plots.apply_style
 def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     '''Construct normalized spatial profile using Gaussian smoothing function.
 
@@ -680,6 +685,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
     return data, meta, log
 
 
+@plots.apply_style
 def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
              p7thresh=10, fittype='smooth', window_len=21, deg=3,
              windowtype='hanning', n=0, m=0, meddata=None, order=None):

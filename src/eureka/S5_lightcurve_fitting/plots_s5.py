@@ -32,6 +32,7 @@ from ..lib.split_channels import split
 from .models.AstroModel import PlanetParams
 
 
+@plots.apply_style
 def plot_fit(lc, model, meta, fitter, isTitle=True):
     """Plot the fitted model over the data. (Figs 5101)
 
@@ -146,12 +147,13 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5101_{fname_tag}_lc_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
     """Plot the fitted model over the data. (Figs 5104 and Figs 5304)
 
@@ -263,7 +265,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5104_{fname_tag}_phaseVariations_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -299,12 +301,13 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
                 ch_number = str(channel).zfill(len(str(lc.nchannel)))
                 fname_tag = f'ch{ch_number}'
             fname = (f'figs{os.sep}fig5304_{fname_tag}_phaseVariations'
-                     f'_{fitter}' + plots.figure_filetype)
+                     f'_{fitter}' + plots.get_filetype())
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if not meta.hide_plots:
                 plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_rms(lc, model, meta, fitter):
     """Create a RMS time-averaging plot to look for red noise. (Figs 5301)
 
@@ -400,12 +403,13 @@ def plot_rms(lc, model, meta, fitter):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5301_{fname_tag}_RMS_TimeAveraging_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_corner(samples, lc, meta, freenames, fitter):
     """Plot a corner plot. (Figs 5501)
 
@@ -448,7 +452,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
         fname_tag = f'ch{ch_number}'
     fname = (f'figs{os.sep}fig5501_{fname_tag}_corner_{fitter}'
-             + plots.figure_filetype)
+             + plots.get_filetype())
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05,
                 dpi=300)
     if not meta.hide_plots:
@@ -460,6 +464,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     rcParams['figure.constrained_layout.use'] = old_constrained_layout
 
 
+@plots.apply_style
 def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
                nburn=0, nrows=3, ncols=4, nthin=1):
     """Plot the evolution of the chain to look for temporal trends. (Figs 5303)
@@ -543,13 +548,14 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
         fname += '_'+fitter
         if nplots > 1:
             fname += f'_plot{plot_number+1}of{nplots}'
-        fname += plots.figure_filetype
+        fname += plots.get_filetype()
         fig.savefig(meta.outputdir+fname, bbox_inches='tight',
                     pad_inches=0.05, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
                **kwargs):
     """Plot the evolution of the trace to look for temporal trends. (Figs 5305)
@@ -594,7 +600,7 @@ def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
         fname = f'figs{os.sep}fig5305_{fname_tag}_trace'
         fname += '_'+fitter
         fname += f'figure{i+1}of{nplots}'
-        fname += plots.figure_filetype
+        fname += plots.get_filetype()
         fig.savefig(meta.outputdir+fname, bbox_inches='tight',
                     pad_inches=0.05, dpi=300)
         if not meta.hide_plots:
@@ -603,6 +609,7 @@ def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
             plt.close(fig)
 
 
+@plots.apply_style
 def plot_res_distr(lc, model, meta, fitter):
     """Plot the normalized distribution of residuals + a Gaussian. (Fig 5302)
 
@@ -653,12 +660,13 @@ def plot_res_distr(lc, model, meta, fitter):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5302_{fname_tag}_res_distri_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     """Plot the lightcurve + GP model + residuals (Figs 5102)
 
@@ -737,12 +745,13 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5102_{fname_tag}_lc_GP_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_eclipse_map(lc, flux_maps, meta, fitter):
     """Plot fitted eclipse map and lat-lon slices (Figs 5105)
 
@@ -838,13 +847,14 @@ def plot_eclipse_map(lc, flux_maps, meta, fitter):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5105_{fname_tag}_eclipseMap_{fitter}' +
-                 plots.figure_filetype)
+                 plots.get_filetype())
 
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_fleck_star(lc, model, meta, fitter):
     """Plot the location and contrast of the fleck star spots (Figs 5307)
 
@@ -909,12 +919,13 @@ def plot_fleck_star(lc, model, meta, fitter):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5307_{fname_tag}_fleck_star_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_starry_star(lc, model, meta, fitter):
     """Plot the location and contrast of the starry star spots (Figs 5308)
 
@@ -985,12 +996,13 @@ def plot_starry_star(lc, model, meta, fitter):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5308_{fname_tag}_starry_star_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_harmonica_string(lc, model, meta, fitter, isTitle=True):
     """Plot the Harmonica string (Figs 5309)
 
@@ -1046,8 +1058,7 @@ def plot_harmonica_string(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5309_{fname_tag}_harmonica_string_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
-

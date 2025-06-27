@@ -20,10 +20,6 @@ from eureka.S6_planet_spectra import s6_spectra as s6
 
 
 def test_NIRCam(capsys):
-    # Set up some parameters to make plots look nicer.
-    # You can set usetex=True if you have LaTeX installed
-    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
-
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests

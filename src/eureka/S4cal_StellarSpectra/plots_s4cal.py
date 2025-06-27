@@ -6,6 +6,7 @@ from ..lib import util, plots
 colors = ['xkcd:bright blue', 'xkcd:soft green', 'orange', 'purple']
 
 
+@plots.apply_style
 def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
     '''Plot binned white light curve and indicate
     baseline and in-occultation regions.
@@ -76,13 +77,14 @@ def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
         ax.set_xlabel(f"Time ({time.time_units})")
         ax.set_ylabel("Normalized Flux")
     fname = 'figs'+os.sep+'fig4202_WhiteLC'
-    fig.savefig(meta.outputdir+fname+plots.figure_filetype,
+    fig.savefig(meta.outputdir+fname+plots.get_filetype(),
                 bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
     return fig, ax
 
 
+@plots.apply_style
 def plot_stellarSpec(meta, ds):
     '''Plot calibrated stellar spectra from
     baseline and in-occultation regions.
@@ -121,7 +123,7 @@ def plot_stellarSpec(meta, ds):
     ax.set_ylabel(f"Flux ({ds.base_flux.flux_units})")
 
     fname = 'figs'+os.sep+'fig4201_CalStellarSpec'
-    fig.savefig(meta.outputdir+fname+plots.figure_filetype,
+    fig.savefig(meta.outputdir+fname+plots.get_filetype(),
                 bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)

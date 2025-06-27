@@ -8,6 +8,7 @@ warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
                                           'this call because figure with num')
 
 
+@plots.apply_style
 def binned_lightcurve(meta, log, lc, i, white=False):
     '''Plot each spectroscopic light curve. (Figs 4102)
 
@@ -83,12 +84,13 @@ def binned_lightcurve(meta, log, lc, i, white=False):
     time_units = lc.data.attrs['time_units']
     plt.xlabel(f'Time [{time_units} - {time_modifier}]')
 
-    fname = f'figs{os.sep}fig4102_{fname_tag}_1D_LC'+plots.figure_filetype
+    fname = f'figs{os.sep}fig4102_{fname_tag}_1D_LC'+plots.get_filetype()
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def binned_background(meta, log, lc, i, white=False):
     '''Plot each spectroscopic background light curve. (Figs 4105)
 
@@ -164,12 +166,13 @@ def binned_background(meta, log, lc, i, white=False):
     time_units = lc.data.attrs['time_units']
     plt.xlabel(f'Time [{time_units} - {time_modifier}]')
 
-    fname = f'figs{os.sep}fig4105_{fname_tag}_1D_BG'+plots.figure_filetype
+    fname = f'figs{os.sep}fig4105_{fname_tag}_1D_BG'+plots.get_filetype()
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def driftxpos(meta, lc):
     '''Plot the 1D drift/jitter results. (Fig 4103)
 
@@ -199,12 +202,13 @@ def driftxpos(meta, lc):
     plt.xlabel('Frame Number')
     plt.legend(loc='best')
 
-    fname = 'figs'+os.sep+'fig4103_DriftXPos'+plots.figure_filetype
+    fname = 'figs'+os.sep+'fig4103_DriftXPos'+plots.get_filetype()
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def driftxwidth(meta, lc):
     '''Plot the 1D drift width results. (Fig 4104)
 
@@ -234,12 +238,13 @@ def driftxwidth(meta, lc):
     plt.xlabel('Frame Number')
     plt.legend(loc='best')
 
-    fname = 'figs'+os.sep+'fig4104_DriftXWidth'+plots.figure_filetype
+    fname = 'figs'+os.sep+'fig4104_DriftXWidth'+plots.get_filetype()
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
     '''Plot a 2D light curve with drift correction. (Fig 4101)
 
@@ -321,7 +326,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
 
     plt.title(f"MAD = {np.round(meta.mad_s4).astype(int)} ppm")
 
-    fname = 'figs'+os.sep+'fig4101_2D_LC'+plots.figure_filetype
+    fname = 'figs'+os.sep+'fig4101_2D_LC'+plots.get_filetype()
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if meta.hide_plots:
         plt.close()
@@ -331,6 +336,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
     return
 
 
+@plots.apply_style
 def cc_spec(meta, ref_spec, fit_spec, n):
     '''Compare the spectrum used for cross-correlation with the current
     spectrum (Fig 4301).
@@ -357,12 +363,13 @@ def cc_spec(meta, ref_spec, fit_spec, n):
 
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = ('figs'+os.sep+f'fig4301_int{int_number}_CC_Spec' +
-             plots.figure_filetype)
+             plots.get_filetype())
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def cc_vals(meta, vals, n):
     '''Make the cross-correlation strength plot (Fig 4302).
 
@@ -382,12 +389,13 @@ def cc_vals(meta, vals, n):
 
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = ('figs'+os.sep+f'fig4302_int{int_number}_CC_Vals' +
-             plots.figure_filetype)
+             plots.get_filetype())
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_extrapolated_throughput(meta, throughput_wavelengths, throughput,
                                  wav_poly, throughput_poly, mode):
     '''Make the extrapolated throughput plot (Fig 4303).
@@ -425,7 +433,7 @@ def plot_extrapolated_throughput(meta, throughput_wavelengths, throughput,
     plt.legend(loc='best')
 
     fname = ('figs'+os.sep+'fig4303_ExtrapolatedThroughput' +
-             plots.figure_filetype)
+             plots.get_filetype())
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)

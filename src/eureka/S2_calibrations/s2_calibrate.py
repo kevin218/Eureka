@@ -191,6 +191,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         Initial version
     '''
 
+    @plots.apply_style
     def run_eurekaS2(self, filename, meta, log):
         '''Reduces rateints spectrum files ouput from Stage 1 of the JWST
         pipeline into calints and x1dints.
@@ -287,7 +288,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
                 plt.xlabel('Wavelength (micron)')
                 plt.ylabel('Flux')
                 plt.savefig(meta.outputdir+'figs'+os.sep+fname +
-                            plots.figure_filetype,
+                            plots.get_filetype(),
                             bbox_inches='tight', dpi=300)
                 if meta.hide_plots:
                     plt.close()

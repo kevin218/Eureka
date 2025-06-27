@@ -29,10 +29,6 @@ except ModuleNotFoundError:
 
 
 def test_MIRI(capsys):
-    # Set up some parameters to make plots look nicer.
-    # You can set usetex=True if you have LaTeX installed
-    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
-
     s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
     if not s2_installed:
         with capsys.disabled():

@@ -1,8 +1,19 @@
+import os
 import matplotlib
 from matplotlib import rcdefaults, rcParams
+from functools import wraps
+import matplotlib.pyplot as plt
 
-# Default figure file type
-figure_filetype = '.png'
+# Global configuration dictionary (used by decorator and set_rc)
+_current_style = {
+    "style": None,  # None = not explicitly set yet
+    "usetex": None,
+    "layout": "constrained",
+    "backend": None,
+    "filetype": ".png",
+    "from_scratch": False,
+    "kwargs": {},
+}
 
 
 def set_rc(style='preserve', usetex=False, layout='constrained',
@@ -47,41 +58,50 @@ def set_rc(style='preserve', usetex=False, layout='constrained',
         Ensures that input style is one of: "custom", "eureka",
         "preserve", or "default"
     """
+    global _current_style
+
     if not (isinstance(usetex, (bool, type(None))) and
             isinstance(from_scratch, bool)):
-        raise ValueError('"usetex" and "from_scratch" arguments must '
-                         'be boolean.')
+        raise ValueError('"usetex" and "from_scratch" arguments must be boolean or None.')
+
+    _current_style.update({
+        "style": style,
+        "usetex": usetex,
+        "layout": layout,
+        "backend": backend,
+        "filetype": filetype,
+        "from_scratch": from_scratch,
+        "kwargs": kwargs
+    })
+
+    _apply_style()
+
+
+def _apply_style():
+    """Apply the currently selected style to matplotlib rcParams."""
+    style = _current_style["style"]
+    usetex = _current_style["usetex"]
+    layout = _current_style["layout"]
+    backend = _current_style["backend"]
+    from_scratch = _current_style["from_scratch"]
+    kwargs = _current_style["kwargs"]
 
     if from_scratch:
-        # Reset all rcParams prior to making changes
         rcdefaults()
 
-    # Apply the desired style...
     if style == 'custom':
         rcParams.update(**kwargs)
     elif style == 'eureka':
-        # Apply default Eureka! font settings
-        family = 'serif'
-        fontfamily = ['Computer Modern Roman', *rcParams['font.serif']]
-        fontsize = 14
-        params = {'font.family': [family, ], 'font.'+family: fontfamily,
-                  'font.size': fontsize, 'legend.fontsize': 11,
-                  'mathtext.fontset': 'dejavuserif',
-                  'mathtext.it': 'serif:italic',
-                  'mathtext.rm': 'serif', 'mathtext.sf': 'serif',
-                  'mathtext.bf': 'serif:bold',
-                  'savefig.bbox': 'tight'}
-        rcParams.update(params)
+        style_path = os.path.join(os.path.dirname(__file__), 'eureka.mplstyle')
+        plt.style.use(style_path)
     elif style == 'default':
-        # Use default matplotlib settings
         rcdefaults()
-    elif style == 'preserve':
+    elif style == 'preserve' or style is None:
         pass
     else:
         raise ValueError('Input style must be one of: "custom", "eureka", '
                          '"preserve", or "default".')
 
-    # TeX fonts may not work on all machines
     if usetex is not None:
         rcParams.update({'text.usetex': usetex})
 
@@ -93,6 +113,27 @@ def set_rc(style='preserve', usetex=False, layout='constrained',
     if backend is not None:
         matplotlib.use(backend)
 
-    # Update the figure filetype
-    global figure_filetype
-    figure_filetype = filetype
+
+def use_current_style(func):
+    """Decorator to apply the current or default Eureka matplotlib style."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if _current_style["style"] is None:
+            _current_style["style"] = "eureka"
+            _apply_style()
+
+        with plt.rc_context():
+            _apply_style()
+            return func(*args, **kwargs)
+    return wrapper
+
+
+def get_filetype():
+    """Return the currently selected figure filetype (e.g., '.png', '.pdf').
+
+    Returns
+    -------
+    str
+        The file extension to use when saving plots, such as '.png' or '.pdf'.
+    """
+    return _current_style["filetype"]
