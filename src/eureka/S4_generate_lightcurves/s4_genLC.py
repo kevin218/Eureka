@@ -448,6 +448,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
             # Loop over spectroscopic channels
             meta.mad_s4_binned = []
+            meta.mad_s4_binned_bg = []
             for i in range(meta.nspecchan):
                 if not meta.photometry:
                     log.writelog(f"  Bandpass {i} = "
@@ -513,6 +514,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     plots_s4.binned_lightcurve(meta, log, lc, i)
                     if 'skylev' in list(spec.keys()):
                         plots_s4.binned_background(meta, log, lc, i)
+
+            # Plot MAD values to help identify outliers
+            if meta.isplots_S4 >= 1:
+                plots_s4.mad_outliers(meta, lc, spec)
 
             # If requested, also generate white-light light curve
             if meta.compute_white and not meta.photometry:

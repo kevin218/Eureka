@@ -156,8 +156,7 @@ def binned_background(meta, log, lc, i, white=False):
         plt.errorbar(lc.time.values-time_modifier, norm_bgdata, norm_bgerr,
                      fmt='o', color=f'C{i}', mec=f'C{i}', alpha=0.2)
         mad = util.get_mad_1d(norm_bgdata)
-        meta.mad_s4_binned.append(mad)
-        # log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+        meta.mad_s4_binned_bg.append(mad)
         plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
                  transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Background')
@@ -179,13 +178,6 @@ def driftxpos(meta, lc):
         The metadata object.
     lc : Xarray Dataset
         The light curve object containing drift arrays.
-
-    Notes
-    -----
-    History:
-
-    - Jul 11, 2022 Caroline Piaulet
-        Edited this function to use the new naming convention for drift
     '''
     plt.figure(4103, figsize=(8, 4))
     plt.clf()
@@ -214,13 +206,6 @@ def driftxwidth(meta, lc):
         The metadata object.
     lc : Xarray Dataset
         The light curve object containing drift arrays.
-
-    Notes
-    -----
-    History:
-
-    - Jul 11, 2022 Caroline Piaulet
-        Created this function
     '''
     plt.figure(4104, figsize=(8, 4))
     plt.clf()
@@ -327,6 +312,71 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
         plt.close()
     else:
         plt.pause(0.2)
+
+    return
+
+
+def mad_outliers(meta, lc, spec):
+    '''Plot spectroscopic MAD values to identify outliers. (Figs 4106)
+    Outliers can be masked using `mask_columns` in the Stage 4 ECF.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    lc : Xarray Dataset
+        The Dataset object containing binned light curve and time data.
+    spec : Xarray Dataset
+        The Dataset object containing spectroscopic LC and time data.
+    '''
+    # Normalize the light curve
+    wave_1d = spec.wave_1d.values
+    iwmin = np.nanargmin(np.abs(wave_1d - meta.wave_min))
+    iwmax = np.nanargmin(np.abs(wave_1d - meta.wave_max))
+    # optspec = np.ma.masked_where(spec.optmask.values, spec.optspec.values)
+    optspec = spec.optspec.values[:, iwmin:iwmax]
+    optmask = spec.optmask.values[:, iwmin:iwmax]
+    norm_lcdata = util.normalize_spectrum(meta, optspec,
+                                          optmask=optmask).filled(np.nan)
+
+    # Compute indices for binned LC MAD values
+    binned_indices = np.zeros(meta.nspecchan)
+    for i in range(meta.nspecchan):
+        index = np.where((wave_1d >= lc.wave_low.values[i]) *
+                         (wave_1d < lc.wave_hi.values[i]))[0]
+        binned_indices[i] = np.mean(spec.x[index])
+
+    # Compute unbinned LC MAD values, then scale
+    numx = norm_lcdata.shape[1]
+    mad = np.zeros(numx)
+    for ii in range(numx):
+        mad[ii] = util.get_mad_1d(norm_lcdata[:,ii])
+    scaled_mad = mad/np.nanmean(mad)*np.nanmean(meta.mad_s4_binned)
+
+    # Compute mean abs deviation from "white" LC, then scale
+    optspec_mean = np.nanmean(norm_lcdata, axis=1)
+    dev = np.zeros(numx)
+    for ii in range(numx):
+       dev[ii] = np.ma.mean(np.ma.abs((norm_lcdata[:,ii] - optspec_mean)))
+    scaled_dev = dev/np.nanmean(dev)*np.nanmean(meta.mad_s4_binned)
+
+    # Plot spectroscopic MAD values
+    alpha = 0.5
+    plt.figure(4106, figsize=(8, 4))
+    plt.clf()
+    plt.plot(binned_indices, meta.mad_s4_binned, 'o', label='Binned LC MAD',
+             color='C1', zorder=3, alpha=alpha)
+    plt.plot(spec.x[iwmin:iwmax], scaled_mad, '.', color='C0', zorder=1,
+             label="Unbinned LC MAD (Scaled)", alpha=alpha)
+    plt.plot(spec.x[iwmin:iwmax], scaled_dev, '.', color='C2', zorder=2,
+             label="Deviation from white LC (Scaled)", alpha=alpha)
+    plt.ylabel('MAD Value (ppm)')
+    plt.xlabel('Detector Pixel Number')
+    plt.legend(loc='best')
+    fname = 'figs'+os.sep+'fig4106_MAD_Outliers'+plots.figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.1)
 
     return
 
