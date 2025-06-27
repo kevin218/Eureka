@@ -17,8 +17,7 @@ rp           0.12          'free'         0.05         0.3          U
 # ** Orbital parameters **
 # ------------------
 per          1.09142030    'fixed'        0.1          10           U
-t0           54508.4761    'free'         54508.4761   0.5          N
-time_offset  2400000.5     'independent'
+t0           2454508.9761    'free'       2454508.9761 0.5          N
 inc          83.37         'free'         83.37        5            N
 a            3.0366        'free'         3.0366       0.5          N
 ecc          0.0           'fixed'        0            1            U

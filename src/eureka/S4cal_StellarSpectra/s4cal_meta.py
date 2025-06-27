@@ -26,6 +26,10 @@ class S4cal_MetaClass(MetaClass):
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
         '''
+        # Remove the stage from kwargs if present
+        if 'stage' in kwargs:
+            kwargs.pop('stage')
+            
         super().__init__(folder, file, eventlabel, stage='4cal', **kwargs)
 
     def set_defaults(self):

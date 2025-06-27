@@ -127,6 +127,12 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         rprs = meta.rprs
         ars = meta.ars
         cosi = np.cos(meta.inc*np.pi/180)
+
+        # This code snippet will automatically make sure t0 is within
+        # the current observation window
+        nOrbits = (np.mean(spec.time.data)-t0) // p + 1
+        t0 += nOrbits*p
+
         # total occultation duration
         if meta.t14 is None:
             meta.t14 = p/np.pi*np.arcsin(
