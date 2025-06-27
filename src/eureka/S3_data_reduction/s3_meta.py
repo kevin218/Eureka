@@ -152,6 +152,7 @@ class S3MetaClass(MetaClass):
         self.curvature = getattr(self, 'curvature', None)
 
         # Background parameters
+        self.skip_bg = getattr(self, 'skip_bg', False)
         self.bg_hw = getattr(self, 'bg_hw')  # Require this parameter to be set
         self.bg_deg = getattr(self, 'bg_deg', 0)
         self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
