@@ -1218,6 +1218,13 @@ Dynamic Nested Sampling Parameters
 ''''''''''''''''''''''''''''''''''
 The following parameters control dynesty's **dynamic nested sampling** behavior. These are only used if ``run_dynamic`` is set to ``True``. Dynamic nested sampling adaptively allocates live points to focus more efficiently on the posterior distribution. More details are available in the dynesty documentation: https://dynesty.readthedocs.io/en/stable/dynamic.html
 
+Dynamic nested sampling is typically preferred for complex or multimodal posteriors, as it adaptively allocates live points to focus more efficiently on the regions of interest.
+It is generally more efficient for parameter estimation, especially when the posterior has sharp features or multiple peaks.
+However, because it adds samples in batches based on runtime decisions, the estimated evidence (logZ) can vary more between runs.
+Static nested sampling, on the other hand, uses a fixed number of live points from start to finish, which can make evidence estimates more stable and repeatable; this is particularly useful if you are comparing models using Bayes factors or need exact reproducibility.
+If you are primarily focused on estimating parameters, dynamic sampling with a high ``run_pfrac`` (e.g., 0.8) is a good choice.
+If you care most about comparing models based on their evidence, consider using static sampling or dynamic sampling with a lower ``run_pfrac`` (e.g., 0.1-0.3).
+
 When ``run_dynamic = True``, dynesty uses ``run_nlive`` to set the number of live points in the initial exploratory phase. The parameters ``run_nlive_batch`` and ``run_pfrac`` then control the behavior of refinement batches. Other static parameters such as ``run_bound``, ``run_sample``, and ``run_tol`` still apply and should be set as usual.
 
 run_dynamic
