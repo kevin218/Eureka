@@ -8,7 +8,6 @@ import numpy as np
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
-import eureka.lib.plots
 from eureka.S2_calibrations import s2_calibrate as s2
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4

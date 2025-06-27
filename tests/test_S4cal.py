@@ -6,7 +6,6 @@ import time as time_pkg
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
-import eureka.lib.plots
 from eureka.S2_calibrations import s2_calibrate as s2
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4cal_StellarSpectra import s4cal_StellarSpec as s4cal

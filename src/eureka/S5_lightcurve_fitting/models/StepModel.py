@@ -67,16 +67,14 @@ class StepModel(Model):
             else:
                 self.time_local = self.time - self.time.data[0]
 
-
-
     def _parse_coeffs(self):
         """Convert dictionary of parameters into an array.
-        
+
         Converts dict of 'step#' coefficients into an array
         of coefficients in increasing order, i.e. ['step0', 'step1'].
         Also converts dict of 'steptime#' coefficients into an array
         of times in increasing order, i.e. ['steptime0', 'steptime1'].
-        
+
         Returns
         -------
         np.ndarray
@@ -130,9 +128,7 @@ class StepModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-
         lcfinal = np.array([])
-
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -145,7 +141,7 @@ class StepModel(Model):
                 time = split([time, ], self.nints, chan)[0]
 
             for s in np.where(self.steps[c] != 0)[0]:
-                lcpiece = np.ma.ones(len(time)) 
+                lcpiece = np.ma.ones(len(time))
                 lcpiece[time >= self.steptimes[c, s]] += \
                     self.steps[c, s]
                 lcfinal = np.append(lcfinal, lcpiece)
