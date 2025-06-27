@@ -1,11 +1,11 @@
 # Eureka default matplotlib style
 
-font.family : serif
-font.serif : Computer Modern Roman
+font.family : STIX Two Text
+font.serif : STIX Two Text
 font.size : 14
 legend.fontsize : 11
 
-mathtext.fontset : dejavuserif
+mathtext.fontset : stix
 mathtext.it : serif:italic
 mathtext.rm : serif
 mathtext.sf : serif
