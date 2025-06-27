@@ -52,11 +52,10 @@ run_nburn       500     # How many of run_nsteps should be discarded as burn-in 
 run_nlive       'min'    # Must be > ndim * (ndim + 1) // 2
 run_bound       'multi'
 run_sample      'auto'
-run_tol         0.1
+run_tol         0.01
 
 # dynamic dynesty fitter (in addition to the dynesty fitter parameters)
 run_dynamic     False    # If False, use only dynesty static fitter; if True, use dynamic dynesty fitter
-run_nlive_init  'min'    # Must be > ndim * (ndim + 1) // 2, which is used if set to 'min'
 run_nlive_batch 'auto'
 run_pfrac        0.5
 

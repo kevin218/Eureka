@@ -829,16 +829,27 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # Set up common dynesty parameters
     ndims = len(freepars)
-    min_nlive = int(np.ceil(ndims * (ndims + 1) // 2))
     bound = meta.run_bound
     sample = meta.run_sample
-    tol = meta.run_tol
     l_args = [lc, model, freenames]
+
+    # Handle 'min' for meta.run_nlive
+    nlive = meta.run_nlive
+    min_nlive = int(np.ceil(ndims * (ndims + 1) // 2))
+    if nlive == 'min':
+        nlive = min_nlive
+        nlive_log = (f'  Setting run_nlive = {nlive} (minimum '
+                     f'recommended for ndim = {ndims})')
+    elif nlive < min_nlive:
+        nlive_log = (f'**** WARNING: You should set run_nlive to at least '
+                     f'{min_nlive} ****')
+    else:
+        nlive_log = None
 
     # Initial log-likelihood
     start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype,
                           freenames)
-    log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
+    log.writelog(f'  Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
     # Plot starting point
     if meta.isplots_S5 >= 1:
@@ -873,57 +884,43 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # Choose between dynamic and static nested sampling
     if meta.run_dynamic:
-        log.writelog('Using dynamic nested sampling...')
+        log.writelog('  Using dynamic nested sampling...')
+        if nlive_log is not None:
+            log.writelog(nlive_log, mute=(not meta.verbose))
 
-        # Handle 'min' for meta.run_nlive_init
-        nlive_init = meta.run_nlive_init
-        if nlive_init == 'min':
-            nlive_init = min_nlive
-            log.writelog(f'Setting run_nlive_init = {nlive_init} (minimum '
-                         f'recommended for ndim = {ndims})',
-                         mute=(not meta.verbose))
-        elif nlive_init < min_nlive:
-            log.writelog(f'**** WARNING: You should set run_nlive_init to at '
-                         f'least {min_nlive} ****')
+        sampler = DynamicNestedSampler(
+            ln_like, ptform, ndims, pool=pool,
+            queue_size=queue_size, bound=bound, sample=sample,
+            logl_args=l_args, ptform_args=[prior1, prior2, priortype])
 
         # Handle 'auto' for meta.run_nlive_batch
         nlive_batch = meta.run_nlive_batch
         if nlive_batch == 'auto':
-            nlive_batch = max(25, nlive_init // 2)
-            log.writelog(f'Setting run_nlive_batch = {nlive_batch} (auto '
-                         f'default based on run_nlive_init = {nlive_init})',
+            nlive_batch = max(25, nlive // 2)
+            log.writelog(f'  Setting run_nlive_batch = {nlive_batch} (auto '
+                         f'default based on run_nlive = {nlive})',
                          mute=(not meta.verbose))
 
-        sampler = DynamicNestedSampler(
-            ln_like, ptform, ndims,
-            pool=pool, queue_size=queue_size,
-            bound=bound, sample=sample,
-            nlive_init=nlive_init, nlive_batch=nlive_batch,
-            logl_args=l_args,
-            ptform_args=[prior1, prior2, priortype],
-            wt_kwargs={'pfrac': meta.pfrac}
-        )
-        res = sampler.run_dynamic(dlogz=tol, print_progress=True)
+        # Run the sampler
+        sampler.run_nested(nlive_init=nlive, nlive_batch=nlive_batch,
+                           dlogz_init=meta.run_tol,
+                           wt_kwargs={"pfrac": meta.run_pfrac},
+                           print_progress=True)
     else:
-        log.writelog('Using static nested sampling...')
-
-        # Handle 'min' for meta.run_nlive
-        nlive = meta.run_nlive
-        if nlive == 'min':
-            nlive = min_nlive
-            log.writelog(f'Setting run_nlive = {nlive} (minimum '
-                         f'recommended for ndim = {ndims})',
-                         mute=(not meta.verbose))
-        elif nlive < min_nlive:
-            log.writelog(f'**** WARNING: You should set run_nlive to at least '
-                         f'{min_nlive} ****')
+        log.writelog('  Using static nested sampling...')
+        if nlive_log is not None:
+            log.writelog(nlive_log, mute=(not meta.verbose))
 
         sampler = NestedSampler(
-            ln_like, ptform, ndims, pool=pool, queue_size=queue_size,
-            bound=bound, sample=sample, nlive=nlive, logl_args=l_args,
-            ptform_args=[prior1, prior2, priortype])
-        sampler.run_nested(dlogz=tol, print_progress=True)
-        res = sampler.results  # get results dictionary from sampler
+            ln_like, ptform, ndims, nlive=nlive, pool=pool,
+            queue_size=queue_size, bound=bound, sample=sample,
+            logl_args=l_args, ptform_args=[prior1, prior2, priortype])
+
+        # Run the sampler
+        sampler.run_nested(dlogz=meta.run_tol, print_progress=True)
+
+    # Get the results from the sampler
+    res = sampler.results
 
     # Clean up pool
     if meta.ncpu > 1:

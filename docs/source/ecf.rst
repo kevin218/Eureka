@@ -1193,50 +1193,50 @@ Integer. The number of burn-in steps to run.
 
 Dynesty Fitting Parameters
 ''''''''''''''''''''''''''
-The following set the parameters for running dynesty. These options are described in more detail in: https://dynesty.readthedocs.io/en/latest/api.html?highlight=unif#module-dynesty.dynesty
+The following set the parameters for running dynesty. These options are described in more detail in: https://dynesty.readthedocs.io/en/latest/api.html#module-dynesty.dynesty
 
 run_nlive
 ^^^^^^^^^
-Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4. For convenience, this can be set to 'min' to automatically set run_nlive to (ndim * (ndim+1)) / 2.
+Integer or ``'min'``. Number of live points for dynesty to use. Should be at least greater than ``(ndim * (ndim + 1)) / 2``, where ``ndim`` is the number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4.
+
+For convenience, this can be set to ``'min'`` to automatically use the minimum recommended value.
 
 run_bound
 ^^^^^^^^^
-The bounding method to use. Options are: ['none', 'single', 'multi', 'balls', 'cubes']
+The bounding method to use. Options are: ``['none', 'single', 'multi', 'balls', 'cubes']``
 
 run_sample
 ^^^^^^^^^^
-The sampling method to use. Options are ['auto', 'unif', 'rwalk', 'rstagger', 'slice', 'rslice', 'hslice']
+The sampling method to use. Options are: ``['auto', 'unif', 'rwalk', 'rstagger', 'slice', 'rslice', 'hslice']``
 
 run_tol
 ^^^^^^^
-Float. The tolerance for the dynesty run. Determines the stopping criterion. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
+Float. The convergence tolerance for the dynesty run. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
 
 
 Dynamic Nested Sampling Parameters
 ''''''''''''''''''''''''''''''''''
 The following parameters control dynesty's **dynamic nested sampling** behavior. These are only used if ``run_dynamic`` is set to ``True``. Dynamic nested sampling adaptively allocates live points to focus more efficiently on the posterior distribution. More details are available in the dynesty documentation: https://dynesty.readthedocs.io/en/stable/dynamic.html
 
-If ``run_dynamic`` is set to ``True``, the parameters ``run_nlive_init``, ``run_nlive_batch``, and ``run_pfrac`` are used to control the dynamic behavior. Other static dynesty options such as ``run_bound``, ``run_sample``, and ``run_tol`` still apply and should be provided as usual. The ``run_nlive`` parameter is ignored when using dynamic sampling.
+When ``run_dynamic = True``, dynesty uses ``run_nlive`` to set the number of live points in the initial exploratory phase. The parameters ``run_nlive_batch`` and ``run_pfrac`` then control the behavior of refinement batches. Other static parameters such as ``run_bound``, ``run_sample``, and ``run_tol`` still apply and should be set as usual.
 
 run_dynamic
 ^^^^^^^^^^^
-Boolean. If ``True``, dynesty will use its ``DynamicNestedSampler`` instead of ``NestedSampler``. Dynamic nested sampling is often more efficient for complex or multimodal posteriors, as it adapts the number and location of live points throughout the run. If ``False``, static nested sampling will be used with a fixed number of live points (``run_nlive``).
-
-run_nlive_init
-^^^^^^^^^^^^^^
-Integer. The number of live points to use during the initial exploratory phase of dynamic nested sampling. This sets the starting resolution for exploring the parameter space. A reasonable starting value is approximately 10x the number of free parameters. This can also be set to ``'min'`` to automatically use the minimum recommended value, which is ``(ndim * (ndim + 1)) / 2``.
+Boolean. If ``True``, dynesty will use its ``DynamicNestedSampler`` instead of ``NestedSampler``. Dynamic nested sampling is often more efficient for complex or multimodal posteriors, as it adaptively refines high-posterior regions. If ``False``, static nested sampling will be used with a fixed number of live points (``run_nlive``).
 
 run_nlive_batch
 ^^^^^^^^^^^^^^^
-Integer or ``'auto'``. The number of live points to allocate in each subsequent refinement batch during dynamic nested sampling. Controls how many new live points are used to zoom in on high-posterior regions.
+Integer or ``'auto'``. The number of live points to allocate in each refinement batch during dynamic nested sampling. Controls how many new live points are used to zoom in on regions of high posterior probability.
 
-Typical values range from one-half to equal the value of ``run_nlive_init``. For example, if ``run_nlive_init = 200``, a common choice for ``run_nlive_batch`` would be between 100 and 200.
+Typical values range from one-half to equal the value of ``run_nlive``. For example, if ``run_nlive = 200``, a common value for ``run_nlive_batch`` would be 100-200.
 
-If set to ``'auto'``, a safe default of ``max(25, run_nlive_init // 2)`` is used.
+If set to ``'auto'``, a safe default of ``max(25, run_nlive // 2)`` is used.
 
 run_pfrac
 ^^^^^^^^^
-Float (between 0 and 1). The fraction of total samples to draw from the posterior distribution versus the prior. A higher value prioritizes detailed posterior exploration, while a lower value improves evidence (logZ) estimation. Use ``pfrac = 0.5`` for a balanced approach. Increase to ``0.7-0.9`` if you are primarily interested in posterior parameter estimation.
+Float between 0 and 1 (exclusive). The fraction of samples to draw from the posterior distribution versus the prior during refinement. A higher value prioritizes detailed posterior exploration, while a lower value improves evidence (logZ) estimation.
+
+Use ``run_pfrac = 0.5`` for a balanced approach. Increase to ``0.7-0.9`` if you are primarily interested in posterior parameter estimation. If your goal is Bayesian model comparison, where precise estimation of the evidence (logZ) is important, consider lower values such as ``run_pfrac = 0.1-0.3``.
 
 
 NUTS Fitting Parameters
