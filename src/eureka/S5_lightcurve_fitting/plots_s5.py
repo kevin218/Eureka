@@ -1,6 +1,7 @@
 import os
 import sys
 import numpy as np
+from copy import deepcopy
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 try:
@@ -11,13 +12,6 @@ import corner
 from scipy import stats
 import fleck
 import astropy.units as unit
-try:
-    import arviz as az
-    from arviz.rcparams import rcParams as az_rcParams
-    import starry
-except ModuleNotFoundError:
-    # PyMC3 hasn't been installed
-    pass
 try:
     from harmonica import HarmonicaTransit
 except ModuleNotFoundError:
@@ -61,10 +55,10 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     model_eval = model_noGP+model_gp
 
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(lc.unc_fit)
-        model_lc = np.ma.copy(model_eval)
-        gp = np.ma.copy(model_gp)
+        flux = deepcopy(lc.flux)
+        unc = deepcopy(lc.unc_fit)
+        model_lc = deepcopy(model_eval)
+        gp = deepcopy(model_gp)
         model_sys = model_sys_full
         model_phys = model_phys_full
         color = lc.colors[i]
@@ -180,8 +174,8 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
     model_phys_full, new_time, nints_interp = \
         model.physeval(interp=meta.interp)
 
-    flux_full = np.ma.copy(lc.flux)
-    unc_full = np.ma.copy(lc.unc_fit)
+    flux_full = deepcopy(lc.flux)
+    unc_full = deepcopy(lc.unc_fit)
     flux_full = flux_full/model_sys-model_gp
 
     # Normalize to zero flux at eclipse
@@ -194,9 +188,9 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
     unc_full *= 1e6
 
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.ma.copy(flux_full)
-        unc = np.ma.copy(unc_full)
-        model_phys = np.ma.copy(model_phys_full)
+        flux = deepcopy(flux_full)
+        unc = deepcopy(unc_full)
+        model_phys = deepcopy(model_phys_full)
         color = lc.colors[i]
 
         if lc.share and not meta.multwhite:
@@ -332,8 +326,8 @@ def plot_rms(lc, model, meta, fitter):
         if 'mc3.stats' not in sys.modules:
             # If MC3 failed to load, exit for loop
             break
-        flux = np.ma.copy(lc.flux)
-        model_lc = np.ma.copy(model_eval)
+        flux = deepcopy(lc.flux)
+        model_lc = deepcopy(model_eval)
 
         if lc.share and not meta.multwhite:
             time = lc.time
@@ -556,60 +550,6 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
 
 
 @plots.apply_style
-def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
-               **kwargs):
-    """Plot the evolution of the trace to look for temporal trends. (Figs 5305)
-
-    Parameters
-    ----------
-    trace : pymc3.backends.base.MultiTrace or arviz.InferenceData
-        A ``MultiTrace`` or ArviZ ``InferenceData`` object that contains the
-        samples.
-    model :
-
-    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object.
-    freenames : iterable
-        The names of the fitted parameters.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    fitter : str; optional
-        The name of the fitter (for plot filename). Defaults to 'nuts'.
-    compact: bool; optional
-        Plot multidimensional variables in a single plot. Defailts to False.
-    **kwargs : dict
-        Additional keyword arguments to pass to pm.traceplot.
-    """
-
-    max_subplots = az_rcParams['plot.max_subplots'] // 2
-    nplots = int(np.ceil(len(freenames)/max_subplots))
-    npanels = min([len(freenames), max_subplots])
-
-    for i in range(nplots):
-        with model.model:
-            ax = az.plot_trace(trace,
-                               var_names=freenames[i*npanels:(i+1)*npanels],
-                               compact=compact, show=False, **kwargs)
-        fig = ax[0][0].figure
-
-        if lc.white:
-            fname_tag = 'white'
-        else:
-            ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-            fname_tag = f'ch{ch_number}'
-        fname = f'figs{os.sep}fig5305_{fname_tag}_trace'
-        fname += '_'+fitter
-        fname += f'figure{i+1}of{nplots}'
-        fname += plots.get_filetype()
-        fig.savefig(meta.outputdir+fname, bbox_inches='tight',
-                    pad_inches=0.05, dpi=300)
-        if not meta.hide_plots:
-            plt.pause(0.2)
-        else:
-            plt.close(fig)
-
-
-@plots.apply_style
 def plot_res_distr(lc, model, meta, fitter):
     """Plot the normalized distribution of residuals + a Gaussian. (Fig 5302)
 
@@ -634,9 +574,9 @@ def plot_res_distr(lc, model, meta, fitter):
         plt.figure(5302, figsize=(8, 6))
         plt.clf()
 
-        flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(lc.unc_fit)
-        model_lc = np.ma.copy(model_eval)
+        flux = deepcopy(lc.flux)
+        unc = deepcopy(lc.unc_fit)
+        model_lc = deepcopy(model_eval)
 
         if lc.share or meta.multwhite:
             # Split the arrays that have lengths of the original time axis
@@ -692,10 +632,10 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     model_with_GP = model_eval + model_GP
 
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(lc.unc_fit)
-        model_lc = np.ma.copy(model_with_GP)
-        model_GP_component = np.ma.copy(model_GP)
+        flux = deepcopy(lc.flux)
+        unc = deepcopy(lc.unc_fit)
+        model_lc = deepcopy(model_with_GP)
+        model_GP_component = deepcopy(model_GP)
         color = lc.colors[i]
 
         if lc.share and not meta.multwhite:
@@ -919,83 +859,6 @@ def plot_fleck_star(lc, model, meta, fitter):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5307_{fname_tag}_fleck_star_{fitter}'
-                 + plots.get_filetype())
-        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-        if not meta.hide_plots:
-            plt.pause(0.2)
-
-
-@plots.apply_style
-def plot_starry_star(lc, model, meta, fitter):
-    """Plot the location and contrast of the starry star spots (Figs 5308)
-
-    Parameters
-    ----------
-    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object.
-    model : eureka.S5_lightcurve_fitting.differentiable_models.CompositePyMC3Model  # noqa: E501
-        The fitted composite model.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    fitter : str
-        The name of the fitter (for plot filename).
-    """
-    for c in range(lc.nchannel_fitted):
-        channel = lc.fitted_channels[c]
-        if lc.nchannel_fitted > 1:
-            chan = channel
-        else:
-            chan = 0
-
-        # Initialize PlanetParams object
-        pl_params = PlanetParams(model, 0, chan, eval=True)
-
-        # create arrays to hold values
-        spotrad = np.zeros(0)
-        spotlat = np.zeros(0)
-        spotlon = np.zeros(0)
-        spotcon = np.zeros(0)
-
-        for n in range(pl_params.nspots):
-            # read radii, latitudes, longitudes, and contrasts
-            if n > 0:
-                spot_id = f'{n}'
-            else:
-                spot_id = ''
-            spotrad = np.concatenate([
-                spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
-            spotlat = np.concatenate([
-                spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
-            spotlon = np.concatenate([
-                spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
-            spotcon = np.concatenate([
-                spotcon, [getattr(pl_params, f'spotcon{spot_id}'),]])
-
-        # Apply some conversions since inputs are in fleck units
-        spotrad *= 90
-        spotcon = 1-spotcon
-
-        if pl_params.spotnpts is None:
-            # Have a default spotnpts for starry
-            pl_params.spotnpts = 30
-
-        # Initialize map object and add spots
-        map = starry.Map(ydeg=pl_params.spotnpts,
-                         inc=pl_params.spotstari)
-        for n in range(pl_params.nspots):
-            map.spot(contrast=spotcon[n], radius=spotrad[n],
-                     lat=spotlat[n], lon=spotlon[n])
-
-        fig = plt.figure(5308, figsize=(8, 6))
-        plt.clf()
-        ax = fig.gca()
-        map.show(ax=ax)
-        if lc.white:
-            fname_tag = 'white'
-        else:
-            ch_number = str(channel).zfill(len(str(lc.nchannel)))
-            fname_tag = f'ch{ch_number}'
-        fname = (f'figs{os.sep}fig5308_{fname_tag}_starry_star_{fitter}'
                  + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:

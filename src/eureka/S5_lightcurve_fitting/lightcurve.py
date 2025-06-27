@@ -5,7 +5,6 @@ from copy import copy
 
 from . import models as m
 from . import fitters
-from . import gradient_fitters
 from .utils import COLORS, color_gen
 from ..lib import plots, util
 from ..lib.split_channels import get_trim, split
@@ -171,9 +170,17 @@ class LightCurve(m.Model):
         elif fitter == 'dynesty':
             self.fitter_func = fitters.dynestyfitter
         elif fitter == 'exoplanet':
-            self.fitter_func = gradient_fitters.exoplanetfitter
+            raise NotImplementedError(
+                'PyMC3/starry support within Eureka! had to be dropped because'
+                ' PyMC3 is now extremely deprecated and incompatible with the '
+                'current jwst pipeline version. For the time being, you must '
+                'instead use the numpy-based models.')
         elif fitter == 'nuts':
-            self.fitter_func = gradient_fitters.nutsfitter
+            raise NotImplementedError(
+                'PyMC3/starry support within Eureka! had to be dropped because'
+                ' PyMC3 is now extremely deprecated and incompatible with the '
+                'current jwst pipeline version. For the time being, you must '
+                'instead use the numpy-based models.')
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
 

@@ -1,11 +1,4 @@
 import numpy as np
-try:
-    import starry
-    starry.config.quiet = True
-    starry.config.lazy = True
-except ModuleNotFoundError:
-    # PyMC3 hasn't been installed
-    pass
 
 from ..lib.readECF import MetaClass
 
@@ -87,8 +80,6 @@ class S5MetaClass(MetaClass):
         self.num_planets = getattr(self, 'num_planets', 1)
         self.compute_ltt = getattr(self, 'compute_ltt', None)
         self.force_positivity = getattr(self, 'force_positivity', False)
-        # The following is only relevant for the starry model
-        self.mutualOccultations = getattr(self, 'mutualOccultations', True)
 
         # Use of modelled LD coefficients
         self.use_generate_ld = getattr(self, 'use_generate_ld', None)
@@ -140,29 +131,6 @@ class S5MetaClass(MetaClass):
         self.run_bound = getattr(self, 'run_bound', 'multi')
         self.run_sample = getattr(self, 'run_sample', 'auto')
         self.run_tol = getattr(self, 'run_tol', 0.1)
-
-        # PyMC3 NUTS sampler settings
-        self.exoplanet_first = getattr(self, 'exoplanet_first', False)
-        self.chains = getattr(self, 'chains', 3)
-        self.target_accept = getattr(self, 'target_accept', 0.85)
-        if 'nuts' in self.fit_method:
-            # Must be provided in the ECF if relevant
-            self.tune = getattr(self, 'tune')
-            self.draws = getattr(self, 'draws')
-
-        # Starry eclipse mapping pixel-sampling parameters
-        self.pixelsampling = getattr(self, 'pixelsampling', False)
-        self.oversample = getattr(self, 'oversample', 3)
-        if self.pixelsampling:
-            # Must be provided in the ECF if relevant
-            self.ydeg = getattr(self, 'ydeg')
-            # Compute the number of pixels used in sampling
-            map = starry.Map(ydeg=self.ydeg)
-            A = map.get_pixel_transforms(oversample=self.oversample)[3]
-            self.npix = A.shape[1]
-        else:
-            self.ydeg = getattr(self, 'ydeg', None)
-            self.npix = 0
 
         # GP inputs
         self.kernel_inputs = getattr(self, 'kernel_inputs', ['time'])

@@ -76,10 +76,16 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta,
                               fitter=calling_function+'StartingPoint')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta,
-                                   fitter=calling_function+'StartingPoint')
+
+    # Plot Harmonica string starting point
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter=calling_function+'StartingPoint')
+
+    if not np.isfinite(start_lnprob):
+        raise AssertionError(
+            'The starting lnprob value must be finite. Most likely, one of '
+            'your priors is outside of its bounds.')
 
     def neg_lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
         return -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
@@ -153,9 +159,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter=calling_function)
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter=calling_function)
 
     # Plot Harmonica string
     if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
@@ -326,10 +329,11 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot star spots starting point
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='emceeStartingPoint')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta,
-                                   fitter='emceeStartingPoint')
+
+    # Plot Harmonica string starting point
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter='emceeStartingPoint')
 
     # Initialize tread pool
     if meta.ncpu > 1:
@@ -446,9 +450,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='emcee')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter='emcee')
 
     # Plot Harmonica string
     if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
@@ -862,10 +863,11 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Plot star spots starting point
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='dynestyStartingPoint')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta,
-                                   fitter='dynestyStartingPoint')
+
+    # Plot Harmonica string starting point
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter='dynestyStartingPoint')
 
     # START DYNESTY
     l_args = [lc, model, freenames]
@@ -972,9 +974,6 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='dynesty')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter='dynesty')
 
     # Plot Harmonica string
     if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
@@ -1099,9 +1098,6 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='lmfitter')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter='lmfitter')
 
     # Plot Harmonica string
     if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:

@@ -972,8 +972,6 @@ def make_citations(meta, stage=None):
             other_cites = other_cites + ["emcee"]
         if "dynesty" in meta.fit_method:
             other_cites = other_cites + ["dynesty"]
-        if "nuts" in meta.fit_method:
-            other_cites = other_cites + ["pymc3"]
         if "exoplanet" in meta.fit_method:
             other_cites = other_cites + ["exoplanet"]
 
@@ -984,8 +982,6 @@ def make_citations(meta, stage=None):
             other_cites.append("catwoman")
         if "fleck_tr" in meta.run_myfuncs:
             other_cites.append("fleck")
-        if "starry" in meta.run_myfuncs:
-            other_cites.append("starry")
         if "GP" in meta.run_myfuncs:
             if hasattr(meta, "GP_package"):
                 other_cites.append(meta.GP_package)
