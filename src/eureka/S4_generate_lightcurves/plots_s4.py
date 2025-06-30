@@ -350,14 +350,14 @@ def mad_outliers(meta, lc, spec):
     numx = norm_lcdata.shape[1]
     mad = np.zeros(numx)
     for ii in range(numx):
-        mad[ii] = util.get_mad_1d(norm_lcdata[:,ii])
+        mad[ii] = util.get_mad_1d(norm_lcdata[:, ii])
     scaled_mad = mad/np.nanmean(mad)*np.nanmean(meta.mad_s4_binned)
 
     # Compute mean abs deviation from "white" LC, then scale
     optspec_mean = np.nanmean(norm_lcdata, axis=1)
     dev = np.zeros(numx)
     for ii in range(numx):
-       dev[ii] = np.ma.mean(np.ma.abs((norm_lcdata[:,ii] - optspec_mean)))
+        dev[ii] = np.ma.mean(np.ma.abs((norm_lcdata[:, ii] - optspec_mean)))
     scaled_dev = dev/np.nanmean(dev)*np.nanmean(meta.mad_s4_binned)
 
     # Plot spectroscopic MAD values
