@@ -38,7 +38,7 @@ jobs:
           if [ -z "$WHL" ]; then
             echo "No wheel file found"; exit 1
           fi
-          pip install "$WHL[jwst,hst,test,docs,jupyter]"
+          pip install --timeout 60 --retries 5 "$WHL[jwst,hst,test,docs,jupyter]"
 
       - name: Run smoke test (import + version check)
         run: |
