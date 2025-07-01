@@ -516,7 +516,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                         plots_s4.binned_background(meta, log, lc, i)
 
             # Plot MAD values to help identify outliers
-            if meta.isplots_S4 >= 1:
+            if meta.isplots_S4 >= 1 and not meta.photometry:
                 plots_s4.mad_outliers(meta, lc, spec)
 
             # If requested, also generate white-light light curve
