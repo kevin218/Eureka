@@ -31,6 +31,7 @@ jobs:
           python -m build
 
       - name: Install built wheel with extras
+        shell: bash
         run: |
           WHL=$(ls dist/eureka-*.whl)
           if [ -z "$WHL" ]; then
