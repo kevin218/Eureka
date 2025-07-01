@@ -7,6 +7,9 @@ import numpy as np
 
 from ..version import version
 
+# A boolean to track if a Eureka! version mis-match warning has been issued
+warned = False
+
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -50,11 +53,24 @@ class MetaClass:
             file = f'S{stage}_{eventlabel}.ecf'
 
         self.params = {}
-        if file is not None and os.path.exists(os.path.join(folder, file)):
+
+        # Determine if a file should be read
+        file_path = os.path.join(folder, file) if file is not None else None
+        if file_path is not None and os.path.exists(file_path):
             self.read(folder, file)
-        elif file is not None:
-            raise ValueError(f"The file {os.path.join(folder, file)} "
-                             "does not exist.")
+        elif file_path is not None and not kwargs:
+            raise ValueError(f"The file {file_path} does not exist and no "
+                             "kwargs were provided.")
+        # else: assume kwargs will populate everything
+
+        self.version = version
+        if stage is not None:
+            self.stage = stage
+        self.eventlabel = eventlabel
+        self.datetime = time_pkg.strftime('%Y-%m-%d')
+
+        # If the data format hasn't been specified, must be eureka output
+        self.data_format = getattr(self, 'data_format', 'eureka')
 
         if kwargs is not None:
             # Add any kwargs to the parameter dict
@@ -63,13 +79,6 @@ class MetaClass:
             # Store each as an attribute
             for param, value in kwargs.items():
                 setattr(self, param, value)
-
-        self.version = version
-        self.eventlabel = eventlabel
-        self.datetime = time_pkg.strftime('%Y-%m-%d')
-
-        # If the data format hasn't been specified, must be eureka output
-        self.data_format = getattr(self, 'data_format', 'eureka')
 
     def __str__(self):
         '''A function to nicely format some outputs when a MetaClass object is
@@ -139,7 +148,14 @@ class MetaClass:
             self.__dict__[item] = value
             return
 
-        if item == 'inst' and value == 'wfc3':
+        # Stage may not be set yet, if not set, default to 0
+        if hasattr(self, 'stage'):
+            stage = self.stage
+        else:
+            stage = 0
+
+        if (item == 'inst' and value == 'wfc3' and stage != '4cal'
+                and stage < 4):
             # Fix issues with CRDS server set for JWST
             if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for JWST and not HST.'
@@ -155,7 +171,8 @@ class MetaClass:
             self.pmap = getattr(self, 'pmap',
                                 crds.get_context_name('hst')[4:-5])
             os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
-        elif item == 'inst' and value is not None:
+        elif (item == 'inst' and value is not None and stage != '4cal'
+              and stage < 4):
             # Fix issues with CRDS server set for HST
             if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for HST and not JWST.'
@@ -175,13 +192,16 @@ class MetaClass:
             os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
 
         if ((item == 'pmap') and hasattr(self, 'pmap') and
-                (self.pmap is not None) and (self.pmap != value)):
+                (self.pmap is not None) and (self.pmap != value) and
+                (stage != '4cal') and (stage < 4)):
             print(f'WARNING: pmap was set to {self.pmap} in the previous stage'
                   f' but is now set to {value} in this stage. This may cause '
                   'unexpected or undesireable behaviors.')
 
-        if ((item == 'version') and hasattr(self, 'version') and
+        global warned
+        if (not warned and (item == 'version') and hasattr(self, 'version') and
                 (self.version is not None) and (self.version != value)):
+            warned = True
             print(f'WARNING: The Eureka! version was {self.version} in the '
                   f'previous stage but is now {value} in this stage. This may '
                   'cause unexpected or undesireable behaviors.')

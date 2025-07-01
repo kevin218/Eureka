@@ -22,6 +22,7 @@ except ImportError:
     from bokeh.models.layouts import Tabs
 
 from . import utils
+from ..lib import plots
 # from . import modelgrid
 
 warnings.simplefilter('ignore', category=AstropyWarning)
@@ -590,6 +591,7 @@ class LDC:
         else:
             return final
 
+    @plots.apply_style
     def plot(self, fig=None, show=False, **kwargs):
         """Plot the LDCs
 

@@ -6,6 +6,7 @@ import os
 from ..utils import COLORS
 from ...lib.readEPF import Parameters
 from ...lib.split_channels import split
+from ...lib import plots
 
 
 class Model:
@@ -225,6 +226,7 @@ class Model:
         """
         return
 
+    @plots.apply_style
     def plot(self, components=False, ax=None, draw=False, color='blue',
              zorder=np.inf, share=False, chan=0, **kwargs):
         """Plot the model.

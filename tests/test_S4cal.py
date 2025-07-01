@@ -6,17 +6,12 @@ import time as time_pkg
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
-import eureka.lib.plots
 from eureka.S2_calibrations import s2_calibrate as s2
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4cal_StellarSpectra import s4cal_StellarSpec as s4cal
 
 
 def test_S4cal(capsys):
-    # Set up some parameters to make plots look nicer.
-    # You can set usetex=True if you have LaTeX installed
-    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
-
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests

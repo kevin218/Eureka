@@ -27,14 +27,18 @@ class S1MetaClass(MetaClass):
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
         '''
+        # Remove the stage from kwargs if present
+        if 'stage' in kwargs:
+            kwargs.pop('stage')
+
         super().__init__(folder, file, eventlabel, stage=1, **kwargs)
+
+        # Set a default data file suffix
+        self.suffix = getattr(self, 'suffix', 'uncal')
 
     def set_defaults(self):
         '''Set Stage 1 specific defaults for generic instruments.
         '''
-        # Data file suffix
-        self.suffix = getattr(self, 'suffix', 'uncal')
-
         # Control parallelization
         # (Options are 'none', quarter', 'half', 'all', or any integer)
         self.maximum_cores = getattr(self, 'maximum_cores', 'half')
@@ -244,13 +248,6 @@ class S1MetaClass(MetaClass):
 
     def set_NIR_defaults(self):
         '''Set Stage 1 specific defaults for NIR-instruments.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for NIR-instruments.
         '''
         # NIR-specific pipeline stages
         self.skip_superbias = getattr(self, 'skip_superbias', False)

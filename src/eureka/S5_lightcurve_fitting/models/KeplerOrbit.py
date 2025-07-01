@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import astropy.constants as const
 import scipy.optimize
 
+from ...lib import plots
+
 
 class KeplerOrbit(object):
     """A Keplerian orbit.
@@ -644,6 +646,7 @@ class KeplerOrbit(object):
         sopLat = 90.-self.inc-self.obliq
         return sopLon, sopLat
 
+    @plots.apply_style
     def plot_orbit(self):
         """A convenience routine to visualize the orbit
 

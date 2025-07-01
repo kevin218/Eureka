@@ -129,7 +129,6 @@ class StepModel(Model):
             self.time = kwargs.get('time')
 
         lcfinal = np.array([])
-
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]

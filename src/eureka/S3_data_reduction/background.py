@@ -162,6 +162,7 @@ def BGsubtraction(data, meta, log, m, isplots=0, group=None):
     return data
 
 
+@plots.apply_style
 def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
           isplots=0):
     '''Fit sky background with out-of-spectra data.
@@ -276,7 +277,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
                     fname = ('figs'+os.sep+'Fig3601_BG_'+str(j) +
-                             plots.figure_filetype)
+                             plots.get_filetype())
                     plt.savefig(meta.outputdir + fname, dpi=300)
                     plt.pause(0.01)
 
@@ -290,6 +291,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
     return bg, mask
 
 
+@plots.apply_style
 def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
            isplots=0):
     '''Fit sky background with out-of-spectra data.
@@ -387,7 +389,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
                         plt.plot(goodxvals, dataslice, 'bo')
                         plt.plot(goodxvals, model, 'g-')
                         fname = ('figs'+os.sep+'Fig6_BG_'+str(j) +
-                                 plots.figure_filetype)
+                                 plots.get_filetype())
                         plt.savefig(meta.outputdir + fname, dpi=300)
                         plt.pause(0.01)
 

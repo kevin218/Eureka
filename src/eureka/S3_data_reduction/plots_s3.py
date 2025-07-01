@@ -18,6 +18,7 @@ from .source_pos import gauss
 from ..lib import util, plots
 
 
+@plots.apply_style
 def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
                    mad=None, order=None):
     '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
@@ -128,14 +129,15 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
         orderkey = ''
     else:
         orderkey = f'_order{order}'
-    fname1 = f'figs{os.sep}fig3101{orderkey}_2D_LC'+plots.figure_filetype
-    fname2 = f'figs{os.sep}fig3102{orderkey}_2D_LC'+plots.figure_filetype
+    fname1 = f'figs{os.sep}fig3101{orderkey}_2D_LC'+plots.get_filetype()
+    fname2 = f'figs{os.sep}fig3102{orderkey}_2D_LC'+plots.get_filetype()
     fig1.savefig(meta.outputdir+fname1, dpi=300)
     fig2.savefig(meta.outputdir+fname2, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def image_and_background(data, meta, log, m, order=None, group=None):
     '''Make image+background plot. (Figs 3301)
 
@@ -220,12 +222,13 @@ def image_and_background(data, meta, log, m, order=None, group=None):
             groupkey = f'_group{group}'
         fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
                  f'{orderkey}' + f'{groupkey}' + '_' + meta.bg_dir +
-                 '_ImageAndBackground' + plots.figure_filetype)
+                 '_ImageAndBackground' + plots.get_filetype())
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def drift_2D(data, meta):
     '''Plot the fitted 2D drift. (Fig 3106)
 
@@ -261,12 +264,13 @@ def drift_2D(data, meta):
     plt.ylabel(f'Drift Along x ({data.centroid_x.units})')
     plt.xlabel('Integration Number')
 
-    fname = f'figs{os.sep}fig3106_Drift2D{plots.figure_filetype}'
+    fname = f'figs{os.sep}fig3106_Drift2D{plots.get_filetype()}'
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def optimal_spectrum(data, meta, n, m):
     '''Make optimal spectrum plot. (Figs 3302)
 
@@ -315,12 +319,13 @@ def optimal_spectrum(data, meta, n, m):
     int_number = str(intstart + n).zfill(int(np.floor(
         np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3302_file{file_number}_int{int_number}' +
-             '_Spectrum'+plots.figure_filetype)
+             '_Spectrum'+plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def source_position(meta, x_dim, pos_max, m, n,
                     isgauss=False, x=None, y=None, popt=None,
                     isFWM=False, y_pixels=None, sum_row=None, y_pos=None):
@@ -383,12 +388,13 @@ def source_position(meta, x_dim, pos_max, m, n,
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3103_file{file_number}_int{int_number}' +
-             '_source_pos'+plots.figure_filetype)
+             '_source_pos'+plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def profile(meta, profile, submask, n, m, order=None):
     '''Plot weighting profile from optimal spectral extraction routine.
     (Figs 3303)
@@ -429,12 +435,13 @@ def profile(meta, profile, submask, n, m, order=None):
     else:
         orderkey = f'_order{order}'
     fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}' +
-             f'{orderkey}_Profile' + plots.figure_filetype)
+             f'{orderkey}_Profile' + plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
     '''Show 1D view of profile for each column. (Figs 3501)
 
@@ -474,12 +481,13 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     col_number = str(i).zfill(int(np.floor(np.log10(nx))+1))
     fname = (f'figs{os.sep}fig3501_file{file_number}_int{int_number}' +
-             f'_col{col_number}_subdata'+plots.figure_filetype)
+             f'_col{col_number}_subdata'+plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
+@plots.apply_style
 def driftypos(data, meta, m):
     '''Plot the spatial jitter. (Fig 3104)
 
@@ -507,12 +515,13 @@ def driftypos(data, meta, m):
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3104_file{file_number}_DriftYPos' +
-             plots.figure_filetype)
+             plots.get_filetype())
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def driftywidth(data, meta, m):
     '''Plot the spatial profile's fitted Gaussian width. (Fig 3105)
 
@@ -540,12 +549,13 @@ def driftywidth(data, meta, m):
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3105_file{file_number}_DriftYWidth' +
-             plots.figure_filetype)
+             plots.get_filetype())
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def residualBackground(data, meta, m, vmin=None, vmax=None,
                        flux=None, order=None, ap_y=None, bg_y=None):
     '''Plot the median, BG-subtracted frame to study the residual BG region and
@@ -635,12 +645,13 @@ def residualBackground(data, meta, m, vmin=None, vmax=None,
     else:
         orderkey = f'_order{order}'
     fname = (f'figs{os.sep}fig3304_file{file_number}{orderkey}' +
-             '_ResidualBG'+plots.figure_filetype)
+             '_ResidualBG'+plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
+@plots.apply_style
 def curvature(meta, column_coms, smooth_coms, int_coms, m):
     '''Plot the measured, smoothed, and integer correction from the measured
     curvature. (Fig 3107)
@@ -682,12 +693,13 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3107_file{file_number}_Curvature' +
-             plots.figure_filetype)
+             plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
+@plots.apply_style
 def median_frame(data, meta, m, medflux, order=None):
     '''Plot the cleaned time-median frame. (Fig 3308)
 
@@ -725,13 +737,14 @@ def median_frame(data, meta, m, medflux, order=None):
     else:
         orderkey = f'_order{order}'
     fname = (f'figs{os.sep}fig3308_file{file_number}{orderkey}' +
-             '_MedianFrame' + plots.figure_filetype)
+             '_MedianFrame' + plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
 # Photometry
+@plots.apply_style
 def phot_lc(data, meta):
     """
     Plots the flux as determined by the photometry routine as a function of
@@ -758,12 +771,13 @@ def phot_lc(data, meta):
     plt.ylabel('Flux')
     plt.xlabel('Time')
 
-    fname = (f'figs{os.sep}fig3108-1D_LC' + plots.figure_filetype)
+    fname = (f'figs{os.sep}fig3108-1D_LC' + plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_bg(data, meta):
     """
     Plots the background flux as determined by the photometry routine as a
@@ -792,12 +806,13 @@ def phot_bg(data, meta):
         plt.ylabel('Flux')
         plt.xlabel('Time')
 
-        fname = (f'figs{os.sep}fig3305-1D_LC_BG' + plots.figure_filetype)
+        fname = (f'figs{os.sep}fig3305-1D_LC_BG' + plots.get_filetype())
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_centroid(data, meta):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths
@@ -865,12 +880,13 @@ def phot_centroid(data, meta):
     fig.get_layout_engine().set(hspace=0.02)
     fig.align_ylabels()
 
-    fname = (f'figs{os.sep}fig3109-Centroid' + plots.figure_filetype)
+    fname = (f'figs{os.sep}fig3109-Centroid' + plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_npix(data, meta):
     """
     Plots the number of pixels within the target aperture and within the
@@ -901,12 +917,13 @@ def phot_npix(data, meta):
     plt.ylabel('nskypix')
     plt.xlabel('Time')
 
-    fname = (f'figs{os.sep}fig3502_aperture_size' + plots.figure_filetype)
+    fname = (f'figs{os.sep}fig3502_aperture_size' + plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
     """
     Plot of the gaussian fit to the centroid cutout. (Fig 3309)
@@ -980,12 +997,13 @@ def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3309_file{file_number}_int{int_number}'
-             f'_Centroid_Fit' + plots.figure_filetype)
+             f'_Centroid_Fit' + plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     """
     Add a vertical color bar to an image plot.
@@ -1002,6 +1020,7 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     return im.axes.figure.colorbar(im, cax=cax, **kwargs)
 
 
+@plots.apply_style
 def make_artists(meta, centroid_x, centroid_y):
     """Make the aperture shapes for the photometry plots.
 
@@ -1105,6 +1124,7 @@ def make_artists(meta, centroid_x, centroid_y):
     return ap1, ap2, ap3
 
 
+@plots.apply_style
 def phot_2d_frame(data, meta, m, i):
     """
     Plots the 2D frame together with the centroid position, the target aperture
@@ -1170,7 +1190,7 @@ def phot_2d_frame(data, meta, m, i):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3306_file{file_number}_int{int_number}_2D_Frame'
-             + plots.figure_filetype)
+             + plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -1205,12 +1225,13 @@ def phot_2d_frame(data, meta, m, i):
         plt.legend(loc=1)
 
         fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}'
-                 f'_2D_Frame_Zoom' + plots.figure_filetype)
+                 f'_2D_Frame_Zoom' + plots.get_filetype())
         plt.savefig(meta.outputdir + fname, dpi=250)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     """
     Plots the 2D frame with a low vmax so that the background is well visible.
@@ -1265,12 +1286,13 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     ax[0].set_title(f'Segment {file_number}, Integration {int_number}\n\n'
                     'Before 1/f correction')
     fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}'
-             f'_2D_Frame_OneOverF' + plots.figure_filetype)
+             f'_2D_Frame_OneOverF' + plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_2d_frame_diff(data, meta):
     """
     Plots the difference between to consecutive 2D frames. This might be
@@ -1310,12 +1332,13 @@ def phot_2d_frame_diff(data, meta):
         plt.title('2D frame differences\n'
                   f'Integration {int_number}')
         fname = (f'figs{os.sep}fig3505_int{int_number}_2D_Frame_Diff'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         plt.savefig(meta.outputdir + fname, dpi=250)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def stddev_profile(meta, n, m, stdevs, p7thresh):
     """
     Plots the difference between the data and optimal profile in units
@@ -1356,12 +1379,13 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3506_file{file_number}_int{int_number}' +
-             '_Std_Dev_Profile'+plots.figure_filetype)
+             '_Std_Dev_Profile'+plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=200)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
+@plots.apply_style
 def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
     """
     Plots the mirror tilt events by divinding
@@ -1461,7 +1485,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
                   f'Batch {file_number}, Integration {int_number}')
         fname = (f'figs{os.sep}tilt_events{os.sep}'
                  f'fig3507a_file{file_number}_int{int_number}'
-                 f'_tilt_events' + plots.figure_filetype)
+                 f'_tilt_events' + plots.get_filetype())
         # Save figure
         plt.savefig(meta.outputdir + fname, dpi=250, bbox_inches='tight')
         if not meta.hide_plots:

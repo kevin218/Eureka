@@ -1,7 +1,8 @@
 <img src="docs/media/Eureka_logo.png" width="256px"/>
 
 [![Documentation Status](https://readthedocs.org/projects/eurekadocs/badge/?version=latest)](https://eurekadocs.readthedocs.io/en/latest/?badge=latest)
-[![pytest](https://github.com/kevin218/Eureka/actions/workflows/pytest_testing_pymc3.yml/badge.svg)](https://github.com/kevin218/Eureka/actions/workflows/pytest_testing_pymc3.yml)
+[![pytest](https://github.com/kevin218/Eureka/actions/workflows/pytest_testing.yml/badge.svg)](https://github.com/kevin218/Eureka/actions/workflows/pytest_testing.yml)
+[![Build Matrix](https://github.com/kevin218/Eureka/actions/workflows/build_matrix.yml/badge.svg)](https://github.com/kevin218/Eureka/actions/workflows/build_matrix.yml)
 [![flake8](https://github.com/kevin218/Eureka/actions/workflows/flake8_linting.yml/badge.svg)](https://github.com/kevin218/Eureka/actions/workflows/flake8_linting.yml)
 [![codecov](https://codecov.io/gh/kevin218/Eureka/branch/main/graph/badge.svg?token=2Y2KK7DZWL)](https://codecov.io/gh/kevin218/Eureka)
 [![status](https://joss.theoj.org/papers/a1cb3f6e4e58c00bc0ab1b471c04812b/status.svg)](https://joss.theoj.org/papers/a1cb3f6e4e58c00bc0ab1b471c04812b)

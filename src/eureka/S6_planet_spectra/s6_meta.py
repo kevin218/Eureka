@@ -9,13 +9,6 @@ class S6MetaClass(MetaClass):
 
     This class loads a Stage 6 Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-06 Taylor J Bell
-        Made specific S6 class based on MetaClass
     '''
 
     def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
@@ -35,25 +28,15 @@ class S6MetaClass(MetaClass):
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - 2024-06 Taylor J Bell
-            Initial version.
         '''
+        # Remove the stage from kwargs if present
+        if 'stage' in kwargs:
+            kwargs.pop('stage')
+
         super().__init__(folder, file, eventlabel, stage=6, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 6 specific defaults for generic instruments.
-
-        Notes
-        -----
-        History:
-
-        - 2024-06 Taylor J Bell
-            Initial version setting defaults for any instrument.
         '''
         # Make sure the S3 expand parameter is defined
         # (to allow resuming from old analyses)
