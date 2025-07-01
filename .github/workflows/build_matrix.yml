@@ -17,6 +17,8 @@ jobs:
         python-version: ['3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history, including tags
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -30,7 +32,12 @@ jobs:
 
       - name: Install built wheel with extras
         run: |
-          pip install dist/eureka-*.whl[jwst,hst,test,docs,jupyter]
+        run: |
+          WHL=$(ls dist/eureka-*.whl)
+          if [ -z "$WHL" ]; then
+            echo "No wheel file found"; exit 1
+          fi
+          pip install "$WHL[jwst,hst,test,docs,jupyter]"
 
       - name: Run smoke test (import + version check)
         run: |
