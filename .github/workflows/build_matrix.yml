@@ -32,7 +32,6 @@ jobs:
 
       - name: Install built wheel with extras
         run: |
-        run: |
           WHL=$(ls dist/eureka-*.whl)
           if [ -z "$WHL" ]; then
             echo "No wheel file found"; exit 1
