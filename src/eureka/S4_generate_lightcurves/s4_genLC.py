@@ -326,9 +326,19 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             lc.wave_mid.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
+            # Plot MAD values to help identify outliers
+            if meta.isplots_S4 >= 1 and not meta.photometry:
+                outliers = plots_s4.mad_outliers(meta, lc, spec)
+                if np.any(outliers):
+                    log.writelog(f'Identified {np.size(outliers)} outlier'
+                                 f' columns in Fig 4106.',
+                                 mute=(not meta.verbose))
+                    meta.mask_columns = np.union1d(meta.mask_columns,
+                                                   outliers).astype(int)
+
             # Manually mask pixel columns by index number
             for w in meta.mask_columns:
-                log.writelog(f"Masking detector pixel column {w}.")
+                log.writelog(f"  Masking detector pixel column {w}.")
                 index = np.where(spec.optmask.x == w)[0][0]
                 spec.optmask[:, index] = True
 
@@ -514,10 +524,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     plots_s4.binned_lightcurve(meta, log, lc, i)
                     if 'skylev' in list(spec.keys()):
                         plots_s4.binned_background(meta, log, lc, i)
-
-            # Plot MAD values to help identify outliers
-            if meta.isplots_S4 >= 1 and not meta.photometry:
-                plots_s4.mad_outliers(meta, lc, spec)
 
             # If requested, also generate white-light light curve
             if meta.compute_white and not meta.photometry:

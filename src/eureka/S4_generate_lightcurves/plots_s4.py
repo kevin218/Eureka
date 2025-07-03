@@ -1,8 +1,10 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from astropy.stats import sigma_clip
 from ..lib import util
 from ..lib import plots
+from ..lib import smooth
 import warnings
 warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
                                           'this call because figure with num')
@@ -333,52 +335,80 @@ def mad_outliers(meta, lc, spec):
     wave_1d = spec.wave_1d.values
     iwmin = np.nanargmin(np.abs(wave_1d - meta.wave_min))
     iwmax = np.nanargmin(np.abs(wave_1d - meta.wave_max))
-    # optspec = np.ma.masked_where(spec.optmask.values, spec.optspec.values)
     optspec = spec.optspec.values[:, iwmin:iwmax]
+    opterr = spec.opterr.values[:, iwmin:iwmax]
     optmask = spec.optmask.values[:, iwmin:iwmax]
-    norm_lcdata = util.normalize_spectrum(meta, optspec,
-                                          optmask=optmask).filled(np.nan)
-
-    # Compute indices for binned LC MAD values
-    binned_indices = np.zeros(meta.nspecchan)
-    for i in range(meta.nspecchan):
-        index = np.where((wave_1d >= lc.wave_low.values[i]) *
-                         (wave_1d < lc.wave_hi.values[i]))[0]
-        binned_indices[i] = np.mean(spec.x[index])
+    norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, optspec, opterr,
+                                                      optmask=optmask)
+    norm_lcdata = norm_lcdata.filled(np.nan)
+    norm_lcerr = norm_lcerr.filled(np.nan)
 
     # Compute unbinned LC MAD values, then scale
     numx = norm_lcdata.shape[1]
     mad = np.zeros(numx)
     for ii in range(numx):
         mad[ii] = util.get_mad_1d(norm_lcdata[:, ii])
-    scaled_mad = mad/np.nanmean(mad)*np.nanmean(meta.mad_s4_binned)
 
     # Compute mean abs deviation from "white" LC, then scale
     optspec_mean = np.nanmean(norm_lcdata, axis=1)
     dev = np.zeros(numx)
     for ii in range(numx):
         dev[ii] = np.ma.mean(np.ma.abs((norm_lcdata[:, ii] - optspec_mean)))
-    scaled_dev = dev/np.nanmean(dev)*np.nanmean(meta.mad_s4_binned)
+    dev /= np.nanmean(dev)/np.nanmean(mad)
+
+    # Remove broad trends from native-resolution MAD values
+    mask = np.isnan(mad)
+    x = spec.x[iwmin:iwmax]
+    x_mask = x[~mask]
+    smoothed_mad = smooth.medfilt(mad[~mask], window_len=meta.box_width)
+    residual_mad = mad[~mask] - smoothed_mad
+    smoothed_dev = smooth.medfilt(dev[~mask], window_len=meta.box_width)
+    residual_dev = dev[~mask] - smoothed_dev
+
+    # Identify only high outliers from residuals
+    masked_mad = sigma_clip(residual_mad, sigma_upper=meta.mad_sigma,
+                            sigma_lower=100, maxiters=meta.maxiters,
+                            masked=True, copy=True)
+    masked_dev = sigma_clip(residual_dev, sigma_upper=meta.mad_sigma,
+                            sigma_lower=100, maxiters=meta.maxiters,
+                            masked=True, copy=True)
+    x_mad_outliers = x_mask[np.where(masked_mad.mask)[0]]
+    x_dev_outliers = x_mask[np.where(masked_dev.mask)[0]]
+    outliers = np.union1d(x_mad_outliers, x_dev_outliers)
 
     # Plot spectroscopic MAD values
     alpha = 0.5
-    plt.figure(4106, figsize=(8, 4))
+    plt.figure(4106, figsize=(8, 8))
     plt.clf()
-    plt.plot(binned_indices, meta.mad_s4_binned, 'o', label='Binned LC MAD',
-             color='C1', zorder=3, alpha=alpha)
-    plt.plot(spec.x[iwmin:iwmax], scaled_mad, '.', color='C0', zorder=1,
-             label="Unbinned LC MAD (Scaled)", alpha=alpha)
-    plt.plot(spec.x[iwmin:iwmax], scaled_dev, '.', color='C2', zorder=2,
+    plt.subplot(211)
+    plt.plot(x, mad, '.', color='b', zorder=1,
+             label="Unbinned LC MAD", alpha=alpha)
+    plt.plot(x, dev, '.', color='gold', zorder=2,
              label="Deviation from white LC (Scaled)", alpha=alpha)
+    plt.plot(x_mask, smoothed_mad, '-', color='r', lw=2, zorder=5,
+             label="Unbinned LC MAD (Smoothed)")
+    plt.plot(x_mask, smoothed_dev, '--', color='0.3', lw=2, zorder=6,
+             label="Deviation from white LC (Smoothed)")
     plt.ylabel('MAD Value (ppm)')
-    plt.xlabel('Detector Pixel Number')
     plt.legend(loc='best')
+    plt.subplot(212)
+    plt.plot(x_mask, residual_mad, '.', color='b', zorder=1,
+             label="Unbinned LC MAD", alpha=alpha)
+    plt.plot(x_mask, residual_dev, '.', color='gold', zorder=2,
+             label="Deviation from white LC", alpha=alpha)
+    plt.plot(x_mad_outliers, residual_mad[masked_mad.mask], '.', color='C3',
+             zorder=5)
+    plt.plot(x_dev_outliers, residual_dev[masked_dev.mask], '.', color='C3',
+             zorder=5, label=f"{meta.mad_sigma}$\sigma$ Outliers")
+    plt.legend(loc='best')
+    plt.ylabel('Residuals (ppm)')
+    plt.xlabel('Detector Column Number')
     fname = 'figs'+os.sep+'fig4106_MAD_Outliers'+plots.figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
-    return
+    return outliers
 
 
 def cc_spec(meta, ref_spec, fit_spec, n):
