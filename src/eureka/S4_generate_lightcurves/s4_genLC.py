@@ -90,13 +90,19 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s4 = None
-    for spec_hw_val in meta.spec_hw_range:
+    for spec_hw_val in meta.spec_hw_range:         
         for bg_hw_val in meta.bg_hw_range:
-            if not isinstance(bg_hw_val, str):
+            if not isinstance(bg_hw_val, str) and meta.expand>1:
                 # Only divide if value is not a string (spectroscopic modes)
+                # If not a string, only need to do this if expand is greater than 1
+                #   This is a hack: for photometry cases meta.expand is forced to 1 since supersampling is not supported in the POET method
+                #   However if using the newer photutils method, there is no need for meta.expand, but we may want non-integer aperture sizes
+                #   In theory, the above conditional should not be met for aperture photmetry using photutils, but met for all other cases
                 bg_hw_val //= meta.expand
+            if meta.photometry and meta.phot_method=="photutils": ap = spec_hw_val
+            else: ap = spec_hw_val//meta.expand
             meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
-                                             ap=spec_hw_val//meta.expand,
+                                             ap=ap,
                                              bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:
@@ -111,10 +117,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if meta.data_format == 'eureka':
                 meta = load_specific_s3_meta_info(meta)
             # Directory structure should not use expanded HW values
-            spec_hw_val //= meta.expand
+            #   (Also see note above about meta.expand and photometry)
+            if meta.expand>1: spec_hw_val //= meta.expand
             if not isinstance(bg_hw_val, str):
                 # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+                if meta.expand>1: bg_hw_val //= meta.expand
 
             # Get directory for Stage 4 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
@@ -709,12 +716,19 @@ def load_specific_s3_meta_info(meta):
     """
     # Get directory containing S3 outputs for this aperture pair
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
-    if not isinstance(meta.bg_hw, str):
+    if not isinstance(meta.bg_hw, str) and meta.expand>1:
         # Only divide if value is not a string (spectroscopic modes)
+        # If not a string, only need to do this if expand is greater than 1
         bg_hw = meta.bg_hw//meta.expand
     else:
         bg_hw = meta.bg_hw
-    inputdir += f'ap{meta.spec_hw//meta.expand}_bg{bg_hw}'+os.sep
+    if meta.photometry and meta.phot_method=="photutils": 
+        spec_hw = meta.spec_hw
+    else:
+        spec_hw = meta.spec_hw//meta.expand
+    # [HDL] The above conditionals are a little messy because they are basically two ways of doing the same thing
+    #     but I'm trying not to indadvertently break something for another mode (hopefully I didn't). Could be more elegant.
+    inputdir += f'ap{spec_hw}_bg{bg_hw}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir
