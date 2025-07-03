@@ -1,31 +1,26 @@
 import numpy as np
+import jax.numpy as jnp
 
-import theano
-theano.config.gcc__cxxflags += " -fexceptions"
-import theano.tensor as tt
-
-# Avoid tonnes of "Cannot construct a scalar test value" messages
-import logging
-logger = logging.getLogger("theano.tensor.opt")
-logger.setLevel(logging.ERROR)
-
-from . import PyMC3Model
-from ...lib.split_channels import split, get_trim
+from . import JaxModel
+from ...lib.split_channels import split
 
 
-class ExpRampModel(PyMC3Model):
+class PolynomialModel(JaxModel):
+    """Polynomial Model"""
     def __init__(self, **kwargs):
-        """Initialize the model.
+        """Initialize the polynomial model.
 
         Parameters
         ----------
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            Can pass in the parameters, longparamlist, nchan, and
+            paramtitles arguments here.
         """
-        # Inherit from PyMC3Model class
+        # Inherit from Model class
         super().__init__(**kwargs)
-        self.name = 'exp. ramp'
+        self.name = 'polynomial'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -38,19 +33,23 @@ class ExpRampModel(PyMC3Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        self._time = np.ma.masked_invalid(time_array)
+        if isinstance(time_array, np.ma.core.MaskedArray):
+            # Convert to a numpy array with NaN masking
+            time_array = time_array.filled(np.nan)
+        self._time = time_array
+
         if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = np.ma.zeros(self.time.shape)
+                self.time_local = np.zeros(0)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    trim1, trim2 = get_trim(self.nints, chan)
-                    time = self.time[trim1:trim2]
-                    self.time_local[trim1:trim2] = time-time[0]
+                    time = split([self.time,], self.nints, chan)[0]
+                    self.time_local = np.append(
+                        self.time_local, time-np.nanmean(time))
             else:
-                self.time_local = self.time - self.time[0]
+                self.time_local = self.time-np.nanmean(self.time)
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -67,7 +66,7 @@ class ExpRampModel(PyMC3Model):
 
         Returns
         -------
-        ndarray
+        lcfinal : ndarray
             The value of the model at the times self.time.
         """
         if channel is None:
@@ -77,29 +76,33 @@ class ExpRampModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
-        ramp_coeffs = np.zeros((nchan, 4)).tolist()
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
 
         if eval:
-            lib = np.ma
+            lib = np
             model = self.fit
         else:
-            lib = tt
+            lib = jnp
             model = self.model
 
-        # Parse 'r#' keyword arguments as coefficients
+        poly_coeffs = np.zeros((nchan, 10)).tolist()
+        # Parse 'c#' keyword arguments as coefficients
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
             else:
                 chan = 0
-
-            for i in range(4):
+            for i in range(10):
                 if chan == 0:
-                    ramp_coeffs[c][i] = getattr(model, f'r{i}', 0)
+                    parname = f'c{i}'
                 else:
-                    ramp_coeffs[c][i] = getattr(model, f'r{i}_ch{chan}', 0)
+                    parname = f'c{i}_ch{chan}'
+                poly_coeffs[c][i] = getattr(model, parname, 0)
 
-        ramp_flux = lib.zeros(0)
+        # Create the polynomial from the coeffs
+        lcfinal = lib.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -111,8 +114,9 @@ class ExpRampModel(PyMC3Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            r0, r1, r2, r3 = ramp_coeffs[c]
-            lcpiece = (1 + r0*lib.exp(-r1*time) + r2*lib.exp(-r3*time))
-            ramp_flux = lib.concatenate([ramp_flux, lcpiece])
+            lcpiece = lib.zeros(len(time))
+            for power in range(len(poly_coeffs[chan])):
+                lcpiece += poly_coeffs[chan][power] * time**power
+            lcfinal = lib.concatenate([lcfinal, lcpiece])
 
-        return ramp_flux
+        return lcfinal
