@@ -164,6 +164,7 @@ class S3MetaClass(MetaClass):
         if self.expand > 1:
             # FINDME: We should soon be able to support expand != 1
             # for photometry
+            # (only relevant for POET method of aperture photometry)
             print("Super sampling is not currently supported for photometry. "
                   "Setting meta.expand to 1.")
             self.expand = 1
