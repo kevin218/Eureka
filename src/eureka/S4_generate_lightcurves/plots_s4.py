@@ -399,7 +399,7 @@ def mad_outliers(meta, lc, spec):
     plt.plot(x_mad_outliers, residual_mad[masked_mad.mask], '.', color='C3',
              zorder=5)
     plt.plot(x_dev_outliers, residual_dev[masked_dev.mask], '.', color='C3',
-             zorder=5, label=f"{meta.mad_sigma}$\sigma$ Outliers")
+             zorder=5, label=rf"{meta.mad_sigma}$\sigma$ Outliers")
     plt.legend(loc='best')
     plt.ylabel('Residuals (ppm)')
     plt.xlabel('Detector Column Number')
