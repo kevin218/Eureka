@@ -1044,11 +1044,11 @@ run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, harmonica_tr, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
+[batman_tr, batman_ecl, harmonica_tr, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, common_mode, GP].
 For theano-based differentiable functions, this can be one or more of the following:
 [starry, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
-The POET transit and eclipse models assume a symmetric transit shape and, thus, are best-suited for planets with small eccentricities (e < 0.2).  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1)
+The POET transit and eclipse models assume a symmetric transit shape and, thus, are best-suited for planets with small eccentricities (e < 0.2).  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1).
 
 compute_ltt
 '''''''''''
@@ -1063,6 +1063,14 @@ Optional. By default, the code will assume that you are only fitting for a singl
 force_positivity
 ''''''''''''''''
 Optional boolean. Used by the sinusoid_pc and poet_pc models. If True, force positive phase variations (phase variations that never go below the bottom of the eclipse). Physically speaking, a negative phase curve is impossible, but strictly enforcing this can hide issues with the decorrelation or potentially bias your measured minimum flux level. Either way, use caution when choosing the value of this parameter.
+
+common_mode_file
+''''''''''''''''
+Optional. Fully qualified path to the location of the common-mode file that you want to use. This is usually the ECSV generated from a Stage 5 white LC fit.
+
+common_mode_name
+''''''''''''''''
+Required when ``common_mode_file`` is given. ECSV parameter name that represents the common-mode variations.  This is usually ``GP`` or ``residuals``.
 
 pixelsampling
 '''''''''''''
@@ -1410,6 +1418,10 @@ Available fitting parameters are:
       - ``xwidth`` - Coefficient for linear decorrelation against changes in the PSF width in the x direction (cross-correlation width in the spectral direction for spectroscopy data).
       - ``ypos`` - Coefficient for linear decorrelation against drift/jitter in the y direction (spatial direction for spectroscopy data).
       - ``ywidth`` - Coefficient for linear decorrelation against changes in the PSF width in the y direction (spatial direction for spectroscopy data).
+
+      - ``cm1`` and ``cm2`` - Coefficients for the 1st and 2nd order common-mode systematics.
+
+         The common-mode systematics model is defined as follows: ``1 + cm1*cm_flux + cm2*cm_flux**2``, where ``cm1`` and ``cm2`` are common-mode amplitude parameters and ``cm_flux`` represents the common-mode flux variations.  The ``cm_flux`` array is read in from ``common_mode_file`` (generated from a Stage 5 white light curve fit) and uses mean-subtracted values from the ECSV parameter name ``common_mode_name`` (e.g., ``GP`` or ``residuals``).
 
       - ``A`` and ``m`` - The natural logarithm (``ln``) of the covariance amplitude and lengthscale to use for the GP model specified in your Stage 5 ECF.
 

@@ -97,6 +97,8 @@ class S5MetaClass(MetaClass):
         self.num_planets = getattr(self, 'num_planets', 1)
         self.compute_ltt = getattr(self, 'compute_ltt', None)
         self.force_positivity = getattr(self, 'force_positivity', False)
+        # Path to ECSV file containing common mode variations
+        self.common_mode_file = getattr(self, 'common_mode_file', None)
         # The following is only relevant for the starry model
         self.mutualOccultations = getattr(self, 'mutualOccultations', True)
 
