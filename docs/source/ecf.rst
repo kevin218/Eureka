@@ -1394,7 +1394,7 @@ Available fitting parameters are:
       - ``spotnpts`` - The degree of spherical harmonics on the star (ydeg). ~30 is needed to appropriately model the spot.
 
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
-      - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
+      - ``c0--c9`` - Coefficients for 0th to 9th order polynomials.
 
          The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.).
          The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array.
