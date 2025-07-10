@@ -327,15 +327,17 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             lc.wave_mid.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
-            # Plot MAD values to help identify outliers
-            outliers, pp = get_outliers(meta, spec)
-            if np.any(outliers):
-                log.writelog(f'Identified {np.size(outliers)} outlier columns.',
-                             mute=(not meta.verbose))
-                meta.mask_columns = np.union1d(meta.mask_columns,
-                                                outliers).astype(int)
-            if meta.isplots_S4 >= 1 and not meta.photometry:
-                plots_s4.mad_outliers(meta, pp)
+            # Use spectroscopic MAD values to identify outliers
+            if not meta.photometry:
+                outliers, pp = get_outliers(meta, spec)
+                if np.any(outliers):
+                    # Create unique list of outliers
+                    log.writelog(f'Identified {np.size(outliers)} outlier' +
+                                 ' columns.', mute=(not meta.verbose))
+                    meta.mask_columns = np.union1d(meta.mask_columns,
+                                                   outliers).astype(int)
+                if meta.isplots_S4 >= 1:
+                    plots_s4.mad_outliers(meta, pp)
 
             # Manually mask pixel columns by index number
             for w in meta.mask_columns:

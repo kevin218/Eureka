@@ -17,9 +17,9 @@ def get_outliers(meta, spec):
     Returns
     -------
     outliers : 1D array
-
+        An array of detector pixel indices flagged as outliers.
     pp : Dictionary
-
+        A dictionary of plotting parameters for Fig 4106.
     '''
     # Normalize the light curve
     wave_1d = spec.wave_1d.values
@@ -66,7 +66,7 @@ def get_outliers(meta, spec):
     x_dev_outliers = x_mask[np.where(masked_dev.mask)[0]]
     outliers = np.union1d(x_mad_outliers, x_dev_outliers)
 
-    # Create dictionary containing necessary plotting parameters
+    # Create dictionary containing plotting parameters for Fig 4106
     pp = {
         "x": x,
         "x_mask": x_mask,
