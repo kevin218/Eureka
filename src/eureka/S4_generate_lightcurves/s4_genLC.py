@@ -328,7 +328,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
             # Use spectroscopic MAD values to identify outliers
-            if not meta.photometry:
+            if not meta.photometry and meta.mad_sigma is not None:
                 outliers, pp = get_outliers(meta, spec)
                 if np.any(outliers):
                     # Create unique list of outliers
