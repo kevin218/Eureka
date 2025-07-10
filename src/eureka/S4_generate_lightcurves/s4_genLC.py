@@ -24,6 +24,7 @@ from astropy.convolution import Box1DKernel
 from tqdm import tqdm
 
 from . import plots_s4, drift, generate_LD, wfc3
+from .outliers import get_outliers
 from .s4_meta import S4MetaClass
 from ..lib import logedit
 from ..lib import manageevent as me
@@ -327,14 +328,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
             # Plot MAD values to help identify outliers
+            outliers, pp = get_outliers(meta, spec)
+            if np.any(outliers):
+                log.writelog(f'Identified {np.size(outliers)} outlier columns.',
+                             mute=(not meta.verbose))
+                meta.mask_columns = np.union1d(meta.mask_columns,
+                                                outliers).astype(int)
             if meta.isplots_S4 >= 1 and not meta.photometry:
-                outliers = plots_s4.mad_outliers(meta, lc, spec)
-                if np.any(outliers):
-                    log.writelog(f'Identified {np.size(outliers)} outlier'
-                                 f' columns in Fig 4106.',
-                                 mute=(not meta.verbose))
-                    meta.mask_columns = np.union1d(meta.mask_columns,
-                                                   outliers).astype(int)
+                plots_s4.mad_outliers(meta, pp)
 
             # Manually mask pixel columns by index number
             for w in meta.mask_columns:

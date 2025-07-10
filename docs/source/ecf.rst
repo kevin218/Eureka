@@ -837,6 +837,10 @@ fill_value
 ''''''''''
 Only used if sigma_clip=True. Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
+mad_sigma
+'''''''''
+The number of sigmas an unbinned MAD value must be from the rolling median (using box_width) to be considered an outlier.  Outlier columns are masked.
+
 sum_reads
 '''''''''
 Only used for HST analyses. Should differential non-destructive reads be summed together to reduce noise and data volume or not.

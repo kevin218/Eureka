@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from astropy.stats import sigma_clip
 from ..lib import util
 from ..lib import plots
 from ..lib import smooth
@@ -318,7 +317,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
     return
 
 
-def mad_outliers(meta, lc, spec):
+def mad_outliers(meta, pp):
     '''Plot spectroscopic MAD values to identify outliers. (Figs 4106)
     Outliers can be masked using `mask_columns` in the Stage 4 ECF.
 
@@ -331,50 +330,62 @@ def mad_outliers(meta, lc, spec):
     spec : Xarray Dataset
         The Dataset object containing spectroscopic LC and time data.
     '''
-    # Normalize the light curve
-    wave_1d = spec.wave_1d.values
-    iwmin = np.nanargmin(np.abs(wave_1d - meta.wave_min))
-    iwmax = np.nanargmin(np.abs(wave_1d - meta.wave_max))
-    optspec = spec.optspec.values[:, iwmin:iwmax]
-    opterr = spec.opterr.values[:, iwmin:iwmax]
-    optmask = spec.optmask.values[:, iwmin:iwmax]
-    norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, optspec, opterr,
-                                                      optmask=optmask)
-    norm_lcdata = norm_lcdata.filled(np.nan)
-    norm_lcerr = norm_lcerr.filled(np.nan)
+    # # Normalize the light curve
+    # wave_1d = spec.wave_1d.values
+    # iwmin = np.nanargmin(np.abs(wave_1d - meta.wave_min))
+    # iwmax = np.nanargmin(np.abs(wave_1d - meta.wave_max))
+    # optspec = spec.optspec.values[:, iwmin:iwmax]
+    # opterr = spec.opterr.values[:, iwmin:iwmax]
+    # optmask = spec.optmask.values[:, iwmin:iwmax]
+    # norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, optspec, opterr,
+    #                                                   optmask=optmask)
+    # norm_lcdata = norm_lcdata.filled(np.nan)
+    # norm_lcerr = norm_lcerr.filled(np.nan)
 
-    # Compute unbinned LC MAD values, then scale
-    numx = norm_lcdata.shape[1]
-    mad = np.zeros(numx)
-    for ii in range(numx):
-        mad[ii] = util.get_mad_1d(norm_lcdata[:, ii])
+    # # Compute unbinned LC MAD values, then scale
+    # numx = norm_lcdata.shape[1]
+    # mad = np.zeros(numx)
+    # for ii in range(numx):
+    #     mad[ii] = util.get_mad_1d(norm_lcdata[:, ii])
 
-    # Compute mean abs deviation from "white" LC, then scale
-    optspec_mean = np.nanmean(norm_lcdata, axis=1)
-    dev = np.zeros(numx)
-    for ii in range(numx):
-        dev[ii] = np.ma.mean(np.ma.abs((norm_lcdata[:, ii] - optspec_mean)))
-    dev /= np.nanmean(dev)/np.nanmean(mad)
+    # # Compute mean abs deviation from "white" LC, then scale
+    # optspec_mean = np.nanmean(norm_lcdata, axis=1)
+    # dev = np.zeros(numx)
+    # for ii in range(numx):
+    #     dev[ii] = np.ma.mean(np.ma.abs((norm_lcdata[:, ii] - optspec_mean)))
+    # dev /= np.nanmean(dev)/np.nanmean(mad)
 
-    # Remove broad trends from native-resolution MAD values
-    mask = np.isnan(mad)
-    x = spec.x[iwmin:iwmax]
-    x_mask = x[~mask]
-    smoothed_mad = smooth.medfilt(mad[~mask], window_len=meta.box_width)
-    residual_mad = mad[~mask] - smoothed_mad
-    smoothed_dev = smooth.medfilt(dev[~mask], window_len=meta.box_width)
-    residual_dev = dev[~mask] - smoothed_dev
+    # # Remove broad trends from native-resolution MAD values
+    # mask = np.isnan(mad)
+    # x = spec.x[iwmin:iwmax]
+    # x_mask = x[~mask]
+    # smoothed_mad = smooth.medfilt(mad[~mask], window_len=meta.box_width)
+    # residual_mad = mad[~mask] - smoothed_mad
+    # smoothed_dev = smooth.medfilt(dev[~mask], window_len=meta.box_width)
+    # residual_dev = dev[~mask] - smoothed_dev
 
-    # Identify only high outliers from residuals
-    masked_mad = sigma_clip(residual_mad, sigma_upper=meta.mad_sigma,
-                            sigma_lower=100, maxiters=meta.maxiters,
-                            masked=True, copy=True)
-    masked_dev = sigma_clip(residual_dev, sigma_upper=meta.mad_sigma,
-                            sigma_lower=100, maxiters=meta.maxiters,
-                            masked=True, copy=True)
-    x_mad_outliers = x_mask[np.where(masked_mad.mask)[0]]
-    x_dev_outliers = x_mask[np.where(masked_dev.mask)[0]]
-    outliers = np.union1d(x_mad_outliers, x_dev_outliers)
+    # # Identify only high outliers from residuals
+    # masked_mad = sigma_clip(residual_mad, sigma_upper=meta.mad_sigma,
+    #                         sigma_lower=100, maxiters=meta.maxiters,
+    #                         masked=True, copy=True)
+    # masked_dev = sigma_clip(residual_dev, sigma_upper=meta.mad_sigma,
+    #                         sigma_lower=100, maxiters=meta.maxiters,
+    #                         masked=True, copy=True)
+    # x_mad_outliers = x_mask[np.where(masked_mad.mask)[0]]
+    # x_dev_outliers = x_mask[np.where(masked_dev.mask)[0]]
+    # outliers = np.union1d(x_mad_outliers, x_dev_outliers)
+    x = pp["x"]
+    x_mask = pp["x_mask"]
+    x_mad_outliers = pp["x_mad_outliers"]
+    x_dev_outliers = pp["x_dev_outliers"]
+    mad = pp["mad"]
+    dev = pp["dev"]
+    masked_mad = pp["masked_mad"]
+    masked_dev = pp["masked_dev"]
+    smoothed_mad = pp["smoothed_mad"]
+    residual_mad = pp["residual_mad"]
+    smoothed_dev = pp["smoothed_dev"]
+    residual_dev = pp["residual_dev"]
 
     # Plot spectroscopic MAD values
     alpha = 0.5
@@ -408,7 +419,7 @@ def mad_outliers(meta, lc, spec):
     if not meta.hide_plots:
         plt.pause(0.1)
 
-    return outliers
+    return
 
 
 def cc_spec(meta, ref_spec, fit_spec, n):
