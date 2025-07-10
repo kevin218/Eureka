@@ -3,7 +3,6 @@ import os
 import matplotlib.pyplot as plt
 from ..lib import util
 from ..lib import plots
-from ..lib import smooth
 import warnings
 warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
                                           'this call because figure with num')
