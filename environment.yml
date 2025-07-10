@@ -35,7 +35,7 @@ dependencies:
     - sphinx-automodapi # Needed for documentation
     - tqdm
     - pip:
-        - astraeus@git+https://github.com/kevin218/Astraeus@main
+        - astraeus-io
         - batman-package
         - catwoman@git+https://github.com/taylorbell57/catwoman@master
         - celerite2 # Needed for GP
