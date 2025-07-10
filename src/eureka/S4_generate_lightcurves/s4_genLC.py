@@ -24,6 +24,7 @@ from astropy.convolution import Box1DKernel
 from tqdm import tqdm
 
 from . import plots_s4, drift, generate_LD, wfc3
+from .outliers import get_outliers
 from .s4_meta import S4MetaClass
 from ..lib import logedit
 from ..lib import manageevent as me
@@ -326,9 +327,21 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             lc.wave_mid.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
+            # Use spectroscopic MAD values to identify outliers
+            if not meta.photometry and meta.mad_sigma is not None:
+                outliers, pp = get_outliers(meta, spec)
+                if np.any(outliers):
+                    # Create unique list of outliers
+                    log.writelog(f'Identified {np.size(outliers)} outlier' +
+                                 ' columns.', mute=(not meta.verbose))
+                    meta.mask_columns = np.union1d(meta.mask_columns,
+                                                   outliers).astype(int)
+                if meta.isplots_S4 >= 1:
+                    plots_s4.mad_outliers(meta, pp)
+
             # Manually mask pixel columns by index number
             for w in meta.mask_columns:
-                log.writelog(f"Masking detector pixel column {w}.")
+                log.writelog(f"  Masking detector pixel column {w}.")
                 index = np.where(spec.optmask.x == w)[0][0]
                 spec.optmask[:, index] = True
 
@@ -448,6 +461,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
             # Loop over spectroscopic channels
             meta.mad_s4_binned = []
+            meta.mad_s4_binned_bg = []
             for i in range(meta.nspecchan):
                 if not meta.photometry:
                     log.writelog(f"  Bandpass {i} = "

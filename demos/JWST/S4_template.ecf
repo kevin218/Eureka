@@ -13,6 +13,7 @@ allapers        False       # Run S4 on all of the apertures considered in S3? O
 
 # Manually mask pixel columns by index number
 # mask_columns  []
+mad_sigma       7       # The number of sigmas an unbinned MAD value must be from the rolling median (using box_width) to be considered an outlier.  Outlier columns are masked.
 
 # Parameters for drift correction of 1D spectra
 recordDrift     False   # Set True to record drift/jitter in 1D spectra (always recorded if correctDrift is True)
@@ -22,7 +23,7 @@ correctDrift    False   # Set True to correct drift/jitter in 1D spectra (not re
 clip_unbinned   False   # Whether or not sigma clipping should be performed on the unbinned 1D time series
 clip_binned     True    # Whether or not sigma clipping should be performed on the binned 1D time series
 sigma           10      # The number of sigmas a point must be from the rolling median to be considered an outlier
-box_width       30      # The width of the box-car filter (used to calculated the rolling median) in units of number of data points
+box_width       31      # The width of the box-car filter (used to calculated the rolling median) in units of number of data points
 maxiters        5       # The number of iterations of sigma clipping that should be performed.
 boundary        fill    # Use 'fill' to extend the boundary values by the median of all data points (recommended), 'wrap' to use a periodic boundary, or 'extend' to use the first/last data points
 fill_value      mask    # Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
