@@ -44,8 +44,8 @@ class CommonModeModel(Model):
         log = kwargs.get('log')
         meta = kwargs.get('meta')
         log.writelog(f'Reading {meta.common_mode_name} values from' +
-                    ' common-mode systematics file:' +
-                    f'{meta.common_mode_file}.', mute=(not meta.verbose))
+                     ' common-mode systematics file:' +
+                     f'{meta.common_mode_file}.', mute=(not meta.verbose))
         lc_table = astropytable.readtable(meta.common_mode_file)
         self.cm_flux = lc_table[meta.common_mode_name] - \
             np.mean(lc_table[meta.common_mode_name])
