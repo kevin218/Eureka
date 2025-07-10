@@ -3,6 +3,7 @@ import numpy as np
 from .Model import Model
 from ...lib.readEPF import Parameters
 from ...lib.split_channels import split
+from ...lib import astropytable
 
 
 class CommonModeModel(Model):
@@ -37,6 +38,17 @@ class CommonModeModel(Model):
         # Update coefficients
         self.coeffs = np.zeros((self.nchannel_fitted, 2))
         self._parse_coeffs()
+
+        # Read common-mode systematics file and store corresponding values.
+        # This is usually the ECSV generated from a Stage 5 white LC fit.
+        log = kwargs.get('log')
+        meta = kwargs.get('meta')
+        log.writelog(f'Reading {meta.common_mode_name} values from' +
+                    ' common-mode systematics file:' +
+                    f'{meta.common_mode_file}.', mute=(not meta.verbose))
+        lc_table = astropytable.readtable(meta.common_mode_file)
+        self.cm_flux = lc_table[meta.common_mode_name] - \
+            np.mean(lc_table[meta.common_mode_name])
 
     @property
     def time(self):

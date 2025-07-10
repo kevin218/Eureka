@@ -14,7 +14,7 @@ except ModuleNotFoundError:
     # PyMC3 hasn't been installed
     dm = None
 from ..lib import manageevent as me
-from ..lib import util, logedit, astropytable
+from ..lib import util, logedit
 from ..lib.readEPF import Parameters
 from ..version import version
 
@@ -603,17 +603,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         flux *= fakeramp.eval(time=time)
         lc_model.flux = flux
 
-    cm_flux = None
-    if meta.common_mode_file is not None:
-        # Read common-mode systematics file and store corresponding values.
-        # This is usually the ECSV generated from a Stage 5 white LC fit.
-        log.writelog(f'Reading {meta.common_mode_name} values from' +
-                     ' common-mode systematics file:' +
-                     f'{meta.common_mode_file}.', mute=(not meta.verbose))
-        lc_table = astropytable.readtable(meta.common_mode_file)
-        cm_flux = lc_table[meta.common_mode_name] - \
-            np.mean(lc_table[meta.common_mode_name])
-
     # Make the astrophysical and detector models
     modellist = []
     if 'starry' in meta.run_myfuncs:
@@ -952,7 +941,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'common_mode' in meta.run_myfuncs:
-        t_cm = CommonModeModel(parameters=params, cm_flux=cm_flux,
+        t_cm = CommonModeModel(parameters=params, meta=meta,
                                fmt='r--', log=log, time=time,
                                time_units=time_units,
                                freenames=freenames,
