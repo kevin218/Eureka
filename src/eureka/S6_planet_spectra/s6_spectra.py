@@ -193,6 +193,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
                 meta.spectrum_median = None
                 meta.spectrum_err = None
+                meta.upper_limits_fn = False
 
                 # Read in S5 fitted values
                 if meta.y_param_basic == 'fn':
@@ -1503,14 +1504,31 @@ def compute_fn(meta, log, fit_methods):
 
     meta.spectrum_median = []
     meta.spectrum_err = []
-
+    meta.upper_limits_fn_3sig = np.zeros(meta.nspecchan)
+    meta.upper_limits_fn_tf = np.zeros(meta.nspecchan, dtype=bool)
+    meta.upper_limits_fn_ind = []
     for i in range(meta.nspecchan):
+        # Compute distribution of fn values
         fluxes = fp[i]*(1-2*ampcos[i])
         flux = np.percentile(np.array(fluxes), [16, 50, 84])[[1, 2, 0]]
+        # Convert percentiles to upper and lower uncertainties
         flux[1] -= flux[0]
         flux[2] = flux[0]-flux[2]
         meta.spectrum_median.append(flux[0])
         meta.spectrum_err.append(flux[1:])
+        # Look for fn values that have < 3-sigma detection significance
+        if meta.force_positivity and (flux[0] - 3*flux[2]) < 0:
+            meta.upper_limits_fn_ind.append(i)
+        # Record 99.7th percentile (not 99.85) as 3-sigma upper limit
+        # since this is NOT a two-sided distribution (like above)
+        meta.upper_limits_fn_3sig[i] = np.percentile(np.array(fluxes), 99.7)
+    if len(meta.upper_limits_fn_ind) > 0:
+        meta.upper_limits_fn = True
+        meta.upper_limits_fn_tf[meta.upper_limits_fn_ind] = True
+        log.writelog(". The following channels have < 3-sigma detection"  +
+                     " significance and should have their nightside" +
+                     " fluxes (fn) reported as upper limits:\n" +
+                     f"  {meta.upper_limits_fn_ind}")
 
     # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
@@ -1861,9 +1879,15 @@ def save_table(meta, log):
     if len(set(wavelengths)) == 1:
         wavelengths = wavelengths[0]
         wave_errs = wave_errs[0]
-    astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param, wavelengths,
-                              wave_errs, meta.spectrum_median,
-                              meta.spectrum_err)
+    if meta.upper_limits_fn:
+        astropytable.savetable_S6_fn(meta.tab_filename_s6, meta.y_param,
+                                     wavelengths, wave_errs,
+                                     meta.spectrum_median, meta.spectrum_err, meta.upper_limits_fn_3sig,
+                                     meta.upper_limits_fn_tf)
+    else:
+        astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param,
+                                  wavelengths, wave_errs, meta.spectrum_median,
+                                  meta.spectrum_err)
 
     transit_latex_table(meta, log)
 
