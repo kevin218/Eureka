@@ -1525,7 +1525,7 @@ def compute_fn(meta, log, fit_methods):
     if len(meta.upper_limits_fn_ind) > 0:
         meta.upper_limits_fn = True
         meta.upper_limits_fn_tf[meta.upper_limits_fn_ind] = True
-        log.writelog(". The following channels have < 3-sigma detection"  +
+        log.writelog(". The following channels have < 3-sigma detection" +
                      " significance and should have their nightside" +
                      " fluxes (fn) reported as upper limits:\n" +
                      f"  {meta.upper_limits_fn_ind}")
@@ -1882,7 +1882,8 @@ def save_table(meta, log):
     if meta.upper_limits_fn:
         astropytable.savetable_S6_fn(meta.tab_filename_s6, meta.y_param,
                                      wavelengths, wave_errs,
-                                     meta.spectrum_median, meta.spectrum_err, meta.upper_limits_fn_3sig,
+                                     meta.spectrum_median, meta.spectrum_err,
+                                     meta.upper_limits_fn_3sig,
                                      meta.upper_limits_fn_tf)
     else:
         astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param,
