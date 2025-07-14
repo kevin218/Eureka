@@ -374,7 +374,7 @@ def mad_outliers(meta, pp):
     plt.legend(loc='best')
     plt.ylabel('Residuals (ppm)')
     plt.xlabel('Detector Column Number')
-    fname = 'figs'+os.sep+'fig4106_MAD_Outliers'+plots.figure_filetype
+    fname = 'figs'+os.sep+'fig4106_MAD_Outliers'+plots.get_filetype()
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
