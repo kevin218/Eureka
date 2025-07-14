@@ -158,8 +158,7 @@ def binned_background(meta, log, lc, i, white=False):
         plt.errorbar(lc.time.values-time_modifier, norm_bgdata, norm_bgerr,
                      fmt='o', color=f'C{i}', mec=f'C{i}', alpha=0.2)
         mad = util.get_mad_1d(norm_bgdata)
-        meta.mad_s4_binned.append(mad)
-        # log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+        meta.mad_s4_binned_bg.append(mad)
         plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
                  transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Background')
@@ -182,13 +181,6 @@ def driftxpos(meta, lc):
         The metadata object.
     lc : Xarray Dataset
         The light curve object containing drift arrays.
-
-    Notes
-    -----
-    History:
-
-    - Jul 11, 2022 Caroline Piaulet
-        Edited this function to use the new naming convention for drift
     '''
     plt.figure(4103, figsize=(8, 4))
     plt.clf()
@@ -218,13 +210,6 @@ def driftxwidth(meta, lc):
         The metadata object.
     lc : Xarray Dataset
         The light curve object containing drift arrays.
-
-    Notes
-    -----
-    History:
-
-    - Jul 11, 2022 Caroline Piaulet
-        Created this function
     '''
     plt.figure(4104, figsize=(8, 4))
     plt.clf()
@@ -332,6 +317,67 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
         plt.close()
     else:
         plt.pause(0.2)
+
+    return
+
+
+@plots.apply_style
+def mad_outliers(meta, pp):
+    '''Plot spectroscopic MAD values and identify outliers. (Figs 4106)
+    Outliers will be appended to `mask_columns` in the Stage 4 ECF.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    pp : Dictionary
+        A dictionary of plotting parameters from outliers.get_outliers().
+    '''
+    # Unpack dictionary of plotting parameters
+    x = pp["x"]
+    x_mask = pp["x_mask"]
+    x_mad_outliers = pp["x_mad_outliers"]
+    x_dev_outliers = pp["x_dev_outliers"]
+    mad = pp["mad"]
+    dev = pp["dev"]
+    masked_mad = pp["masked_mad"]
+    masked_dev = pp["masked_dev"]
+    smoothed_mad = pp["smoothed_mad"]
+    residual_mad = pp["residual_mad"]
+    smoothed_dev = pp["smoothed_dev"]
+    residual_dev = pp["residual_dev"]
+
+    # Plot spectroscopic MAD values
+    alpha = 0.5
+    plt.figure(4106, figsize=(8, 8))
+    plt.clf()
+    plt.subplot(211)
+    plt.plot(x, mad, '.', color='b', zorder=1,
+             label="Unbinned LC MAD", alpha=alpha)
+    plt.plot(x, dev, '.', color='gold', zorder=2,
+             label="Deviation from white LC (Scaled)", alpha=alpha)
+    plt.plot(x_mask, smoothed_mad, '-', color='r', lw=2, zorder=5,
+             label="Unbinned LC MAD (Smoothed)")
+    plt.plot(x_mask, smoothed_dev, '--', color='0.3', lw=2, zorder=6,
+             label="Deviation from white LC (Smoothed)")
+    plt.ylabel('MAD Value (ppm)')
+    plt.legend(loc='best')
+    plt.subplot(212)
+    plt.plot(x_mask, residual_mad, '.', color='b', zorder=1,
+             label="Unbinned LC MAD", alpha=alpha)
+    plt.plot(x_mask, residual_dev, '.', color='gold', zorder=2,
+             label="Deviation from white LC", alpha=alpha)
+    plt.plot(x_mad_outliers, residual_mad[masked_mad.mask], '.', color='C3',
+             zorder=5)
+    plt.plot(x_dev_outliers, residual_dev[masked_dev.mask], '.', color='C3',
+             zorder=5, label=rf"{meta.mad_sigma}$\sigma$ Outliers")
+    plt.legend(loc='best')
+    plt.ylabel('Residuals (ppm)')
+    plt.xlabel('Detector Column Number')
+    fname = 'figs'+os.sep+'fig4106_MAD_Outliers'+plots.figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.1)
 
     return
 
