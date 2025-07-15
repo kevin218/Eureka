@@ -124,10 +124,10 @@ def medstddev(data, mask=None, medi=False, axis=0):
 
     # critical case fixes:
     if np.any(ngood == 0):
-        std[np.where(ngood == 0)] = np.nan
-        median[np.where(ngood == 0)] = np.nan
+        std[ngood == 0] = np.nan
+        median[ngood == 0] = np.nan
     if np.any(ngood == 1):
-        std[np.where(ngood == 1)] = 0.
+        std[ngood == 1] = 0.
 
     if len(std) == 1:
         std = std[0]
