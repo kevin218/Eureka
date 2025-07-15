@@ -41,7 +41,7 @@ def test_S4cal(capsys):
     # run assertions for S2
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage2{os.sep}')
-    name = pathdirectory(meta, 'S2', 1,
+    name = pathdirectory(meta, 'S2', meta.run_s2,
                          old_datetime=s2_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -49,7 +49,7 @@ def test_S4cal(capsys):
     # run assertions for S3
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage3{os.sep}')
-    name = pathdirectory(meta, 'S3', 1, ap=5, bg=6,
+    name = pathdirectory(meta, 'S3', meta.run_s3, ap=5, bg=6,
                          old_datetime=s3_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -57,7 +57,7 @@ def test_S4cal(capsys):
     # run assertions for S4cal
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage4cal{os.sep}')
-    name = pathdirectory(meta, 'S4cal', 1,
+    name = pathdirectory(meta, 'S4cal', meta.run_S4cal,
                          old_datetime=s4_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
