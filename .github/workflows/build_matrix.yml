@@ -34,7 +34,7 @@ jobs:
       - name: Install built wheel with extras
         shell: bash
         run: |
-          WHL=$(ls dist/eureka-*.whl)
+          WHL=$(ls dist/eureka_bang-*.whl)
           if [ -z "$WHL" ]; then
             echo "No wheel file found"; exit 1
           fi
