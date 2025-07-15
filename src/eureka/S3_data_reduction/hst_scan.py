@@ -503,7 +503,7 @@ def calcDrift2D(im1, im2, n):
                                   'installed with Eureka and is required for '
                                   'HST analyses.\nYou can install all '
                                   'HST-related dependencies with '
-                                  '`pip install .[hst]`')
+                                  '`pip install eureka-bang[hst]`')
     drift2D = imr.chi2_shift(im1, im2, boundary='constant', nthreads=1,
                              zeromean=False, return_error=False)
     return drift2D, n

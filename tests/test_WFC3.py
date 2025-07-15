@@ -23,7 +23,7 @@ def test_WFC3(capsys):
         raise Exception("HST-relevant packages have not been installed,"
                         " so the WFC3 test is being skipped. You can install "
                         "all HST-related dependencies using "
-                        "`pip install .[hst]`.")
+                        "`pip install eureka-bang[hst]`.")
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
