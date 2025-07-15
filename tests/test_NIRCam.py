@@ -52,7 +52,7 @@ def test_NIRCam(capsys):
     # run assertions for S3
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage3{os.sep}')
-    name = pathdirectory(meta, 'S3', meta.run_s3, ap=8, bg=12,
+    name = pathdirectory(meta, 'S3', s3_meta.run_s3, ap=8, bg=12,
                          old_datetime=s3_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -63,7 +63,7 @@ def test_NIRCam(capsys):
     # run assertions for S4
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage4{os.sep}')
-    name = pathdirectory(meta, 'S4', meta.run_s4, ap=8, bg=12,
+    name = pathdirectory(meta, 'S4', s4_meta.run_s4, ap=8, bg=12,
                          old_datetime=s4_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -74,7 +74,7 @@ def test_NIRCam(capsys):
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage5{os.sep}')
-    name = pathdirectory(meta, 'S5', meta.run_s5, ap=8, bg=12,
+    name = pathdirectory(meta, 'S5', s5_meta.run_s5, ap=8, bg=12,
                          old_datetime=s5_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -86,7 +86,7 @@ def test_NIRCam(capsys):
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage6{os.sep}')
-    name = pathdirectory(meta, 'S6', meta.run_s6, ap=8, bg=12,
+    name = pathdirectory(meta, 'S6', s6_meta.run_s6, ap=8, bg=12,
                          old_datetime=s6_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -107,7 +107,7 @@ def test_NIRCam(capsys):
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage5{os.sep}')
-    name = pathdirectory(meta, 'S5', meta.run_s5, ap=8, bg=12,
+    name = pathdirectory(meta, 'S5', s5_meta.run_s5, ap=8, bg=12,
                          old_datetime=s5_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -115,7 +115,7 @@ def test_NIRCam(capsys):
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage6{os.sep}')
-    name = pathdirectory(meta, 'S6', meta.run_s6, ap=8, bg=12,
+    name = pathdirectory(meta, 'S6', s6_meta.run_s6, ap=8, bg=12,
                          old_datetime=s6_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -134,7 +134,7 @@ def test_NIRCam(capsys):
         # run assertions for S5
         meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                               f'Stage5{os.sep}')
-        name = pathdirectory(meta, 'S5', meta.run_s5, ap=8, bg=12,
+        name = pathdirectory(meta, 'S5', s5_meta.run_s5, ap=8, bg=12,
                              old_datetime=s5_meta.datetime)
         assert os.path.exists(name)
         assert os.path.exists(name+os.sep+'figs')
@@ -142,7 +142,7 @@ def test_NIRCam(capsys):
         # run assertions for S6
         meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                               f'Stage6{os.sep}')
-        name = pathdirectory(meta, 'S6', meta.run_s6, ap=8, bg=12,
+        name = pathdirectory(meta, 'S6', s6_meta.run_s6, ap=8, bg=12,
                              old_datetime=s6_meta.datetime)
         assert os.path.exists(name)
         assert os.path.exists(name+os.sep+'figs')

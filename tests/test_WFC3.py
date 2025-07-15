@@ -48,7 +48,7 @@ def test_WFC3(capsys):
 
     # run assertions for S3
     meta.outputdir_raw = f'data{os.sep}WFC3{os.sep}Stage3{os.sep}'
-    name = pathdirectory(meta, 'S3', meta.run_s3, ap=5, bg=8,
+    name = pathdirectory(meta, 'S3', s3_meta.run_s3, ap=5, bg=8,
                          old_datetime=s3_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -58,7 +58,7 @@ def test_WFC3(capsys):
 
     # run assertions for S4
     meta.outputdir_raw = f'data{os.sep}WFC3{os.sep}Stage4{os.sep}'
-    name = pathdirectory(meta, 'S4', meta.run_s4, ap=5, bg=8,
+    name = pathdirectory(meta, 'S4', s4_meta.run_s4, ap=5, bg=8,
                          old_datetime=s4_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
