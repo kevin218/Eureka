@@ -210,7 +210,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
         submask = np.concatenate((mask[:, :x1[0]].T, mask[:, x2[0]+1:].T)).T
         subdata = np.concatenate((dataim[:, :x1[0]].T,
                                   dataim[:, x2[0]+1:].T)).T
-        bg = np.zeros((ny, nx)) + np.median(subdata[np.where(submask)])
+        bg = np.zeros((ny, nx)) + np.median(subdata[submask])
     elif deg is None:
         # No background subtraction
         bg = np.zeros((ny, nx))

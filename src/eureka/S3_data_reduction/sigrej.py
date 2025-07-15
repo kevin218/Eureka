@@ -116,7 +116,7 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
             # Fixes
             count = np.sum(~mask, axis=axis)
             # note: ival is slicing
-            (ival[1, iter])[np.where(count == 0)] = np.nan
+            (ival[1, iter])[count == 0] = np.nan
 
         # Update mask
         # note: ival is slicing
@@ -138,7 +138,7 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
         if np.ndim(fmean) == 0 and goodvals:
             fmean /= count
         else:
-            fmean[np.where(goodvals)] /= count[np.where(goodvals)]
+            fmean[goodvals] /= count[goodvals]
 
         if retfstddev:
             resid = (data-fmean)*~mask
@@ -147,7 +147,7 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
                 if count == 1:
                     fstddev = 0.0
             else:
-                fstddev[np.where(count == 1)] = 0.0
+                fstddev[count == 1] = 0.0
 
     if retfmedian or retfmedstddev:
         fmedstddev, fmedian = msd.medstddev(data, mask, axis=axis, medi=True)

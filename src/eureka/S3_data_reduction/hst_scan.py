@@ -337,25 +337,25 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
             # Points that are outliers, do this for the high and low
             # sides separately
             # 1. Reject points < 0
-            index = np.where(flat_norm < 0)
+            index = np.nonzero(flat_norm < 0)
             flat_norm[index] = 1.
             mask_window[index] = True
             # 2. Reject outliers from low side
-            ilow = np.where(flat_norm < 1)
+            ilow = np.nonzero(flat_norm < 1)
             # Make distribution symetric about 1
             dbl = np.concatenate((flat_norm[ilow], 1+(1-flat_norm[ilow])))
             # MAD
             std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
-            ibadpix = np.where((1-flat_norm[ilow]) > sigma*std)
+            ibadpix = np.nonzero((1 - flat_norm[ilow]) > sigma * std)[0]
             flat_norm[ilow[0][ibadpix], ilow[1][ibadpix]] = 1.
             mask_window[ilow[0][ibadpix], ilow[1][ibadpix]] = True
             # 3. Reject outliers from high side
-            ihi = np.where(flat_norm > 1)
+            ihi = np.nonzero(flat_norm > 1)
             # Make distribution symetric about 1
             dbl = np.concatenate((flat_norm[ihi], 2-flat_norm[ihi]))
             # MAD
             std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
-            ibadpix = np.where((flat_norm[ihi]-1) > sigma*std)
+            ibadpix = np.nonzero((flat_norm[ihi] - 1) > sigma * std)[0]
             flat_norm[ihi[0][ibadpix], ihi[1][ibadpix]] = 1.
             mask_window[ihi[0][ibadpix], ihi[1][ibadpix]] = True
 
@@ -440,25 +440,25 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
         # Points that are outliers, do this for the high and low
         # sides separately
         # 1. Reject points < 0
-        index = np.where(flat_norm < 0)
+        index = np.nonzero(flat_norm < 0)
         flat_norm[index] = 1.
         mask_window[index] = True
         # 2. Reject outliers from low side
-        ilow = np.where(flat_norm < 1)
+        ilow = np.nonzero(flat_norm < 1)
         # Make distribution symetric about 1
         dbl = np.concatenate((flat_norm[ilow], 1+(1-flat_norm[ilow])))
         # MAD
         std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
-        ibadpix = np.where((1-flat_norm[ilow]) > sigma*std)
+        ibadpix = np.nonzero((1 - flat_norm[ilow]) > sigma * std)[0]
         flat_norm[ilow[0][ibadpix], ilow[1][ibadpix]] = 1.
         mask_window[ilow[0][ibadpix], ilow[1][ibadpix]] = True
         # 3. Reject outliers from high side
-        ihi = np.where(flat_norm > 1)
+        ihi = np.nonzero(flat_norm > 1)
         # Make distribution symetric about 1
         dbl = np.concatenate((flat_norm[ihi], 2-flat_norm[ihi]))
         # MAD
         std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
-        ibadpix = np.where((flat_norm[ihi]-1) > sigma*std)
+        ibadpix = np.nonzero((flat_norm[ihi] - 1) > sigma * std)[0]
         flat_norm[ihi[0][ibadpix], ihi[1][ibadpix]] = 1.
         mask_window[ihi[0][ibadpix], ihi[1][ibadpix]] = True
 

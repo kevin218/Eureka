@@ -60,7 +60,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
     # Plot the normalized light curve
     if meta.inst == 'wfc3':
         for p in range(2):
-            iscans = np.where(lc.scandir.values == p)[0]
+            iscans = np.nonzero(lc.scandir.values == p)[0]
 
             if len(iscans) > 0:
                 ax.errorbar(lc.time.values[iscans]-time_modifier,
@@ -143,7 +143,7 @@ def binned_background(meta, log, lc, i, white=False):
     # Plot the normalized light curve
     if meta.inst == 'wfc3':
         for p in range(2):
-            iscans = np.where(lc.scandir.values == p)[0]
+            iscans = np.nonzero(lc.scandir.values == p)[0]
 
             if len(iscans) > 0:
                 ax.errorbar(lc.time.values[iscans]-time_modifier,
@@ -187,11 +187,12 @@ def driftxpos(meta, lc):
     fig = plt.figure(4103)
     fig.set_size_inches(8, 4, forward=True)
     fig.clf()
-    plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)],
-             lc.centroid_x[np.where(~lc.driftmask)], '.',
+    mask = lc.driftmask
+    plt.plot(np.arange(meta.n_int)[~mask],
+             lc.centroid_x[~mask], '.',
              label='Good Drift Points')
-    plt.plot(np.arange(meta.n_int)[np.where(lc.driftmask)],
-             lc.centroid_x[np.where(lc.driftmask)], '.',
+    plt.plot(np.arange(meta.n_int)[mask],
+             lc.centroid_x[mask], '.',
              label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
@@ -217,11 +218,12 @@ def driftxwidth(meta, lc):
     fig = plt.figure(4104)
     fig.set_size_inches(8, 4, forward=True)
     fig.clf()
-    plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)],
-             lc.centroid_sx[np.where(~lc.driftmask)], '.',
+    mask = lc.driftmask
+    plt.plot(np.arange(meta.n_int)[~mask],
+             lc.centroid_sx[~mask], '.',
              label='Good Drift Points')
-    plt.plot(np.arange(meta.n_int)[np.where(lc.driftmask)],
-             lc.centroid_sx[np.where(lc.driftmask)], '.',
+    plt.plot(np.arange(meta.n_int)[mask],
+             lc.centroid_sx[mask], '.',
              label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift CC Width Along x')
     plt.xlabel('Frame Number')

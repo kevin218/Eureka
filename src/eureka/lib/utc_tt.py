@@ -148,7 +148,7 @@ def leapseconds(jd_utc, dates):
     float
         The difference between UTC and TT for a given date.
     '''
-    utc_tai = len(np.where(jd_utc > dates)[0])+10-1
+    utc_tai = len(np.atleast_1d((jd_utc > dates)).nonzero()[0])+10-1
     tt_tai = 32.184
     return tt_tai + utc_tai
 

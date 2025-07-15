@@ -578,17 +578,33 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames, freepars,
 
     # Make sure that no walkers are starting in the same place as
     # they would then exactly follow each other
-    repeat_pos = np.where([np.any(np.all(pos[i] == np.delete(pos, i, axis=0),
-                                         axis=1))
-                           for i in range(pos.shape[0])])[0]
-    while (len(repeat_pos) > 0 and
-           samples.shape[0] > (walkers_used+len(repeat_pos))):
-        pos[repeat_pos] = samples[:-walkers_used][-len(repeat_pos):]
-        walkers_used += len(repeat_pos)
-        repeat_pos = np.where([np.any(np.all(pos[i] ==
-                                             np.delete(pos, i, axis=0),
-                                             axis=1))
-                               for i in range(pos.shape[0])])[0]
+    # repeat_pos = np.where([np.any(np.all(pos[i] == np.delete(pos, i, axis=0),
+    #                                      axis=1))
+    #                        for i in range(pos.shape[0])])[0]
+    # while (len(repeat_pos) > 0 and
+    #        samples.shape[0] > (walkers_used+len(repeat_pos))):
+    #     pos[repeat_pos] = samples[:-walkers_used][-len(repeat_pos):]
+    #     walkers_used += len(repeat_pos)
+    #     repeat_pos = np.where([np.any(np.all(pos[i] ==
+    #                                          np.delete(pos, i, axis=0),
+    #                                          axis=1))
+    #                            for i in range(pos.shape[0])])[0]
+
+    repeat_pos = np.array([
+        i for i in range(pos.shape[0])
+        if np.any(np.all(pos[i] == np.delete(pos, i, axis=0), axis=1))
+    ])
+
+    while (
+        repeat_pos.size > 0
+        and samples.shape[0] > (walkers_used + repeat_pos.size)
+    ):
+        pos[repeat_pos] = samples[:-walkers_used][-repeat_pos.size:]
+        walkers_used += repeat_pos.size
+        repeat_pos = np.array([
+            i for i in range(pos.shape[0])
+            if np.any(np.all(pos[i] == np.delete(pos, i, axis=0), axis=1))
+        ])
 
     # If unable to initialize all walkers in unique starting locations,
     # use fewer walkers unless there'd be fewer walkers than dimensions
@@ -630,7 +646,8 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames, freepars,
                 new_pos[:, i] = temp_pos[:, i]
             else:
                 # This variable already existed, so just add it
-                new_pos[:, i] = pos[:, np.where(full_keys == key)[0][0]]
+                idx = np.flatnonzero(full_keys == key)[0]
+                new_pos[:, i] = pos[:, idx]
 
         pos = new_pos
 
@@ -681,15 +698,18 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
     if lsq_sol is not None and lsq_sol.cov_mat is not None:
         step_size = np.diag(lsq_sol.cov_mat)
         if np.any(step_size == 0.):
-            ind_zero_u = np.where(step_size[u] == 0.)[0]
-            ind_zero_lu = np.where(step_size[lu] == 0.)[0]
-            ind_zero_n = np.where(step_size[n] == 0.)[0]
-            step_size[u][ind_zero_u] = (0.001*(prior2[u][ind_zero_u] -
-                                               prior1[u][ind_zero_u]))
-            step_size[lu][ind_zero_lu] = (0.001 *
-                                          (np.exp(prior2[lu][ind_zero_lu]) -
-                                           np.exp(prior1[lu][ind_zero_lu])))
-            step_size[n][ind_zero_n] = 0.1*prior2[n][ind_zero_n]
+            zero_u = np.flatnonzero(step_size[u] == 0.)
+            zero_lu = np.flatnonzero(step_size[lu] == 0.)
+            zero_n = np.flatnonzero(step_size[n] == 0.)
+
+            delta_u = prior2[u][zero_u] - prior1[u][zero_u]
+            step_size[u][zero_u] = 0.001 * delta_u
+
+            delta_lu = (np.exp(prior2[lu][zero_lu])
+                        - np.exp(prior1[lu][zero_lu]))
+            step_size[lu][zero_lu] = 0.001 * delta_lu
+
+            step_size[n][zero_n] = 0.1 * prior2[n][zero_n]
     else:
         # Sometimes the lsq fitter won't converge and will give None as
         # the covariance matrix. In that case, we need to establish the
@@ -705,10 +725,10 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
     nwalkers = meta.run_nwalkers
 
     # make it robust to lsq hitting the upper or lower bound of the param space
-    ind_max = np.where(freepars[u] - prior2[u] == 0.)[0]
-    ind_min = np.where(freepars[u] - prior1[u] == 0.)[0]
-    ind_max_LU = np.where(np.log(freepars[lu]) - prior2[lu] == 0.)[0]
-    ind_min_LU = np.where(np.log(freepars[lu]) - prior1[lu] == 0.)[0]
+    ind_max = np.flatnonzero(freepars[u] == prior2[u])
+    ind_min = np.flatnonzero(freepars[u] == prior1[u])
+    ind_max_LU = np.flatnonzero(np.log(freepars[lu]) == prior2[lu])
+    ind_min_LU = np.flatnonzero(np.log(freepars[lu]) == prior1[lu])
     pmid = (prior2+prior1)/2.
 
     if len(ind_max) > 0 or len(ind_max_LU) > 0:

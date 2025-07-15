@@ -358,7 +358,8 @@ def plot_rms(lc, model, meta, fitter):
                                                     binstep=1)
         normfactor = 1e-6
 
-        fig = plt.figure(int('52{}'.format(str(0).zfill(len(str(lc.nchannel))))))
+        figureNumber = int('52{}'.format(str(0).zfill(len(str(lc.nchannel)))))
+        fig = plt.figure(figureNumber)
         fig.set_size_inches(8, 6, forward=True)
         fig.clf()
         ax = fig.gca()

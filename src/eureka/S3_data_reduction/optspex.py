@@ -142,7 +142,7 @@ def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
                   'dataslice ' + str(j))
 
     # Enforce positivity
-    profile[np.where(profile < 0)] = 0
+    profile[profile < 0] = 0
     # Normalize along spatial direction
     with np.errstate(divide='ignore', invalid='ignore'):
         profile /= np.nansum(profile, axis=0)
@@ -231,7 +231,7 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
                       'dataslice ' + str(j))
 
     # Enforce positivity
-    profile[np.where(profile < 0)] = 0
+    profile[profile < 0] = 0
     # Normalize along spatial direction
     with np.errstate(divide='ignore', invalid='ignore'):
         profile /= np.nansum(profile, axis=0)
@@ -254,7 +254,7 @@ def profile_meddata(meddata):
     '''
     profile = np.ma.copy(meddata)
     # Enforce positivity
-    profile[np.where(profile < 0)] = 0
+    profile[profile < 0] = 0
     # Normalize along spatial direction
     with np.errstate(divide='ignore', invalid='ignore'):
         profile /= np.ma.sum(profile, axis=0)
@@ -330,7 +330,7 @@ def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
             plt.pause(0.1)
 
     # Enforce positivity
-    profile[np.where(profile < 0)] = 0
+    profile[profile < 0] = 0
     # Normalize along spatial direction
     with np.errstate(divide='ignore', invalid='ignore'):
         profile /= np.nansum(profile, axis=0)
@@ -413,7 +413,7 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
         plt.pause(0.1)
 
     # Enforce positivity
-    profile[np.where(profile < 0)] = 0
+    profile[profile < 0] = 0
     # Normalize along spatial direction
     with np.errstate(divide='ignore', invalid='ignore'):
         profile /= np.nansum(profile, axis=0)
@@ -510,7 +510,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
                   str(i))
 
     # Enforce positivity
-    profile[np.where(profile < 0)] = 0
+    profile[profile < 0] = 0
     # Normalize along spatial direction
     with np.errstate(divide='ignore', invalid='ignore'):
         profile /= np.nansum(profile, axis=0)

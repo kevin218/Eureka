@@ -58,7 +58,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
     # For plotting purposes, extrapolate NaN wavelengths
     wave_1d = np.ma.masked_invalid(np.copy(wave_1d))
     if np.any(wave_1d.mask):
-        masked = np.where(wave_1d.mask)[0]
+        masked = np.nonzero(wave_1d.mask)[0]
         inds = np.arange(len(wave_1d))
         wave_1d_valid = np.delete(wave_1d, masked)
         inds_valid = np.delete(inds, masked)
@@ -247,7 +247,7 @@ def drift_2D(data, meta):
     fig.clf()
     plt.subplot(211)
     for p in range(2):
-        iscans = np.where(data.scandir.values == p)[0]
+        iscans = np.nonzero(data.scandir.values == p)[0]
         if len(iscans) > 0:
             if p == 0:
                 label = "Direction 0 (Forward)"
@@ -258,7 +258,7 @@ def drift_2D(data, meta):
 
     plt.subplot(212)
     for p in range(2):
-        iscans = np.where(data.scandir.values == p)[0]
+        iscans = np.nonzero(data.scandir.values == p)[0]
         if len(iscans) > 0:
             if p == 0:
                 label = "Direction 0 (Forward)"
@@ -475,12 +475,13 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
     fig = plt.figure(3501)
     fig.clf()
     plt.suptitle(f'Integration {n}, Columns {i}/{nx}')
-    plt.errorbar(np.arange(ny)[np.where(~submask[:, i])[0]],
-                 subdata[np.where(~submask[:, i])[0], i],
-                 np.sqrt(variance[np.where(~submask[:, i])[0], i]),
+    good_inds = np.nonzero(~submask[:, i])[0]
+    plt.errorbar(np.arange(ny)[good_inds],
+                 subdata[good_inds, i],
+                 np.sqrt(variance[good_inds, i]),
                  fmt='.', color='b')
-    plt.plot(np.arange(ny)[np.where(~submask[:, i])[0]],
-             expected[np.where(~submask[:, i])[0], i], 'g-')
+    plt.plot(np.arange(ny)[good_inds],
+             expected[good_inds, i], 'g-')
     plt.plot((loc), (subdata[loc, i]), 'ro')
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))

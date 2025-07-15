@@ -333,8 +333,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
                 # Odd numbers in DQ array are bad pixels. Do not use.
                 if meta.dqmask:
-                    dqmask = np.where(data.dq.values % 2 == 1)
-                    data.mask.values[dqmask] = True
+                    data.mask.values[data.dq.values % 2 == 1] = True
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if meta.manmask is not None:
