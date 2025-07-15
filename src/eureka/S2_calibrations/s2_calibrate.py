@@ -265,7 +265,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         log.writelog('Running the Spec2Pipeline\n')
         # Must call the pipeline in this way to ensure the skip booleans are
         # respected
-        self(filename)
+        self.run(filename)
 
         # Produce some summary plots if requested
         if not meta.testing_S2 and not self.extract_1d.skip:
@@ -347,6 +347,6 @@ class EurekaImage2Pipeline(Image2Pipeline):
         log.writelog('Running the Image2Pipeline\n')
         # Must call the pipeline in this way to ensure the skip booleans are
         # respected
-        self(filename)
+        self.run(filename)
 
         return

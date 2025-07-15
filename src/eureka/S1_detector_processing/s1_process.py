@@ -216,6 +216,6 @@ class EurekaS1Pipeline(Detector1Pipeline):
                     meta.default_ramp_fit_custom_exponents
 
         # Run Stage 1
-        self(filename)
+        self.run(filename)
 
         return
