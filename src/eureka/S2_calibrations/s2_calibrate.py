@@ -277,8 +277,9 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             x1d_fname = ('_'.join(filename.split(os.sep)[-1].split('_')[:-1]) +
                          '_x1dints')
             with datamodels.open(meta.outputdir+x1d_fname+'.fits') as sp1d:
-                plt.figure(2101, figsize=[15, 5])
-                plt.clf()
+                fig = plt.figure(2101)
+                fig.set_size_inches(15, 5, forward=True)
+                fig.clf()
 
                 for i in range(len(sp1d.spec)):
                     plt.plot(sp1d.spec[i].spec_table['WAVELENGTH'],

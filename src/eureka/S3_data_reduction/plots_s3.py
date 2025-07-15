@@ -80,9 +80,11 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
         pmax = optspec.x[-1].values+0.5
 
     cmap = plt.cm.RdYlBu_r.copy()
-    fig1 = plt.figure(3101, figsize=(8, 8))
-    fig2 = plt.figure(3102, figsize=(8, 8))
+    fig1 = plt.figure(3101)
+    fig1.set_size_inches(8, 8, forward=True)
     fig1.clf()
+    fig2 = plt.figure(3102)
+    fig2.set_size_inches(8, 8, forward=True)
     fig2.clf()
     ax1 = fig1.gca()
     ax2 = fig2.gca()
@@ -188,8 +190,9 @@ def image_and_background(data, meta, log, m, order=None, group=None):
     if meta.verbose:
         iterfn = tqdm(iterfn)
     for n in iterfn:
-        plt.figure(3301, figsize=(8, 8))
-        plt.clf()
+        fig = plt.figure(3301)
+        fig.set_size_inches(8, 8, forward=True)
+        fig.clf()
         plt.suptitle(f'Integration {intstart + n}')
         plt.subplot(211)
         plt.title('Background-Subtracted Frame')
@@ -239,8 +242,9 @@ def drift_2D(data, meta):
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     '''
-    plt.figure(3106, figsize=(8, 6))
-    plt.clf()
+    fig = plt.figure(3106)
+    fig.set_size_inches(8, 6, forward=True)
+    fig.clf()
     plt.subplot(211)
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
@@ -291,8 +295,8 @@ def optimal_spectrum(data, meta, n, m):
                                           data.optspec.values,
                                           data.opterr.values)
 
-    plt.figure(3302)
-    plt.clf()
+    fig = plt.figure(3302)
+    fig.clf()
     plt.suptitle(f'1D Spectrum - Integration {intstart + n}')
     if meta.orders is None:
         plt.semilogy(data.stdspec.x.values, stdspec[n], '-', color='C1',
@@ -369,8 +373,8 @@ def source_position(meta, x_dim, pos_max, m, n,
     - Oct 15, 2021: Taylor Bell
         Tidied up the code a bit to reduce repeated code.
     '''
-    plt.figure(3103)
-    plt.clf()
+    fig = plt.figure(3103)
+    fig.clf()
     plt.plot(y_pixels, sum_row, 'o', label='Data')
     if isgauss:
         x_gaussian = np.linspace(0, x_dim, 500)
@@ -419,8 +423,9 @@ def profile(meta, profile, submask, n, m, order=None):
     vmin = np.ma.min(profile)
     vmax = vmin + 0.3*np.ma.max(profile)
     cmap = plt.cm.viridis.copy()
-    plt.figure(3303, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3303)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     plt.title(f"Optimal Profile - Integration {n}")
     plt.imshow(profile, aspect='auto', origin='lower',
                vmax=vmax, vmin=vmin, interpolation='nearest', cmap=cmap)
@@ -467,8 +472,8 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
         Variance of background subtracted data.
     '''
     ny, nx = subdata.shape
-    plt.figure(3501)
-    plt.clf()
+    fig = plt.figure(3501)
+    fig.clf()
     plt.suptitle(f'Integration {n}, Columns {i}/{nx}')
     plt.errorbar(np.arange(ny)[np.where(~submask[:, i])[0]],
                  subdata[np.where(~submask[:, i])[0], i],
@@ -507,8 +512,9 @@ def driftypos(data, meta, m):
     - 2022-07-11 Caroline Piaulet
         First version of this function
     '''
-    plt.figure(3104, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3104)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     plt.plot(np.arange(meta.n_int), data["centroid_y"].values, '.')
     plt.ylabel('Spectrum spatial profile center')
     plt.xlabel('Integration Number')
@@ -541,8 +547,9 @@ def driftywidth(data, meta, m):
     - 2022-07-11 Caroline Piaulet
         First version of this function
     '''
-    plt.figure(3105, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3105)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     plt.plot(np.arange(meta.n_int), data["centroid_sy"].values, '.')
     plt.ylabel('Spectrum spatial profile width')
     plt.xlabel('Integration Number')
@@ -610,8 +617,9 @@ def residualBackground(data, meta, m, vmin=None, vmax=None,
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
 
-    plt.figure(3304, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3304)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304)
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
@@ -678,8 +686,8 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
     '''
     cmap = plt.cm.viridis.copy()
 
-    plt.figure(3107)
-    plt.clf()
+    fig = plt.figure(3107)
+    fig.clf()
     plt.title("Trace Curvature")
     plt.plot(column_coms+meta.ywindow[0], '.', label='Measured',
              color=cmap(0.25))
@@ -721,8 +729,9 @@ def median_frame(data, meta, m, medflux, order=None):
     vmax = medflux.max()/3
     cmap = plt.cm.plasma.copy()
 
-    plt.figure(3308, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3308)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     plt.title("Cleaned Median Frame")
     plt.imshow(medflux, origin='lower', aspect='auto',
                vmin=vmin, vmax=vmax, interpolation='nearest',
@@ -764,8 +773,8 @@ def phot_lc(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3108)
-    plt.clf()
+    fig = plt.figure(3108)
+    fig.clf()
     plt.suptitle('Photometric light curve')
     plt.errorbar(data.time, data['aplev'], yerr=data['aperr'], c='k', fmt='.')
     plt.ylabel('Flux')
@@ -798,8 +807,8 @@ def phot_bg(data, meta):
         Initial version
     """
     if not meta.skip_apphot_bg:
-        plt.figure(3305)
-        plt.clf()
+        fig = plt.figure(3305)
+        fig.clf()
         plt.suptitle('Photometric background light curve')
         plt.errorbar(data.time, data['skylev'], yerr=data['skyerr'],
                      c='k', fmt='.')
@@ -838,9 +847,10 @@ def phot_centroid(data, meta):
     - 2023-04-21 Isaac Edelman
         Added flat "0" lines to plots.
     """
-    plt.figure(3109)
-    plt.clf()
-    fig, ax = plt.subplots(4, 1, num=3019, figsize=(10, 6), sharex=True)
+    fig = plt.figure(3109)
+    fig.set_size_inches(10, 6, forward=True)
+    fig.clf()
+    fig, ax = fig.subplots(4, 1, sharex=True)
     plt.suptitle('Centroid positions over time')
 
     cx = data.centroid_x.values
@@ -906,8 +916,8 @@ def phot_npix(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3502)
-    plt.clf()
+    fig = plt.figure(3502)
+    fig.clf()
     plt.suptitle('Aperture sizes over time')
     plt.subplot(211)
     plt.plot(range(len(data.nappix)), data.nappix)
@@ -954,9 +964,10 @@ def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
     img = np.ma.copy(img)
     img = np.ma.masked_where(mask, img)
 
-    plt.figure(3309)
-    plt.clf()
-    fig, ax = plt.subplots(2, 2, num=3309, figsize=(8, 8))
+    fig = plt.figure(3309)
+    fig.set_size_inches(8, 8, forward=True)
+    fig.clf()
+    ax = fig.subplots(2, 2)
 
     # Title
     plt.suptitle('Centroid gaussian fit')
@@ -1152,8 +1163,9 @@ def phot_2d_frame(data, meta, m, i):
     - 2024-04-06 Yoni Brande
         Added hexagonal aperture plotting
     """
-    plt.figure(3306, figsize=(8, 8))
-    plt.clf()
+    fig = plt.figure(3306)
+    fig.set_size_inches(8, 8, forward=True)
+    fig.clf()
 
     flux = data.flux.values[i]
     centroid_x = data.centroid_x.values[i]
@@ -1196,8 +1208,9 @@ def phot_2d_frame(data, meta, m, i):
         plt.pause(0.2)
 
     if meta.isplots_S3 >= 5:
-        plt.figure(3504, figsize=(6, 5))
-        plt.clf()
+        fig = plt.figure(3504)
+        fig.set_size_inches(6, 5, forward=True)
+        fig.clf()
         plt.title('Zoomed-in 2D frame\nwith centroid and apertures')
 
         im = plt.imshow(flux, vmin=vmin, vmax=vmax, origin='lower',
@@ -1260,10 +1273,10 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3307)
-    plt.clf()
-    fig, ax = plt.subplots(2, 1, num=3307, figsize=(8.2, 4.2),
-                           gridspec_kw={'hspace': 0.0})
+    fig = plt.figure(3307)
+    fig.set_size_inches(8.2, 4.2, forward=True)
+    fig.clf()
+    ax = fig.subplots(2, 1, gridspec_kw={'hspace': 0.0})
 
     cmap = plt.cm.viridis.copy()
     ax[0].imshow(flux_w_oneoverf, origin='lower',
@@ -1319,8 +1332,8 @@ def phot_2d_frame_diff(data, meta):
         nplots -= 1
 
     for i in range(nplots):
-        plt.figure(3505)
-        plt.clf()
+        fig = plt.figure(3505)
+        fig.clf()
         flux1 = data.flux.values[i]
         flux2 = data.flux.values[i+1]
         im = plt.imshow(flux2-flux1, origin='lower', vmin=-600, vmax=600)
@@ -1365,8 +1378,9 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
     - 2022-12-29 Kevin Stevenson
         Initial version
     """
-    plt.figure(3506, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3506)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     cmap = plt.cm.viridis.copy()
     plt.title(f'Std. Dev. from Optimal Profile - Integration {n}')
     plt.imshow(stdevs, origin='lower', aspect='auto',
@@ -1454,8 +1468,9 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
                                       minx:maxx] / refrence_tilt_frame)
 
         # Create plot
-        plt.figure(3507, figsize=(6, 6))
-        plt.clf()
+        fig = plt.figure(3507)
+        fig.set_size_inches(6, 6, forward=True)
+        fig.clf()
 
         # Plot figure
         im = plt.imshow(flux_tilt, origin='lower', aspect='equal',

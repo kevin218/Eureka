@@ -54,8 +54,9 @@ def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
                                      nbin=meta.nbin_plot)
 
     if i == 0:
-        fig = plt.figure(4202, figsize=(8, 5))
-        plt.clf()
+        fig = plt.figure(4202)
+        fig.set_size_inches(8, 5, forward=True)
+        fig.clf()
         ax = fig.subplots(1, 1)
         ax.plot(time_bin-toffset, lc_bin, '.', color='0.2', alpha=0.8,
                 label='Binned White LC')
@@ -107,8 +108,9 @@ def plot_stellarSpec(meta, ds):
     else:
         raise ValueError(f"Unknown error type: {meta.s4cal_plotErrorType}")
 
-    fig = plt.figure(4201, figsize=(8, 5))
-    plt.clf()
+    fig = plt.figure(4201)
+    fig.set_size_inches(8, 5, forward=True)
+    fig.clf()
     ax = fig.subplots(1, 1)
     for i in range(len(ds.time)):
         ax.errorbar(ds.wavelength, ds.base_flux[:, i], base_err[:, i],

@@ -37,10 +37,11 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         The reference radius for the scale height, by default None
     """
     if scaleHeight is not None:
-        fig = plt.figure(6301, figsize=(8, 4))
+        fig = plt.figure(6301)
     else:
-        fig = plt.figure(6101, figsize=(8, 4))
-    plt.clf()
+        fig = plt.figure(6101)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     ax = fig.subplots(1, 1)
 
     wavelength = deepcopy(meta.wavelengths)

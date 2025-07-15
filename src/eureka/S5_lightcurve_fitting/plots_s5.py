@@ -107,8 +107,9 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
                                                 nbin=nbin_plot)
             binned_res = util.binData_time(residuals, time, nbin=nbin_plot)
 
-        fig = plt.figure(5101, figsize=(8, 6))
-        plt.clf()
+        fig = plt.figure(5101)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
 
         ax = fig.subplots(3, 1)
         ax[0].errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
@@ -229,8 +230,9 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             binned_unc = util.binData_time(unc, time, nbin=nbin_plot, err=True)
 
         # Setup the figure
-        fig = plt.figure(5104, figsize=(8, 6))
-        plt.clf()
+        fig = plt.figure(5104)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
         ax = fig.gca()
         if isTitle:
             ax.set_title(f'{meta.eventlabel} - Channel {channel} - '
@@ -266,8 +268,9 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
 
         if meta.isplots_S5 >= 3:
             # Setup the figure
-            fig = plt.figure(5304, figsize=(8, 6))
-            plt.clf()
+            fig = plt.figure(5304)
+            fig.set_size_inches(8, 6, forward=True)
+            fig.clf()
             ax = fig.gca()
             if isTitle:
                 ax.set_title(f'{meta.eventlabel} - Channel {channel} - '
@@ -354,9 +357,9 @@ def plot_rms(lc, model, meta, fitter):
                                                     maxbins=maxbins,
                                                     binstep=1)
         normfactor = 1e-6
-        fig = plt.figure(
-            int('52{}'.format(str(0).zfill(len(str(lc.nchannel))))),
-            figsize=(8, 6))
+
+        fig = plt.figure(int('52{}'.format(str(0).zfill(len(str(lc.nchannel))))))
+        fig.set_size_inches(8, 6, forward=True)
         fig.clf()
         ax = fig.gca()
         ax.set_xscale('log')
@@ -432,7 +435,8 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     rcParams['ytick.labelsize'] = 10
     rcParams['figure.constrained_layout.use'] = False
 
-    fig = plt.figure(5501, figsize=(ndim*1.4, ndim*1.4))
+    fig = plt.figure(5501)
+    fig.set_size_inches(ndim*1.4, ndim*1.4, forward=True)
     fig.clf()
     fig = corner.corner(samples, fig=fig, quantiles=[0.16, 0.5, 0.84],
                         max_n_ticks=3, labels=freenames, show_titles=True,
@@ -492,7 +496,8 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
 
     k = 0
     for plot_number in range(nplots):
-        fig = plt.figure(5303, figsize=(6*ncols, 4*nrows))
+        fig = plt.figure(5303)
+        fig.set_size_inches(6*ncols, 4*nrows, forward=True)
         fig.clf()
         axes = fig.subplots(nrows, ncols, sharex=True)
 
@@ -571,8 +576,9 @@ def plot_res_distr(lc, model, meta, fitter):
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
-        plt.figure(5302, figsize=(8, 6))
-        plt.clf()
+        fig = plt.figure(5302)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
 
         flux = deepcopy(lc.flux)
         unc = deepcopy(lc.unc_fit)
@@ -653,8 +659,9 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             time = lc.time
 
         residuals = flux - model_lc
-        fig = plt.figure(5102, figsize=(8, 6))
-        plt.clf()
+        fig = plt.figure(5102)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
         ax = fig.subplots(3, 1)
         ax[0].errorbar(time, flux, yerr=unc, fmt='.', color='w',
                        ecolor=color, mec=color)
@@ -707,7 +714,8 @@ def plot_eclipse_map(lc, flux_maps, meta, fitter):
         The name of the fitter (for plot filename).
     """
     for i, channel in enumerate(lc.fitted_channels):
-        fig = plt.figure(5105, figsize=(12, 3))
+        fig = plt.figure(5105)
+        fig.set_size_inches(12, 3, forward=True)
         fig.clf()
         axs = fig.subplots(1, 3, width_ratios=[1.4, 1, 1])
 
@@ -841,8 +849,9 @@ def plot_fleck_star(lc, model, meta, fitter):
             # Have a default spotnpts for fleck
             pl_params.spotnpts = 300
 
-        fig = plt.figure(5307, figsize=(8, 6))
-        plt.clf()
+        fig = plt.figure(5307)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
         ax = fig.gca()
         star = fleck.Star(spot_contrast=pl_params.spotcon,
                           u_ld=pl_params.u,
@@ -900,8 +909,9 @@ def plot_harmonica_string(lc, model, meta, fitter, isTitle=True):
         theta = np.linspace(-np.pi, np.pi, 1000)
         string = ht.get_planet_transmission_string(theta)
 
-        fig = plt.figure(5309, figsize=(8, 6))
-        plt.clf()
+        fig = plt.figure(5309)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
         ax = fig.gca()
         ax.set_aspect("equal", "datalim")
         if isTitle:

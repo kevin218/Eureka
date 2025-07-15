@@ -25,7 +25,8 @@ def binned_lightcurve(meta, log, lc, i, white=False):
     white : bool; optional
         Is this figure for the additional white-light light curve
     '''
-    fig = plt.figure(4102, figsize=(8, 6))
+    fig = plt.figure(4102)
+    fig.set_size_inches(8, 6, forward=True)
     fig.clf()
     ax = fig.gca()
     if white:
@@ -107,7 +108,8 @@ def binned_background(meta, log, lc, i, white=False):
     white : bool; optional
         Is this figure for the additional white-light light curve
     '''
-    fig = plt.figure(4105, figsize=(8, 6))
+    fig = plt.figure(4105)
+    fig.set_size_inches(8, 6, forward=True)
     fig.clf()
     ax = fig.gca()
     if white:
@@ -182,8 +184,9 @@ def driftxpos(meta, lc):
     lc : Xarray Dataset
         The light curve object containing drift arrays.
     '''
-    plt.figure(4103, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(4103)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)],
              lc.centroid_x[np.where(~lc.driftmask)], '.',
              label='Good Drift Points')
@@ -211,8 +214,9 @@ def driftxwidth(meta, lc):
     lc : Xarray Dataset
         The light curve object containing drift arrays.
     '''
-    plt.figure(4104, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(4104)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)],
              lc.centroid_sx[np.where(~lc.driftmask)], '.',
              label='Good Drift Points')
@@ -268,8 +272,9 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
         meta.time_axis = 'y'
 
     cmap = plt.cm.RdYlBu_r
-    plt.figure(4101, figsize=(8, 8))
-    plt.clf()
+    fig = plt.figure(4101)
+    fig.set_size_inches(8, 8, forward=True)
+    fig.clf()
     if meta.time_axis == 'y':
         plt.pcolormesh(wave_1d[iwmin:iwmax], np.arange(meta.n_int)+0.5,
                        norm_lcdata, vmin=meta.vmin, vmax=meta.vmax,
@@ -349,8 +354,9 @@ def mad_outliers(meta, pp):
 
     # Plot spectroscopic MAD values
     alpha = 0.5
-    plt.figure(4106, figsize=(8, 8))
-    plt.clf()
+    fig = plt.figure(4106)
+    fig.set_size_inches(8, 8, forward=True)
+    fig.clf()
     plt.subplot(211)
     plt.plot(x, mad, '.', color='b', zorder=1,
              label="Unbinned LC MAD", alpha=alpha)
@@ -398,8 +404,9 @@ def cc_spec(meta, ref_spec, fit_spec, n):
     n : int
         The current integration number.
     '''
-    plt.figure(4301, figsize=(8, 8))
-    plt.clf()
+    fig = plt.figure(4301)
+    fig.set_size_inches(8, 8, forward=True)
+    fig.clf()
     plt.title(f'Cross Correlation - Spectrum {n}')
     nx = len(ref_spec)
     plt.plot(np.arange(nx), ref_spec, '-', label='Reference Spectrum')
@@ -428,8 +435,9 @@ def cc_vals(meta, vals, n):
     n : int
         The current integration number.
     '''
-    plt.figure(4302, figsize=(8, 8))
-    plt.clf()
+    fig = plt.figure(4302)
+    fig.set_size_inches(8, 8, forward=True)
+    fig.clf()
     plt.title(f'Cross Correlation - Values {n}')
     plt.plot(np.arange(-meta.drift_range, meta.drift_range+1), vals, '.')
 
@@ -464,8 +472,9 @@ def plot_extrapolated_throughput(meta, throughput_wavelengths, throughput,
         from the supported list at
         https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html
     '''
-    plt.figure(4303, figsize=(8, 8))
-    plt.clf()
+    fig = plt.figure(4303)
+    fig.set_size_inches(8, 8, forward=True)
+    fig.clf()
     plt.title(mode)
     plt.plot(throughput_wavelengths/1e4, 100*throughput,
              label='ExoTiC-LD Throughput')

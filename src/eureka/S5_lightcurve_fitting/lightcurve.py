@@ -229,7 +229,8 @@ class LightCurve(m.Model):
                 binned_unc = util.binData_time(unc, time, nbin=nbin_plot,
                                                err=True)
 
-            fig = plt.figure(5103, figsize=(8, 6))
+            fig = plt.figure(5103)
+            fig.set_size_inches(8, 6, forward=True)
             fig.clf()
             # Draw the data
             ax = fig.gca()

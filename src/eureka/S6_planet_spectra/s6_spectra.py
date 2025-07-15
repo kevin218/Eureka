@@ -1776,8 +1776,7 @@ def transit_latex_table(meta, log):
     """
     log.writelog('  Saving results as a LaTeX table')
 
-    data = pd.read_csv(meta.tab_filename_s6, comment='#',
-                       delim_whitespace=True)
+    data = pd.read_csv(meta.tab_filename_s6, comment='#', sep='\s+')
 
     # Figure out the number of rows and columns in the table
     nvals = data.shape[0]
