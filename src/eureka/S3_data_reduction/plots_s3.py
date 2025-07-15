@@ -850,7 +850,7 @@ def phot_centroid(data, meta):
     fig = plt.figure(3109)
     fig.set_size_inches(10, 6, forward=True)
     fig.clf()
-    fig, ax = fig.subplots(4, 1, sharex=True)
+    ax = fig.subplots(4, 1, sharex=True)
     plt.suptitle('Centroid positions over time')
 
     cx = data.centroid_x.values
