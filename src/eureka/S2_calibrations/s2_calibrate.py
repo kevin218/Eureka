@@ -96,8 +96,8 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     # Then apply instrument-agnostic defaults
     meta.set_defaults()
 
-    run = util.makedirectory(meta, 'S2')
-    meta.outputdir = util.pathdirectory(meta, 'S2', run)
+    meta.run_s2 = util.makedirectory(meta, 'S2')
+    meta.outputdir = util.pathdirectory(meta, 'S2', meta.run_s2)
 
     # Output S2 log file
     meta.s2_logname = meta.outputdir + 'S2_' + meta.eventlabel + ".log"
