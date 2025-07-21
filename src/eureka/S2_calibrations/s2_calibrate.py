@@ -147,16 +147,28 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     # Run the pipeline on each file sequentially
     for m in range(istart, meta.num_data_files):
         # Report progress
-        log.writelog(f'Starting file {m + 1} of {meta.num_data_files}')
+        meta.m = m
         filename = meta.segment_list[m]
+        log.writelog(f'Starting file {m + 1} of {meta.num_data_files}')
 
-        with fits.open(filename, mode='update') as hdulist:
-            if hdulist[0].header['INSTRUME'] == 'NIRCam':
-                # jwst 1.3.3 breaks unless NDITHPTS and NRIMDTPT are integers
-                # rather than the strings that they are in the old simulated
-                # NIRCam data
-                hdulist[0].header['NDITHPTS'] = 1
-                hdulist[0].header['NRIMDTPT'] = 1
+        need_update = False
+        with fits.open(filename) as hdulist:
+            if (hdulist[0].header['INSTRUME'] == 'NIRCam'
+                    and isinstance(hdulist[0].header['NDITHPTS'], str)):
+                need_update = True
+
+            meta.intstart = hdulist[0].header['INTSTART']-1
+            meta.intend = hdulist[0].header['INTEND']
+            meta.n_int = meta.intend-meta.intstart
+
+        if need_update:
+            with fits.open(filename, mode='update') as hdulist:
+                # If the NDITHPTS header is a string, then it is an old
+                # simulated file and we need to change it to an integer
+                hdulist[0].header['NDITHPTS'] = int(
+                    hdulist[0].header['NDITHPTS'])
+                hdulist[0].header['NRIMDTPT'] = int(
+                    hdulist[0].header['NRIMDTPT'])
 
         pipeline.run_eurekaS2(filename, meta, log)
 
