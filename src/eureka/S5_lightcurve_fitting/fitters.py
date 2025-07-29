@@ -19,7 +19,7 @@ from dynesty.utils import resample_equal
 from .likelihood import (computeRedChiSq, lnprob, ln_like, ptform,
                          update_uncertainty)
 from . import plots_s5 as plots
-from ..lib import astropytable
+from ..lib import astropytable, util
 from ..lib.split_channels import get_trim
 
 from multiprocessing import Pool
@@ -1369,20 +1369,10 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         xrio.writeXR(fname, ds)
 
     # Directory structure should not use expanded HW values
-    spec_hw_val = meta.spec_hw
-    bg_hw_val = meta.bg_hw
-    spec_hw_val //= meta.expand
-    if not isinstance(bg_hw_val, str):
-        # Only divide if value is not a string (spectroscopic modes)
-        bg_hw_val //= meta.expand
-    # Save the S5 outputs in a human readable ecsv file
-    if not isinstance(meta.bg_hw, str):
-        # Only divide if value is not a string (spectroscopic modes)
-        bg_hw = meta.bg_hw//meta.expand
-    else:
-        bg_hw = meta.bg_hw
-    event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw//meta.expand) + \
-        '_bg'+str(bg_hw)
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    event_ap_bg = meta.eventlabel+"_ap"+str(spec_hw_val) + \
+        '_bg'+str(bg_hw_val)
     meta.tab_filename_s5 = (meta.outputdir+'S5_'+event_ap_bg+"_Table_Save" +
                             channel_tag+'.txt')
     wavelengths = np.mean(np.append(meta.wave_low.reshape(1, -1),
