@@ -96,10 +96,13 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                                              ap=spec_hw_val,
                                              bg=bg_hw_val)
 
-    for meta.spec_hw_val in meta.spec_hw_range:
-        for meta.bg_hw_val in meta.bg_hw_range:
+    for spec_hw_val in meta.spec_hw_range:
+        for bg_hw_val in meta.bg_hw_range:
 
             t0 = time_pkg.time()
+
+            meta.spec_hw = spec_hw_val
+            meta.bg_hw = bg_hw_val
 
             # Load in the S5 metadata used for this particular aperture pair
             meta = load_specific_s5_meta_info(meta)
@@ -109,8 +112,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 meta.expand, spec_hw_val, bg_hw_val)
             # Get the directory for Stage 6 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S6', meta.run_s6,
-                                                ap=meta.spec_hw_val,
-                                                bg=meta.bg_hw_val)
+                                                ap=spec_hw_val,
+                                                bg=bg_hw_val)
 
             # Copy existing S5 log file and resume log
             meta.s6_logname = meta.outputdir+'S6_'+meta.eventlabel+'.log'
@@ -1659,8 +1662,11 @@ def save_table(meta, log):
     """
     log.writelog('  Saving results as an astropy table')
 
-    event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
-                   str(meta.bg_hw_val))
+    # Directory structure should not use expanded HW values
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val) +
+                   '_bg' + str(bg_hw_val))
     clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
     meta.tab_filename_s6 = (meta.outputdir+'S6_'+event_ap_bg+'_' +
                             clean_y_param+"_Table_Save.txt")
