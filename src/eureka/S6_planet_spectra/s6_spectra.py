@@ -12,11 +12,6 @@ from matplotlib.pyplot import rcParams
 from astraeus import xarrayIO as xrio
 
 try:
-    import starry
-except ModuleNotFoundError:
-    # starry hasn't been installed
-    pass
-try:
     from harmonica import HarmonicaTransit
 except ModuleNotFoundError:
     # Harmonica hasn't been installed
@@ -945,10 +940,6 @@ def compute_offset(meta, log, fit_methods):
 
 
 def compute_amp(meta, log, fit_methods):
-    if (('nuts' in fit_methods or 'exoplanet' in fit_methods) and
-            'sinusoid_pc' not in meta.run_myfuncs):
-        return compute_amp_starry(meta, log, fit_methods)
-
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -1356,100 +1347,8 @@ def compute_pc_amp(meta, log, fit_methods):
     return meta
 
 
-def compute_amp_starry(meta, log, fit_methods, nsamp=1e3):
-    nsamp = int(nsamp)
-
-    # Save meta.y_param
-    y_param = meta.y_param
-
-    suffix = ''
-    if meta.planetNumber > 0:
-        suffix += f'_pl{meta.planetNumber}'
-    if meta.channelNumber > 0:
-        suffix += f'_ch{meta.channelNumber}'
-
-    # Load eclipse depth
-    meta.y_param = 'fp'+suffix
-    fp = load_s5_saves(meta, log, fit_methods)
-    if all(np.all(v == 0) for v in fp):
-        meta.y_param = 'fpfs'+suffix
-        fp = load_s5_saves(meta, log, fit_methods)
-        if all(np.all(v == 0) for v in fp):
-            # The parameter could not be found - skip it
-            log.writelog('  Planet flux (fp or fpfs) was not in the list of '
-                         'fitted parameters')
-            log.writelog(f'  Skipping {y_param}')
-            return meta
-
-    nsamp = min([nsamp, len(fp[0])])
-    inds = np.random.randint(0, len(fp[0]), nsamp)
-
-    class temp_class:
-        def __init__(self):
-            pass
-
-    # Load map parameters
-    if y_param[-1].isnumeric():
-        ydeg = int(y_param[-1])
-    else:
-        ydeg = 1
-    temp = temp_class()
-    ell = ydeg
-    for m in range(-ell, ell+1):
-        meta.y_param = f'Y{ell}{m}{suffix}'
-        val = load_s5_saves(meta, log, fit_methods)
-        if val.shape[-1] != 0:
-            setattr(temp, f'Y{ell}{m}{suffix}', val[:, inds])
-
-    # Reset meta.y_param
-    meta.y_param = y_param
-
-    # If no parameters could not be found - skip it
-    if len(temp.__dict__.keys()) == 0:
-        log.writelog('  No Ylm parameters were found...')
-        log.writelog(f'  Skipping {y_param}')
-        return meta
-
-    meta.spectrum_median = []
-    meta.spectrum_err = []
-
-    planet_map = starry.Map(ydeg=ydeg, nw=nsamp)
-    planet_map2 = starry.Map(ydeg=ydeg, nw=nsamp)
-    for i in range(meta.nspecchan):
-        inds = np.random.randint(0, len(fp[i]), nsamp)
-        ell = ydeg
-        for m in range(-ell, ell+1):
-            if hasattr(temp, f'Y{ell}{m}{suffix}'):
-                planet_map[ell, m, :] = getattr(temp, f'Y{ell}{m}{suffix}')[i]
-                planet_map2[ell, m, :] = getattr(temp, f'Y{ell}{m}{suffix}')[i]
-        planet_map.amp = fp[i][inds]/planet_map2.flux(theta=0)[0]
-
-        theta = np.linspace(0, 359, 360)
-        fluxes = np.array(planet_map.flux(theta=theta).eval())
-        min_fluxes = np.min(fluxes, axis=0)
-        max_fluxes = np.max(fluxes, axis=0)
-        amps = (max_fluxes-min_fluxes)
-        amp = np.percentile(amps, [16, 50, 84])[[1, 2, 0]]
-        amp[1] -= amp[0]
-        amp[2] = amp[0]-amp[2]
-        meta.spectrum_median.append(amp[0])
-        meta.spectrum_err.append(amp[1:])
-
-    # Convert the lists to an array
-    meta.spectrum_median = np.array(meta.spectrum_median)
-    if meta.fitter == 'lsq':
-        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
-    else:
-        meta.spectrum_err = np.array(meta.spectrum_err).T
-
-    return meta
-
-
 def compute_fn(meta, log, fit_methods):
-    if (('nuts' in fit_methods or 'exoplanet' in fit_methods) and
-            'sinusoid_pc' not in meta.run_myfuncs):
-        return compute_fn_starry(meta, log, fit_methods)
-    elif ('poet_pc' in meta.run_myfuncs and
+    if ('poet_pc' in meta.run_myfuncs and
             'sinusoid_pc' not in meta.run_myfuncs):
         return compute_fn_poet(meta, log, fit_methods)
     elif ('quasilambert_pc' in meta.run_myfuncs):
@@ -1590,89 +1489,6 @@ def compute_fn_poet(meta, log, fit_methods):
         # Compute nightside flux (at deg = 180)
         fluxes = fp[i]*phaseVars[:, 0]
         flux = np.percentile(fluxes, [16, 50, 84])[[1, 2, 0]]
-        flux[1] -= flux[0]
-        flux[2] = flux[0]-flux[2]
-        meta.spectrum_median.append(flux[0])
-        meta.spectrum_err.append(flux[1:])
-
-    # Convert the lists to an array
-    meta.spectrum_median = np.array(meta.spectrum_median)
-    if meta.fitter == 'lsq':
-        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
-    else:
-        meta.spectrum_err = np.array(meta.spectrum_err).T
-
-    return meta
-
-
-def compute_fn_starry(meta, log, fit_methods, nsamp=1e3):
-    nsamp = int(nsamp)
-
-    # Save meta.y_param
-    y_param = meta.y_param
-
-    suffix = ''
-    if meta.planetNumber > 0:
-        suffix += f'_pl{meta.planetNumber}'
-    if meta.channelNumber > 0:
-        suffix += f'_ch{meta.channelNumber}'
-
-    # Load eclipse depth
-    meta.y_param = 'fp'+suffix
-    fp = load_s5_saves(meta, log, fit_methods)
-    if all(np.all(v == 0) for v in fp):
-        # The parameter could not be found - try fpfs
-        meta.y_param = 'fpfs'+suffix
-        fp = load_s5_saves(meta, log, fit_methods)
-        if all(np.all(v == 0) for v in fp):
-            log.writelog('  Planet flux (fp or fpfs) was not in the list of '
-                         'fitted parameters')
-            log.writelog(f'  Skipping {y_param}')
-            return meta
-
-    nsamp = min([nsamp, len(fp[0])])
-    inds = np.random.randint(0, len(fp[0]), nsamp)
-
-    class temp_class:
-        def __init__(self):
-            pass
-
-    # Load map parameters
-    temp = temp_class()
-    for ell in range(1, meta.ydeg+1):
-        for m in range(-ell, ell+1):
-            meta.y_param = f'Y{ell}{m}{suffix}'
-            val = load_s5_saves(meta, log, fit_methods)
-            if val.shape[-1] != 0:
-                setattr(temp, f'Y{ell}{m}{suffix}', val[:, inds])
-
-    # Reset meta.y_param
-    meta.y_param = y_param
-
-    # If no parameters could not be found - skip it
-    if len(temp.__dict__.keys()) == 0:
-        log.writelog('  No Ylm parameters were found...')
-        log.writelog(f'  Skipping {y_param}')
-        return meta
-
-    meta.spectrum_median = []
-    meta.spectrum_err = []
-
-    planet_map = starry.Map(ydeg=meta.ydeg, nw=nsamp)
-    planet_map2 = starry.Map(ydeg=meta.ydeg, nw=nsamp)
-    for i in range(meta.nspecchan):
-        inds = np.random.randint(0, len(fp[i]), nsamp)
-        for ell in range(1, meta.ydeg+1):
-            for m in range(-ell, ell+1):
-                if hasattr(temp, f'Y{ell}{m}{suffix}'):
-                    planet_map[ell, m, :] = getattr(temp,
-                                                    f'Y{ell}{m}{suffix}')[i]
-                    planet_map2[ell, m, :] = getattr(temp,
-                                                     f'Y{ell}{m}{suffix}')[i]
-        planet_map.amp = fp[i][inds]/planet_map2.flux(theta=0)[0]
-
-        fluxes = planet_map.flux(theta=180)[0].eval()
-        flux = np.percentile(np.array(fluxes), [16, 50, 84])[[1, 2, 0]]
         flux[1] -= flux[0]
         flux[2] = flux[0]-flux[2]
         meta.spectrum_median.append(flux[0])
@@ -1960,8 +1776,7 @@ def transit_latex_table(meta, log):
     """
     log.writelog('  Saving results as a LaTeX table')
 
-    data = pd.read_csv(meta.tab_filename_s6, comment='#',
-                       delim_whitespace=True)
+    data = pd.read_csv(meta.tab_filename_s6, comment='#', sep=r'\s+')
 
     # Figure out the number of rows and columns in the table
     nvals = data.shape[0]

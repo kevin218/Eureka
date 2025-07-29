@@ -29,24 +29,23 @@ def update_uncertainty(theta, nints, unc, freenames, nchannel_fitted):
     # Make a copy so we don't edit in place
     unc_fit = copy.deepcopy(unc)
 
+    param_type = None
     if "scatter_mult" in freenames:
-        for chan in range(nchannel_fitted):
-            trim1, trim2 = get_trim(nints, chan)
-            if chan > 0 and f'scatter_mult_ch{chan}' in freenames:
-                loc = np.where(f'scatter_mult_ch{chan}' == np.array(freenames))
-            else:
-                loc = np.where('scatter_mult' == np.array(freenames))
-            scatter_mult = theta[loc]
-            unc_fit[trim1:trim2] *= scatter_mult
+        param_type = "scatter_mult"
     elif "scatter_ppm" in freenames:
+        param_type = "scatter_ppm"
+
+    if param_type in ("scatter_mult", "scatter_ppm"):
         for chan in range(nchannel_fitted):
             trim1, trim2 = get_trim(nints, chan)
-            if chan > 0 and f'scatter_ppm_ch{chan}' in freenames:
-                loc = np.where(f'scatter_ppm_ch{chan}' == np.array(freenames))
-            else:
-                loc = np.where('scatter_ppm' == np.array(freenames))
-            scatter_ppm = theta[loc]
-            unc_fit[trim1:trim2] = scatter_ppm*1e-6
+            param_name = f"{param_type}_ch{chan}" if chan > 0 else param_type
+            loc = np.flatnonzero(np.array(freenames) == param_name)
+            param_val = theta[loc]
+
+            if param_type == "scatter_mult":
+                unc_fit[trim1:trim2] *= param_val
+            elif param_type == "scatter_ppm":
+                unc_fit[trim1:trim2] = param_val * 1e-6
 
     return unc_fit
 

@@ -127,6 +127,12 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         rprs = meta.rprs
         ars = meta.ars
         cosi = np.cos(meta.inc*np.pi/180)
+
+        # This code snippet will automatically make sure t0 is within
+        # the current observation window
+        nOrbits = (np.mean(spec.time.data)-t0) // p + 1
+        t0 += nOrbits*p
+
         # total occultation duration
         if meta.t14 is None:
             meta.t14 = p/np.pi*np.arcsin(
@@ -142,25 +148,28 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 raise Exception("t23 is not finite. Check your system " +
                                 "parameters or planet may be grazing.")
         # Indices for first through fourth contact
-        it1 = np.where(spec.time > (t0 - meta.t14/2))[0][0]
-        it2 = np.where(spec.time > (t0 - meta.t23/2))[0][0]
-        it3 = np.where(spec.time > (t0 + meta.t23/2))[0][0]
-        it4 = np.where(spec.time > (t0 + meta.t14/2))[0][0]
+        t_arr = spec.time.values
+        t14_half = meta.t14 / 2
+        t23_half = meta.t23 / 2
+        base_dur = meta.base_dur
+        it1_matches = np.flatnonzero(t_arr > (t0 - t14_half))
+        it1 = it1_matches[0] if it1_matches.size > 0 else 0
+        it2_matches = np.flatnonzero(t_arr > (t0 - t23_half))
+        it2 = it2_matches[0] if it2_matches.size > 0 else 0
+        it3_matches = np.flatnonzero(t_arr > (t0 + t23_half))
+        it3 = it3_matches[0] if it3_matches.size > 0 else 0
+        it4_matches = np.flatnonzero(t_arr > (t0 + t14_half))
+        it4 = it4_matches[0] if it4_matches.size > 0 else len(t_arr) - 1
         # Indices for beginning and end of baseline
         if meta.base_dur is None:
             it0 = 0
-            it5 = -1
+            it5 = len(t_arr) - 1
         else:
-            try:
-                it0 = np.where(spec.time > (t0 - meta.t14/2 -
-                                            meta.base_dur))[0][0]
-            except IndexError:
-                it0 = 0
-            try:
-                it5 = np.where(spec.time > (t0 + meta.t14/2 +
-                                            meta.base_dur))[0][0]
-            except IndexError:
-                it5 = -1
+            it0_matches = np.flatnonzero(t_arr > (t0 - t14_half - base_dur))
+            it0 = it0_matches[0] if it0_matches.size > 0 else 0
+
+            it5_matches = np.flatnonzero(t_arr > (t0 + t14_half + base_dur))
+            it5 = it5_matches[0] if it5_matches.size > 0 else len(t_arr) - 1
         meta.it = [it0, it1, it2, it3, it4, it5]
 
         if meta.isplots_S4cal >= 2:
@@ -192,7 +201,8 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                   wave[igood], [t0],
                                   flux_units, wave_units, time_units,
                                   name='Std. Dev. of Baseline Flux')
-        base_ferr = base_fstd.copy()/np.sqrt(it5-it4+it1-it0)
+        denom = max(it5 - it4 + it1 - it0, 1)
+        base_ferr = base_fstd.copy() / np.sqrt(denom)
 
         # Median in-occultation flux
         spec_t23 = np.ma.median(optspec[it2:it3+1], axis=0)
@@ -216,7 +226,8 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                  wave[igood], [t0],
                                  flux_units, wave_units, time_units,
                                  name='Std. Dev. of In-Occultation Flux')
-        ecl_ferr = ecl_fstd.copy()/np.sqrt(it3-it2+1)
+        denom = max(it3 - it2 + 1, 1)
+        ecl_ferr = ecl_fstd.copy() / np.sqrt(denom)
 
         # Create XArray dataset
         ds = dict(base_flux=base_flux, base_fstd=base_fstd,

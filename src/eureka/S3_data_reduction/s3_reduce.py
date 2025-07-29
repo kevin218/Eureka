@@ -62,6 +62,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
     Returns
     -------
+    spec : xarray.Dataset
+        The xarray Dataset containing the time-series of 1D spectra.
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S3.
     '''
@@ -331,8 +333,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
                 # Odd numbers in DQ array are bad pixels. Do not use.
                 if meta.dqmask:
-                    dqmask = np.where(data.dq.values % 2 == 1)
-                    data.mask.values[dqmask] = True
+                    data.mask.values[data.dq.values % 2 == 1] = True
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if meta.manmask is not None:
@@ -397,11 +398,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                      'curved and may benefit from setting '
                                      'meta.curvature to "correct".')
 
-                    # Perform outlier rejection of
-                    # sky background along time axis
+                    # Perform outlier rejection of bg pix along time axis
                     meta.bg_y2 = meta.src_ypos + meta.bg_hw + 1
                     meta.bg_y1 = meta.src_ypos - meta.bg_hw
-                    if not meta.ff_outlier:
+                    if not meta.ff_outlier and not meta.skip_bg:
                         data = inst.flag_bg(data, meta, log)
 
                     # Do the background subtraction

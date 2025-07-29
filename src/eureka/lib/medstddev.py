@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 
 def medstddev(data, mask=None, medi=False, axis=0):
@@ -111,8 +112,13 @@ def medstddev(data, mask=None, medi=False, axis=0):
     # residuals is data - median, masked values don't count:
     residuals = data - median
     # calculate standar deviation:
-    with np.errstate(divide='ignore', invalid='ignore'):
-        std = np.ma.std(residuals, axis=axis, ddof=1)
+    std = np.full(median.shape, np.nan)  # initialize output
+    valid = ngood > 1
+    if np.any(valid):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                std[valid] = np.ma.std(residuals, axis=axis, ddof=1)[valid]
 
     # Convert masked arrays to just arrays
     std = np.array(std)
@@ -124,10 +130,10 @@ def medstddev(data, mask=None, medi=False, axis=0):
 
     # critical case fixes:
     if np.any(ngood == 0):
-        std[np.where(ngood == 0)] = np.nan
-        median[np.where(ngood == 0)] = np.nan
+        std[ngood == 0] = np.nan
+        median[ngood == 0] = np.nan
     if np.any(ngood == 1):
-        std[np.where(ngood == 1)] = 0.
+        std[ngood == 1] = 0.
 
     if len(std) == 1:
         std = std[0]
