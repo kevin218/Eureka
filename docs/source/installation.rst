@@ -28,7 +28,18 @@ Alternatively, if you are following the "Installing with a ``conda`` environment
 you will not need to manually make a new ``conda`` environment as the ``conda env create --file environment.yml --force``
 line will make a new one for you (or replace your old one if you already had one).
 
-Option 1) With ``git`` and ``pip``
+Option 1) Directly from PyPI with ``pip``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once in your new conda environment, you can install the ``Eureka!`` package with ``pip`` with the following command:
+
+.. code-block:: bash
+
+	pip install 'eureka-bang[jwst]'
+
+In order to use any of the demo ECF files, follow the instructions in the :ref:`Demos <demos>` section of the :ref:`Quickstart <quickstart>` page.
+
+Option 2) From source with ``git`` and ``pip``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Once in your new conda environment, you can install ``Eureka!`` directly from source on
 `GitHub <http://github.com/kevin218/Eureka>`_ using ``git`` and ``pip`` by running:
@@ -38,24 +49,6 @@ Once in your new conda environment, you can install ``Eureka!`` directly from so
 	git clone -b v1.2.1 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	pip install -e '.[jwst]'
-
-
-Option 2) With ``pip`` only
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Once in your new conda environment, you can install the ``Eureka!`` package with ``pip`` with the following command:
-
-.. code-block:: bash
-
-	pip install -e 'eureka[jwst]@git+https://github.com/kevin218/Eureka.git@v1.2.1'
-
-Other specific branches can be installed using:
-
-.. code-block:: bash
-
-	pip install 'eureka[jwst]@git+https://github.com/kevin218/Eureka.git@mybranchname'
-
-In order to use any of the demo ECF files, follow the instructions in the :ref:`Demos <demos>` section of the :ref:`Quickstart <quickstart>` page.
 
 
 Including optional dependencies

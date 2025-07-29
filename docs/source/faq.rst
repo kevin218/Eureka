@@ -49,7 +49,7 @@ Issues installing or importing jwst
 
 As a first step, make sure that you were following the instructions on the :ref:`installation` page and were
 either using the conda environment.yml installation method or a pip installation command that included "[jwst]"
-like ``pip install .[jwst]``. If you are getting error messages on linux that mention gcc, you likely need to
+like ``pip install eureka-bang[jwst]``. If you are getting error messages on linux that mention gcc, you likely need to
 first install gcc using ``sudo apt install gcc``. If you are getting messages on macOS that mention clang,
 X-Code, and/or CommandLineTools, you need to make sure that CommandLineTools is first manually installed.
 CommandLineTools is installed whenever you first manually use a command that requires it like git, so one very
@@ -65,7 +65,7 @@ You should also consider opening an issue on the `jwst GitHub <https://github.co
 there may not be much we can do to help troubleshoot a package we have no control over.
 
 Finally, if you simply cannot get jwst to install and still want to use later stages of the Eureka! pipeline, then you can
-install Eureka! using ``pip install .`` instead of ``pip install .[jwst]`` which will not install the jwst package. Note,
+install Eureka! using ``pip install eureka-bang`` instead of ``pip install eureka-bang[jwst]`` which will not install the jwst package. Note,
 however, that this means that Stages 1 and 2 will not work at all as Eureka's Stages 1 and 2 simply offer ways of editing
 the behaviour of the jwst package's Stages 1 and 2.
 

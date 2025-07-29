@@ -5,10 +5,6 @@ import eureka.S2_calibrations.s2_calibrate as s2
 import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4cal_StellarSpectra.s4cal_StellarSpec as s4cal
 
-# Set up some parameters to make plots look nicer.
-# You can set usetex=True if you have LaTeX installed
-eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
-
 # eventlabel = 'imaging_template'
 # eventlabel = 'miri_lrs_template'
 eventlabel = 'nirspec_fs_template'

@@ -2,9 +2,6 @@ import numpy as np
 
 from ..lib.readECF import MetaClass
 
-# FINDME: Placeholder code until jaxoplanet.starry support is added
-starry = None
-
 
 class S5MetaClass(MetaClass):
     '''A class to hold Eureka! S5 metadata.
@@ -154,20 +151,6 @@ class S5MetaClass(MetaClass):
             if self.run_pfrac <= 0 or self.run_pfrac >= 1:
                 raise ValueError(
                     'run_pfrac must be between 0 and 1, exclusive.')
-
-        # Starry eclipse mapping pixel-sampling parameters
-        self.pixelsampling = getattr(self, 'pixelsampling', False)
-        self.oversample = getattr(self, 'oversample', 3)
-        if self.pixelsampling:
-            # Must be provided in the ECF if relevant
-            self.ydeg = getattr(self, 'ydeg')
-            # Compute the number of pixels used in sampling
-            map = starry.Map(ydeg=self.ydeg)
-            A = map.get_pixel_transforms(oversample=self.oversample)[3]
-            self.npix = A.shape[1]
-        else:
-            self.ydeg = getattr(self, 'ydeg', None)
-            self.npix = 0
 
         # GP inputs
         self.kernel_inputs = getattr(self, 'kernel_inputs', ['time'])

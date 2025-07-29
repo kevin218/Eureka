@@ -948,8 +948,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                            paramtitles=paramtitles,
                            multwhite=lc_model.multwhite,
                            nints=lc_model.nints,
-                           num_planets=meta.num_planets,
-                           npix=meta.npix)
+                           num_planets=meta.num_planets)
 
     # Fit the models using one or more fitters
     log.writelog("=========================")
@@ -1077,27 +1076,17 @@ def make_longparamlist(meta, params, chanrng):
 
     for param in paramtitles:
         for c in range(nspecchan):
-            npix = meta.npix
-            if npix == 0:
-                npix = 1
-            for pix in range(npix):
-                name = param
-                if pix > 0 and param == 'pixel':
-                    # Doing pixel-sampling within starry
-                    name += f'{pix}'
-                elif pix > 0 and param != 'pixel':
-                    # Skip pix>0 for non-pixel parameters
-                    continue
-                if c > 0:
-                    name += f'_ch{c}'
-                if name not in longparamlist[c]:
-                    longparamlist[c].append(name)
+            name = param
+            if c > 0:
+                name += f'_ch{c}'
+            if name not in longparamlist[c]:
+                longparamlist[c].append(name)
 
-                if (name not in params.dict.keys() and
-                        getattr(params, param).ptype != 'independent' and
-                        (c == 0 or getattr(params, param).ptype != 'shared')):
-                    # Set this parameter based on channel 0
-                    params.__setattr__(name, params.dict[param])
+            if (name not in params.dict.keys() and
+                    getattr(params, param).ptype != 'independent' and
+                    (c == 0 or getattr(params, param).ptype != 'shared')):
+                # Set this parameter based on channel 0
+                params.__setattr__(name, params.dict[param])
 
     freenames = [key for key in params.dict.keys()
                  if getattr(params, key).ptype in
@@ -1106,24 +1095,11 @@ def make_longparamlist(meta, params, chanrng):
     freenames_sorted = []
     for param in paramtitles:
         for c in range(nspecchan):
-            npix = meta.npix
-            if npix == 0:
-                npix = 1
-            for pix in range(npix):
-                name = param
-                if pix > 0 and param == 'pixel':
-                    # Doing pixel-sampling within starry
-                    name += f'{pix}'
-                elif pix > 0 and param != 'pixel':
-                    # Skip pix>0 for non-pixel parameters
-                    continue
-                if c > 0:
-                    name += f'_ch{c}'
-                if name in freenames and name not in freenames_sorted:
-                    freenames_sorted.append(name)
-
-    if meta.pixelsampling:
-        params.__setattr__('ydeg', [meta.ydeg, 'independent'])
+            name = param
+            if c > 0:
+                name += f'_ch{c}'
+            if name in freenames and name not in freenames_sorted:
+                freenames_sorted.append(name)
 
     return longparamlist, paramtitles, freenames_sorted, params
 

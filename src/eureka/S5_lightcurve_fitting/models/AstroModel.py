@@ -3,7 +3,6 @@ import astropy.constants as const
 from copy import copy
 import inspect
 
-
 from .Model import Model
 from .KeplerOrbit import KeplerOrbit
 from ..limb_darkening_fit import ld_profile
@@ -37,10 +36,10 @@ class PlanetParams():
             parameterObject = model.parameters
             lib = np
         else:
-            # Raise error while jax is not yet supported
+            # No other option is currently supported until jax is added
             raise NotImplementedError(
-                'The eval=False option is not yet implemented for the '
-                'PlanetParams class. Please set eval=True to use this class.')
+                'JAX support is not yet implemented. '
+                'Please use eval=True to evaluate the model in numpy mode.')
 
         # Planet ID
         self.pid = pid
@@ -129,9 +128,8 @@ class PlanetParams():
             setattr(self, pixname, 0.)
 
         # Figure out how many planet Ylm spherical harmonics
-        ylm_params = np.where(['Y' == par[0] and par[1].isnumeric()
-                               for par in list(model.parameters.dict.keys())
-                               ])[0]
+        ylm_params = [i for i, par in enumerate(model.parameters.dict.keys())
+                      if par.startswith('Y') and par[1:].isnumeric()]
         if len(ylm_params) > 0:
             l_vals = [int(list(model.parameters.dict.keys())[ind][1])
                       for ind in ylm_params]

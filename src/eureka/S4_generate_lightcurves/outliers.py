@@ -62,8 +62,8 @@ def get_outliers(meta, spec):
     masked_dev = sigma_clip(residual_dev, sigma_upper=meta.mad_sigma,
                             sigma_lower=100, maxiters=meta.maxiters,
                             masked=True, copy=True)
-    x_mad_outliers = x_mask[np.where(masked_mad.mask)[0]]
-    x_dev_outliers = x_mask[np.where(masked_dev.mask)[0]]
+    x_mad_outliers = x_mask[np.ma.getmaskarray(masked_mad)]
+    x_dev_outliers = x_mask[np.ma.getmaskarray(masked_dev)]
     outliers = np.union1d(x_mad_outliers, x_dev_outliers)
 
     # Create dictionary containing plotting parameters for Fig 4106

@@ -1,0 +1,15 @@
+# Eureka default matplotlib style
+
+font.family : STIX Two Text, STIXGeneral, DejaVu Serif, serif
+font.serif : STIX Two Text, STIXGeneral, DejaVu Serif, serif
+font.size : 14
+legend.fontsize : 11
+
+mathtext.fontset : stix
+mathtext.it : serif:italic
+mathtext.rm : serif
+mathtext.sf : serif
+mathtext.bf : serif:bold
+
+savefig.bbox : tight
+figure.constrained_layout.use : True

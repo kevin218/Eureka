@@ -325,11 +325,11 @@ def interpolate_power(snr):
         weighting exponent
     """
     pow_wt = snr.copy() * 0.0
-    pow_wt[np.where(snr > 5)] = ((snr[snr > 5]-5)/(10-5))*0.6+0.4
-    pow_wt[np.where(snr > 10)] = ((snr[snr > 10]-10)/(20-10))*2.0+1.0
-    pow_wt[np.where(snr > 20)] = ((snr[snr > 20]-20))/(50-20)*3.0+3.0
-    pow_wt[np.where(snr > 50)] = ((snr[snr > 50]-50))/(100-50)*4.0+6.0
-    pow_wt[np.where(snr > 100)] = 10.0
+    pow_wt[snr > 5] = ((snr[snr > 5]-5)/(10-5))*0.6+0.4
+    pow_wt[snr > 10] = ((snr[snr > 10]-10)/(20-10))*2.0+1.0
+    pow_wt[snr > 20] = ((snr[snr > 20]-20))/(50-20)*3.0+3.0
+    pow_wt[snr > 50] = ((snr[snr > 50]-50))/(100-50)*4.0+6.0
+    pow_wt[snr > 100] = 10.0
 
     return pow_wt.ravel()
 
@@ -361,7 +361,7 @@ def custom_power(snr, snr_bounds, exponents):
     pow_wt = snr.copy() * 0.0
 
     for snr_b, exp_b in zip(snr_bounds, exponents):
-        pow_wt[np.where(snr > snr_b)] = exp_b
+        pow_wt[snr > snr_b] = exp_b
 
     return pow_wt.ravel()
 
@@ -457,7 +457,7 @@ def calc_opt_sums_uniform_weight(ramp_data, rn_sect, gain_sect, data_masked,
     sqrt_arg = rn_2_r + data_diff * gain_sect_r
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "invalid value.*", RuntimeWarning)
-        wh_pos = np.where((sqrt_arg >= 0.) & (gain_sect_r != 0.))
+        wh_pos = np.flatnonzero((sqrt_arg >= 0.) & (gain_sect_r != 0.))
     numer_ir[wh_pos] = \
         np.sqrt(rn_2_r[wh_pos] + data_diff[wh_pos] * gain_sect_r[wh_pos])
     sigma_ir[wh_pos] = numer_ir[wh_pos] / gain_sect_r[wh_pos]
