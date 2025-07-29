@@ -36,7 +36,7 @@ def BGsubtraction(data, meta, log, m, isplots=0, group=None):
     data : Xarray Dataset
         Dataset object containing background subtracted data.
     """
-    if meta.bg_deg is None:
+    if meta.bg_deg is None or meta.skip_bg:
         # Need to skip doing background subtraction
         log.writelog('  Skipping background subtraction...',
                      mute=(not meta.verbose))
