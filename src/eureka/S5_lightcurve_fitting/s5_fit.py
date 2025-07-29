@@ -887,6 +887,19 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                multwhite=lc_model.multwhite,
                                nints=lc_model.nints)
         modellist.append(t_cent)
+    if 'common_mode' in meta.run_myfuncs:
+        t_cm = CommonModeModel(parameters=params, meta=meta,
+                               fmt='r--', log=log, time=time,
+                               time_units=time_units,
+                               freenames=freenames,
+                               longparamlist=lc_model.longparamlist,
+                               nchannel=chanrng,
+                               nchannel_fitted=nchannel_fitted,
+                               fitted_channels=fitted_channels,
+                               paramtitles=paramtitles,
+                               multwhite=lc_model.multwhite,
+                               nints=lc_model.nints)
+        modellist.append(t_cm)
     if 'GP' in meta.run_myfuncs:
         t_GP = GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
                        parameters=params, fmt='r--', log=log,

@@ -140,9 +140,9 @@ class StepModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
+            lcpiece = np.ma.ones(len(time))
             for s in np.where(self.steps[c] != 0)[0]:
-                lcpiece = np.ma.ones(len(time))
                 lcpiece[time >= self.steptimes[c, s]] += \
                     self.steps[c, s]
-                lcfinal = np.append(lcfinal, lcpiece)
+            lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal
