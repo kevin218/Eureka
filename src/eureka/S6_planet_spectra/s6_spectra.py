@@ -624,8 +624,11 @@ def convert_s5_LC(meta, log):
     lc : Astreaus object
         Data object of time-like arrays (light curve).
     '''
-    event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
-                   str(meta.bg_hw_val))
+    # Directory structure should not use expanded HW values
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val) +
+                   '_bg' + str(bg_hw_val))
 
     if meta.sharedp:
         niter = 1
