@@ -1,0 +1,20 @@
+# Eureka! Control File for Stage 2: Data Reduction
+
+# Stage 2 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-2
+
+suffix                  rateints     # Data file suffix
+
+# Note: different instruments and modes will use different steps by default
+skip_flat_field         False
+skip_photom             True	# Recommended to skip to get better uncertainties out of Stage 3. Set this to False if you want to compute calibrated stellar spectra.
+skip_extract_1d         True
+
+# Diagnostics
+hide_plots              True    # If True, plots will automatically be closed rather than popping up
+
+# Project directory
+topdir                  /home/User/Data/JWST-Sim/NIRISS/
+
+# Directories relative to topdir
+inputdir                Stage1
+outputdir               Stage2

@@ -102,7 +102,7 @@ def spec1D(spectra, meta, log, mask=None):
         # Zero-mean for cross correlation
         # correlate.py sometimes performs better when the mean is subtracted
         ref_spec -= np.ma.mean(ref_spec[meta.drift_range:-meta.drift_range])
-    ref_spec[np.where(np.isnan(ref_spec))] = 0
+    ref_spec[np.isnan(ref_spec)] = 0
     iterfn = range(meta.n_int)
     if meta.verbose:
         iterfn = tqdm(iterfn)
@@ -120,7 +120,7 @@ def spec1D(spectra, meta, log, mask=None):
             fit_spec = fit_spec[int(np.ceil(meta.highpassWidth/2)):]
         if meta.sub_mean:
             fit_spec -= np.ma.mean(fit_spec)
-        fit_spec[np.where(np.isnan(fit_spec))] = 0
+        fit_spec[np.isnan(fit_spec)] = 0
         try:
             vals = sps.correlate(ref_spec, fit_spec, mode='valid',
                                  method='fft')

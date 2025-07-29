@@ -21,18 +21,8 @@ from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
 
-try:
-    from eureka.S5_lightcurve_fitting import differentiable_models
-    pymc3_installed = True
-except ModuleNotFoundError:
-    pymc3_installed = False
-
 
 def test_MIRI(capsys):
-    # Set up some parameters to make plots look nicer.
-    # You can set usetex=True if you have LaTeX installed
-    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
-
     s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
     if not s2_installed:
         with capsys.disabled():
@@ -84,27 +74,6 @@ def test_MIRI(capsys):
                                        s3_meta=s3_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
-    # Test differentiable models if pymc3 related dependencies are installed
-    if pymc3_installed:
-        # Copy the S5 meta and manually edit some settings
-        s5_meta2 = deepcopy(s5_meta)
-        s5_meta2.fit_method = '[exoplanet,nuts]'
-        s5_meta2.run_myfuncs = s5_meta2.run_myfuncs.replace(
-            'fleck_tr,batman_ecl,sinusoid_pc', 'starry')
-        s5_meta2.fit_par = './s5_fit_par_starry.epf'
-        s5_meta2.tune = 10
-        s5_meta2.draws = 100
-        s5_meta2.chains = 1
-        s5_meta2.target_accept = 0.5
-        s5_meta2.isplots_S5 = 3
-        # Reset the citations list
-        s5_meta2.citations = s4_meta.citations
-        s5_meta2.bibliography = [CITATIONS[entry] for entry
-                                 in s5_meta2.citations]
-        # Run S5 with the new parameters
-        s5_meta2 = s5.fitlc(meta.eventlabel, s4_meta=s4_meta,
-                            input_meta=s5_meta2)
-
     s6_meta, s6_lc = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
                                      s5_meta=s5_meta)
 
@@ -112,13 +81,13 @@ def test_MIRI(capsys):
     if s2_installed:
         # Only run S1-2 stuff if jwst package has been installed
         # meta.outputdir_raw=f'{os.sep}data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage1{os.sep}'
-        # name = pathdirectory(meta, 'S1', 1,
+        # name = pathdirectory(meta, 'S1', s1_meta.run_s1,
         #                      old_datetime=s1_meta.datetime)
         # assert os.path.exists(name)
 
         meta.outputdir_raw = (f'{os.sep}data{os.sep}JWST-Sim{os.sep}MIRI'
                               f'{os.sep}Stage2{os.sep}')
-        name = pathdirectory(meta, 'S2', 1,
+        name = pathdirectory(meta, 'S2', s2_meta.run_s2,
                              old_datetime=s2_meta.datetime)
         assert os.path.exists(name)
         assert os.path.exists(name+os.sep+'figs')
@@ -126,7 +95,7 @@ def test_MIRI(capsys):
     # run assertions for S3
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage3{os.sep}')
-    name = pathdirectory(meta, 'S3', 1, ap=4, bg=10,
+    name = pathdirectory(meta, 'S3', s3_meta.run_s3, ap=4, bg=10,
                          old_datetime=s3_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -136,7 +105,7 @@ def test_MIRI(capsys):
     # run assertions for S4
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage4{os.sep}')
-    name = pathdirectory(meta, 'S4', 1, ap=4, bg=10,
+    name = pathdirectory(meta, 'S4', s4_meta.run_s4, ap=4, bg=10,
                          old_datetime=s4_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -147,7 +116,7 @@ def test_MIRI(capsys):
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage5{os.sep}')
-    name = pathdirectory(meta, 'S5', 1, ap=4, bg=10,
+    name = pathdirectory(meta, 'S5', s5_meta.run_s5, ap=4, bg=10,
                          old_datetime=s5_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -156,15 +125,10 @@ def test_MIRI(capsys):
                           ["dynesty", "batman", "fleck"])
     assert np.array_equal(s5_meta.citations, s5_cites)
 
-    if pymc3_installed:
-        s5_cites2 = np.union1d(s4_cites, COMMON_IMPORTS[4] +
-                               ["pymc3", "exoplanet", "starry"])
-        assert np.array_equal(s5_meta2.citations, s5_cites2)
-
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage6{os.sep}')
-    name = pathdirectory(meta, 'S6', 1, ap=4, bg=10,
+    name = pathdirectory(meta, 'S6', s6_meta.run_s6, ap=4, bg=10,
                          old_datetime=s6_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -185,7 +149,7 @@ def test_MIRI(capsys):
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage5{os.sep}')
-    name = pathdirectory(meta, 'S5', 1, ap=4, bg=10,
+    name = pathdirectory(meta, 'S5', s5_meta.run_s5, ap=4, bg=10,
                          old_datetime=s5_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -193,7 +157,7 @@ def test_MIRI(capsys):
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage6{os.sep}')
-    name = pathdirectory(meta, 'S6', 1, ap=4, bg=10,
+    name = pathdirectory(meta, 'S6', s6_meta.run_s6, ap=4, bg=10,
                          old_datetime=s6_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')

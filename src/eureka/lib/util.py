@@ -601,7 +601,7 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
     # Normalize the spectrum
     if meta.inst == 'wfc3':
         for p in range(2):
-            iscans = np.where(scandir == p)[0]
+            iscans = np.atleast_1d(scandir == p).nonzero()[0]
             if len(iscans) > 0:
                 for r in range(meta.nreads):
                     normFactor = np.ma.abs(np.ma.mean(
@@ -692,7 +692,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
 
         # Compute the MAD for each scan direction
         for p in range(2):
-            iscans = np.where(scandir == p)[0]
+            iscans = np.atleast_1d(scandir == p).nonzero()[0]
             if len(iscans) > 0:
                 # Compute the MAD
                 for m in range(n_wav):
@@ -972,8 +972,6 @@ def make_citations(meta, stage=None):
             other_cites = other_cites + ["emcee"]
         if "dynesty" in meta.fit_method:
             other_cites = other_cites + ["dynesty"]
-        if "nuts" in meta.fit_method:
-            other_cites = other_cites + ["pymc3"]
         if "exoplanet" in meta.fit_method:
             other_cites = other_cites + ["exoplanet"]
 
@@ -984,8 +982,6 @@ def make_citations(meta, stage=None):
             other_cites.append("catwoman")
         if "fleck_tr" in meta.run_myfuncs:
             other_cites.append("fleck")
-        if "starry" in meta.run_myfuncs:
-            other_cites.append("starry")
         if "GP" in meta.run_myfuncs:
             if hasattr(meta, "GP_package"):
                 other_cites.append(meta.GP_package)

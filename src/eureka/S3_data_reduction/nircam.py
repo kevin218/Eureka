@@ -587,7 +587,7 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
             mask_all.append([])
             continue
         edge = edges[k] - meta.xwindow[0]
-        edge[np.where(edge < 0)] = 0
+        edge[edge < 0] = 0
         use_cols_temp = np.copy(use_cols)
         inds = np.arange(len(use_cols_temp))
         # Set False if columns are out of amplifier region

@@ -286,7 +286,7 @@ def residuals(params, x, data, mask, weights, bgpars, fitbg):
     # Calculate residuals:
     res = (model - data) * weights
     # Return only unmasked values:
-    return res[np.where(~mask)]
+    return res[~mask]
 
 
 def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,

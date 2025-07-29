@@ -6,6 +6,7 @@ from ..lib import util, plots
 colors = ['xkcd:bright blue', 'xkcd:soft green', 'orange', 'purple']
 
 
+@plots.apply_style
 def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
     '''Plot binned white light curve and indicate
     baseline and in-occultation regions.
@@ -53,8 +54,9 @@ def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
                                      nbin=meta.nbin_plot)
 
     if i == 0:
-        fig = plt.figure(4202, figsize=(8, 5))
-        plt.clf()
+        fig = plt.figure(4202)
+        fig.set_size_inches(8, 5, forward=True)
+        fig.clf()
         ax = fig.subplots(1, 1)
         ax.plot(time_bin-toffset, lc_bin, '.', color='0.2', alpha=0.8,
                 label='Binned White LC')
@@ -76,13 +78,14 @@ def plot_whitelc(optspec, time, meta, i, fig=None, ax=None):
         ax.set_xlabel(f"Time ({time.time_units})")
         ax.set_ylabel("Normalized Flux")
     fname = 'figs'+os.sep+'fig4202_WhiteLC'
-    fig.savefig(meta.outputdir+fname+plots.figure_filetype,
+    fig.savefig(meta.outputdir+fname+plots.get_filetype(),
                 bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
     return fig, ax
 
 
+@plots.apply_style
 def plot_stellarSpec(meta, ds):
     '''Plot calibrated stellar spectra from
     baseline and in-occultation regions.
@@ -105,8 +108,9 @@ def plot_stellarSpec(meta, ds):
     else:
         raise ValueError(f"Unknown error type: {meta.s4cal_plotErrorType}")
 
-    fig = plt.figure(4201, figsize=(8, 5))
-    plt.clf()
+    fig = plt.figure(4201)
+    fig.set_size_inches(8, 5, forward=True)
+    fig.clf()
     ax = fig.subplots(1, 1)
     for i in range(len(ds.time)):
         ax.errorbar(ds.wavelength, ds.base_flux[:, i], base_err[:, i],
@@ -121,7 +125,7 @@ def plot_stellarSpec(meta, ds):
     ax.set_ylabel(f"Flux ({ds.base_flux.flux_units})")
 
     fname = 'figs'+os.sep+'fig4201_CalStellarSpec'
-    fig.savefig(meta.outputdir+fname+plots.figure_filetype,
+    fig.savefig(meta.outputdir+fname+plots.get_filetype(),
                 bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)

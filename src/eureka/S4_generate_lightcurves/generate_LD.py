@@ -241,8 +241,7 @@ def spam_ld(meta, white=False):
     for i in range(meta.nspecchan):
         # Find valid indices
         wl_bin = wavelength_range[i]
-        ii = np.where(np.logical_and(sld_wave >= wl_bin[0],
-                                     sld_wave <= wl_bin[1]))[0]
+        ii = (sld_wave >= wl_bin[0]) & (sld_wave <= wl_bin[1])
         # Average limb-darkening coefficients for each bin
         for j in range(num_ld_coef):
             ld_coeffs[i, j] = np.mean(sld[j+1, ii])
