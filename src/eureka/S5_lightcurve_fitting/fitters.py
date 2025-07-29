@@ -78,14 +78,16 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                               fitter=calling_function+'StartingPoint')
 
     # Plot Harmonica string starting point
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
         plots.plot_harmonica_string(lc, model, meta,
                                     fitter=calling_function+'StartingPoint')
 
     if not np.isfinite(start_lnprob):
         raise AssertionError(
             'The starting lnprob value must be finite. Most likely, one of '
-            'your priors is outside of its bounds.')
+            'your initial parameter values are outside of the bounds of its '
+            'prior.')
 
     def neg_lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
         return -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
@@ -161,7 +163,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_fleck_star(lc, model, meta, fitter=calling_function)
 
     # Plot Harmonica string
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
         plots.plot_harmonica_string(lc, model, meta, fitter=calling_function)
 
     # Plot GP fit + components
@@ -331,7 +334,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_fleck_star(lc, model, meta, fitter='emceeStartingPoint')
 
     # Plot Harmonica string starting point
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
         plots.plot_harmonica_string(lc, model, meta,
                                     fitter='emceeStartingPoint')
 
@@ -452,7 +456,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_fleck_star(lc, model, meta, fitter='emcee')
 
     # Plot Harmonica string
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
         plots.plot_harmonica_string(lc, model, meta, fitter='emcee')
 
     # Plot GP fit + components
@@ -578,18 +583,6 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames, freepars,
 
     # Make sure that no walkers are starting in the same place as
     # they would then exactly follow each other
-    # repeat_pos = np.where([np.any(np.all(pos[i] == np.delete(pos, i, axis=0),
-    #                                      axis=1))
-    #                        for i in range(pos.shape[0])])[0]
-    # while (len(repeat_pos) > 0 and
-    #        samples.shape[0] > (walkers_used+len(repeat_pos))):
-    #     pos[repeat_pos] = samples[:-walkers_used][-len(repeat_pos):]
-    #     walkers_used += len(repeat_pos)
-    #     repeat_pos = np.where([np.any(np.all(pos[i] ==
-    #                                          np.delete(pos, i, axis=0),
-    #                                          axis=1))
-    #                            for i in range(pos.shape[0])])[0]
-
     repeat_pos = np.array([
         i for i in range(pos.shape[0])
         if np.any(np.all(pos[i] == np.delete(pos, i, axis=0), axis=1))
@@ -885,7 +878,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_fleck_star(lc, model, meta, fitter='dynestyStartingPoint')
 
     # Plot Harmonica string starting point
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
         plots.plot_harmonica_string(lc, model, meta,
                                     fitter='dynestyStartingPoint')
 
@@ -996,7 +990,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_fleck_star(lc, model, meta, fitter='dynesty')
 
     # Plot Harmonica string
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
         plots.plot_harmonica_string(lc, model, meta, fitter='dynesty')
 
     # Plot GP fit + components
@@ -1120,7 +1115,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_fleck_star(lc, model, meta, fitter='lmfitter')
 
     # Plot Harmonica string
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
         plots.plot_harmonica_string(lc, model, meta, fitter='lmfitter')
 
     # Plot GP fit + components
