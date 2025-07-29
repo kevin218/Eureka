@@ -128,8 +128,7 @@ class StepModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        lcfinal = np.array([])
-
+        lcfinal = np.ma.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -142,8 +141,7 @@ class StepModel(Model):
                 time = split([time, ], self.nints, chan)[0]
 
             lcpiece = np.ma.ones(len(time))
-            for s in np.where(self.steps[c] != 0)[0]:
-                lcpiece[time >= self.steptimes[c, s]] += \
-                    self.steps[c, s]
-            lcfinal = np.append(lcfinal, lcpiece)
+            for s in np.flatnonzero(self.steps[c] != 0):
+                lcpiece[time >= self.steptimes[c, s]] += self.steps[c, s]
+            lcfinal = np.ma.append(lcfinal, lcpiece)
         return lcfinal

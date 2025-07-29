@@ -210,8 +210,15 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                              'channels.')
             elif meta.nspecchan is None and meta.npixelbins is not None:
                 # User wants bins defined by the given number of pixels
-                istart = np.where(wave_1d >= meta.wave_min)[0][0]
-                iend = np.where(wave_1d >= meta.wave_max)[0][0]
+                mask = (wave_1d >= meta.wave_min)
+                if not np.any(mask):
+                    raise ValueError(f"No wavelengths ≥ {meta.wave_min}")
+                istart = np.nonzero(mask)[0][0]
+
+                mask = (wave_1d >= meta.wave_max)
+                if not np.any(mask):
+                    raise ValueError(f"No wavelengths ≥ {meta.wave_max}")
+                iend = np.nonzero(mask)[0][0]
                 # Shift bins by some number of pixels (only useful for MIRI)
                 istart += meta.npixelshift
                 iend += meta.npixelshift
@@ -342,8 +349,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             # Manually mask pixel columns by index number
             for w in meta.mask_columns:
                 log.writelog(f"  Masking detector pixel column {w}.")
-                index = np.where(spec.optmask.x == w)[0][0]
-                spec.optmask[:, index] = True
+                matches = np.nonzero(spec.optmask.x.values == w)[0]
+                if matches.size == 0:
+                    log.writelog(
+                        f"  Warning: Pixel column {w} not found in optmask.x.")
+                    continue
+                spec.optmask[:, matches[0]] = True
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.clip_unbinned:
@@ -468,10 +479,15 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                  f"{lc.wave_low.values[i]:.3f} - "
                                  f"{lc.wave_hi.values[i]:.3f}")
                     # Compute valid indices within wavelength range
-                    index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
-                                     (spec.wave_1d < lc.wave_hi.values[i]))[0]
-                    log.writelog(f"    indices {index[0]} - {index[-1]}, "
-                                 f"{len(index)} in total")
+                    index = np.nonzero(
+                        (spec.wave_1d.values >= lc.wave_low.values[i]) &
+                        (spec.wave_1d.values < lc.wave_hi.values[i]))[0]
+                    if index.size > 0:
+                        log.writelog(f"    indices {index[0]} - {index[-1]}, "
+                                     f"{len(index)} in total")
+                    else:
+                        log.writelog(
+                            "    No indices found in this wavelength range.")
                     # Make masked arrays for easy summing
                     optspec_ma = np.ma.masked_where(
                         spec.optmask.values[:, index],
@@ -533,9 +549,13 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 log.writelog("Generating white-light light curve")
 
                 # Compute valid indices within wavelength range
-                index = np.where((spec.wave_1d >= meta.wave_min) *
-                                 (spec.wave_1d < meta.wave_max))[0]
-                central_wavelength = np.mean(spec.wave_1d[index].values)
+                index = np.nonzero((spec.wave_1d.values >= meta.wave_min) &
+                                   (spec.wave_1d.values < meta.wave_max))[0]
+                if index.size > 0:
+                    central_wavelength = np.mean(spec.wave_1d[index].values)
+                else:
+                    raise ValueError(
+                        "No wavelengths found in the specified range.")
                 lc['flux_white'] = xrio.makeTimeLikeDA(np.zeros(meta.n_int),
                                                        lc.time,
                                                        lc.data.flux_units,

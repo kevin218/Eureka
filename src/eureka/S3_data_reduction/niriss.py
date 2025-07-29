@@ -242,8 +242,8 @@ def straighten_trace(data, meta, log, m):
         # This only happens with SUBSTRIP96 and Order 2,
         # which is not recommended.
         ymax = data.flux.shape[1]
-        new_shifts[np.where(new_shifts > ymax)] = ymax
-        new_shifts[np.where(new_shifts < -ymax)] = -ymax
+        new_shifts[new_shifts > ymax] = ymax
+        new_shifts[new_shifts < -ymax] = -ymax
 
         # broadcast the shifts to the number of integrations
         new_shifts = np.reshape(np.repeat(new_shifts,
@@ -464,7 +464,7 @@ def cut_aperture(data, meta, log):
         apv0[:, :, :, k] = data.v0.values[:, ap_y1:ap_y2, :, k]
         apmedflux[:, :, k] = data.medflux.values[ap_y1:ap_y2, :, k]
         # Mask invalid regions
-        inan = np.where(np.isnan(data.wave_1d[:, k]))
+        inan = np.isnan(data.wave_1d[:, k])
         apmask[:, :, inan, k] = True
 
     return apdata, aperr, apmask, apbg, apv0, apmedflux

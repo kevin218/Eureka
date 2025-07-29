@@ -190,12 +190,12 @@ def custom_ref_pixel(input_model, log, meta):
     nrow = all_data.shape[2]
     row_ind_ref = np.append(np.arange(nrow)[:meta.npix_top],
                             np.arange(nrow)[nrow-meta.npix_bot:])
-    evn_row_ref = row_ind_ref[np.where(row_ind_ref % 2 == 0)[0]]
-    odd_row_ref = row_ind_ref[np.where(row_ind_ref % 2 == 1)[0]]
+    evn_row_ref = row_ind_ref[row_ind_ref % 2 == 0]
+    odd_row_ref = row_ind_ref[row_ind_ref % 2 == 1]
 
     row_ind = np.arange(nrow)
-    evn_ind = np.where(row_ind % 2 == 0)[0]
-    odd_ind = np.where(row_ind % 2 == 1)[0]
+    evn_ind = np.flatnonzero(row_ind % 2 == 0)
+    odd_ind = np.flatnonzero(row_ind % 2 == 1)
 
     for nint in range(all_data.shape[0]):
         for ngrp in range(all_data.shape[1]):

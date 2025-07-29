@@ -7,10 +7,6 @@ import eureka.S4_generate_lightcurves.s4_genLC as s4
 import eureka.S5_lightcurve_fitting.s5_fit as s5
 import eureka.S6_planet_spectra.s6_spectra as s6
 
-# Set up some parameters to make plots look nicer.
-# You can set usetex=True if you have LaTeX installed
-eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
-
 # eventlabel = 'imaging_template'
 # eventlabel = 'miri_lrs_template'
 eventlabel = 'nirspec_fs_template'
