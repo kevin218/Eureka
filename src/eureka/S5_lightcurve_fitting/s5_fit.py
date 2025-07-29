@@ -526,6 +526,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     BatmanTransitModel = m.BatmanTransitModel
     CatwomanTransitModel = m.CatwomanTransitModel
     CentroidModel = m.CentroidModel
+    CommonModeModel = m.CommonModeModel
     DampedOscillatorModel = m.DampedOscillatorModel
     ExpRampModel = m.ExpRampModel
     FleckTransitModel = m.FleckTransitModel
