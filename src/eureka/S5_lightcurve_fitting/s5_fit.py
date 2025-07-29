@@ -92,9 +92,16 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
                 # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+                if isinstance(bg_hw_val, float):
+                    bg_hw_val /= meta.expand
+                else:
+                    bg_hw_val //= meta.expand
+            if isinstance(spec_hw_val, float):
+                spec_hw_val /= meta.expand
+            else:
+                spec_hw_val //= meta.expand
             meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
-                                             ap=spec_hw_val//meta.expand,
+                                             ap=spec_hw_val,
                                              bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:

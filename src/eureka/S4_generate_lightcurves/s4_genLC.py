@@ -90,19 +90,20 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s4 = None
-    for spec_hw_val in meta.spec_hw_range:         
+    for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
-            if not isinstance(bg_hw_val, str) and meta.expand>1:
+            if not isinstance(bg_hw_val, str):
                 # Only divide if value is not a string (spectroscopic modes)
-                # If not a string, only need to do this if expand is greater than 1
-                #   This is a hack: for photometry cases meta.expand is forced to 1 since supersampling is not supported in the POET method
-                #   However if using the newer photutils method, there is no need for meta.expand, but we may want non-integer aperture sizes
-                #   In theory, the above conditional should not be met for aperture photmetry using photutils, but met for all other cases
-                bg_hw_val //= meta.expand
-            if meta.photometry and meta.phot_method=="photutils": ap = spec_hw_val
-            else: ap = spec_hw_val//meta.expand
+                if isinstance(bg_hw_val, float):
+                    bg_hw_val /= meta.expand
+                else:
+                    bg_hw_val //= meta.expand
+            if isinstance(spec_hw_val, float):
+                spec_hw_val /= meta.expand
+            else:
+                spec_hw_val //= meta.expand
             meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
-                                             ap=ap,
+                                             ap=spec_hw_val,
                                              bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:
@@ -722,7 +723,7 @@ def load_specific_s3_meta_info(meta):
         bg_hw = meta.bg_hw//meta.expand
     else:
         bg_hw = meta.bg_hw
-    if meta.photometry and meta.phot_method=="photutils": 
+    if meta.photometry and meta.phot_method=="photutils":
         spec_hw = meta.spec_hw
     else:
         spec_hw = meta.spec_hw//meta.expand
