@@ -47,8 +47,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
         meta = S1MetaClass(**input_meta.__dict__)
 
     # Create directories for Stage 1 processing outputs
-    run = util.makedirectory(meta, 'S1')
-    meta.outputdir = util.pathdirectory(meta, 'S1', run)
+    meta.run_s1 = util.makedirectory(meta, 'S1')
+    meta.outputdir = util.pathdirectory(meta, 'S1', meta.run_s1)
     # Make a separate folder for plot outputs
     if not os.path.exists(meta.outputdir+'figs'):
         os.makedirs(meta.outputdir+'figs')
@@ -92,8 +92,7 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
         # Report progress
         meta.m = m
         filename = meta.segment_list[m]
-        log.writelog(f'Starting file {m + 1} of {meta.num_data_files}: ' +
-                     filename.split(os.sep)[-1])
+        log.writelog(f'Starting file {m + 1} of {meta.num_data_files}')
 
         need_update = False
         with fits.open(filename) as hdulist:
@@ -225,6 +224,6 @@ class EurekaS1Pipeline(Detector1Pipeline):
                     meta.default_ramp_fit_custom_exponents
 
         # Run Stage 1
-        self(filename)
+        self.run(filename)
 
         return

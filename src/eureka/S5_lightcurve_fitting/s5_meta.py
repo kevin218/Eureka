@@ -2,9 +2,6 @@ import numpy as np
 
 from ..lib.readECF import MetaClass
 
-# FINDME: Placeholder code until jaxoplanet.starry support is added
-starry = None
-
 
 class S5MetaClass(MetaClass):
     '''A class to hold Eureka! S5 metadata.
@@ -83,6 +80,12 @@ class S5MetaClass(MetaClass):
         self.num_planets = getattr(self, 'num_planets', 1)
         self.compute_ltt = getattr(self, 'compute_ltt', None)
         self.force_positivity = getattr(self, 'force_positivity', False)
+        # Path to ECSV file containing common mode variations
+        self.common_mode_file = getattr(self, 'common_mode_file', None)
+        if self.common_mode_file is not None:
+            # Require the common mode name to be specified
+            # if a common_mode_file is provided
+            self.common_mode_name = getattr(self, 'common_mode_name')
         # The following is only relevant for the starry model
         self.mutualOccultations = getattr(self, 'mutualOccultations', True)
 
@@ -136,31 +139,6 @@ class S5MetaClass(MetaClass):
         self.run_bound = getattr(self, 'run_bound', 'multi')
         self.run_sample = getattr(self, 'run_sample', 'auto')
         self.run_tol = getattr(self, 'run_tol', 0.1)
-
-        # numpyro NUTS sampler settings
-        self.jaxopt_first = getattr(self, 'jaxopt_first', False)
-        self.chains = getattr(self, 'chains', 3)
-        # Set this to True if you have really tight covariances or are getting
-        # divergences (will be more RAM and compute intensive)
-        self.dense_mass = getattr(self, 'dense_mass', False)
-        if 'nuts' in self.fit_method:
-            # Must be provided in the ECF if relevant
-            self.run_nsteps = getattr(self, 'run_nsteps')
-            self.run_nburn = getattr(self, 'run_nburn')
-
-        # Starry eclipse mapping pixel-sampling parameters
-        self.pixelsampling = getattr(self, 'pixelsampling', False)
-        self.oversample = getattr(self, 'oversample', 3)
-        if self.pixelsampling:
-            # Must be provided in the ECF if relevant
-            self.ydeg = getattr(self, 'ydeg')
-            # Compute the number of pixels used in sampling
-            map = starry.Map(ydeg=self.ydeg)
-            A = map.get_pixel_transforms(oversample=self.oversample)[3]
-            self.npix = A.shape[1]
-        else:
-            self.ydeg = getattr(self, 'ydeg', None)
-            self.npix = 0
 
         # GP inputs
         self.kernel_inputs = getattr(self, 'kernel_inputs', ['time'])

@@ -187,6 +187,7 @@ def get_pgram(data, time):
     return pgram, freqs
 
 
+@plots.apply_style
 def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
               meta, returnp1=False, prnt=False, isplots_S1=1):
     """Run the 390Hz noise removal on a single integration.
@@ -297,7 +298,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
             int(np.floor(np.log10(meta.n_int))+1))
         fname = f'figs{os.sep}fig1301_file{file_number}_int{int_number}'
         fname += '_390HzFit'
-        fname += plots.figure_filetype
+        fname += plots.get_filetype()
         plt.savefig(meta.outputdir+fname, dpi=300, bbox_inches='tight')
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -361,7 +362,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
             grp_number = str(grp+1).zfill(
                 int(np.floor(np.log10(images2.shape[0]-1))+1))
             fname = f'figs{os.sep}fig1302_file{file_number}_int{int_number}'
-            fname += f'_grp{grp_number}_LS_Periodogram'+plots.figure_filetype
+            fname += f'_grp{grp_number}_LS_Periodogram'+plots.get_filetype()
             plt.savefig(meta.outputdir+fname, dpi=300, bbox_inches='tight')
             if not meta.hide_plots:
                 plt.pause(0.2)

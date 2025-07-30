@@ -96,8 +96,8 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     # Then apply instrument-agnostic defaults
     meta.set_defaults()
 
-    run = util.makedirectory(meta, 'S2')
-    meta.outputdir = util.pathdirectory(meta, 'S2', run)
+    meta.run_s2 = util.makedirectory(meta, 'S2')
+    meta.outputdir = util.pathdirectory(meta, 'S2', meta.run_s2)
 
     # Output S2 log file
     meta.s2_logname = meta.outputdir + 'S2_' + meta.eventlabel + ".log"
@@ -203,6 +203,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         Initial version
     '''
 
+    @plots.apply_style
     def run_eurekaS2(self, filename, meta, log):
         '''Reduces rateints spectrum files ouput from Stage 1 of the JWST
         pipeline into calints and x1dints.
@@ -276,7 +277,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         log.writelog('Running the Spec2Pipeline\n')
         # Must call the pipeline in this way to ensure the skip booleans are
         # respected
-        self(filename)
+        self.run(filename)
 
         # Produce some summary plots if requested
         if not meta.testing_S2 and not self.extract_1d.skip:
@@ -288,8 +289,9 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             x1d_fname = ('_'.join(filename.split(os.sep)[-1].split('_')[:-1]) +
                          '_x1dints')
             with datamodels.open(meta.outputdir+x1d_fname+'.fits') as sp1d:
-                plt.figure(2101, figsize=[15, 5])
-                plt.clf()
+                fig = plt.figure(2101)
+                fig.set_size_inches(15, 5, forward=True)
+                fig.clf()
 
                 for i in range(len(sp1d.spec)):
                     plt.plot(sp1d.spec[i].spec_table['WAVELENGTH'],
@@ -299,7 +301,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
                 plt.xlabel('Wavelength (micron)')
                 plt.ylabel('Flux')
                 plt.savefig(meta.outputdir+'figs'+os.sep+fname +
-                            plots.figure_filetype,
+                            plots.get_filetype(),
                             bbox_inches='tight', dpi=300)
                 if meta.hide_plots:
                     plt.close()
@@ -358,6 +360,6 @@ class EurekaImage2Pipeline(Image2Pipeline):
         log.writelog('Running the Image2Pipeline\n')
         # Must call the pipeline in this way to ensure the skip booleans are
         # respected
-        self(filename)
+        self.run(filename)
 
         return

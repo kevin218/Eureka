@@ -436,7 +436,7 @@ def optphot(data, meta, i, saved_photometric_profile):
                              f'but got {meta.aperture_edge}')
         profile *= weight
         # Force positivity
-        profile[np.where(profile < 0)] = 0
+        profile[profile < 0] = 0
         # Get normalized error-weighted profile
         with np.errstate(divide='ignore', invalid='ignore'):
             profile /= np.ma.sqrt(profile)

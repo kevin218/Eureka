@@ -682,25 +682,6 @@ CITATIONS = {
                 url = {{https://github.com/keflavich/image\_registration}}
                 }"""
              ],
-    "starry": [r"""@ARTICLE{starry,
-                    author = {{Luger}, Rodrigo and {Agol}, Eric and {Foreman-Mackey}, Daniel and {Fleming}, David P. and {Lustig-Yaeger}, Jacob and {Deitrick}, Russell},
-                    title = "{starry: Analytic Occultation Light Curves}",
-                    journal = {\aj},
-                    keywords = {eclipses, methods: analytical, occultations, techniques: photometric, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Earth and Planetary Astrophysics, Astrophysics - Solar and Stellar Astrophysics},
-                    year = 2019,
-                    month = feb,
-                    volume = {157},
-                    number = {2},
-                    eid = {64},
-                    pages = {64},
-                    doi = {10.3847/1538-3881/aae8e5},
-                    archivePrefix = {arXiv},
-                    eprint = {1810.06559},
-                    primaryClass = {astro-ph.IM},
-                    adsurl = {https://ui.adsabs.harvard.edu/abs/2019AJ....157...64L},
-                    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-                }"""
-               ],
     "catwoman": [r"""@ARTICLE{catwoman:joss,
                     author = {{Jones}, Kathryn and {Espinoza}, N{\'e}stor},
                     title = "{catwoman: A transit modelling Python package for asymmetric light curves}",

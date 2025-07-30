@@ -2,13 +2,14 @@ import numpy as np
 
 from .Model import Model
 from ...lib.readEPF import Parameters
-from ...lib.split_channels import split, get_trim
+from ...lib.split_channels import split
+from ...lib import astropytable
 
 
-class StepModel(Model):
-    """Model for step-functions in time"""
+class CommonModeModel(Model):
+    """Common Mode Model"""
     def __init__(self, **kwargs):
-        """Initialize the step-function model.
+        """Initialize the common mode model.
 
         Parameters
         ----------
@@ -20,7 +21,7 @@ class StepModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
-        self.name = 'step'
+        self.name = 'common_mode'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -29,21 +30,25 @@ class StepModel(Model):
         self.parameters = kwargs.get('parameters')
         # Generate parameters from kwargs if necessary
         if self.parameters is None:
-            steps_dict = kwargs.get('steps_dict')
-            steptimes_dict = kwargs.get('steptimes_dict')
-            params = {key: coeff for key, coeff in steps_dict.items()
-                      if key.startswith('step') and key[4:].isdigit()}
-            params.update({key: coeff for key, coeff in steptimes_dict.items()
-                           if (key.startswith('steptime') and
-                               key[9:].isdigit())})
+            coeff_dict = kwargs.get('coeff_dict')
+            params = {cN: coeff for cN, coeff in coeff_dict.items()
+                      if cN.startswith('cm') and cN[1:].isdigit()}
             self.parameters = Parameters(**params)
 
         # Update coefficients
-        self.steps = np.zeros((self.nchannel_fitted, 10))
-        self.steptimes = np.zeros((self.nchannel_fitted, 10))
-        self.keys = list(self.parameters.dict.keys())
-        self.keys = [key for key in self.keys if key.startswith('step')]
+        self.coeffs = np.zeros((self.nchannel_fitted, 2))
         self._parse_coeffs()
+
+        # Read common-mode systematics file and store corresponding values.
+        # This is usually the ECSV generated from a Stage 5 white LC fit.
+        log = kwargs.get('log')
+        meta = kwargs.get('meta')
+        log.writelog(f'Reading {meta.common_mode_name} values from' +
+                     ' common-mode systematics file:' +
+                     f'{meta.common_mode_file}.', mute=(not meta.verbose))
+        lc_table = astropytable.readtable(meta.common_mode_file)
+        self.cm_flux = lc_table[meta.common_mode_name] - \
+            np.mean(lc_table[meta.common_mode_name])
 
     @property
     def time(self):
@@ -53,54 +58,46 @@ class StepModel(Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        if time_array is not None:
-            self._time = np.ma.masked_invalid(time_array)
+        self._time = time_array
+        if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = np.ma.zeros(self.time.shape)
+                self.time_local = np.ma.zeros(0)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    trim1, trim2 = get_trim(self.nints, chan)
-                    time = self.time[trim1:trim2]
-                    self.time_local[trim1:trim2] = time-time.data[0]
+                    time = split([self.time, ], self.nints, chan)[0]
+                    self.time_local = np.ma.append(
+                        self.time_local, time-np.ma.mean(time))
             else:
-                self.time_local = self.time - self.time.data[0]
+                self.time_local = self.time - np.ma.mean(self.time)
 
     def _parse_coeffs(self):
-        """Convert dictionary of parameters into an array.
-
-        Converts dict of 'step#' coefficients into an array
-        of coefficients in increasing order, i.e. ['step0', 'step1'].
-        Also converts dict of 'steptime#' coefficients into an array
-        of times in increasing order, i.e. ['steptime0', 'steptime1'].
+        """Convert dict of 'cm#' coefficients into a list
+        of coefficients in increasing order, i.e. ['cm1','cm2'].
 
         Returns
         -------
         np.ndarray
-            The sequence of coefficient values.
-
-        Notes
-        -----
-        History:
-
-        - 2022 July 14, Taylor J Bell
-            Initial version.
+            The sequence of coefficient values
         """
-        for key in self.keys:
-            split_key = key.split('_')
-            if len(split_key) == 1:
+        # Parse 'cm#' keyword arguments as coefficients
+        for c in range(self.nchannel_fitted):
+            if self.nchannel_fitted > 1:
+                chan = self.fitted_channels[c]
+            else:
                 chan = 0
-            else:
-                chan = int(split_key[1])
-            if len(split_key[0]) < 9:
-                # Get the step number and update self.steps
-                self.steps[chan, int(split_key[0][4:])] = \
-                    self.parameters.dict[key][0]
-            else:
-                # Get the steptime number and update self.steptimes
-                self.steptimes[chan, int(split_key[0][8:])] = \
-                    self.parameters.dict[key][0]
+
+            for i in range(2):
+                try:
+                    if chan == 0:
+                        self.coeffs[c, i] = \
+                            self.parameters.dict[f'cm{i+1}'][0]
+                    else:
+                        self.coeffs[c, i] = \
+                            self.parameters.dict[f'cm{i+1}_ch{chan}'][0]
+                except KeyError:
+                    pass
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -128,6 +125,7 @@ class StepModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
+        # Create the polynomial from the coeffs
         lcfinal = np.ma.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
@@ -135,13 +133,13 @@ class StepModel(Model):
             else:
                 chan = 0
 
-            time = self.time
+            time = self.time_local
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            lcpiece = np.ma.ones(len(time))
-            for s in np.flatnonzero(self.steps[c] != 0):
-                lcpiece[time >= self.steptimes[c, s]] += self.steps[c, s]
+            cm1, cm2 = self.coeffs[chan]
+            lcpiece = 1 + cm1*self.cm_flux + cm2*self.cm_flux**2
+            lcpiece = np.ma.masked_where(np.ma.getmaskarray(time), lcpiece)
             lcfinal = np.ma.append(lcfinal, lcpiece)
         return lcfinal
