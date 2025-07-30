@@ -154,7 +154,7 @@ def savetable_S6(filename, key, wavelength, bin_width, value, error):
 
 
 def savetable_S6_ul(filename, key, wavelength, bin_width, value, error,
-                    f_3sig, f_tf):
+                    f_3sig, f_bool):
     """Save the results from Stage 6 as an ECSV.
 
     Parameters
@@ -173,8 +173,8 @@ def savetable_S6_ul(filename, key, wavelength, bin_width, value, error,
         The uncertainty on each value.
     f_3sig : ndarray (1D)
         The 3-sigma upper limit on the flux.
-    f_tf : ndarray (1D)
-        True/False boolean array, where True indicates fn values should be
+    f_bool : ndarray (1D)
+        True/False boolean array, where True indicates values should be
         reported as an upper limit.
 
     Raises
@@ -185,11 +185,11 @@ def savetable_S6_ul(filename, key, wavelength, bin_width, value, error,
     orig_shapes = [str(wavelength.shape), str(bin_width.shape),
                    str(value.shape), str(error[0].shape),
                    str(error[1].shape), str(f_3sig.shape),
-                   str(f_tf.shape)]
+                   str(f_bool.shape)]
 
     arr = [wavelength.flatten(), bin_width.flatten(), value.flatten(),
            error[0].flatten(), error[1].flatten(), f_3sig.flatten(),
-           f_tf.flatten()]
+           f_bool.flatten()]
 
     try:
         table = QTable(arr, names=('wavelength', 'bin_width', f'{key}_value',

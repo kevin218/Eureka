@@ -1380,7 +1380,7 @@ def compute_fp(meta, log, fit_methods):
     meta.spectrum_median = []
     meta.spectrum_err = []
     meta.upper_limits_3sig = np.zeros(meta.nspecchan)
-    meta.upper_limits_tf = np.zeros(meta.nspecchan, dtype=bool)
+    meta.upper_limits_bool = np.zeros(meta.nspecchan, dtype=bool)
     meta.upper_limits_ind = []
     for i in range(meta.nspecchan):
         # Compute distribution of fp values
@@ -1391,14 +1391,14 @@ def compute_fp(meta, log, fit_methods):
         meta.spectrum_median.append(flux[0])
         meta.spectrum_err.append(flux[1:])
         # Look for fp values that have < 3-sigma detection significance
-        if meta.force_positivity and (flux[0] - 3*flux[2]) < 0:
+        if (flux[0] - 3*flux[2]) < 0:
             meta.upper_limits_ind.append(i)
         # Record 99.7th percentile (not 99.85) as 3-sigma upper limit
         # since this is NOT a two-sided distribution (like above)
         meta.upper_limits_3sig[i] = np.percentile(np.array(fp[i]), 99.7)
     if len(meta.upper_limits_ind) > 0:
         meta.upper_limits = True
-        meta.upper_limits_tf[meta.upper_limits_ind] = True
+        meta.upper_limits_bool[meta.upper_limits_ind] = True
         log.writelog("  The following channels have < 3-sigma detection" +
                      " significances and should have their dayside" +
                      " fluxes (fp) reported as upper limits:\n" +
@@ -1470,7 +1470,7 @@ def compute_fn(meta, log, fit_methods):
     meta.spectrum_median = []
     meta.spectrum_err = []
     meta.upper_limits_3sig = np.zeros(meta.nspecchan)
-    meta.upper_limits_tf = np.zeros(meta.nspecchan, dtype=bool)
+    meta.upper_limits_bool = np.zeros(meta.nspecchan, dtype=bool)
     meta.upper_limits_ind = []
     for i in range(meta.nspecchan):
         # Compute distribution of fn values
@@ -1489,7 +1489,7 @@ def compute_fn(meta, log, fit_methods):
         meta.upper_limits_3sig[i] = np.percentile(np.array(fluxes), 99.7)
     if len(meta.upper_limits_ind) > 0:
         meta.upper_limits = True
-        meta.upper_limits_tf[meta.upper_limits_ind] = True
+        meta.upper_limits_bool[meta.upper_limits_ind] = True
         log.writelog("  The following channels have < 3-sigma detection" +
                      " significances and should have their nightside" +
                      " fluxes (fn) reported as upper limits:\n" +
@@ -1559,7 +1559,7 @@ def compute_fn_poet(meta, log, fit_methods):
     meta.spectrum_median = []
     meta.spectrum_err = []
     meta.upper_limits_3sig = np.zeros(meta.nspecchan)
-    meta.upper_limits_tf = np.zeros(meta.nspecchan, dtype=bool)
+    meta.upper_limits_bool = np.zeros(meta.nspecchan, dtype=bool)
     meta.upper_limits_ind = []
     # Only need to calculate the flux at two points,
     # anti-stellar (180 deg) and sub-stellar (0 deg)
@@ -1588,7 +1588,7 @@ def compute_fn_poet(meta, log, fit_methods):
         meta.upper_limits_3sig[i] = np.percentile(np.array(fluxes), 99.7)
     if len(meta.upper_limits_ind) > 0:
         meta.upper_limits = True
-        meta.upper_limits_tf[meta.upper_limits_ind] = True
+        meta.upper_limits_bool[meta.upper_limits_ind] = True
         log.writelog("  The following channels have < 3-sigma detection" +
                      " significances and should have their nightside" +
                      " fluxes (fn) reported as upper limits:\n" +
@@ -1782,7 +1782,7 @@ def save_table(meta, log):
                                      wavelengths, wave_errs,
                                      meta.spectrum_median, meta.spectrum_err,
                                      meta.upper_limits_3sig,
-                                     meta.upper_limits_tf)
+                                     meta.upper_limits_bool)
     else:
         astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param,
                                   wavelengths, wave_errs, meta.spectrum_median,
