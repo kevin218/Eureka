@@ -1146,3 +1146,37 @@ def load_attrs_from_xarray(data):
                            for citations in attrs[attr]]
 
     return attrs
+
+
+def get_unexpanded_hws(expand, spec_hw_val, bg_hw_val):
+    """Get the unexpanded half-width values for the spectrum and background.
+
+    Parameters
+    ----------
+    expand : int
+        The super-sampling factor.
+    spec_hw_val : float
+        The half-width value for the spectrum.
+    bg_hw_val : float
+        The half-width value for the background.
+
+    Returns
+    -------
+    spec_hw_val_unexpanded : float
+        The unexpanded half-width value for the spectrum.
+    bg_hw_val_unexpanded : float
+        The unexpanded half-width value for the background.
+    """
+    if not isinstance(bg_hw_val, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        if isinstance(bg_hw_val, float):
+            bg_hw_val /= expand
+        else:
+            bg_hw_val //= expand
+
+    if isinstance(spec_hw_val, float):
+        spec_hw_val /= expand
+    else:
+        spec_hw_val //= expand
+
+    return spec_hw_val, bg_hw_val
