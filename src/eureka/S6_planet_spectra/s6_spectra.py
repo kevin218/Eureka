@@ -89,30 +89,31 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     meta.run_s6 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
-            if not isinstance(bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+            # Directory structure should not use expanded HW values
+            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+                meta.expand, spec_hw_val, bg_hw_val)
             meta.run_s6 = util.makedirectory(meta, 'S6', meta.run_s6,
-                                             ap=spec_hw_val//meta.expand,
+                                             ap=spec_hw_val,
                                              bg=bg_hw_val)
 
-    for meta.spec_hw_val in meta.spec_hw_range:
-        for meta.bg_hw_val in meta.bg_hw_range:
+    for spec_hw_val in meta.spec_hw_range:
+        for bg_hw_val in meta.bg_hw_range:
 
             t0 = time_pkg.time()
+
+            meta.spec_hw = spec_hw_val
+            meta.bg_hw = bg_hw_val
 
             # Load in the S5 metadata used for this particular aperture pair
             meta = load_specific_s5_meta_info(meta)
 
             # Directory structure should not use expanded HW values
-            meta.spec_hw_val //= meta.expand
-            if not isinstance(meta.bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                meta.bg_hw_val //= meta.expand
+            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+                meta.expand, spec_hw_val, bg_hw_val)
             # Get the directory for Stage 6 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S6', meta.run_s6,
-                                                ap=meta.spec_hw_val,
-                                                bg=meta.bg_hw_val)
+                                                ap=spec_hw_val,
+                                                bg=bg_hw_val)
 
             # Copy existing S5 log file and resume log
             meta.s6_logname = meta.outputdir+'S6_'+meta.eventlabel+'.log'
@@ -623,8 +624,11 @@ def convert_s5_LC(meta, log):
     lc : Astreaus object
         Data object of time-like arrays (light curve).
     '''
-    event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
-                   str(meta.bg_hw_val))
+    # Directory structure should not use expanded HW values
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val) +
+                   '_bg' + str(bg_hw_val))
 
     if meta.sharedp:
         niter = 1
@@ -1564,13 +1568,10 @@ def load_specific_s5_meta_info(meta):
         The current meta data object with values from earlier stages.
     """
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
-    # Get directory containing S5 outputs for this aperture pair
-    if not isinstance(meta.bg_hw, str):
-        # Only divide if value is not a string (spectroscopic modes)
-        bg_hw = meta.bg_hw//meta.expand
-    else:
-        bg_hw = meta.bg_hw
-    inputdir += f'ap{meta.spec_hw//meta.expand}_bg{bg_hw}'+os.sep
+    # Directory structure should not use expanded HW values
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    inputdir += f'ap{spec_hw_val}_bg{bg_hw_val}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir
@@ -1664,8 +1665,11 @@ def save_table(meta, log):
     """
     log.writelog('  Saving results as an astropy table')
 
-    event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
-                   str(meta.bg_hw_val))
+    # Directory structure should not use expanded HW values
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val) +
+                   '_bg' + str(bg_hw_val))
     clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
     meta.tab_filename_s6 = (meta.outputdir+'S6_'+event_ap_bg+'_' +
                             clean_y_param+"_Table_Save.txt")

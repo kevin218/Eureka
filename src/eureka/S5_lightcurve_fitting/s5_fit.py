@@ -77,11 +77,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     meta.run_s5 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
-            if not isinstance(bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+                meta.expand, spec_hw_val, bg_hw_val)
             meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
-                                             ap=spec_hw_val//meta.expand,
+                                             ap=spec_hw_val,
                                              bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:
@@ -93,7 +92,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             meta.bg_hw = bg_hw_val
 
             # Load in the S4 metadata used for this particular aperture pair
-            meta = load_specific_s4_meta_info(meta)
+            if meta.data_format == 'eureka':
+                meta = load_specific_s4_meta_info(meta)
             filename_S4_hold = meta.filename_S4_LCData.split(os.sep)[-1]
             lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
 
@@ -140,10 +140,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     lc_whites.append(lc_hold)
 
             # Directory structure should not use expanded HW values
-            spec_hw_val //= meta.expand
-            if not isinstance(bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+                meta.expand, spec_hw_val, bg_hw_val)
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.run_s5,
                                                 ap=spec_hw_val,
@@ -1118,13 +1116,10 @@ def load_specific_s4_meta_info(meta):
         The current metadata object with values from the old MetaClass.
     """
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
-    # Get directory containing S4 outputs for this aperture pair
-    if not isinstance(meta.bg_hw, str):
-        # Only divide if value is not a string (spectroscopic modes)
-        bg_hw = meta.bg_hw//meta.expand
-    else:
-        bg_hw = meta.bg_hw
-    inputdir += f'ap{meta.spec_hw//meta.expand}_bg{bg_hw}'+os.sep
+    # Directory structure should not use expanded HW values
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    inputdir += f'ap{spec_hw_val}_bg{bg_hw_val}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir
