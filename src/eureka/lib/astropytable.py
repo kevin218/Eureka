@@ -153,8 +153,8 @@ def savetable_S6(filename, key, wavelength, bin_width, value, error):
                          ",".join(orig_shapes)) from e
 
 
-def savetable_S6_fn(filename, key, wavelength, bin_width, value, error,
-                    fn_3sig, fn_tf):
+def savetable_S6_ul(filename, key, wavelength, bin_width, value, error,
+                    f_3sig, f_tf):
     """Save the results from Stage 6 as an ECSV.
 
     Parameters
@@ -171,9 +171,9 @@ def savetable_S6_fn(filename, key, wavelength, bin_width, value, error,
         The fitted value at each wavelength.
     error : ndarray (1D)
         The uncertainty on each value.
-    fn_3sig : ndarray (1D)
-        The 3-sigma upper limit on the nightside flux.
-    fn_tf : ndarray (1D)
+    f_3sig : ndarray (1D)
+        The 3-sigma upper limit on the flux.
+    f_tf : ndarray (1D)
         True/False boolean array, where True indicates fn values should be
         reported as an upper limit.
 
@@ -184,12 +184,12 @@ def savetable_S6_fn(filename, key, wavelength, bin_width, value, error,
     """
     orig_shapes = [str(wavelength.shape), str(bin_width.shape),
                    str(value.shape), str(error[0].shape),
-                   str(error[1].shape), str(fn_3sig.shape),
-                   str(fn_tf.shape)]
+                   str(error[1].shape), str(f_3sig.shape),
+                   str(f_tf.shape)]
 
     arr = [wavelength.flatten(), bin_width.flatten(), value.flatten(),
-           error[0].flatten(), error[1].flatten(), fn_3sig.flatten(),
-           fn_tf.flatten()]
+           error[0].flatten(), error[1].flatten(), f_3sig.flatten(),
+           f_tf.flatten()]
 
     try:
         table = QTable(arr, names=('wavelength', 'bin_width', f'{key}_value',
