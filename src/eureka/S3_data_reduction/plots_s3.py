@@ -363,15 +363,6 @@ def source_position(meta, x_dim, pos_max, m, n,
         The sum over each row.
     y_pos : float; optional
         The FWM central position of the star.
-
-    Notes
-    -----
-    History:
-
-    - 2021-07-14: Sebastian Zieba
-        Initial version.
-    - Oct 15, 2021: Taylor Bell
-        Tidied up the code a bit to reduce repeated code.
     '''
     fig = plt.figure(3103)
     fig.clf()
@@ -505,13 +496,6 @@ def driftypos(data, meta, m):
         The metadata object.
     m : int
         The file number.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-11 Caroline Piaulet
-        First version of this function
     '''
     fig = plt.figure(3104)
     fig.set_size_inches(8, 4, forward=True)
@@ -540,13 +524,6 @@ def driftywidth(data, meta, m):
         The metadata object.
     m : int
         The file number.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-11 Caroline Piaulet
-        First version of this function
     '''
     fig = plt.figure(3105)
     fig.set_size_inches(8, 4, forward=True)
@@ -677,13 +654,6 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
         Integer-rounded center of mass (light) for each pixel column
     m : int
         The file number.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-31 KBS
-        Initial version
     '''
     cmap = plt.cm.viridis.copy()
 
@@ -766,13 +736,6 @@ def phot_lc(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
     """
     fig = plt.figure(3108)
     fig.clf()
@@ -799,13 +762,6 @@ def phot_bg(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
     """
     if not meta.skip_apphot_bg:
         fig = plt.figure(3305)
@@ -834,19 +790,6 @@ def phot_centroid(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
-    - 2023-02-24 Isaac Edelman
-        Enchanced graph layout,
-        added sig display values for sy,sx,
-        and fixed issue with ax[2] displaying sy instead of sx.
-    - 2023-04-21 Isaac Edelman
-        Added flat "0" lines to plots.
     """
     fig = plt.figure(3109)
     fig.set_size_inches(10, 6, forward=True)
@@ -909,13 +852,6 @@ def phot_npix(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
     """
     fig = plt.figure(3502)
     fig.clf()
@@ -1154,15 +1090,6 @@ def phot_2d_frame(data, meta, m, i):
         The integration number.
     m : int
         The file number.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
-    - 2024-04-06 Yoni Brande
-        Added hexagonal aperture plotting
     """
     fig = plt.figure(3306)
     fig.set_size_inches(8, 8, forward=True)
@@ -1266,13 +1193,6 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
         The file number.
     flux_w_oneoverf : 2D numpy array
         The 2D frame before the 1/f correction
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
     """
     fig = plt.figure(3307)
     fig.set_size_inches(8.2, 4.2, forward=True)
@@ -1319,13 +1239,6 @@ def phot_2d_frame_diff(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
     """
     nplots = meta.nplots
     if nplots == meta.n_int:
@@ -1371,13 +1284,6 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
     p7thresh : int
         X-sigma threshold for outlier rejection during optimal spectral
         extraction
-
-    Notes
-    -----
-    History:
-
-    - 2022-12-29 Kevin Stevenson
-        Initial version
     """
     fig = plt.figure(3506)
     fig.set_size_inches(8, 4, forward=True)
@@ -1427,13 +1333,6 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
     -------
     ndarray
         A median frame of the first 10 integrations.
-
-    Notes
-    -----
-    History:
-
-    - 2023-03-22 Isaac Edelman
-        Initial implementation.
     """
     images = []
     cmap = plt.cm.viridis.copy()

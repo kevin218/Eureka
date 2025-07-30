@@ -1708,13 +1708,6 @@ def roundToSigFigs(x, sigFigs=2):
     output : str
         x formatted as a string with the requested number of significant
         figures.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-22, Taylor J Bell
-        Imported code written for SPCA, and optimized for Python3.
     """
     if not np.isfinite(x) or not np.isfinite(np.log10(np.abs(x))):
         return np.nan, ""
@@ -1745,13 +1738,6 @@ def roundToDec(x, nDec=2):
     -------
     output : str
         x formatted as a string with the requested number of decimals.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-22, Taylor J Bell
-        Imported code written for SPCA, and optimized for Python3.
     """
     if not np.isfinite(nDec):
         return str(x)

@@ -238,13 +238,6 @@ def demcfitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation and arguments
     """
     best_model = None
     return best_model
@@ -270,23 +263,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation. Reduced repeated code.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter. Added statements to avoid some initial
-        state issues.
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-        Record an astropy table for mean, median, percentiles,
-        +/- 1 sigma, all params
     """
     # Group the different variable types
     freenames = lc.freenames
@@ -829,22 +805,6 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation. Reduced repeated code.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter.
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-        Record an astropy table for mean, median, percentiles,
-        +/- 1 sigma, all params
     """
     # Group the different variable types
     freenames = lc.freenames
@@ -1047,17 +1007,6 @@ def lmfitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation. Reduced repeated code.
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter.
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-         Record an astropy table for parameter values
     """
     # TODO: Do something so that duplicate param names can all be handled
     # (e.g. two Polynomail models with c0). Perhaps append something to the
@@ -1170,17 +1119,6 @@ def group_variables(model):
         Keywords indicating the type of prior for each free parameter.
     indep_vars : dict
         The frozen variables.
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved code to separate function to reduce repeated code.
-    - January 11, 2022 Megan Mansfield
-        Added ability to have shared parameters
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
     """
     parameters_dict = model.components[0].parameters.dict
     freenames = model.components[0].freenames
@@ -1236,13 +1174,6 @@ def group_variables_lmfit(model):
         The fitted variables.
     indep_vars : dict
         The frozen variables.
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved code to separate function to look similar to other fitters.
     """
     all_params = [i for j in [model.components[n].parameters.dict.items()
                   for n in range(len(model.components))] for i in j]

@@ -41,19 +41,6 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
     -------
     centers : list
         Centroids
-
-    Notes
-    -----
-    History:
-
-    - November 2013, Kevin Stevenson
-        Initial version
-    - March 2016, Kevin Stevenson
-        Added IRSUB256
-    - December 8, 2021, Taylor J Bell
-        Updated for Eureka
-    - December 15, 2023, Kevin Stevenson
-        Cleaned up function
     '''
     nfiles = len(filenames)
     centers = []
@@ -148,15 +135,6 @@ def calcTrace(x, centroid, grism):
     -------
     y : ndarray
         Computed trace.
-
-    Notes
-    -----
-    History:
-
-    - LK
-        Initial version
-    - November 2021, Kevin Stevenson
-        Modified
     '''
     yref, xref = centroid
 
@@ -211,15 +189,6 @@ def calibrateLambda(x, centroid, grism):
     -------
     y : ndarray
         Computed wavelength values
-
-    Notes
-    -----
-    History:
-
-    - LK
-        Initial version
-    - November 2021, Kevin Stevenson
-        Modified
     '''
     yref, xref = centroid
 
@@ -285,13 +254,6 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
     mask_master : list
         Single bad-pixel mask image. Boolean, where True values
         should be masked.
-
-    Notes
-    -----
-    History:
-
-    - November 2012, Kevin Stevenson
-        Initial version.
     '''
     # Read in flat frames
     hdulist = fits.open(flatfile)
@@ -397,15 +359,6 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
     mask_master : list
         Single bad-pixel mask image. Boolean, where True values
         should be masked.
-
-    Notes
-    -----
-    History:
-
-    - November 2012, Kevin Stevenson
-        Initial version.
-    - February 2018, Kevin Stevenson
-        Removed wavelength dependence.
     '''
     # Read in flat frames
     hdulist = fits.open(flatfile)
