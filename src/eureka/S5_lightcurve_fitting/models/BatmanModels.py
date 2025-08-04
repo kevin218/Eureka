@@ -57,7 +57,7 @@ class BatmanTransitModel(Model):
                 for u in self.coeffs:
                     if u in self.paramtitles:
                         index = self.paramtitles.index(u)
-                        item = self.longparamlist[c][index[0]]
+                        item = self.longparamlist[c][index]
                         param = int(item.split('_')[0][-1])
                         ld_val = ld_array[chan][param-1]
                         log.writelog(f"{item}: {ld_val}")
