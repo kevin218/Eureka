@@ -153,6 +153,58 @@ def savetable_S6(filename, key, wavelength, bin_width, value, error):
                          ",".join(orig_shapes)) from e
 
 
+def savetable_S6_ul(filename, key, wavelength, bin_width, value, error,
+                    f_3sig, f_bool):
+    """Save the results from Stage 6 as an ECSV.
+
+    Parameters
+    ----------
+    filename : str
+        The fully qualified filename that the results will be stored in.
+    key : str
+        The parameter being saved.
+    wavelength : ndarray (1D)
+        The wavelengths of each data point.
+    bin_width : ndarray (1D)
+        The width of each wavelength bin.
+    value : ndarray (1D)
+        The fitted value at each wavelength.
+    error : ndarray (1D)
+        The uncertainty on each value.
+    f_3sig : ndarray (1D)
+        The 3-sigma upper limit on the flux.
+    f_bool : ndarray (1D)
+        True/False boolean array, where True indicates values should be
+        reported as an upper limit.
+
+    Raises
+    ------
+    ValueError
+        There was a shape mismatch between your arrays
+    """
+    orig_shapes = [str(wavelength.shape), str(bin_width.shape),
+                   str(value.shape), str(error[0].shape),
+                   str(error[1].shape), str(f_3sig.shape),
+                   str(f_bool.shape)]
+
+    arr = [wavelength.flatten(), bin_width.flatten(), value.flatten(),
+           error[0].flatten(), error[1].flatten(), f_3sig.flatten(),
+           f_bool.flatten()]
+
+    try:
+        table = QTable(arr, names=('wavelength', 'bin_width', f'{key}_value',
+                                   f'{key}_errorneg', f'{key}_errorpos',
+                                   f'{key}_3sigma', 'upper_limit?'))
+        ascii.write(table, filename, format='ecsv', overwrite=True,
+                    fast_writer=True)
+    except ValueError as e:
+        raise ValueError("There was a shape mismatch between your arrays which"
+                         " had shapes:\n"
+                         f"wavelength, bin_width, {key}_value, {key}_errorneg,"
+                         " {key}_errorpos, 3sigma, upper_limit?\n"
+                         ",".join(orig_shapes)) from e
+
+
 def readtable(filename):
     """Read in a saved ECSV file.
 

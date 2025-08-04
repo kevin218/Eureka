@@ -140,6 +140,18 @@ class S5MetaClass(MetaClass):
         self.run_sample = getattr(self, 'run_sample', 'auto')
         self.run_tol = getattr(self, 'run_tol', 0.1)
 
+        # dynamic dynesty inputs
+        self.run_dynamic = getattr(self, 'run_dynamic', False)
+        if not isinstance(self.run_dynamic, bool):
+            raise TypeError(
+                'run_dynamic must be a boolean, not a string or other type.')
+        if self.run_dynamic:
+            self.run_nlive_batch = getattr(self, 'run_nlive_batch', 'auto')
+            self.run_pfrac = getattr(self, 'run_pfrac', 0.5)
+            if self.run_pfrac <= 0 or self.run_pfrac >= 1:
+                raise ValueError(
+                    'run_pfrac must be between 0 and 1, exclusive.')
+
         # GP inputs
         self.kernel_inputs = getattr(self, 'kernel_inputs', ['time'])
         self.kernel_class = getattr(self, 'kernel_class', ['Matern32'])

@@ -410,17 +410,6 @@ def read(filename, data, meta, log):
         The metadata object
     log : logedit.Logedit
         The current log.
-
-    Notes
-    -----
-    History:
-
-    - January 2017 Kevin Stevenson
-        Initial code as implemented in the WFC3 pipeline
-    - 18-19 Nov 2021 Taylor Bell
-        Edited and decomposed WFC3 code to integrate with Eureka!
-    - May 9, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     '''
     # Determine image size and filter/grism
     with fits.open(filename) as hdulist:
@@ -1039,13 +1028,6 @@ def cut_aperture(data, meta, log):
         The v0 values over the aperture region.
     apmedflux : ndarray
         The median flux over the aperture region. Currently None.
-
-    Notes
-    -----
-    History:
-
-    - 2022-06-17, Taylor J Bell
-        Initial version, edited to work for HST scanned observations.
     """
     log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))

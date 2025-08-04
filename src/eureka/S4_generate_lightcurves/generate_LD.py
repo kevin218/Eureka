@@ -24,13 +24,6 @@ def exotic_ld(meta, spec, log, white=False):
     -------
     ld_coeffs : tuple
         Linear, Quadratic, Non-linear (3 and 4) limb-darkening coefficients
-
-    Notes
-    -----
-    History:
-
-    - July 2022, Eva-Maria Ahrer
-        Initial version based on exotic_ld documentation.
     '''
     # Set the observing mode
     custom_wavelengths = None
@@ -208,13 +201,6 @@ def spam_ld(meta, white=False):
     -------
     ld_coeffs : tuple
         Linear, Quadratic, Non-linear (3 and 4) limb-darkening coefficients
-
-    Notes
-    -----
-    History:
-
-    - February 2024, Kevin Stevenson
-        Initial version based on exotic_ld above.
     '''
     # Compute wavelength ranges
     if white:

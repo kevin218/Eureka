@@ -55,18 +55,6 @@ class LightCurve(m.Model):
             Any parameter named log will not be loaded into the
             LightCurve object as Logedit objects cannot be pickled
             which is required for multiprocessing.
-
-        Notes
-        -----
-
-        History:
-        - Dec 29, 2021 Taylor Bell
-            Allowing for a constant uncertainty to be input with just a float.
-            Added a channel number.
-        - Jan. 15, 2022 Megan Mansfield
-            Added ability to share fit between all channels
-        - Oct. 2022 Erin May
-            Added ability to joint fit WLCs with different time arrays
         """
         # Initialize the model
         super().__init__(**kwargs)
@@ -151,13 +139,6 @@ class LightCurve(m.Model):
             The name of the fitter to use.
         **kwargs : dict
             Arbitrary keyword arguments.
-
-        Notes
-        -----
-        History:
-
-        - Dec 29, 2021 Taylor Bell
-            Updated documentation and reduced repeated code
         """
         if fitter == 'lmfit':
             self.fitter_func = fitters.lmfitter

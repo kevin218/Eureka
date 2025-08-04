@@ -23,17 +23,6 @@ def highpassfilt(signal, highpassWidth):
     -------
     smoothed_signal : ndarray (1D)
         An array containing the smoothed signal.
-
-    Notes
-    -----
-    History:
-
-    - 14 Feb 2018 Lisa Dang
-        Written for early version of SPCA
-    - 23 Sep 2019 Taylor Bell
-        Generalized upon the code
-    - 02 Nov 2021 Taylor Bell
-        Added to Eureka!
     '''
     g = Box1DKernel(highpassWidth)
     return convolve(signal, g, boundary='extend')
@@ -64,25 +53,6 @@ def spec1D(spectra, meta, log, mask=None):
         1D array of the widths of the Gaussians fitted to the CCFs.
     driftmask : ndarray
         1D masked array, where True is masked.
-
-    Notes
-    -----
-    History:
-
-    - Dec 2013 KBS
-        Written for HST.
-    - Jun 2021 KBS
-        Updated for JWST.
-    - Oct 18, 2021 Taylor Bell
-        Minor tweak to cc_spec inputs.
-    - Nov 02, 2021 Taylor Bell
-        Added option for subtraction of continuum using a highpass
-        filter before cross-correlation.
-    - Apr 23, 2022 Kevin Stevenson
-        Switched defition of mask to coincide with np.ma definition
-        Removed drift1d and driftmask from meta
-    - Jul 11, 2022 Caroline Piaulet
-        Added recording of driftwidth
     '''
     spectra = np.ma.masked_invalid(np.ma.copy(spectra))
     spectra = np.ma.masked_where(mask, spectra)

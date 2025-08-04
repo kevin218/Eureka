@@ -35,19 +35,6 @@ def read(filename, data, meta, log):
         The updated metadata object.
     log : logedit.Logedit
         The current log.
-
-    Notes
-    -----
-    History:
-
-    - November 2012 Kevin Stevenson
-        Initial version
-    - May 2021 KBS
-        Updated for NIRCam
-    - July 2021
-        Moved bjdtdb into here
-    - Apr 20, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     '''
     hdulist = fits.open(filename)
 
@@ -396,13 +383,6 @@ def cut_aperture(data, meta, log):
         The v0 values over the aperture region.
     apmedflux : ndarray
         The median flux over the aperture region.
-
-    Notes
-    -----
-    History:
-
-    - 2022-06-17, Taylor J Bell
-        Initial version based on the code in s3_reduce.py
     """
     log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))
@@ -646,13 +626,6 @@ def calibrated_spectra(data, meta, log):
     -------
     data : ndarray
         The flux values in mJy
-
-    Notes
-    -----
-    History:
-
-    - 2023-07-17, KBS
-        Initial version.
     """
     # Convert from MJy/sr to mJy
     log.writelog("  Converting from MJy/sr to mJy...",

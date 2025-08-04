@@ -36,6 +36,11 @@ Be sure that you are installing (or have installed) batman-package (not batman) 
 installed the wrong package you can try pip uninstalling it, but you may just need to make a whole new environment.
 In general, we strongly recommend you closely follow the instructions on the :ref:`installation` page.
 
+Issues running starry/theano code
+'''''''''''''''''''''''''''''''''
+
+Starry and Theano are no longer supported by Eureka! and will not work. If you try to run code that uses these packages, you will get an error message.
+
 
 .. _faq-install:
 

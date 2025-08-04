@@ -321,13 +321,6 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
         Default is 0 (no rotation).
     isplots : int; optional
         The amount of plots saved; set in ecf. Default is 0.
-
-    Notes
-    -----
-    History:
-
-    - September 2016 Kevin Stevenson
-        Initial version
     '''
     # Assume x is the spatial direction and y is the wavelength direction
     # Otherwise, rotate array
