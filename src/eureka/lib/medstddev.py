@@ -81,21 +81,6 @@ def medstddev(data, mask=None, medi=False, axis=0):
     moment.pro doesn't work for the median standard deviation.  It
     only works for the mean, because by definition the residuals from
     the mean add to zero.
-
-    History:
-
-    - 2005-01-18  statia
-        Written by Statia Luszcz.
-    - 2005-01-19  statia
-        Updated variance calculation according to algorithm in moment.pro,
-        added medi keyword.
-    - 2005-01-20  Joe Harrington, Cornell, jh@oobleck.astro.cornell.edu
-        Header update.  Removed algorithm from moment.pro because it
-        doesn't work for the median.  Added /double.
-    - 2010-11-05  patricio  pcubillos@fulbrightmail.org
-        Converted to python, documented.
-    - 2022-04-11  Taylor James Bell
-        Efficiently using numpy axes
     """
     # Default mask: only non-finite values are bad
     if mask is None:

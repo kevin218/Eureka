@@ -189,11 +189,15 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
                 meta.spectrum_median = None
                 meta.spectrum_err = None
+                meta.upper_limits = False
 
                 # Read in S5 fitted values
                 if meta.y_param_basic == 'fn':
                     # Compute nightside flux
                     meta = compute_fn(meta, log, fit_methods)
+                elif meta.y_param_basic == 'fp':
+                    # Compute dayside flux
+                    meta = compute_fp(meta, log, fit_methods)
                 elif 'offset_order' in meta.y_param:
                     # Compute phase curve offset of given order
                     meta = compute_offset(meta, log, fit_methods)
@@ -1351,6 +1355,69 @@ def compute_pc_amp(meta, log, fit_methods):
     return meta
 
 
+def compute_fp(meta, log, fit_methods):
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    suffix = ''
+    if meta.planetNumber > 0:
+        suffix += f'_pl{meta.planetNumber}'
+    if meta.channelNumber > 0:
+        suffix += f'_ch{meta.channelNumber}'
+
+    # Load eclipse depth
+    meta.y_param = 'fp'+suffix
+    fp = load_s5_saves(meta, log, fit_methods)
+    if all(np.all(v == 0) for v in fp):
+        # The parameter could not be found - try fpfs
+        meta.y_param = 'fpfs'+suffix
+        fp = load_s5_saves(meta, log, fit_methods)
+        if all(np.all(v == 0) for v in fp):
+            log.writelog('  Planet flux (fp or fpfs) was not in the list of '
+                         'fitted parameters')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
+
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+    meta.upper_limits_3sig = np.zeros(meta.nspecchan)
+    meta.upper_limits_bool = np.zeros(meta.nspecchan, dtype=bool)
+    meta.upper_limits_ind = []
+    for i in range(meta.nspecchan):
+        # Compute distribution of fp values
+        flux = np.percentile(np.array(fp[i]), [16, 50, 84])[[1, 2, 0]]
+        # Convert percentiles to upper and lower uncertainties
+        flux[1] -= flux[0]
+        flux[2] = flux[0]-flux[2]
+        meta.spectrum_median.append(flux[0])
+        meta.spectrum_err.append(flux[1:])
+        # Look for fp values that have < 3-sigma detection significance
+        if (flux[0] - 3*flux[2]) < 0:
+            meta.upper_limits_ind.append(i)
+        # Record 99.7th percentile (not 99.85) as 3-sigma upper limit
+        # since this is NOT a two-sided distribution (like above)
+        meta.upper_limits_3sig[i] = np.percentile(np.array(fp[i]), 99.7)
+    if len(meta.upper_limits_ind) > 0:
+        meta.upper_limits = True
+        meta.upper_limits_bool[meta.upper_limits_ind] = True
+        log.writelog("  The following channels have < 3-sigma detection" +
+                     " significances and should have their dayside" +
+                     " fluxes (fp) reported as upper limits:\n" +
+                     f"  {meta.upper_limits_ind}")
+
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+
+    return meta
+
+
 def compute_fn(meta, log, fit_methods):
     if ('poet_pc' in meta.run_myfuncs and
             'sinusoid_pc' not in meta.run_myfuncs):
@@ -1406,14 +1473,31 @@ def compute_fn(meta, log, fit_methods):
 
     meta.spectrum_median = []
     meta.spectrum_err = []
-
+    meta.upper_limits_3sig = np.zeros(meta.nspecchan)
+    meta.upper_limits_bool = np.zeros(meta.nspecchan, dtype=bool)
+    meta.upper_limits_ind = []
     for i in range(meta.nspecchan):
+        # Compute distribution of fn values
         fluxes = fp[i]*(1-2*ampcos[i])
         flux = np.percentile(np.array(fluxes), [16, 50, 84])[[1, 2, 0]]
+        # Convert percentiles to upper and lower uncertainties
         flux[1] -= flux[0]
         flux[2] = flux[0]-flux[2]
         meta.spectrum_median.append(flux[0])
         meta.spectrum_err.append(flux[1:])
+        # Look for fn values that have < 3-sigma detection significance
+        if meta.force_positivity and (flux[0] - 3*flux[2]) < 0:
+            meta.upper_limits_ind.append(i)
+        # Record 99.7th percentile (not 99.85) as 3-sigma upper limit
+        # since this is NOT a two-sided distribution (like above)
+        meta.upper_limits_3sig[i] = np.percentile(np.array(fluxes), 99.7)
+    if len(meta.upper_limits_ind) > 0:
+        meta.upper_limits = True
+        meta.upper_limits_bool[meta.upper_limits_ind] = True
+        log.writelog("  The following channels have < 3-sigma detection" +
+                     " significances and should have their nightside" +
+                     " fluxes (fn) reported as upper limits:\n" +
+                     f"  {meta.upper_limits_ind}")
 
     # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
@@ -1478,6 +1562,9 @@ def compute_fn_poet(meta, log, fit_methods):
 
     meta.spectrum_median = []
     meta.spectrum_err = []
+    meta.upper_limits_3sig = np.zeros(meta.nspecchan)
+    meta.upper_limits_bool = np.zeros(meta.nspecchan, dtype=bool)
+    meta.upper_limits_ind = []
     # Only need to calculate the flux at two points,
     # anti-stellar (180 deg) and sub-stellar (0 deg)
     deg = np.array([180, 0])
@@ -1497,6 +1584,19 @@ def compute_fn_poet(meta, log, fit_methods):
         flux[2] = flux[0]-flux[2]
         meta.spectrum_median.append(flux[0])
         meta.spectrum_err.append(flux[1:])
+        # Look for fn values that have < 3-sigma detection significance
+        if meta.force_positivity and (flux[0] - 3*flux[2]) < 0:
+            meta.upper_limits_ind.append(i)
+        # Record 99.7th percentile (not 99.85) as 3-sigma upper limit
+        # since this is NOT a two-sided distribution (like above)
+        meta.upper_limits_3sig[i] = np.percentile(np.array(fluxes), 99.7)
+    if len(meta.upper_limits_ind) > 0:
+        meta.upper_limits = True
+        meta.upper_limits_bool[meta.upper_limits_ind] = True
+        log.writelog("  The following channels have < 3-sigma detection" +
+                     " significances and should have their nightside" +
+                     " fluxes (fn) reported as upper limits:\n" +
+                     f"  {meta.upper_limits_ind}")
 
     # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
@@ -1681,9 +1781,16 @@ def save_table(meta, log):
     if len(set(wavelengths)) == 1:
         wavelengths = wavelengths[0]
         wave_errs = wave_errs[0]
-    astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param, wavelengths,
-                              wave_errs, meta.spectrum_median,
-                              meta.spectrum_err)
+    if meta.upper_limits:
+        astropytable.savetable_S6_ul(meta.tab_filename_s6, meta.y_param,
+                                     wavelengths, wave_errs,
+                                     meta.spectrum_median, meta.spectrum_err,
+                                     meta.upper_limits_3sig,
+                                     meta.upper_limits_bool)
+    else:
+        astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param,
+                                  wavelengths, wave_errs, meta.spectrum_median,
+                                  meta.spectrum_err)
 
     transit_latex_table(meta, log)
 
@@ -1708,13 +1815,6 @@ def roundToSigFigs(x, sigFigs=2):
     output : str
         x formatted as a string with the requested number of significant
         figures.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-22, Taylor J Bell
-        Imported code written for SPCA, and optimized for Python3.
     """
     if not np.isfinite(x) or not np.isfinite(np.log10(np.abs(x))):
         return np.nan, ""
@@ -1745,13 +1845,6 @@ def roundToDec(x, nDec=2):
     -------
     output : str
         x formatted as a string with the requested number of decimals.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-22, Taylor J Bell
-        Imported code written for SPCA, and optimized for Python3.
     """
     if not np.isfinite(nDec):
         return str(x)

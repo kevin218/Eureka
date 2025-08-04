@@ -79,13 +79,6 @@ class StepModel(Model):
         -------
         np.ndarray
             The sequence of coefficient values.
-
-        Notes
-        -----
-        History:
-
-        - 2022 July 14, Taylor J Bell
-            Initial version.
         """
         for key in self.keys:
             split_key = key.split('_')

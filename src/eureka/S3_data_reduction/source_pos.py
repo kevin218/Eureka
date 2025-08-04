@@ -33,14 +33,6 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
         The updated metadata object.
     log : logedit.Logedit
         The updated log.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-18, Taylor J Bell
-        Added source_pos_wrapper to allow multiple frames to get
-        source positions in parallel.
     '''
     # Mask any clipped values
     flux = np.ma.masked_where(data.mask.values, data.flux.values)
@@ -137,16 +129,6 @@ def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
     src_ypos_width : float
         If gaussian fit, the std of the Gaussian fitted to the image
         Otherwise, array of zeros.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-11 Caroline Piaulet
-        Enable recording of the width if the source is fitted with a Gaussian
-        + add an option to fit any integration (not hardcoded to be the first)
-    - 2022-07-18, Taylor J Bell
-        Tweaked to allow parallelized code if fitting multiple frames.
     '''
     if meta.src_pos_type == 'header':
         if 'SRCYPOS' not in shdr:
@@ -201,13 +183,6 @@ def source_pos_median(flux, meta, m, n=0, plot=True):
     -------
     y_pos : int
         The central position of the star.
-
-    Notes
-    -----
-    History:
-
-    - 4/27/23 Kevin Stevenson
-        Modified from source_pos_max
     '''
     x_dim = flux.shape[0]
 
@@ -244,17 +219,6 @@ def source_pos_max(flux, meta, m, n=0, plot=True):
     -------
     y_pos : int
         The central position of the star.
-
-    Notes
-    -----
-    History:
-
-    - 6/24/21 Megan Mansfield
-        Initial version
-    - 2021-07-14 Sebastian Zieba
-        Modified
-    - July 11, 2022 Caroline Piaulet
-        Add option to fit any integration (not hardcoded to be the first)
     '''
     x_dim = flux.shape[0]
 
@@ -345,15 +309,6 @@ def gauss(x, a, x0, sigma, off):
     -------
     gaussian : ndarray
         The 1D Gaussian evaluated at the points x, in the same shape as x.
-
-    Notes
-    -----
-    History:
-
-    - 2021-07-14 Sebastian Zieba
-        Initial version
-    - 2021-10-15 Taylor Bell
-        Separated this into its own function to allow it to be used elsewhere.
     '''
     return a*np.exp(-(x-x0)**2/(2*sigma**2))+off
 
@@ -382,18 +337,6 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
         The central position of the star.
     y_width : float
         The std of the fitted Gaussian.
-
-    Notes
-    -----
-    History:
-
-    - 2021-07-14 Sebastian Zieba
-        Initial version
-    - 2021-10-15 Taylor Bell
-        Tweaked to allow for cleaner plots_s3.py
-    - 2022-07-11 Caroline Piaulet
-        Enable recording of the width if the source is fitted with a Gaussian
-        + add an option to fit any integration (not hardcoded to be the first)
     '''
     x_dim = flux.shape[0]
 

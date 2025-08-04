@@ -238,13 +238,6 @@ def demcfitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation and arguments
     """
     best_model = None
     return best_model

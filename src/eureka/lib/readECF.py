@@ -38,13 +38,6 @@ class MetaClass:
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial Version based on old readECF code.
         '''
         if folder is None:
             folder = '.'+os.sep
@@ -91,13 +84,6 @@ class MetaClass:
         str
             A string representation of what is contained in the
             MetaClass object.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial version.
         '''
         output = ''
         for par in self.params:
@@ -117,13 +103,6 @@ class MetaClass:
         str
             A string representation of what is contained in the MetaClass
             object in a manner that could reproduce a similar MetaClass object.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial version.
         '''
         # Get the fully qualified name of the class
         output = type(self).__module__+'.'+type(self).__qualname__+'('
@@ -221,15 +200,6 @@ class MetaClass:
             The folder containing an ECF file to be read in.
         file : str
             The ECF filename to be read in.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial Version based on old readECF code.
-        - April 25, 2022 Taylor J Bell
-            Joining topdir and inputdir/outputdir here.
         """
         self.filename = file
         self.folder = folder
@@ -293,15 +263,6 @@ class MetaClass:
         ----------
         folder : str
             The folder where the ECF file should be written.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial Version.
-        - Oct 2022 Eva-Maria Ahrer
-            Update parameters and replace
         """
 
         for i in range(len(self.lines)):
@@ -329,13 +290,6 @@ class MetaClass:
         NOTE: This will update the inputdir of the ECF file to point to the
         exact inputdir used to avoid ambiguity later and ensure that the ECF
         could be used to make the same outputs.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial Version based on old readECF code.
         """
         # Copy ecf (and update inputdir to be precise which exact inputs
         # were used)
