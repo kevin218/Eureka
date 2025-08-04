@@ -466,6 +466,12 @@ def cut_aperture(data, meta, log):
         # Mask invalid regions
         inan = np.isnan(data.wave_1d[:, k])
         apmask[:, :, inan, k] = True
+        # Mask Order 2 regions that overlap with Order 1
+        if meta.orders[k] == 2:
+            ioverlap = data.wave_1d[:, k] > 1.05
+            apmask[:, :, ioverlap, k] = True
+            ioverlap = data.wave_1d[:, k] < 0.60
+            apmask[:, :, ioverlap, k] = True
 
     return apdata, aperr, apmask, apbg, apv0, apmedflux
 
