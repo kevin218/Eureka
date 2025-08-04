@@ -267,15 +267,6 @@ def uniform(z, rprs):
     -------
     y : ndarray
         The flux for each point in time.
-
-    Notes
-    -----
-    History:
-
-    - 2010-11-27 Kevin Stevenson
-        Original version
-    - 2024-01-28 Kevin Stevenson
-        Updated for Eureka!
     """
     # INGRESS/EGRESS MASK
     ingress_mask = ((1 - rprs) < z) & (z <= (1 + rprs))
@@ -317,14 +308,6 @@ def trnlldsp(z, rprs, u):
     -------
     y : ndarray
         The flux for each point in time.
-    Notes
-    -----
-    History:
-
-    - 2010-12-15 Kevin Stevenson
-        Converted to Python
-    - 2024-01-28 Kevin Stevenson
-        Updated for Eureka!
     """
 
     # DEFINE PARAMETERS
@@ -395,15 +378,6 @@ def trquad(z, rprs, u1, u2):
     -------
     y : ndarray
         The flux for each point in time.
-
-    Notes
-    -----
-    History:
-
-    - 2012-08-13 Kevin Stevenson
-        Modified from Jason Eastman's version
-    2024-01-28 Kevin Stevenson
-        Updated for Eureka!
     '''
 
     nz = np.size(z)
@@ -668,18 +642,6 @@ def ellke(k):
         elliptic integral of the first kind
     kk : 1D array
         elliptic integral of the second kind
-
-
-    Notes
-    -----
-    History:
-
-    - 2008-ish Jason Eastman
-        Originally written in IDL (Eastman et al. 2013, PASP 125, 83)
-    - 2010-ish Kevin Stevenson
-        Converted to Python
-    - 2024-01-29 Kevin B Stevenson
-        Modified for Eureka!
     """
     m1 = 1. - k ** 2
     logm1 = np.log(m1)
@@ -718,6 +680,8 @@ def ellpic_bulirsch(n, k):
     Computes the complete elliptical integral of the third kind using
     the algorithm of Bulirsch (1965).
 
+    Originally written in IDL (Eastman et al. 2013, PASP 125, 83).
+
     Parameters
     ----------
     n : float
@@ -731,17 +695,6 @@ def ellpic_bulirsch(n, k):
     -------
     ellpic : ndarray
         The elliptical integral
-
-    Notes
-    -----
-    History:
-
-    - 2008-ish Jason Eastman
-        Originally written in IDL (Eastman et al. 2013, PASP 125, 83)
-    - 2010-ish Kevin Stevenson
-        Converted to Python
-    - 2024-01-29 Kevin B Stevenson
-        Modified for Eureka!
     """
     kc = np.sqrt(1. - k ** 2)
     p = n + 1.

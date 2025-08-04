@@ -43,13 +43,6 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     Robinson 2003, Data Reduction and Error Analysis for the
     Physical Sciences, 3rd ed, McGraw Hill, Ch. 4.).
 
-    History:
-
-    - 2005-11-15: jh. Joseph Harrington, Cornell. jh@oobleck.astro.cornell.edu
-        Initial version
-    - 2010-11-18 patricio. pcubillos@fulbrightmail.org
-        Wrote in python, docstring added.
-
     Examples
     --------
     .. highlight:: python

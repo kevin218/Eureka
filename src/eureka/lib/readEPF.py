@@ -46,13 +46,6 @@ class Parameter:
         str
             A string representation of what is contained in
             the Parameter object.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial version.
         '''
         # Return a string representation of the self.values list
         return str(self.values)
@@ -69,13 +62,6 @@ class Parameter:
         str
             A string representation of what is contained in the Parameter
             object in a manner that could reproduce a similar Parameter object.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial version.
         '''
         # Get the fully qualified name of the class
         output = type(self).__module__+'.'+type(self).__qualname__+'('
@@ -138,13 +124,6 @@ class Parameters:
 
     This class loads a Eureka! Parameter File (epf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2022-03-24 Taylor J Bell
-        Based on readECF with significant edits for Eureka
     """
     def __init__(self, param_path=None, param_file=None, **kwargs):
         """Initialize the parameter object
@@ -212,13 +191,6 @@ class Parameters:
         str
             A string representation of what is contained in
             the Parameters object.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial version.
         '''
         output = ''
         for key in self.params:
@@ -239,13 +211,6 @@ class Parameters:
             A string representation of what is contained in the Parameters
             object in a manner that could reproduce a similar Parameters
             object.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial version.
         '''
         # Get the fully qualified name of the class
         output = type(self).__module__+'.'+type(self).__qualname__+'('
@@ -320,13 +285,6 @@ class Parameters:
             The folder containing an EPF file to be read in.
         file : str
             The EPF filename to be read in.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial Version based on old readECF code.
         """
         self.filename = file
         self.folder = folder
@@ -373,13 +331,6 @@ class Parameters:
         ----------
         folder : str
             The folder where the EPF file should be written.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial Version.
         """
         with open(os.path.join(folder, self.filename), 'w') as file:
             file.writelines(self.lines)

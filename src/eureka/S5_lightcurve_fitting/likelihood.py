@@ -68,17 +68,6 @@ def ln_like(theta, lc, model, freenames):
     -------
     ln_like_val : ndarray
         The log-likelihood value at the position theta.
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Moved code to separate file, added documentation.
-    - January 22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February, 2022 Eva-Maria Ahrer
-        Adding GP likelihood
     """
     model.update(theta)
     model_lc = model.eval()
@@ -119,15 +108,6 @@ def lnprior(theta, prior1, prior2, priortype, freenames):
     -------
     lnprior_prob : ndarray
         The log-prior probability value at the position theta.
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Moved code to separate file, added documentation.
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
     """
     lnprior_prob = 0.
     for i in range(len(theta)):
@@ -189,15 +169,6 @@ def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
     -------
     ln_prob_val : ndarray
         The log-probability value at the position theta.
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Moved code to separate file, added documentation.
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
     """
     lp = lnprior(theta, prior1, prior2, priortype, freenames)
     if not np.isfinite(lp):
@@ -290,13 +261,6 @@ def ptform(theta, prior1, prior2, priortype):
     -------
     p : ndarray
         The prior transform.
-
-    Notes
-    -----
-    History:
-
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
     """
     p = np.zeros_like(theta)
     n = len(theta)
@@ -332,15 +296,6 @@ def computeRedChiSq(lc, log, model, meta, freenames):
     -------
     chi2red : float
         The reduced chi-squared value.
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Moved code to separate file, added documentation.
-    - February, 2022 Eva-Maria Ahrer
-        Added GP functionality
     """
     model_lc = model.eval(incl_GP=True)
     residuals = (lc.flux - model_lc)
@@ -376,13 +331,6 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
         The different bin sizes.
     rmserr : ndarray; optional
         The uncertainty in the RMS. Only returned if isrmserr==True.
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Moved code to separate file, added documentation.
     """
     data = np.ma.masked_invalid(np.ma.copy(data))
 

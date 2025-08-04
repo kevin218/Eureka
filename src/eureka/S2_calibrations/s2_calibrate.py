@@ -194,13 +194,6 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
     '''A wrapper class for the jwst.pipeline.calwebb_spec2.Spec2Pipeline.
 
     This wrapper class allows non-standard changes to Stage 2 for Eureka!.
-
-    Notes
-    -----
-    History:
-
-    - October 2021 Taylor Bell
-        Initial version
     '''
 
     @plots.apply_style
@@ -216,18 +209,6 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             The metadata object.
         log : logedit.Logedit
             The open log in which notes from this step can be added.
-
-        Notes
-        -----
-        History:
-
-        - June 2021 Eva-Maria Ahrer and Aarynn Carter
-            Code fragments written
-        - October 2021 Taylor Bell
-            Significantly overhauled code formatting
-        - 03 Nov 2021 Taylor Bell
-            Fragmented code to allow reuse of code between spectral and image
-            analysis.
         '''
 
         if meta.inst == 'nirspec' and meta.slit_y_low is not None:
@@ -315,13 +296,6 @@ class EurekaImage2Pipeline(Image2Pipeline):
     '''A wrapper class for the jwst.pipeline.calwebb_image2.Image2Pipeline.
 
     This wrapper class allows non-standard changes to Stage 2 for Eureka!.
-
-    Notes
-    -----
-    History:
-
-    - October 2021 Taylor Bell
-        Initial version
     '''
 
     def run_eurekaS2(self, filename, meta, log):
@@ -336,13 +310,6 @@ class EurekaImage2Pipeline(Image2Pipeline):
             The metadata object.
         log : logedit.Logedit
             The open log in which notes from this step can be added.
-
-        Notes
-        -----
-        History:
-
-        - 03 Nov 2021 Taylor Bell
-            Initial version
         '''
         # Skip steps according to input ecf file
         self.bkg_subtract.skip = meta.skip_bkg_subtract

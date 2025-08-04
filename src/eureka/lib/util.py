@@ -412,13 +412,6 @@ def find_fits(meta):
     meta : eureka.lib.readECF.MetaClass
         The meta object with the updated inputdir pointing to the location of
         the input files to use.
-
-    Notes
-    -----
-    History:
-
-    - April 25, 2022 Taylor Bell
-        Initial version.
     '''
     fnames = glob.glob(meta.inputdir+'*'+meta.suffix + '.fits')
     if len(fnames) == 0:
