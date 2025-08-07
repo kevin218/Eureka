@@ -1,0 +1,45 @@
+name: Build Matrix (Python x OS)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  smoke:
+    name: Build Check - ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history, including tags
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Upgrade pip and build package
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Install built wheel with extras
+        shell: bash
+        run: |
+          WHL=$(ls dist/eureka_bang-*.whl)
+          if [ -z "$WHL" ]; then
+            echo "No wheel file found"; exit 1
+          fi
+          pip install --timeout 60 --retries 5 "$WHL[jwst,hst,test,docs,jupyter]"
+
+      - name: Run smoke test (import + version check)
+        run: |
+          python -c "import eureka; print('Eureka version:', eureka.__version__)"

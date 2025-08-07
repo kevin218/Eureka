@@ -8,13 +8,6 @@ class S4MetaClass(MetaClass):
 
     This class loads a Stage 4 Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-04 Taylor J Bell
-        Made specific S4 class based on MetaClass
     '''
 
     def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
@@ -34,25 +27,15 @@ class S4MetaClass(MetaClass):
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - 2024-04 Taylor J Bell
-            Initial version.
         '''
+        # Remove the stage from kwargs if present
+        if 'stage' in kwargs:
+            kwargs.pop('stage')
+
         super().__init__(folder, file, eventlabel, stage=4, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 4 specific defaults for generic instruments.
-
-        Notes
-        -----
-        History:
-
-        - 2024-04 Taylor J Bell
-            Initial version setting defaults for any instrument.
         '''
         # If not specified, assuming the inputs are from a Eureka output
         self.data_format = getattr(self, 'data_format', 'eureka')
@@ -90,6 +73,8 @@ class S4MetaClass(MetaClass):
 
         # Spectral binning/trimming control
         self.nspecchan = getattr(self, 'nspecchan', None)
+        self.npixelbins = getattr(self, 'npixelbins', None)
+        self.npixelshift = getattr(self, 'npixelshift', 0)
         self.compute_white = getattr(self, 'compute_white', True)
         self.wave_input = getattr(self, 'wave_input', None)
         self.wave_min = getattr(self, 'wave_min', None)
@@ -132,6 +117,8 @@ class S4MetaClass(MetaClass):
         self.maxiters = getattr(self, 'maxiters', 20)
         self.boundary = getattr(self, 'boundary', 'fill')
         self.fill_value = getattr(self, 'fill_value', 'mask')
+        # Used in Fig 4106
+        self.mad_sigma = getattr(self, 'mad_sigma', 7)
 
         # HST/WFC3 temporal binning (sum together all reads from one scan)
         self.sum_reads = getattr(self, 'sum_reads', True)
@@ -174,13 +161,6 @@ class S4MetaClass(MetaClass):
 
     def set_nonEureka_defaults(self):
         '''Set Stage 4 specific defaults for non-Eureka inputs.
-
-        Notes
-        -----
-        History:
-
-        - 2024-06 Taylor J Bell
-            Initial version based on Aarynn's code in s4_genLC.py.
         '''
         self.spec_hw = getattr(self, 'spec_hw', 0)
         self.bg_hw = getattr(self, 'bg_hw', 0)

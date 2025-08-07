@@ -43,13 +43,6 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     Robinson 2003, Data Reduction and Error Analysis for the
     Physical Sciences, 3rd ed, McGraw Hill, Ch. 4.).
 
-    History:
-
-    - 2005-11-15: jh. Joseph Harrington, Cornell. jh@oobleck.astro.cornell.edu
-        Initial version
-    - 2010-11-18 patricio. pcubillos@fulbrightmail.org
-        Wrote in python, docstring added.
-
     Examples
     --------
     .. highlight:: python
@@ -86,23 +79,27 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     status = 0
 
     # Mask off NaNs
-    fin = ~np.isfinite(data) + ~np.isfinite(derr)
+    nans = ~np.isfinite(data) + ~np.isfinite(derr)
 
     # Mask off errors = zero
     nonzero = derr == 0
 
     # Final Mask
-    loc = np.where(fin + nonzero + mask)
-    weights = (1.0 / derr[loc] ** 2.0)
+    finalMask = nans + nonzero + mask
+
+    data = np.ma.masked_where(finalMask, data)
+    derr = np.ma.masked_where(finalMask, derr)
+
+    weights = 1/derr**2
 
     # The returns (a tuple if err or status set to True).
-    ret = (np.average(data[loc], weights=weights),)
+    ret = (np.ma.average(data, weights=weights),)
 
     if err:
-        ret = ret + (np.sqrt(1.0 / np.sum(weights)),)
+        ret = ret + (np.sqrt(1/np.ma.sum(weights)),)
 
     if retstatus:
-        if np.any(fin):  # NaNs
+        if np.any(nans):  # NaNs
             status |= 1
         if np.any(nonzero):  # errors = zero
             status |= 2

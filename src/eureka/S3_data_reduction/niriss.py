@@ -82,7 +82,7 @@ def read(filename, data, meta, log):
     # Duplicate science arrays for each order to be analyzed
     if isinstance(meta.orders, int):
         meta.orders = [meta.orders]
-    norders = len(meta.orders)
+    norders = len(meta.all_orders)
     sci = np.repeat(sci[:, :, :, np.newaxis], norders, axis=3)
     err = np.repeat(err[:, :, :, np.newaxis], norders, axis=3)
     dq = np.repeat(dq[:, :, :, np.newaxis], norders, axis=3)
@@ -95,13 +95,13 @@ def read(filename, data, meta, log):
         meta.ywindow[1] *= meta.expand
 
     data['flux'] = xrio.makeFluxLikeDA(sci, time, flux_units, time_units,
-                                       name='flux', order=meta.orders)
+                                       name='flux', order=meta.all_orders)
     data['err'] = xrio.makeFluxLikeDA(err, time, flux_units, time_units,
-                                      name='err', order=meta.orders)
+                                      name='err', order=meta.all_orders)
     data['dq'] = xrio.makeFluxLikeDA(dq, time, "None", time_units,
-                                     name='dq', order=meta.orders)
+                                     name='dq', order=meta.all_orders)
     data['v0'] = xrio.makeFluxLikeDA(v0, time, flux_units, time_units,
-                                     name='v0', order=meta.orders)
+                                     name='v0', order=meta.all_orders)
 
     # Initialize bad pixel mask (False = good, True = bad)
     data['mask'] = (['time', 'y', 'x', 'order'], np.zeros(data.flux.shape,
@@ -133,7 +133,7 @@ def get_wave(data, meta, log):
     log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
                  mute=(not meta.verbose))
 
-    norders = len(data.order)
+    norders = len(meta.all_orders)
     data['trace'] = (['x', 'order'],
                      np.zeros((data.x.shape[0], norders)) +
                      np.array(meta.src_ypos)[np.newaxis])
@@ -141,9 +141,20 @@ def get_wave(data, meta, log):
                        np.zeros((data.x.shape[0], norders))*np.nan)
     data['wave_1d'].attrs['wave_units'] = 'microns'
 
-    for order in meta.orders:
+    for order in meta.all_orders:
         # Get trace for the given order and pupil position
         trace = get_soss_traces(pwcpos=pwcpos, order=str(order), interp=True)
+        if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96' and \
+                meta.trace_offset is None:
+            # PASTASOSS doesn't account for different substrip starting rows;
+            # therefore, set trace offset to best guess (-12 pixels).
+            meta.trace_offset = -12
+        if meta.trace_offset is not None:
+            trace.y += meta.trace_offset
+            subarray = data.attrs['mhdr']['SUBARRAY']
+            log.writelog(f"  Shifting trace by {meta.trace_offset} pixels "
+                         f"for {subarray} and Order {order}.",
+                         mute=(not meta.verbose))
         # Assign trace and wavelength for given order
         ind1 = np.nonzero(np.in1d(trace.x, data.x.values))[0]
         ind2 = np.nonzero(np.in1d(data.x.values, trace.x))[0]
@@ -168,16 +179,24 @@ def mask_other_orders(data, meta):
     data : Xarray Dataset
         The updated Dataset object with regions masked.
     '''
-    for order in meta.orders:
+    for order in meta.all_orders:
         trace = np.round(data.trace.sel(order=order).values).astype(int)
         wave = data.wave_1d.sel(order=order).values
-        other_orders = list.copy(meta.orders)
+        other_orders = list.copy(meta.all_orders)
         other_orders.remove(order)
-        for j in np.where(~np.isnan(wave))[0]:
-            ymin = np.max((0, trace[j] - meta.spec_hw))
-            ymax = np.min((trace[j] + meta.spec_hw + 1, len(data.y) + 1))
-            for other_order in other_orders:
-                data['mask'].sel(order=other_order)[:, ymin:ymax, j] = True
+        for other_order in other_orders:
+            if other_order in meta.orders:
+                other_trace = np.round(
+                    data.trace.sel(order=other_order).values).astype(int)
+                # Loop over valid wavelengths in current order
+                for j in np.where(~np.isnan(wave))[0]:
+                    ymin = np.max((0,
+                                   trace[j] - meta.spec_hw,
+                                   other_trace[j] + meta.bg_hw + 1))
+                    ymax = np.min((len(data.y) + 1,
+                                   trace[j] + meta.spec_hw + 1))
+                    # Mask extraction region for 'order' in 'other_order'
+                    data['mask'].sel(order=other_order)[:, ymin:ymax, j] = True
     return data
 
 
@@ -218,6 +237,13 @@ def straighten_trace(data, meta, log, m):
         shifts = np.round(data.trace.sel(order=order).values).astype(int)
         new_center = meta.src_ypos[k]
         new_shifts = new_center - shifts
+
+        # Keep shifts from exceeding the height of the detector
+        # This only happens with SUBSTRIP96 and Order 2,
+        # which is not recommended.
+        ymax = data.flux.shape[1]
+        new_shifts[new_shifts > ymax] = ymax
+        new_shifts[new_shifts < -ymax] = -ymax
 
         # broadcast the shifts to the number of integrations
         new_shifts = np.reshape(np.repeat(new_shifts,
@@ -422,13 +448,13 @@ def cut_aperture(data, meta, log):
                  mute=(not meta.verbose))
 
     apdata = np.zeros((len(data.time), 2*meta.spec_hw+1,
-                       len(data.x), len(data.order)))
+                       len(data.x), len(meta.orders)))
     aperr = np.zeros_like(apdata)
     apmask = np.zeros_like(apdata, dtype=bool)
     apbg = np.zeros_like(apdata)
     apv0 = np.zeros_like(apdata)
     apmedflux = np.zeros_like(apdata[0])
-    for k in range(len(data.order)):
+    for k in range(len(meta.orders)):
         ap_y1 = int(meta.src_ypos[k] - meta.spec_hw)
         ap_y2 = int(meta.src_ypos[k] + meta.spec_hw + 1)
         apdata[:, :, :, k] = data.flux.values[:, ap_y1:ap_y2, :, k]
@@ -438,7 +464,7 @@ def cut_aperture(data, meta, log):
         apv0[:, :, :, k] = data.v0.values[:, ap_y1:ap_y2, :, k]
         apmedflux[:, :, k] = data.medflux.values[ap_y1:ap_y2, :, k]
         # Mask invalid regions
-        inan = np.where(np.isnan(data.wave_1d[:, k]))
+        inan = np.isnan(data.wave_1d[:, k])
         apmask[:, :, inan, k] = True
 
     return apdata, aperr, apmask, apbg, apv0, apmedflux

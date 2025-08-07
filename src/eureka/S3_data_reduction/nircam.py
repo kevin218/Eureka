@@ -2,14 +2,14 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
+
 from . import sigrej, background, optspex, straighten, plots_s3
 from ..lib.util import read_time, supersample
-from tqdm import tqdm
 from ..lib import meanerr as me
 
-__all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg',
+__all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg', 'flag_bg_phot',
            'fit_bg', 'cut_aperture', 'standard_spectrum', 'clean_median_flux',
-           'flag_bg_phot', 'do_oneoverf_corr', 'calibrated_spectra',
+           'do_oneoverf_corr', 'calibrated_spectra',
            'residualBackground', 'lc_nodriftcorr']
 
 
@@ -35,19 +35,6 @@ def read(filename, data, meta, log):
         The updated metadata object.
     log : logedit.Logedit
         The current log.
-
-    Notes
-    -----
-    History:
-
-    - November 2012 Kevin Stevenson
-        Initial version
-    - May 2021 KBS
-        Updated for NIRCam
-    - July 2021
-        Moved bjdtdb into here
-    - Apr 20, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     '''
     hdulist = fits.open(filename)
 
@@ -215,6 +202,9 @@ def flag_bg(data, meta, log):
     log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
+    size = data.mask.size
+    prev_count = (~data.mask.values).sum()
+
     bgdata1 = data.flux[:, :meta.bg_y1]
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
@@ -231,6 +221,60 @@ def flag_bg(data, meta, log):
                                                  bgmask1, estsig1)
     data['mask'][:, meta.bg_y2:] = sigrej.sigrej(bgdata2, meta.bg_thresh,
                                                  bgmask2, estsig2)
+
+    # Count difference in number of good pixels
+    new_count = (~data.mask.values).sum()
+    diff_count = prev_count - new_count
+    perc_rej = 100*(diff_count/size)
+    log.writelog(f'    Flagged {perc_rej:.6f}% of pixels as bad.',
+                 mute=(not meta.verbose))
+
+    return data
+
+
+def flag_bg_phot(data, meta, log):
+    '''Outlier rejection of sky background along time axis for photometry.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
+    '''
+    log.writelog('  Performing background outlier rejection...',
+                 mute=(not meta.verbose))
+
+    size = data.mask.size
+    prev_count = (~data.mask.values).sum()
+
+    # Figure out which pixels are outside of the source aperture
+    x_indices, y_indices = np.meshgrid(np.arange(data.flux.shape[2]),
+                                       np.arange(data.flux.shape[1]))
+    mean_x = np.ma.median(data.centroid_x.values)
+    mean_y = np.ma.median(data.centroid_y.values)
+    distance = np.sqrt((x_indices-mean_x)**2 + (y_indices-mean_y)**2)
+    outside_aper = distance > meta.photap
+
+    # Do sigrej only on the pixels outside of the source aperture
+    bgdata = data.flux.values[:, outside_aper]
+    bgmask = data.mask.values[:, outside_aper]
+    data.mask.values[:, outside_aper] = sigrej.sigrej(bgdata, meta.bg_thresh,
+                                                      bgmask, None)
+
+    # Count difference in number of good pixels
+    new_count = (~data.mask.values).sum()
+    diff_count = prev_count - new_count
+    perc_rej = 100*(diff_count/size)
+    log.writelog(f'    Flagged {perc_rej:.6f}% of pixels as bad.',
+                 mute=(not meta.verbose))
 
     return data
 
@@ -339,13 +383,6 @@ def cut_aperture(data, meta, log):
         The v0 values over the aperture region.
     apmedflux : ndarray
         The median flux over the aperture region.
-
-    Notes
-    -----
-    History:
-
-    - 2022-06-17, Taylor J Bell
-        Initial version based on the code in s3_reduce.py
     """
     log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))
@@ -459,56 +496,6 @@ def clean_median_flux(data, meta, log, m):
     return data
 
 
-def flag_bg_phot(data, meta, log):
-    '''Outlier rejection of segment along time axis adjusted for the
-    photometry reduction routine.
-
-    Parameters
-    ----------
-    data : Xarray Dataset
-        The Dataset object.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    log : logedit.Logedit
-        The current log.
-
-    Returns
-    -------
-    data : Xarray Dataset
-        The updated Dataset object with outlier background pixels flagged.
-    '''
-    log.writelog('  Performing outlier rejection...',
-                 mute=(not meta.verbose))
-
-    flux = data.flux.values
-    mask = data.mask.values
-    # FINDME: KBS removed estsig from inputs to speed up outlier detection.
-    # Need to test performance with and without estsig on real data.
-    if meta.use_estsig:
-        bgerr = np.median(data.err)
-        estsig = [bgerr for j in range(len(meta.bg_thresh))]
-    else:
-        estsig = None
-
-    nbadpix_total = 0
-    for i in tqdm(range(flux.shape[1]),
-                  desc='  Looping over rows for outlier removal'):
-        for j in range(flux.shape[2]):  # Loops over Columns
-            ngoodpix = np.sum(~mask[:, i, j])
-            data['mask'][:, i, j] |= sigrej.sigrej(flux[:, i, j],
-                                                   meta.bg_thresh,
-                                                   mask[:, i, j], estsig)
-            if any(data['mask'][:, i, j].values):
-                # counting the amount of flagged bad pixels
-                nbadpix = ngoodpix - np.sum(~data['mask'][:, i, j].values)
-                nbadpix_total += nbadpix
-    flag_percent = nbadpix_total/np.product(flux.shape)*100
-    log.writelog(f"    {flag_percent:.5f}% of the pixels have been flagged as "
-                 "outliers", mute=(not meta.verbose))
-
-    return data
-
-
 def do_oneoverf_corr(data, meta, i, star_pos_x, log):
     """
     Correcting for 1/f noise in each amplifier region by doing a row-by-row
@@ -580,7 +567,7 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
             mask_all.append([])
             continue
         edge = edges[k] - meta.xwindow[0]
-        edge[np.where(edge < 0)] = 0
+        edge[edge < 0] = 0
         use_cols_temp = np.copy(use_cols)
         inds = np.arange(len(use_cols_temp))
         # Set False if columns are out of amplifier region
@@ -639,13 +626,6 @@ def calibrated_spectra(data, meta, log):
     -------
     data : ndarray
         The flux values in mJy
-
-    Notes
-    -----
-    History:
-
-    - 2023-07-17, KBS
-        Initial version.
     """
     # Convert from MJy/sr to mJy
     log.writelog("  Converting from MJy/sr to mJy...",

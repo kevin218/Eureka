@@ -2,12 +2,14 @@ import numpy as np
 import os
 import glob
 from astropy.io import fits
-from . import sort_nicely as sn
 from scipy.interpolate import griddata
 from scipy.ndimage import zoom
 from scipy.stats import binned_statistic
-from .naninterp1d import naninterp1d
+import multiprocessing as mp
+from tqdm import tqdm
 
+from . import sort_nicely as sn
+from .naninterp1d import naninterp1d
 from .citations import CITATIONS
 
 # populate common imports for current stage
@@ -410,13 +412,6 @@ def find_fits(meta):
     meta : eureka.lib.readECF.MetaClass
         The meta object with the updated inputdir pointing to the location of
         the input files to use.
-
-    Notes
-    -----
-    History:
-
-    - April 25, 2022 Taylor Bell
-        Initial version.
     '''
     fnames = glob.glob(meta.inputdir+'*'+meta.suffix + '.fits')
     if len(fnames) == 0:
@@ -538,14 +533,14 @@ def binData_time(data, time, mask=None, nbin=100, err=False):
 
     # Binned_statistic will copy data without keeping it a masked array
     # so we have to manually remove invalid points
-    if (type(data.mask) == np.bool_):
+    if (type(data.mask) is np.bool_):
         # Only good data
         # np.ma.maskarray doesn't work with np.bool_ objects
         good_time = time
         good_data = data
     else:
-        good_time = time[~np.ma.getmaskarray(data.mask)]
-        good_data = data[~np.ma.getmaskarray(data.mask)]
+        good_time = time[~np.ma.getmaskarray(data)]
+        good_data = data[~np.ma.getmaskarray(data)]
 
     binned, _, _ = binned_statistic(good_time, good_data,
                                     statistic='mean',
@@ -594,23 +589,24 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
     if opterr is not None:
         normerr = np.ma.masked_invalid(np.ma.copy(opterr))
         normerr = np.ma.masked_where(np.ma.getmaskarray(normspec), normerr)
+        normerr = np.ma.abs(normerr)
 
     # Normalize the spectrum
     if meta.inst == 'wfc3':
         for p in range(2):
-            iscans = np.where(scandir == p)[0]
+            iscans = np.atleast_1d(scandir == p).nonzero()[0]
             if len(iscans) > 0:
                 for r in range(meta.nreads):
+                    normFactor = np.ma.abs(np.ma.mean(
+                        normspec[iscans[r::meta.nreads]], axis=0))
+                    normspec[iscans[r::meta.nreads]] /= normFactor
                     if opterr is not None:
-                        normerr[iscans[r::meta.nreads]] /= np.ma.abs(
-                            np.ma.mean(normspec[iscans[r::meta.nreads]],
-                                       axis=0))
-                    normspec[iscans[r::meta.nreads]] /= np.ma.mean(
-                        normspec[iscans[r::meta.nreads]], axis=0)
+                        normerr[iscans[r::meta.nreads]] /= normFactor
     else:
+        normFactor = np.ma.abs(np.ma.mean(normspec, axis=0))
+        normspec /= normFactor
         if opterr is not None:
-            normerr = np.ma.abs(normerr/np.ma.mean(normspec, axis=0))
-        normspec = normspec/np.ma.mean(normspec, axis=0)
+            normerr /= normFactor
 
     if opterr is not None:
         return normspec, normerr
@@ -636,7 +632,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
         The current log.
     wave_1d : ndarray
         Wavelength array (nx) with trimmed edges depending on xwindow and
-        ywindow which have been set in the S3 ecf
+        ywindow which have been set in the S3 ecf.
     optspec : ndarray
         Optimally extracted spectra, 2D array (time, nx)
     optmask : ndarray (1D); optional
@@ -646,7 +642,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     wave_min : float; optional
         Minimum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose a lower limit.
-    wave_maxf : float; optional
+    wave_max : float; optional
         Maximum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose an upper limit.
     scandir : ndarray; optional
@@ -659,6 +655,12 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     mad : float
         Single MAD value in ppm
     """
+    # Make sure wavelengths are in ascending order
+    if wave_1d[0] > wave_1d[-1]:
+        wave_1d = wave_1d[::-1]
+        optspec = optspec[::-1]
+        optmask = optmask[::-1]
+
     optspec = np.ma.masked_invalid(optspec)
     optspec = np.ma.masked_where(optmask, optspec)
 
@@ -683,7 +685,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
 
         # Compute the MAD for each scan direction
         for p in range(2):
-            iscans = np.where(scandir == p)[0]
+            iscans = np.atleast_1d(scandir == p).nonzero()[0]
             if len(iscans) > 0:
                 # Compute the MAD
                 for m in range(n_wav):
@@ -786,7 +788,7 @@ def manmask(data, meta, log):
 
 
 # PHOTOMETRY
-def interp_masked(data, meta, i, log):
+def interp_masked(data, meta, log):
     """
     Interpolates masked pixels.
     Based on the example here:
@@ -798,8 +800,6 @@ def interp_masked(data, meta, i, log):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    i : int
-        The current integration.
     log : logedit.Logedit
         The current log.
 
@@ -808,34 +808,94 @@ def interp_masked(data, meta, i, log):
     data : Xarray Dataset
         The updated Dataset object with requested pixels masked.
     """
-    if i == 0:
-        log.writelog('    Interpolating masked values...',
-                     mute=(not meta.verbose))
-    flux = data.flux.values[i]
-    mask = data.mask.values[i]
-    nx = flux.shape[1]
-    ny = flux.shape[0]
+    nx = data.flux.values.shape[2]
+    ny = data.flux.values.shape[1]
     grid_x, grid_y = np.mgrid[0:ny-1:complex(0, ny), 0:nx-1:complex(0, nx)]
-    points = np.where(~mask)
-    # x,y positions of not masked pixels
-    points_t = np.array(points).transpose()
-    values = flux[np.where(~mask)]  # flux values of not masked pixels
 
-    # Use scipy.interpolate.griddata to interpolate
-    if meta.interp_method == 'nearest':
-        grid_z = griddata(points_t, values, (grid_x, grid_y), method='nearest')
-    elif meta.interp_method == 'linear':
-        grid_z = griddata(points_t, values, (grid_x, grid_y), method='linear')
-    elif meta.interp_method == 'cubic':
-        grid_z = griddata(points_t, values, (grid_x, grid_y), method='cubic')
+    if meta.interp_method not in ['nearest', 'linear', 'cubic']:
+        message = (f'Your method for interpolation "{meta.interp_method}" '
+                   'is not supported! Please choose between None, nearest, '
+                   'linear or cubic.')
+        log.writelog(message, mute=(not meta.verbose))
+        raise ValueError(message)
+
+    # Write interpolated values
+    def writeInterploated(arg):
+        grid_z, i = arg
+        data.flux.values[i] = grid_z
+        return
+
+    message = '  Interpolating masked values'
+    log.writelog(message+'...', mute=True)
+
+    if meta.ncpu == 1:
+        # Only 1 CPU
+
+        iterfn = range(len(data.time))
+        if meta.verbose:
+            iterfn = tqdm(iterfn, desc=message)
+        for i in iterfn:
+            writeInterploated(interp_masked_helper(
+                data.flux.values[i], data.mask.values[i], grid_x, grid_y,
+                meta.interp_method, i))
     else:
-        log.writelog('Your method for interpolation is not supported!'
-                     'Please choose between None, nearest, linear or cubic.',
-                     mute=(not meta.verbose))
-
-    data.flux.values[i] = grid_z
+        # Multiple CPUs
+        pool = mp.Pool(meta.ncpu)
+        jobs = [pool.apply_async(func=interp_masked_helper,
+                                 args=(data.flux.values[i],
+                                       data.mask.values[i],
+                                       grid_x, grid_y,
+                                       meta.interp_method, i,),
+                                 callback=writeInterploated)
+                for i in range(len(data.time))]
+        pool.close()
+        iterfn = jobs
+        if meta.verbose:
+            iterfn = tqdm(iterfn, desc=message)
+        for job in iterfn:
+            job.get()
 
     return data
+
+
+def interp_masked_helper(flux, mask, grid_x, grid_y, interp_method, i):
+    """A helper function to do bad-pixel intepolation when multiprocessing.
+
+    Parameters
+    ----------
+    flux : ndarray (2D)
+        A 2D float array.
+    mask : ndarray
+        A 2D boolean array, where True values are masked.
+    grid_x : ndarray
+        The x position for every index.
+    grid_y : ndarray
+        The y position for every index.
+    interp_method : str
+        One of ['linear', 'nearest', 'cubic']. For more details, read the
+        documentation for scipy.interpolate.griddata.
+    i : int
+        The current integration number.
+
+    Returns
+    -------
+    grid_z : ndarray
+        The input flux array with bad values interpolated over.
+    i : int
+        The same input i, to be used when multiprocessing.
+    """
+    if not np.any(mask):
+        # Don't bother trying to replace bad values if there are none
+        return flux, i
+
+    # flux values of good pixels
+    values = flux[~mask]
+    # x,y positions of good pixels
+    points = np.array(np.where(~mask)).T
+    # Use scipy.interpolate.griddata to interpolate
+    grid_z = griddata(points, values, (grid_x, grid_y), method=interp_method)
+    # Replace flux with interpolated values
+    return grid_z, i
 
 
 def phot_arrays(data):
@@ -905,8 +965,6 @@ def make_citations(meta, stage=None):
             other_cites = other_cites + ["emcee"]
         if "dynesty" in meta.fit_method:
             other_cites = other_cites + ["dynesty"]
-        if "nuts" in meta.fit_method:
-            other_cites = other_cites + ["pymc3"]
         if "exoplanet" in meta.fit_method:
             other_cites = other_cites + ["exoplanet"]
 
@@ -917,8 +975,6 @@ def make_citations(meta, stage=None):
             other_cites.append("catwoman")
         if "fleck_tr" in meta.run_myfuncs:
             other_cites.append("fleck")
-        if "starry" in meta.run_myfuncs:
-            other_cites.append("starry")
         if "GP" in meta.run_myfuncs:
             if hasattr(meta, "GP_package"):
                 other_cites.append(meta.GP_package)
@@ -1083,3 +1139,37 @@ def load_attrs_from_xarray(data):
                            for citations in attrs[attr]]
 
     return attrs
+
+
+def get_unexpanded_hws(expand, spec_hw_val, bg_hw_val):
+    """Get the unexpanded half-width values for the spectrum and background.
+
+    Parameters
+    ----------
+    expand : int
+        The super-sampling factor.
+    spec_hw_val : float
+        The half-width value for the spectrum.
+    bg_hw_val : float
+        The half-width value for the background.
+
+    Returns
+    -------
+    spec_hw_val_unexpanded : float
+        The unexpanded half-width value for the spectrum.
+    bg_hw_val_unexpanded : float
+        The unexpanded half-width value for the background.
+    """
+    if not isinstance(bg_hw_val, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        if isinstance(bg_hw_val, float):
+            bg_hw_val /= expand
+        else:
+            bg_hw_val //= expand
+
+    if isinstance(spec_hw_val, float):
+        spec_hw_val /= expand
+    else:
+        spec_hw_val //= expand
+
+    return spec_hw_val, bg_hw_val

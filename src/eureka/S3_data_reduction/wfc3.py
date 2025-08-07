@@ -315,12 +315,12 @@ def separate_direct(meta, log):
         direct_times = obstimes[obstypes == 'IMAGING']
         science_times = obstimes[obstypes == 'SPECTROSCOPIC']
         meta.direct_index = np.zeros(meta.segment_list.shape, dtype=int)
-        for i in range(len(science_times)):
-            indices = np.where(science_times[i] > direct_times)[0]
-            if len(indices) == 0:
-                index = 0
+        for i, t in enumerate(science_times):
+            mask = t > direct_times
+            if np.any(mask):
+                index = np.flatnonzero(mask)[-1]
             else:
-                index = indices[-1]
+                index = 0
             meta.direct_index[i] = index
 
     meta.obstimes = science_times
@@ -410,17 +410,6 @@ def read(filename, data, meta, log):
         The metadata object
     log : logedit.Logedit
         The current log.
-
-    Notes
-    -----
-    History:
-
-    - January 2017 Kevin Stevenson
-        Initial code as implemented in the WFC3 pipeline
-    - 18-19 Nov 2021 Taylor Bell
-        Edited and decomposed WFC3 code to integrate with Eureka!
-    - May 9, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     '''
     # Determine image size and filter/grism
     with fits.open(filename) as hdulist:
@@ -478,7 +467,8 @@ def read(filename, data, meta, log):
     # Make sure there aren't any NaN times so that concat works later
     # Increment by something smaller than t_exp for safety
     t_exp = np.nanmedian(np.diff(jd))
-    jd[np.where(np.isnan(jd))[0]] = jd[np.where(np.isnan(jd))[0]-1] + t_exp/10
+    nan_inds = np.flatnonzero(np.isnan(jd))
+    jd[nan_inds] = jd[nan_inds - 1] + t_exp / 10
 
     if meta.horizonsfile is not None:
         horizon_path = os.path.join(meta.hst_cal,
@@ -515,7 +505,7 @@ def read(filename, data, meta, log):
     # Calculate centroids for each frame
     centroids = np.full((meta.nreads_full, 2), np.nan)
     # Figure out which direct image is the relevant one for this observation
-    image_number = np.where(meta.segment_list == filename)[0][0]
+    image_number = np.flatnonzero(meta.segment_list == filename)[0]
     centroid_index = meta.direct_index[image_number]
     # Use the same centroid for each read
     # Only set the centroids of non-NaN reads
@@ -529,7 +519,8 @@ def read(filename, data, meta, log):
                      f"filter/grism...", mute=(not meta.verbose))
     xrange = np.arange(0, meta.nx)
     # wavelength in microns
-    wave = hst.calibrateLambda(xrange, centroids[goodInds][0], meta.filter)/1e4
+    wave = hst.calibrateLambda(xrange, centroids[goodInds][0].tolist(),
+                               meta.filter)/1e4
     # Assume no skew over the detector
     wave_2d = wave*np.ones((meta.ny, 1))
     wave_units = 'microns'
@@ -624,8 +615,8 @@ def flatfield(data, meta, log):
                                            time_units, name='flatmask')
 
     # Calculate reduced image
-    subflat[np.where(flatmask)] = 1
-    subflat[np.where(subflat == 0)] = 1
+    subflat[flatmask] = 1
+    subflat[subflat == 0] = 1
     data['flux'] /= subflat
 
     return data, meta, log
@@ -681,8 +672,10 @@ def difference_frames(data, meta, log):
             continue
         diffmask[n] = data['flatmask'][0][0]
         if meta.nreads > 1:
-            diffmask[n][np.where(differr[n] > meta.diffthresh *
-                        np.median(differr[n], axis=1)[:, np.newaxis])] = True
+            threshold = meta.diffthresh * np.median(
+                differr[n], axis=1)[:, np.newaxis]
+            mask = differr[n] > threshold
+            diffmask[n][mask] = True
         else:
             # Don't use diffthresh for FLT files
             pass
@@ -762,7 +755,7 @@ def flag_bg(data, meta, log):
                  mute=(not meta.verbose))
 
     for p in range(2):
-        iscans = np.where(data.scandir.values == p)[0]
+        iscans = np.nonzero(data.scandir.values == p)[0]
         if len(iscans) > 0:
             for n in range(meta.nreads):
                 iscan = iscans[n::meta.nreads]
@@ -836,8 +829,10 @@ def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
 
     # Calculate variance assuming background dominated rather than
     # read noise dominated
-    bgerr = np.std(bg, axis=0)/np.sqrt(np.sum(~mask, axis=0))
-    bgerr[np.logical_not(np.isfinite(bgerr))] = 0.
+    n_unmasked = np.sum(~mask, axis=0)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        bgerr = np.std(bg, axis=0) / np.sqrt(n_unmasked)
+    bgerr[~np.isfinite(bgerr)] = 0.
     datav0 += np.mean(bgerr**2)
     datavariance = abs(dataim) / meta.gain + datav0
 
@@ -950,7 +945,7 @@ def correct_drift2D(data, meta, log, m):
         log.writelog("  Performing full-frame outlier rejection...",
                      mute=(not meta.verbose))
         for p in range(2):
-            iscans = np.where(data.scandir.values == p)[0]
+            iscans = np.nonzero(data.scandir.values == p)[0]
             if len(iscans) > 0:
                 for n in range(meta.nreads):
                     iscan = iscans[n::meta.nreads]
@@ -1033,13 +1028,6 @@ def cut_aperture(data, meta, log):
         The v0 values over the aperture region.
     apmedflux : ndarray
         The median flux over the aperture region. Currently None.
-
-    Notes
-    -----
-    History:
-
-    - 2022-06-17, Taylor J Bell
-        Initial version, edited to work for HST scanned observations.
     """
     log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))
@@ -1148,7 +1136,7 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
     vmax : int; optional
         Maximum value of colormap. Default is None.
     """
-    plots_s3.residualBackground(data, meta, m, vmin=None, vmax=None)
+    plots_s3.residualBackground(data, meta, m, vmin=vmin, vmax=vmax)
 
 
 def lc_nodriftcorr(spec, meta):

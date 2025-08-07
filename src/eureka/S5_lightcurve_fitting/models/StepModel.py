@@ -2,7 +2,7 @@ import numpy as np
 
 from .Model import Model
 from ...lib.readEPF import Parameters
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class StepModel(Model):
@@ -45,6 +45,28 @@ class StepModel(Model):
         self.keys = [key for key in self.keys if key.startswith('step')]
         self._parse_coeffs()
 
+    @property
+    def time(self):
+        """A getter for the time."""
+        return self._time
+
+    @time.setter
+    def time(self, time_array):
+        """A setter for the time."""
+        if time_array is not None:
+            self._time = np.ma.masked_invalid(time_array)
+            # Convert to local time
+            if self.multwhite:
+                self.time_local = np.ma.zeros(self.time.shape)
+                for chan in self.fitted_channels:
+                    # Split the arrays that have lengths
+                    # of the original time axis
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    time = self.time[trim1:trim2]
+                    self.time_local[trim1:trim2] = time-time.data[0]
+            else:
+                self.time_local = self.time - self.time.data[0]
+
     def _parse_coeffs(self):
         """Convert dictionary of parameters into an array.
 
@@ -57,13 +79,6 @@ class StepModel(Model):
         -------
         np.ndarray
             The sequence of coefficient values.
-
-        Notes
-        -----
-        History:
-
-        - 2022 July 14, Taylor J Bell
-            Initial version.
         """
         for key in self.keys:
             split_key = key.split('_')
@@ -106,8 +121,7 @@ class StepModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Create the ramp from the coeffs
-        lcfinal = np.ma.ones((nchan, len(self.time)))
+        lcfinal = np.ma.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -119,7 +133,8 @@ class StepModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            for s in np.where(self.steps[c] != 0)[0]:
-                lcfinal[c, time >= self.steptimes[c, s]] += \
-                    self.steps[c, s]
-        return lcfinal.flatten()
+            lcpiece = np.ma.ones(len(time))
+            for s in np.flatnonzero(self.steps[c] != 0):
+                lcpiece[time >= self.steptimes[c, s]] += self.steps[c, s]
+            lcfinal = np.ma.append(lcfinal, lcpiece)
+        return lcfinal

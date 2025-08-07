@@ -7,13 +7,6 @@ class S1MetaClass(MetaClass):
 
     This class loads a Stage 1 Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-03 Taylor J Bell
-        Made specific S1 class based on MetaClass
     '''
 
     def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
@@ -33,36 +26,29 @@ class S1MetaClass(MetaClass):
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version.
         '''
+        # Remove the stage from kwargs if present
+        if 'stage' in kwargs:
+            kwargs.pop('stage')
+
         super().__init__(folder, file, eventlabel, stage=1, **kwargs)
+
+        # Set a default data file suffix
+        self.suffix = getattr(self, 'suffix', 'uncal')
 
     def set_defaults(self):
         '''Set Stage 1 specific defaults for generic instruments.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for any instrument.
         '''
-        # Data file suffix
-        self.suffix = getattr(self, 'suffix', 'uncal')
-
         # Control parallelization
         # (Options are 'none', quarter', 'half', 'all', or any integer)
         self.maximum_cores = getattr(self, 'maximum_cores', 'half')
 
         # Control ramp fitting method
-        self.ramp_fit_algorithm = getattr(self, 'ramp_fit_algorithm',
-                                          'default')
+        self.ramp_fit_algorithm = getattr(self, 'ramp_fit_algorithm', 'OLS_C')
+        self.ramp_fit_firstgroup = getattr(self, 'ramp_fit_firstgroup', None)
+        self.ramp_fit_lastgroup = getattr(self, 'ramp_fit_lastgroup', None)
+        self.ramp_fit_suppress_one_group = getattr(
+            self, 'ramp_fit_suppress_one_group', True)
 
         # Pipeline steps
         self.skip_group_scale = getattr(self, 'skip_group_scale', False)
@@ -75,6 +61,8 @@ class S1MetaClass(MetaClass):
         self.skip_jump = getattr(self, 'skip_jump', False)
         self.skip_ramp_fitting = getattr(self, 'skip_ramp_fitting', False)
         self.skip_gain_scale = getattr(self, 'skip_gain_scale', False)
+        self.skip_clean_flicker_noise = getattr(
+            self, 'skip_clean_flicker_noise', True)
 
         # CR sigma rejection threshold
         self.jump_rejection_threshold = getattr(self,
@@ -187,7 +175,6 @@ class S1MetaClass(MetaClass):
             # Row-by-row BG subtraction (only useful for NIRCam)
             self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
             self.orders = getattr(self, 'orders', None)
-            self.src_ypos = getattr(self, 'src_ypos', 15)
         # bg_x1 and bg_x2 also need to be defined if meta.masktrace is True
         # Left edge of exclusion region for row-by-row BG subtraction
         self.bg_x1 = getattr(self, 'bg_x1', None)
@@ -211,15 +198,17 @@ class S1MetaClass(MetaClass):
 
         #####
 
-        # "Default" ramp fitting settings
-        # Options are "default", "fixed", "interpolated", "flat", or "custom"
-        self.default_ramp_fit_weighting = 'default'
+        # Ramp fitting settings if ram_fit_algorithm is set to OLS_C or OLS,
+        # where OLS stands for Ordinary Least Squares and OLS_C is the same
+        # underlying algorithm but coded in C for faster execution.
+        # Options are "default"/"optimal", "unweighted", "fixed",
+        # "interpolated", "uniform", or "custom"
+        self.default_ramp_fit_weighting = getattr(
+            self, 'default_ramp_fit_weighting', 'default')
         if self.default_ramp_fit_weighting == 'fixed':
-            # Force this to be specified if fixed weighting
             self.default_ramp_fit_fixed_exponent = getattr(
                 self, 'default_ramp_fit_fixed_exponent', 10)
         elif self.default_ramp_fit_weighting == 'custom':
-            # Force these to be specified if custom weighting
             self.default_ramp_fit_custom_snr_bounds = getattr(
                 self, 'default_ramp_fit_custom_snr_bounds',
                 [5, 10, 20, 50, 100])
@@ -229,13 +218,6 @@ class S1MetaClass(MetaClass):
 
     def set_MIRI_defaults(self):
         '''Set Stage 1 specific defaults for MIRI.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for MIRI.
         '''
         # MIRI-specific pipeline stages
 
@@ -248,7 +230,11 @@ class S1MetaClass(MetaClass):
         self.skip_reset = getattr(self, 'skip_reset', False)
         # jwst skips by default for MIRI TSO.
         self.skip_rscd = getattr(self, 'skip_rscd', True)
+        # Skip since pretty time consuming and testing has shown it has
+        # negligible effect on the data.
         self.skip_emicorr = getattr(self, 'skip_emicorr', True)
+        # If running emicorr, set the algorithm to use the newer joint method
+        self.emicorr_algorithm = getattr(self, 'emicorr_algorithm', 'joint')
 
         # Remove the 390 Hz periodic noise in MIRI/LRS SLITLESSPRISM
         # group-level data?
@@ -262,13 +248,6 @@ class S1MetaClass(MetaClass):
 
     def set_NIR_defaults(self):
         '''Set Stage 1 specific defaults for NIR-instruments.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for NIR-instruments.
         '''
         # NIR-specific pipeline stages
         self.skip_superbias = getattr(self, 'skip_superbias', False)
@@ -280,3 +259,10 @@ class S1MetaClass(MetaClass):
         if self.remove_390hz:
             raise AssertionError('remove_390hz cannot be set to True for NIR '
                                  'instruments!')
+
+    def set_NIRISS_defaults(self):
+        '''Set Stage 1 specific defaults for NIRISS.
+        '''
+        self.orders = getattr(self, 'orders', [1, 2])
+
+        self.set_NIR_defaults()

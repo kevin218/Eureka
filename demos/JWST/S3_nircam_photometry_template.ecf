@@ -3,11 +3,10 @@
 # Stage 3 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-3
 
 ncpu                 4                # Number of CPUs
-nfiles               1                # The number of data files to analyze simultaneously
+nfiles               100              # The number of data files to analyze simultaneously
 max_memory           0.5              # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
 indep_batches        False            # Independently treat each batch of files? Strongly recommended to leave this as False unless you have a clear reason to set it to True.
 suffix               calints          # Data file suffix
-photometry           True             # Set to True if the user wants to analyse a photometric dataset
 
 calibrated_spectra  False             # Set True to generate flux-calibrated spectra/photometry in mJy
                                       # Set False to convert to electrons
@@ -18,22 +17,34 @@ xwindow              [512, 1536]      # Horizontal axis as seen in DS9
 dqmask               True             # Mask pixels with an odd entry in the DQ array
 
 # Background parameters
-flag_bg              True             # Do outlier rejection along time axis for each individual pixel?
+ff_outlier           False            # Set False to use only background region (recommended for deep transits)
+                                      # Set True to use full frame (works well for shallow transits/eclipses)
 bg_thresh            [7,7]            # Double-iteration X-sigma threshold for outlier rejection along time axis
 
-# Photometric extraction parameters
-interp_method        cubic            # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
+# Centroiding parameters
 centroid_method      mgmc             # Method used for centroiding. Options: mgmc, fgc
+ctr_guess            'fits'           # Initial guess of centroid position [x,y]. If 'fits', the code will use the approximate centroid position information contained in the FITS header as an starting point. If set to None, will first perform centroiding on whole frame (can sometimes fail)
 ctr_cutout_size      5                # Cutoff size all around the centroid after the coarse centroid calculation or first centroid guess when using the mgmc method.
-oneoverf_corr        median           # Options: None, meanerr, median
-oneoverf_dist        350              # How many pixels away from the centroid should be considered as background? (used for 1/f correction)
-skip_apphot_bg       False            # Skips the background subtraction during the aperture photometry step
-aperture_shape       circle           # Shape of extraction aperture: options are 'circle' or 'hexagon'
-photap               65               # Size of photometry aperture in pixels
-skyin                70               # Inner sky annulus edge, in pixels
-skywidth             20               # Width of the sky annulus, in pixels
 centroid_tech        com              # (mgmc method param) Technique used for centroiding. Options: com, 1dg, 2dg
 gauss_frame          100              # (mgmc method param) Half-width away from second centroid guess to include in centroiding map for gaussian widths. Recommend ~100 for defocused NIRCam photometry.
+
+# 1/f noise correction for NIRCam photometric data
+oneoverf_corr        median           # Options: None, meanerr, median
+oneoverf_dist        350              # How many pixels away from the centroid should be considered as background? (used for 1/f correction)
+
+# Photometric extraction parameters
+phot_method          photutils        # photutils (aperture photometry using photutils), poet (aperture photometry using code from POET), or optimal (for optimal photometric extraction)
+aperture_edge        exact            # center (pixel is included only if its center lies within the aperture), or exact (pixel is weighted by the fractional area that lies within the aperture)
+aperture_shape       circle           # If phot_method is photutils or optimal: circle, ellipse, or rectangle. If phot_method is poet: circle or hexagon. Used to set both the object aperture shape and the sky annulus shape
+moving_centroid      False            # Boolean: False if the aperture should stay fixed on the median centroid location (recommended), or True if the aperture should track the moving centroid
+interp_method        cubic            # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
+skip_apphot_bg       False            # Skips the background subtraction during the aperture photometry step
+photap               65               # Size of photometry aperture in pixels
+# photap_b             70               # Size of photometry aperture y-radius in pixels (if aperture_shape is ellipse or rectangle)
+# photap_theta         45               # Rotation angle of photometry aperture in degrees (if aperture_shape is ellipse or rectangle)
+skyin                70               # Inner sky annulus edge, in pixels
+skywidth             20               # Width of the sky annulus, in pixels
+
 
 # Diagnostics
 isplots_S3           3                # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)

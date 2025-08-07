@@ -18,6 +18,7 @@ from .source_pos import gauss
 from ..lib import util, plots
 
 
+@plots.apply_style
 def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
                    mad=None, order=None):
     '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
@@ -57,7 +58,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
     # For plotting purposes, extrapolate NaN wavelengths
     wave_1d = np.ma.masked_invalid(np.copy(wave_1d))
     if np.any(wave_1d.mask):
-        masked = np.where(wave_1d.mask)[0]
+        masked = np.nonzero(wave_1d.mask)[0]
         inds = np.arange(len(wave_1d))
         wave_1d_valid = np.delete(wave_1d, masked)
         inds_valid = np.delete(inds, masked)
@@ -79,9 +80,11 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
         pmax = optspec.x[-1].values+0.5
 
     cmap = plt.cm.RdYlBu_r.copy()
-    fig1 = plt.figure(3101, figsize=(8, 8))
-    fig2 = plt.figure(3102, figsize=(8, 8))
+    fig1 = plt.figure(3101)
+    fig1.set_size_inches(8, 8, forward=True)
     fig1.clf()
+    fig2 = plt.figure(3102)
+    fig2.set_size_inches(8, 8, forward=True)
     fig2.clf()
     ax1 = fig1.gca()
     ax2 = fig2.gca()
@@ -128,15 +131,16 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
         orderkey = ''
     else:
         orderkey = f'_order{order}'
-    fname1 = f'figs{os.sep}fig3101{orderkey}_2D_LC'+plots.figure_filetype
-    fname2 = f'figs{os.sep}fig3102{orderkey}_2D_LC'+plots.figure_filetype
+    fname1 = f'figs{os.sep}fig3101{orderkey}_2D_LC'+plots.get_filetype()
+    fname2 = f'figs{os.sep}fig3102{orderkey}_2D_LC'+plots.get_filetype()
     fig1.savefig(meta.outputdir+fname1, dpi=300)
     fig2.savefig(meta.outputdir+fname2, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
-def image_and_background(data, meta, log, m, order=None):
+@plots.apply_style
+def image_and_background(data, meta, log, m, order=None, group=None):
     '''Make image+background plot. (Figs 3301)
 
     Parameters
@@ -150,7 +154,9 @@ def image_and_background(data, meta, log, m, order=None):
     m : int
         The file number.
     order : int; optional
-        Spectral order. Default is None
+        Spectral order. Default is None.
+    group : int; optional
+        The group number (only applies to Stage 1).  Default is None.
     '''
     log.writelog('  Creating figures for background subtraction...',
                  mute=(not meta.verbose))
@@ -158,7 +164,11 @@ def image_and_background(data, meta, log, m, order=None):
     # If need be, transpose array so that largest dimension is on x axis
     if len(data.x) < len(data.y):
         data = data.transpose('time', 'x', 'y')
-    xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
+        xmin, xmax, ymin, ymax = get_bounds(data.flux.y.values,
+                                            data.flux.x.values)
+    else:
+        xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values,
+                                            data.flux.y.values)
 
     intstart = data.attrs['intstart']
     subdata = np.ma.masked_invalid(data.flux.values)
@@ -180,8 +190,9 @@ def image_and_background(data, meta, log, m, order=None):
     if meta.verbose:
         iterfn = tqdm(iterfn)
     for n in iterfn:
-        plt.figure(3301, figsize=(8, 8))
-        plt.clf()
+        fig = plt.figure(3301)
+        fig.set_size_inches(8, 8, forward=True)
+        fig.clf()
         plt.suptitle(f'Integration {intstart + n}')
         plt.subplot(211)
         plt.title('Background-Subtracted Frame')
@@ -208,14 +219,19 @@ def image_and_background(data, meta, log, m, order=None):
             orderkey = ''
         else:
             orderkey = f'_order{order}'
+        if group is None:
+            groupkey = ''
+        else:
+            groupkey = f'_group{group}'
         fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
-                 f'{orderkey}' + '_' + meta.bg_dir + '_ImageAndBackground' +
-                 plots.figure_filetype)
+                 f'{orderkey}' + f'{groupkey}' + '_' + meta.bg_dir +
+                 '_ImageAndBackground' + plots.get_filetype())
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def drift_2D(data, meta):
     '''Plot the fitted 2D drift. (Fig 3106)
 
@@ -226,11 +242,12 @@ def drift_2D(data, meta):
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     '''
-    plt.figure(3106, figsize=(8, 6))
-    plt.clf()
+    fig = plt.figure(3106)
+    fig.set_size_inches(8, 6, forward=True)
+    fig.clf()
     plt.subplot(211)
     for p in range(2):
-        iscans = np.where(data.scandir.values == p)[0]
+        iscans = np.nonzero(data.scandir.values == p)[0]
         if len(iscans) > 0:
             if p == 0:
                 label = "Direction 0 (Forward)"
@@ -241,7 +258,7 @@ def drift_2D(data, meta):
 
     plt.subplot(212)
     for p in range(2):
-        iscans = np.where(data.scandir.values == p)[0]
+        iscans = np.nonzero(data.scandir.values == p)[0]
         if len(iscans) > 0:
             if p == 0:
                 label = "Direction 0 (Forward)"
@@ -251,12 +268,13 @@ def drift_2D(data, meta):
     plt.ylabel(f'Drift Along x ({data.centroid_x.units})')
     plt.xlabel('Integration Number')
 
-    fname = f'figs{os.sep}fig3106_Drift2D{plots.figure_filetype}'
+    fname = f'figs{os.sep}fig3106_Drift2D{plots.get_filetype()}'
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def optimal_spectrum(data, meta, n, m):
     '''Make optimal spectrum plot. (Figs 3302)
 
@@ -277,8 +295,8 @@ def optimal_spectrum(data, meta, n, m):
                                           data.optspec.values,
                                           data.opterr.values)
 
-    plt.figure(3302)
-    plt.clf()
+    fig = plt.figure(3302)
+    fig.clf()
     plt.suptitle(f'1D Spectrum - Integration {intstart + n}')
     if meta.orders is None:
         plt.semilogy(data.stdspec.x.values, stdspec[n], '-', color='C1',
@@ -305,12 +323,13 @@ def optimal_spectrum(data, meta, n, m):
     int_number = str(intstart + n).zfill(int(np.floor(
         np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3302_file{file_number}_int{int_number}' +
-             '_Spectrum'+plots.figure_filetype)
+             '_Spectrum'+plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def source_position(meta, x_dim, pos_max, m, n,
                     isgauss=False, x=None, y=None, popt=None,
                     isFWM=False, y_pixels=None, sum_row=None, y_pos=None):
@@ -344,18 +363,9 @@ def source_position(meta, x_dim, pos_max, m, n,
         The sum over each row.
     y_pos : float; optional
         The FWM central position of the star.
-
-    Notes
-    -----
-    History:
-
-    - 2021-07-14: Sebastian Zieba
-        Initial version.
-    - Oct 15, 2021: Taylor Bell
-        Tidied up the code a bit to reduce repeated code.
     '''
-    plt.figure(3103)
-    plt.clf()
+    fig = plt.figure(3103)
+    fig.clf()
     plt.plot(y_pixels, sum_row, 'o', label='Data')
     if isgauss:
         x_gaussian = np.linspace(0, x_dim, 500)
@@ -373,12 +383,13 @@ def source_position(meta, x_dim, pos_max, m, n,
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3103_file{file_number}_int{int_number}' +
-             '_source_pos'+plots.figure_filetype)
+             '_source_pos'+plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def profile(meta, profile, submask, n, m, order=None):
     '''Plot weighting profile from optimal spectral extraction routine.
     (Figs 3303)
@@ -403,8 +414,9 @@ def profile(meta, profile, submask, n, m, order=None):
     vmin = np.ma.min(profile)
     vmax = vmin + 0.3*np.ma.max(profile)
     cmap = plt.cm.viridis.copy()
-    plt.figure(3303, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3303)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     plt.title(f"Optimal Profile - Integration {n}")
     plt.imshow(profile, aspect='auto', origin='lower',
                vmax=vmax, vmin=vmin, interpolation='nearest', cmap=cmap)
@@ -419,12 +431,13 @@ def profile(meta, profile, submask, n, m, order=None):
     else:
         orderkey = f'_order{order}'
     fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}' +
-             f'{orderkey}_Profile' + plots.figure_filetype)
+             f'{orderkey}_Profile' + plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
     '''Show 1D view of profile for each column. (Figs 3501)
 
@@ -450,26 +463,28 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
         Variance of background subtracted data.
     '''
     ny, nx = subdata.shape
-    plt.figure(3501)
-    plt.clf()
+    fig = plt.figure(3501)
+    fig.clf()
     plt.suptitle(f'Integration {n}, Columns {i}/{nx}')
-    plt.errorbar(np.arange(ny)[np.where(~submask[:, i])[0]],
-                 subdata[np.where(~submask[:, i])[0], i],
-                 np.sqrt(variance[np.where(~submask[:, i])[0], i]),
+    good_inds = np.nonzero(~submask[:, i])[0]
+    plt.errorbar(np.arange(ny)[good_inds],
+                 subdata[good_inds, i],
+                 np.sqrt(variance[good_inds, i]),
                  fmt='.', color='b')
-    plt.plot(np.arange(ny)[np.where(~submask[:, i])[0]],
-             expected[np.where(~submask[:, i])[0], i], 'g-')
+    plt.plot(np.arange(ny)[good_inds],
+             expected[good_inds, i], 'g-')
     plt.plot((loc), (subdata[loc, i]), 'ro')
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     col_number = str(i).zfill(int(np.floor(np.log10(nx))+1))
     fname = (f'figs{os.sep}fig3501_file{file_number}_int{int_number}' +
-             f'_col{col_number}_subdata'+plots.figure_filetype)
+             f'_col{col_number}_subdata'+plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
+@plots.apply_style
 def driftypos(data, meta, m):
     '''Plot the spatial jitter. (Fig 3104)
 
@@ -481,28 +496,23 @@ def driftypos(data, meta, m):
         The metadata object.
     m : int
         The file number.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-11 Caroline Piaulet
-        First version of this function
     '''
-    plt.figure(3104, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3104)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     plt.plot(np.arange(meta.n_int), data["centroid_y"].values, '.')
     plt.ylabel('Spectrum spatial profile center')
     plt.xlabel('Integration Number')
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3104_file{file_number}_DriftYPos' +
-             plots.figure_filetype)
+             plots.get_filetype())
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def driftywidth(data, meta, m):
     '''Plot the spatial profile's fitted Gaussian width. (Fig 3105)
 
@@ -514,28 +524,23 @@ def driftywidth(data, meta, m):
         The metadata object.
     m : int
         The file number.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-11 Caroline Piaulet
-        First version of this function
     '''
-    plt.figure(3105, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3105)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     plt.plot(np.arange(meta.n_int), data["centroid_sy"].values, '.')
     plt.ylabel('Spectrum spatial profile width')
     plt.xlabel('Integration Number')
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3105_file{file_number}_DriftYWidth' +
-             plots.figure_filetype)
+             plots.get_filetype())
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def residualBackground(data, meta, m, vmin=None, vmax=None,
                        flux=None, order=None, ap_y=None, bg_y=None):
     '''Plot the median, BG-subtracted frame to study the residual BG region and
@@ -590,8 +595,9 @@ def residualBackground(data, meta, m, vmin=None, vmax=None,
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
 
-    plt.figure(3304, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3304)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304)
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
@@ -625,12 +631,13 @@ def residualBackground(data, meta, m, vmin=None, vmax=None,
     else:
         orderkey = f'_order{order}'
     fname = (f'figs{os.sep}fig3304_file{file_number}{orderkey}' +
-             '_ResidualBG'+plots.figure_filetype)
+             '_ResidualBG'+plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
+@plots.apply_style
 def curvature(meta, column_coms, smooth_coms, int_coms, m):
     '''Plot the measured, smoothed, and integer correction from the measured
     curvature. (Fig 3107)
@@ -647,18 +654,11 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
         Integer-rounded center of mass (light) for each pixel column
     m : int
         The file number.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-31 KBS
-        Initial version
     '''
     cmap = plt.cm.viridis.copy()
 
-    plt.figure(3107)
-    plt.clf()
+    fig = plt.figure(3107)
+    fig.clf()
     plt.title("Trace Curvature")
     plt.plot(column_coms+meta.ywindow[0], '.', label='Measured',
              color=cmap(0.25))
@@ -672,12 +672,13 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3107_file{file_number}_Curvature' +
-             plots.figure_filetype)
+             plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
+@plots.apply_style
 def median_frame(data, meta, m, medflux, order=None):
     '''Plot the cleaned time-median frame. (Fig 3308)
 
@@ -699,8 +700,9 @@ def median_frame(data, meta, m, medflux, order=None):
     vmax = medflux.max()/3
     cmap = plt.cm.plasma.copy()
 
-    plt.figure(3308, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3308)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     plt.title("Cleaned Median Frame")
     plt.imshow(medflux, origin='lower', aspect='auto',
                vmin=vmin, vmax=vmax, interpolation='nearest',
@@ -715,13 +717,14 @@ def median_frame(data, meta, m, medflux, order=None):
     else:
         orderkey = f'_order{order}'
     fname = (f'figs{os.sep}fig3308_file{file_number}{orderkey}' +
-             '_MedianFrame' + plots.figure_filetype)
+             '_MedianFrame' + plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
 # Photometry
+@plots.apply_style
 def phot_lc(data, meta):
     """
     Plots the flux as determined by the photometry routine as a function of
@@ -733,27 +736,21 @@ def phot_lc(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
     """
-    plt.figure(3108)
-    plt.clf()
+    fig = plt.figure(3108)
+    fig.clf()
     plt.suptitle('Photometric light curve')
     plt.errorbar(data.time, data['aplev'], yerr=data['aperr'], c='k', fmt='.')
     plt.ylabel('Flux')
     plt.xlabel('Time')
 
-    fname = (f'figs{os.sep}fig3108-1D_LC' + plots.figure_filetype)
+    fname = (f'figs{os.sep}fig3108-1D_LC' + plots.get_filetype())
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_bg(data, meta):
     """
     Plots the background flux as determined by the photometry routine as a
@@ -765,29 +762,23 @@ def phot_bg(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
     """
     if not meta.skip_apphot_bg:
-        plt.figure(3305)
-        plt.clf()
+        fig = plt.figure(3305)
+        fig.clf()
         plt.suptitle('Photometric background light curve')
         plt.errorbar(data.time, data['skylev'], yerr=data['skyerr'],
                      c='k', fmt='.')
         plt.ylabel('Flux')
         plt.xlabel('Time')
 
-        fname = (f'figs{os.sep}fig3305-1D_LC_BG' + plots.figure_filetype)
+        fname = (f'figs{os.sep}fig3305-1D_LC_BG' + plots.get_filetype())
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_centroid(data, meta):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths
@@ -799,23 +790,11 @@ def phot_centroid(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
-    - 2023-02-24 Isaac Edelman
-        Enchanced graph layout,
-        added sig display values for sy,sx,
-        and fixed issue with ax[2] displaying sy instead of sx.
-    - 2023-04-21 Isaac Edelman
-        Added flat "0" lines to plots.
     """
-    plt.figure(3109)
-    plt.clf()
-    fig, ax = plt.subplots(4, 1, num=3019, figsize=(10, 6), sharex=True)
+    fig = plt.figure(3109)
+    fig.set_size_inches(10, 6, forward=True)
+    fig.clf()
+    ax = fig.subplots(4, 1, sharex=True)
     plt.suptitle('Centroid positions over time')
 
     cx = data.centroid_x.values
@@ -855,12 +834,13 @@ def phot_centroid(data, meta):
     fig.get_layout_engine().set(hspace=0.02)
     fig.align_ylabels()
 
-    fname = (f'figs{os.sep}fig3109-Centroid' + plots.figure_filetype)
+    fname = (f'figs{os.sep}fig3109-Centroid' + plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_npix(data, meta):
     """
     Plots the number of pixels within the target aperture and within the
@@ -872,16 +852,9 @@ def phot_npix(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
     """
-    plt.figure(3502)
-    plt.clf()
+    fig = plt.figure(3502)
+    fig.clf()
     plt.suptitle('Aperture sizes over time')
     plt.subplot(211)
     plt.plot(range(len(data.nappix)), data.nappix)
@@ -891,12 +864,13 @@ def phot_npix(data, meta):
     plt.ylabel('nskypix')
     plt.xlabel('Time')
 
-    fname = (f'figs{os.sep}fig3502_aperture_size' + plots.figure_filetype)
+    fname = (f'figs{os.sep}fig3502_aperture_size' + plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
     """
     Plot of the gaussian fit to the centroid cutout. (Fig 3309)
@@ -927,9 +901,10 @@ def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
     img = np.ma.copy(img)
     img = np.ma.masked_where(mask, img)
 
-    plt.figure(3309)
-    plt.clf()
-    fig, ax = plt.subplots(2, 2, num=3309, figsize=(8, 8))
+    fig = plt.figure(3309)
+    fig.set_size_inches(8, 8, forward=True)
+    fig.clf()
+    ax = fig.subplots(2, 2)
 
     # Title
     plt.suptitle('Centroid gaussian fit')
@@ -970,12 +945,13 @@ def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3309_file{file_number}_int{int_number}'
-             f'_Centroid_Fit' + plots.figure_filetype)
+             f'_Centroid_Fit' + plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     """
     Add a vertical color bar to an image plot.
@@ -992,6 +968,111 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     return im.axes.figure.colorbar(im, cax=cax, **kwargs)
 
 
+@plots.apply_style
+def make_artists(meta, centroid_x, centroid_y):
+    """Make the aperture shapes for the photometry plots.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    centroid_x : float
+        The x-coordinate of the centroid.
+    centroid_y : float
+        The y-coordinate of the centroid.
+
+    Returns
+    -------
+    ap1 : matplotlib.patches.PathPatch
+        The target aperture.
+    ap2 : matplotlib.patches.PathPatch
+        The inner circle of the sky annulus.
+    ap3 : matplotlib.patches.PathPatch
+        The outer circle of the sky annulus.
+    """
+    # Plot proper aperture shapes
+    if meta.aperture_shape == "hexagon":
+        # to make a hexagon, make the vertices and add them into a path
+        # need to add extraneous vertex to close path, for some reason
+        xvert = centroid_x - meta.photap*np.sin(2*np.pi*np.arange(7)/6)
+        yvert = centroid_y + meta.photap*np.cos(2*np.pi*np.arange(7)/6)
+        hex1 = Path(np.vstack((xvert, yvert)).T)
+
+        # make patch of hexagon
+        ap1 = patches.PathPatch(hex1, color='r',
+                                fill=False, lw=3, alpha=0.7,
+                                label='target aperture')
+
+        xvert = centroid_x - meta.skyin*np.sin(2*np.pi*np.arange(7)/6)
+        yvert = centroid_y + meta.skyin*np.cos(2*np.pi*np.arange(7)/6)
+        hex2 = Path(np.vstack((xvert, yvert)).T)
+
+        ap2 = patches.PathPatch(hex2, color='w',
+                                fill=False, lw=4, alpha=0.8,
+                                label='sky aperture')
+
+        xvert = centroid_x - meta.skyout*np.sin(2*np.pi*np.arange(7)/6)
+        yvert = centroid_y + meta.skyout*np.cos(2*np.pi*np.arange(7)/6)
+        hex3 = Path(np.vstack((xvert, yvert)).T)
+
+        ap3 = patches.PathPatch(hex3, color='w',
+                                fill=False, lw=4, alpha=0.8)
+    elif meta.aperture_shape == "ellipse":
+        # elliptical apertures
+
+        skyin_b = meta.skyin*(meta.photap_b/meta.photap)
+        skyout_b = meta.skyout*(meta.photap_b/meta.photap)
+
+        ap1 = patches.Ellipse((centroid_x, centroid_y), 2*meta.photap,
+                              2*meta.photap_b, angle=meta.photap_theta,
+                              color='r', fill=False, lw=3,
+                              alpha=0.7, label='target aperture')
+        ap2 = patches.Ellipse((centroid_x, centroid_y), 2*meta.skyin,
+                              2*skyin_b, angle=meta.photap_theta,
+                              color='w', fill=False, lw=4, alpha=0.8,
+                              label='sky aperture')
+        ap3 = patches.Ellipse((centroid_x, centroid_y), 2*meta.skyout,
+                              2*skyout_b, angle=meta.photap_theta,
+                              color='w', fill=False, lw=4, alpha=0.8)
+    elif meta.aperture_shape == "rectangle":
+        # rectangular apertures
+
+        skyin_b = meta.skyin*(meta.photap_b/meta.photap)
+        skyout_b = meta.skyout*(meta.photap_b/meta.photap)
+
+        ap1 = patches.Rectangle((centroid_x-meta.photap,
+                                 centroid_y-meta.photap_b),
+                                2*meta.photap, 2*meta.photap_b,
+                                angle=meta.photap_theta,
+                                rotation_point='center',
+                                color='r', fill=False, lw=3,
+                                alpha=0.7, label='target aperture')
+        ap2 = patches.Rectangle((centroid_x-meta.skyin,
+                                 centroid_y-skyin_b),
+                                2*meta.skyin, 2*skyin_b,
+                                angle=meta.photap_theta,
+                                rotation_point='center',
+                                color='w', fill=False, lw=4, alpha=0.8,
+                                label='sky aperture')
+        ap3 = patches.Rectangle((centroid_x-meta.skyout,
+                                 centroid_y-skyout_b),
+                                2*meta.skyout, 2*skyout_b,
+                                angle=meta.photap_theta,
+                                rotation_point='center',
+                                color='w', fill=False, lw=4, alpha=0.8)
+    else:
+        # circular apertures
+        ap1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
+                         fill=False, lw=3, alpha=0.7, label='target aperture')
+        ap2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
+                         fill=False, lw=4, alpha=0.8, label='sky aperture')
+        ap3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
+                         fill=False, lw=4, alpha=0.8)
+
+    return ap1, ap2, ap3
+
+
+@plots.apply_style
 def phot_2d_frame(data, meta, m, i):
     """
     Plots the 2D frame together with the centroid position, the target aperture
@@ -1009,21 +1090,14 @@ def phot_2d_frame(data, meta, m, i):
         The integration number.
     m : int
         The file number.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
-    - 2024-04-06 Yoni Brande
-        Added hexagonal aperture plotting
     """
-    plt.figure(3306, figsize=(8, 8))
-    plt.clf()
+    fig = plt.figure(3306)
+    fig.set_size_inches(8, 8, forward=True)
+    fig.clf()
 
-    flux, centroid_x, centroid_y = \
-        data.flux[i], data.centroid_x[i], data.centroid_y[i]
+    flux = data.flux.values[i]
+    centroid_x = data.centroid_x.values[i]
+    centroid_y = data.centroid_y.values[i]
 
     xmin = data.flux.x.min().values-meta.xwindow[0]
     xmax = data.flux.x.max().values-meta.xwindow[0]
@@ -1041,48 +1115,7 @@ def phot_2d_frame(data, meta, m, i):
     plt.ylabel('y pixels')
     plt.xlabel('x pixels')
 
-    # Plot proper aperture shapes
-    if meta.aperture_shape == "hexagon":
-        # to make a hexagon, make the vertices and add them into a path
-        # need to add extraneous vertex to close path, for some reason
-        xvert = centroid_x.data.tolist() - meta.photap*np.sin(
-            2*np.pi*np.arange(7)/6)
-        yvert = centroid_y.data.tolist() + meta.photap*np.cos(
-            2*np.pi*np.arange(7)/6)
-        hex1 = Path(np.vstack((xvert, yvert)).T)
-
-        # make patch of hexagon
-        ap1 = patches.PathPatch(hex1, color='r',
-                                fill=False, lw=3, alpha=0.7,
-                                label='target aperture')
-
-        xvert = centroid_x.data.tolist() - meta.skyin*np.sin(
-            2*np.pi*np.arange(7)/6)
-        yvert = centroid_y.data.tolist() + meta.skyin*np.cos(
-            2*np.pi*np.arange(7)/6)
-        hex2 = Path(np.vstack((xvert, yvert)).T)
-
-        ap2 = patches.PathPatch(hex2, color='w',
-                                fill=False, lw=4, alpha=0.8,
-                                label='sky aperture')
-
-        xvert = centroid_x.data.tolist() - meta.skyout*np.sin(
-            2*np.pi*np.arange(7)/6)
-        yvert = centroid_y.data.tolist() + meta.skyout*np.cos(
-            2*np.pi*np.arange(7)/6)
-        hex3 = Path(np.vstack((xvert, yvert)).T)
-
-        ap3 = patches.PathPatch(hex3, color='w',
-                                fill=False, lw=4, alpha=0.8)
-    else:
-        # circular apertures
-        ap1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
-                         fill=False, lw=3, alpha=0.7, label='target aperture')
-        ap2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
-                         fill=False, lw=4, alpha=0.8, label='sky aperture')
-        ap3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
-                         fill=False, lw=4, alpha=0.8)
-
+    ap1, ap2, ap3 = make_artists(meta, centroid_x, centroid_y)
     plt.gca().add_patch(ap1)
     plt.gca().add_patch(ap2)
     plt.gca().add_patch(ap3)
@@ -1097,14 +1130,15 @@ def phot_2d_frame(data, meta, m, i):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3306_file{file_number}_int{int_number}_2D_Frame'
-             + plots.figure_filetype)
+             + plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
     if meta.isplots_S3 >= 5:
-        plt.figure(3504, figsize=(6, 5))
-        plt.clf()
+        fig = plt.figure(3504)
+        fig.set_size_inches(6, 5, forward=True)
+        fig.clf()
         plt.title('Zoomed-in 2D frame\nwith centroid and apertures')
 
         im = plt.imshow(flux, vmin=vmin, vmax=vmax, origin='lower',
@@ -1114,52 +1148,7 @@ def phot_2d_frame(data, meta, m, i):
         plt.ylabel('y pixels')
         plt.xlabel('x pixels')
 
-        # Plot proper aperture shapes
-        if meta.aperture_shape == "hexagon":
-            # to make a hexagon, make the vertices and add them into a path
-            xvert = centroid_x.data.tolist() - meta.photap*np.sin(
-                2*np.pi*np.arange(7)/6)
-            yvert = centroid_y.data.tolist() + meta.photap*np.cos(
-                2*np.pi*np.arange(7)/6)
-            hex1 = Path(np.vstack((xvert, yvert)).T)
-
-            # make patch of hexagon
-            ap1 = patches.PathPatch(hex1, color='r',
-                                    fill=False, lw=3, alpha=0.7,
-                                    label='target aperture')
-
-            # to make a hexagon, make the vertices and add them into a path
-            xvert = centroid_x.data.tolist() - meta.skyin*np.sin(
-                2*np.pi*np.arange(7)/6)
-            yvert = centroid_y.data.tolist() + meta.skyin*np.cos(
-                2*np.pi*np.arange(7)/6)
-            hex2 = Path(np.vstack((xvert, yvert)).T)
-
-            # make patch of hexagon
-            ap2 = patches.PathPatch(hex2, color='w',
-                                    fill=False, lw=4, alpha=0.8,
-                                    label='sky aperture')
-
-            # to make a hexagon, make the vertices and add them into a path
-            xvert = centroid_x.data.tolist() - meta.skyout*np.sin(
-                2*np.pi*np.arange(7)/6)
-            yvert = centroid_y.data.tolist() + meta.skyout*np.cos(
-                2*np.pi*np.arange(7)/6)
-            hex3 = Path(np.vstack((xvert, yvert)).T)
-
-            # make patch of hexagon
-            ap3 = patches.PathPatch(hex3, color='w',
-                                    fill=False, lw=4, alpha=0.8)
-        else:
-            # circular apertures
-            ap1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
-                             fill=False, lw=3, alpha=0.7,
-                             label='target aperture')
-            ap2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
-                             fill=False, lw=4, alpha=0.8, label='sky aperture')
-            ap3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
-                             fill=False, lw=4, alpha=0.8)
-
+        ap1, ap2, ap3 = make_artists(meta, centroid_x, centroid_y)
         plt.gca().add_patch(ap1)
         plt.gca().add_patch(ap2)
         plt.gca().add_patch(ap3)
@@ -1177,12 +1166,13 @@ def phot_2d_frame(data, meta, m, i):
         plt.legend(loc=1)
 
         fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}'
-                 f'_2D_Frame_Zoom' + plots.figure_filetype)
+                 f'_2D_Frame_Zoom' + plots.get_filetype())
         plt.savefig(meta.outputdir + fname, dpi=250)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     """
     Plots the 2D frame with a low vmax so that the background is well visible.
@@ -1203,18 +1193,11 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
         The file number.
     flux_w_oneoverf : 2D numpy array
         The 2D frame before the 1/f correction
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
     """
-    plt.figure(3307)
-    plt.clf()
-    fig, ax = plt.subplots(2, 1, num=3307, figsize=(8.2, 4.2),
-                           gridspec_kw={'hspace': 0.0})
+    fig = plt.figure(3307)
+    fig.set_size_inches(8.2, 4.2, forward=True)
+    fig.clf()
+    ax = fig.subplots(2, 1, gridspec_kw={'hspace': 0.0})
 
     cmap = plt.cm.viridis.copy()
     ax[0].imshow(flux_w_oneoverf, origin='lower',
@@ -1237,12 +1220,13 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     ax[0].set_title(f'Segment {file_number}, Integration {int_number}\n\n'
                     'Before 1/f correction')
     fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}'
-             f'_2D_Frame_OneOverF' + plots.figure_filetype)
+             f'_2D_Frame_OneOverF' + plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
+@plots.apply_style
 def phot_2d_frame_diff(data, meta):
     """
     Plots the difference between to consecutive 2D frames. This might be
@@ -1255,13 +1239,6 @@ def phot_2d_frame_diff(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-02 Sebastian Zieba
-        Initial version
     """
     nplots = meta.nplots
     if nplots == meta.n_int:
@@ -1269,8 +1246,8 @@ def phot_2d_frame_diff(data, meta):
         nplots -= 1
 
     for i in range(nplots):
-        plt.figure(3505)
-        plt.clf()
+        fig = plt.figure(3505)
+        fig.clf()
         flux1 = data.flux.values[i]
         flux2 = data.flux.values[i+1]
         im = plt.imshow(flux2-flux1, origin='lower', vmin=-600, vmax=600)
@@ -1282,12 +1259,13 @@ def phot_2d_frame_diff(data, meta):
         plt.title('2D frame differences\n'
                   f'Integration {int_number}')
         fname = (f'figs{os.sep}fig3505_int{int_number}_2D_Frame_Diff'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         plt.savefig(meta.outputdir + fname, dpi=250)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def stddev_profile(meta, n, m, stdevs, p7thresh):
     """
     Plots the difference between the data and optimal profile in units
@@ -1306,16 +1284,10 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
     p7thresh : int
         X-sigma threshold for outlier rejection during optimal spectral
         extraction
-
-    Notes
-    -----
-    History:
-
-    - 2022-12-29 Kevin Stevenson
-        Initial version
     """
-    plt.figure(3506, figsize=(8, 4))
-    plt.clf()
+    fig = plt.figure(3506)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     cmap = plt.cm.viridis.copy()
     plt.title(f'Std. Dev. from Optimal Profile - Integration {n}')
     plt.imshow(stdevs, origin='lower', aspect='auto',
@@ -1328,12 +1300,13 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3506_file{file_number}_int{int_number}' +
-             '_Std_Dev_Profile'+plots.figure_filetype)
+             '_Std_Dev_Profile'+plots.get_filetype())
     plt.savefig(meta.outputdir + fname, dpi=200)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
+@plots.apply_style
 def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
     """
     Plots the mirror tilt events by divinding
@@ -1360,13 +1333,6 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
     -------
     ndarray
         A median frame of the first 10 integrations.
-
-    Notes
-    -----
-    History:
-
-    - 2023-03-22 Isaac Edelman
-        Initial implementation.
     """
     images = []
     cmap = plt.cm.viridis.copy()
@@ -1402,8 +1368,9 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
                                       minx:maxx] / refrence_tilt_frame)
 
         # Create plot
-        plt.figure(3507, figsize=(6, 6))
-        plt.clf()
+        fig = plt.figure(3507)
+        fig.set_size_inches(6, 6, forward=True)
+        fig.clf()
 
         # Plot figure
         im = plt.imshow(flux_tilt, origin='lower', aspect='equal',
@@ -1433,7 +1400,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
                   f'Batch {file_number}, Integration {int_number}')
         fname = (f'figs{os.sep}tilt_events{os.sep}'
                  f'fig3507a_file{file_number}_int{int_number}'
-                 f'_tilt_events' + plots.figure_filetype)
+                 f'_tilt_events' + plots.get_filetype())
         # Save figure
         plt.savefig(meta.outputdir + fname, dpi=250, bbox_inches='tight')
         if not meta.hide_plots:
@@ -1487,9 +1454,9 @@ def get_bounds(x, y=None):
     Parameters
     ----------
     x : 1D array
-        Pixel indeces along x axis.
+        Pixel indices along x axis.
     y : 1D array, optional
-        Pixel indeces along y axis.
+        Pixel indices along y axis.
 
     Returns
     -------
