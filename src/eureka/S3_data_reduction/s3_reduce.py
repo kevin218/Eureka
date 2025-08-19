@@ -438,6 +438,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 else:  # Do Photometry reduction
                     meta.photap = meta.spec_hw
+                    if meta.aperture_shape == 'circle':
+                        # Need to update photap_b for this particular
+                        # aperture size (since photap_b=photap for circles)
+                        meta.photap_b = meta.photap
                     meta.skyin, meta.skyout = np.array(meta.bg_hw.split('_')
                                                        ).astype(float)
                     if meta.skyin == int(meta.skyin):
@@ -700,6 +704,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 log.writelog('Generating figures')
                 # 2D light curve without drift correction
                 inst.lc_nodriftcorr(spec, meta)
+            # return spec, meta # FINDME
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
