@@ -839,7 +839,11 @@ Only used if sigma_clip=True. Either the string 'mask' to mask the outlier value
 
 mad_sigma
 '''''''''
-The number of sigmas an unbinned MAD value must be from the rolling median (using box_width) to be considered an outlier.  Outlier columns are masked.
+The number of sigmas an unbinned MAD value must be from the rolling median (using mad_box_width) to be considered an outlier.  Outlier columns are masked.
+
+mad_box_width
+'''''''''''''
+The width of the box-car filter (used to calculated the rolling median) in units of number of wavelength elements. Used in calculating whether wavelength elements are outliers in the unbinned spectrum.
 
 sum_reads
 '''''''''
