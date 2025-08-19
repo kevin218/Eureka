@@ -1274,6 +1274,8 @@ def load_old_fitparams(lc, meta, log, freenames, fitter):
 
     foldername = os.path.join(meta.topdir, *meta.old_fitparams.split(os.sep))
     fname = f'S5_{fitter}_fitparams{channel_tag}.csv'
+    log.writelog('Loading old fit parameters from '
+                 f'{os.path.join(foldername, fname)}')
     fitted_values = pd.read_csv(os.path.join(foldername, fname),
                                 escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values['Parameter'])
