@@ -704,7 +704,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 log.writelog('Generating figures')
                 # 2D light curve without drift correction
                 inst.lc_nodriftcorr(spec, meta)
-            # return spec, meta # FINDME
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
