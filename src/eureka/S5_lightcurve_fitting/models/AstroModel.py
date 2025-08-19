@@ -13,7 +13,7 @@ class PlanetParams():
     """
     Define planet parameters.
     """
-    def __init__(self, model, pid=0, channel=0, eval=True):
+    def __init__(self, model, pid=0, channel=0, wl=0, eval=True):
         """
         Set attributes to PlanetParams object.
 
@@ -27,6 +27,10 @@ class PlanetParams():
         channel : int, optional
             The channel number for multi-wavelength fits or mutli-white fits.
             Defaults to 0.
+        wl : int, optional
+            The wavelength channel for multi-wavelength fits. Can be used for
+            shared parameters in multi-white fits which should be different
+            between channels. Defaults to 0.
         eval : bool; optional
             If true evaluate the model, otherwise simply compile the model.
             Defaults to True.
@@ -53,6 +57,12 @@ class PlanetParams():
             self.channel_id = ''
         else:
             self.channel_id = f'_ch{self.channel}'
+        # Wavelength ID
+        self.wl = wl
+        if wl == 0:
+            self.wl_id = ''
+        else:
+            self.wl_id = f'_wl{self.wl}'
         # Transit/eclipse parameters
         self.t0 = None
         self.rprs = None
@@ -144,9 +154,19 @@ class PlanetParams():
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
             try:
-                item_temp = item0 + self.channel_id
+                item_temp = item0 + self.channel_id + self.wl_id
                 if item_temp in model.parameters.dict.keys():
                     item0 = item_temp
+                else:
+                    # Default to wl=0 if not specified
+                    item_temp = item0 + self.channel_id
+                    if item_temp in model.parameters.dict.keys():
+                        item0 = item_temp
+                    else:
+                        # Default to ch=0 if not specified
+                        item_temp = item0 + self.wl_id
+                        if item_temp in model.parameters.dict.keys():
+                            item0 = item_temp
                 value = getattr(parameterObject, item0)
                 if eval:
                     value = value.value
@@ -158,9 +178,19 @@ class PlanetParams():
                     # Limb darkening and spots probably don't vary with planet
                     try:
                         item0 = item
-                        item_temp = item0 + self.channel_id
+                        item_temp = item0 + self.channel_id + self.wl_id
                         if item_temp in model.parameters.dict.keys():
                             item0 = item_temp
+                        else:
+                            # Default to wl=0 if not specified
+                            item_temp = item0 + self.channel_id
+                            if item_temp in model.parameters.dict.keys():
+                                item0 = item_temp
+                            else:
+                                # Default to ch=0 if not specified
+                                item_temp = item0 + self.wl_id
+                                if item_temp in model.parameters.dict.keys():
+                                    item0 = item_temp
                         value = getattr(parameterObject, item0)
                         if eval:
                             value = value.value
@@ -172,7 +202,7 @@ class PlanetParams():
         if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
             item0 = 'rp' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
@@ -180,7 +210,7 @@ class PlanetParams():
         if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
             item0 = 'rprs' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
@@ -189,7 +219,7 @@ class PlanetParams():
         if (self.rprs2 is None) and ('rp2' in model.parameters.dict.keys()):
             item0 = 'rp2' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
@@ -197,7 +227,7 @@ class PlanetParams():
         if (self.rp2 is None) and ('rprs2' in model.parameters.dict.keys()):
             item0 = 'rprs2' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
@@ -206,7 +236,7 @@ class PlanetParams():
         if (self.ars is None) and ('a' in model.parameters.dict.keys()):
             item0 = 'a' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
@@ -214,7 +244,7 @@ class PlanetParams():
         if (self.a is None) and ('ars' in model.parameters.dict.keys()):
             item0 = 'ars' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
@@ -223,7 +253,7 @@ class PlanetParams():
         if (self.b is None) and ('inc' in model.parameters.dict.keys()):
             item0 = 'inc' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             inc_value = getattr(parameterObject, item0)
             a_value = self.a
             if eval:
@@ -232,7 +262,7 @@ class PlanetParams():
         if (self.inc is None) and ('b' in model.parameters.dict.keys()):
             item0 = 'b' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             b_value = getattr(parameterObject, item0)
             a_value = self.a
             if eval:
@@ -249,9 +279,9 @@ class PlanetParams():
             item0 = 'ecc' + self.pid_id
             item1 = 'w' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             if model.parameters.dict[item1][1] == 'free':
-                item1 += self.channel_id
+                item1 += self.channel_id + self.wl_id
             value0 = getattr(parameterObject, item0)
             value1 = getattr(parameterObject, item1)
             if eval:
@@ -265,9 +295,9 @@ class PlanetParams():
             item0 = 'ecosw' + self.pid_id
             item1 = 'esinw' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             if model.parameters.dict[item1][1] == 'free':
-                item1 += self.channel_id
+                item1 += self.channel_id + self.wl_id
             value0 = getattr(parameterObject, item0)
             value1 = getattr(parameterObject, item1)
             if eval:
@@ -281,7 +311,7 @@ class PlanetParams():
         if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
             item0 = 'fp' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
@@ -291,7 +321,7 @@ class PlanetParams():
         if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
             item0 = 'fpfs' + self.pid_id
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             value = getattr(parameterObject, item0)
             if eval:
                 value = value.value
@@ -302,7 +332,7 @@ class PlanetParams():
         if 'Rs' in model.parameters.dict.keys():
             item0 = 'Rs'
             if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+                item0 += self.channel_id + self.wl_id
             try:
                 value = getattr(parameterObject, item0)
             except AttributeError as message:
