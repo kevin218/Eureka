@@ -10,6 +10,7 @@ from . import lightcurve
 from . import models as m
 from ..lib import manageevent as me
 from ..lib import util, logedit
+from ..lib.util import resolve_param_key
 from ..lib.readEPF import Parameters
 from ..version import version
 
@@ -594,7 +595,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        nchannel=chanrng,
                                        nchannel_fitted=nchannel_fitted,
                                        fitted_channels=fitted_channels,
-                                       wavelengths=meta.wavelengths,
+                                       wl_groups=meta.wl_groups,
                                        paramtitles=paramtitles,
                                        ld_from_S4=meta.use_generate_ld,
                                        ld_from_file=meta.ld_file,
@@ -614,7 +615,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        nchannel=chanrng,
                                        nchannel_fitted=nchannel_fitted,
                                        fitted_channels=fitted_channels,
-                                       wavelengths=meta.wavelengths,
+                                       wl_groups=meta.wl_groups,
                                        paramtitles=paramtitles,
                                        compute_ltt=meta.compute_ltt,
                                        multwhite=lc_model.multwhite,
@@ -630,7 +631,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          nchannel=chanrng,
                                          nchannel_fitted=nchannel_fitted,
                                          fitted_channels=fitted_channels,
-                                         wavelengths=meta.wavelengths,
+                                         wl_groups=meta.wl_groups,
                                          paramtitles=paramtitles,
                                          ld_from_S4=meta.use_generate_ld,
                                          ld_from_file=meta.ld_file,
@@ -652,7 +653,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                           nchannel=chanrng,
                                           nchannel_fitted=nchannel_fitted,
                                           fitted_channels=fitted_channels,
-                                          wavelengths=meta.wavelengths,
+                                          wl_groups=meta.wl_groups,
                                           paramtitles=paramtitles,
                                           ld_from_S4=meta.use_generate_ld,
                                           ld_from_file=meta.ld_file,
@@ -672,7 +673,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       nchannel=chanrng,
                                       nchannel_fitted=nchannel_fitted,
                                       fitted_channels=fitted_channels,
-                                      wavelengths=meta.wavelengths,
+                                      wl_groups=meta.wl_groups,
                                       paramtitles=paramtitles,
                                       ld_from_S4=meta.use_generate_ld,
                                       ld_from_file=meta.ld_file,
@@ -713,7 +714,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       nchannel=chanrng,
                                       nchannel_fitted=nchannel_fitted,
                                       fitted_channels=fitted_channels,
-                                      wavelengths=meta.wavelengths,
+                                      wl_groups=meta.wl_groups,
                                       paramtitles=paramtitles,
                                       compute_ltt=meta.compute_ltt,
                                       multwhite=lc_model.multwhite,
@@ -729,7 +730,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                 nchannel=chanrng,
                                 nchannel_fitted=nchannel_fitted,
                                 fitted_channels=fitted_channels,
-                                wavelengths=meta.wavelengths,
+                                wl_groups=meta.wl_groups,
                                 paramtitles=paramtitles,
                                 force_positivity=meta.force_positivity,
                                 multwhite=lc_model.multwhite,
@@ -745,7 +746,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                 nchannel=chanrng,
                                 nchannel_fitted=nchannel_fitted,
                                 fitted_channels=fitted_channels,
-                                wavelengths=meta.wavelengths,
+                                wl_groups=meta.wl_groups,
                                 paramtitles=paramtitles,
                                 force_positivity=meta.force_positivity,
                                 multwhite=lc_model.multwhite,
@@ -762,7 +763,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       nchannel=chanrng,
                                       nchannel_fitted=nchannel_fitted,
                                       fitted_channels=fitted_channels,
-                                      wavelengths=meta.wavelengths,
+                                      wl_groups=meta.wl_groups,
                                       paramtitles=paramtitles,
                                       multwhite=lc_model.multwhite,
                                       nints=lc_model.nints,
@@ -777,7 +778,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       nchannel=chanrng,
                                       nchannel_fitted=nchannel_fitted,
                                       fitted_channels=fitted_channels,
-                                      wavelengths=meta.wavelengths,
+                                      wl_groups=meta.wl_groups,
                                       paramtitles=paramtitles,
                                       multwhite=lc_model.multwhite,
                                       nints=lc_model.nints)
@@ -791,7 +792,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        nchannel=chanrng,
                                        nchannel_fitted=nchannel_fitted,
                                        fitted_channels=fitted_channels,
-                                       wavelengths=meta.wavelengths,
+                                       wl_groups=meta.wl_groups,
                                        paramtitles=paramtitles,
                                        multwhite=lc_model.multwhite,
                                        nints=lc_model.nints)
@@ -805,7 +806,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                     nchannel=chanrng,
                                     nchannel_fitted=nchannel_fitted,
                                     fitted_channels=fitted_channels,
-                                    wavelengths=meta.wavelengths,
+                                    wl_groups=meta.wl_groups,
                                     paramtitles=paramtitles,
                                     multwhite=lc_model.multwhite,
                                     nints=lc_model.nints)
@@ -818,7 +819,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                            nchannel=chanrng,
                            nchannel_fitted=nchannel_fitted,
                            fitted_channels=fitted_channels,
-                           wavelengths=meta.wavelengths,
+                           wl_groups=meta.wl_groups,
                            paramtitles=paramtitles,
                            multwhite=lc_model.multwhite,
                            nints=lc_model.nints)
@@ -831,7 +832,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                  nchannel=chanrng,
                                  nchannel_fitted=nchannel_fitted,
                                  fitted_channels=fitted_channels,
-                                 wavelengths=meta.wavelengths,
+                                 wl_groups=meta.wl_groups,
                                  paramtitles=paramtitles,
                                  multwhite=lc_model.multwhite,
                                  nints=lc_model.nints)
@@ -844,7 +845,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                  nchannel=chanrng,
                                  nchannel_fitted=nchannel_fitted,
                                  fitted_channels=fitted_channels,
-                                 wavelengths=meta.wavelengths,
+                                 wl_groups=meta.wl_groups,
                                  paramtitles=paramtitles,
                                  multwhite=lc_model.multwhite,
                                  nints=lc_model.nints)
@@ -857,7 +858,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nchannel=chanrng,
                                nchannel_fitted=nchannel_fitted,
                                fitted_channels=fitted_channels,
-                               wavelengths=meta.wavelengths,
+                               wl_groups=meta.wl_groups,
                                paramtitles=paramtitles,
                                axis='xpos', centroid=xpos,
                                multwhite=lc_model.multwhite,
@@ -871,7 +872,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nchannel=chanrng,
                                nchannel_fitted=nchannel_fitted,
                                fitted_channels=fitted_channels,
-                               wavelengths=meta.wavelengths,
+                               wl_groups=meta.wl_groups,
                                paramtitles=paramtitles,
                                axis='xwidth', centroid=xwidth,
                                multwhite=lc_model.multwhite,
@@ -885,7 +886,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nchannel=chanrng,
                                nchannel_fitted=nchannel_fitted,
                                fitted_channels=fitted_channels,
-                               wavelengths=meta.wavelengths,
+                               wl_groups=meta.wl_groups,
                                paramtitles=paramtitles,
                                axis='ypos', centroid=ypos,
                                multwhite=lc_model.multwhite,
@@ -899,7 +900,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nchannel=chanrng,
                                nchannel_fitted=nchannel_fitted,
                                fitted_channels=fitted_channels,
-                               wavelengths=meta.wavelengths,
+                               wl_groups=meta.wl_groups,
                                paramtitles=paramtitles,
                                axis='ywidth', centroid=ywidth,
                                multwhite=lc_model.multwhite,
@@ -914,7 +915,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nchannel=chanrng,
                                nchannel_fitted=nchannel_fitted,
                                fitted_channels=fitted_channels,
-                               wavelengths=meta.wavelengths,
+                               wl_groups=meta.wl_groups,
                                paramtitles=paramtitles,
                                multwhite=lc_model.multwhite,
                                nints=lc_model.nints)
@@ -930,7 +931,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                        nchannel=chanrng,
                        nchannel_fitted=nchannel_fitted,
                        fitted_channels=fitted_channels,
-                       wavelengths=meta.wavelengths,
+                       wl_groups=meta.wl_groups,
                        paramtitles=paramtitles,
                        multwhite=lc_model.multwhite,
                        nints=lc_model.nints)
@@ -950,7 +951,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                             nchannel=chanrng,
                             nchannel_fitted=nchannel_fitted,
                             fitted_channels=fitted_channels,
-                            wavelengths=meta.wavelengths,
+                            wl_groups=meta.wl_groups,
                             paramtitles=paramtitles,
                             multwhite=lc_model.multwhite,
                             nints=lc_model.nints,
@@ -965,7 +966,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                            nchannel=chanrng,
                            nchannel_fitted=nchannel_fitted,
                            fitted_channels=fitted_channels,
-                           wavelengths=meta.wavelengths,
+                           wl_groups=meta.wl_groups,
                            paramtitles=paramtitles,
                            multwhite=lc_model.multwhite,
                            nints=lc_model.nints,
@@ -1062,7 +1063,9 @@ def make_longparamlist(meta, params, chanrng):
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
-        The current metadata object.
+        The current metadata object. If wavelength grouping is desired,
+        provide `meta.wl_groups` as a list of integer group IDs (one per
+        fitted channel). wl=0 is implicit (no `_wl0` keys).
     params : eureka.lib.readEPF.Parameters
         The Parameters object containing the fitted parameters
         and their priors.
@@ -1071,56 +1074,134 @@ def make_longparamlist(meta, params, chanrng):
 
     Returns
     -------
-    longparamlist : list
-        The long list of all parameters relevant to this fit.
-    paramtitles : list
-        The names of the fitted parameters.
-    freenames : list
-        The list of freely fitted parameters.
+    longparamlist : list[list[str]]
+        Per-channel list of parameter keys to use in the fit.
+    paramtitles : list[str]
+        Base parameter names (without _ch# or _wl# suffixes).
+    freenames_sorted : list[str]
+        Ordered list of free/shared parameter keys to optimize.
     params : eureka.lib.readEPF.Parameters
-        The updated Parameters object containing the fitted parameters
-        and their priors.
+        Possibly updated Parameters object (due to _ch# auto-completion).
     """
     if meta.multwhite:
-        nspecchan = int(len(meta.inputdirlist)+1)
+        nspecchan = int(len(meta.inputdirlist) + 1)
     elif meta.sharedp:
         nspecchan = chanrng
     else:
         nspecchan = 1
 
-    longparamlist = [[] for i in range(nspecchan)]
+    # Wavelength group index per channel; default all to 0.
+    wl_groups = getattr(meta, "wl_groups", None)
+    if not isinstance(wl_groups, (list, tuple)) or len(wl_groups) != nspecchan:
+        wl_groups = [0] * nspecchan
 
-    order = dict([[par, i] for i, par in enumerate(params.dict.keys())])
-    paramtitles = sorted(np.unique([key.split('_ch')[0]
-                                    for key in params.dict.keys()]),
-                         key=order.get)
+    longparamlist = [[] for _ in range(nspecchan)]
 
-    for param in paramtitles:
+    # Preserve user-declared ordering based on first appearance in params.dict
+    order = {par: i for i, par in enumerate(params.dict.keys())}
+
+    # Strip both _ch# and _wl# to get base names
+    paramtitles = sorted(
+        np.unique([k.split("_ch")[0].split("_wl")[0] for k in params.dict.keys()]),
+        key=order.get,
+    )
+
+    # Track whether the user defined any wavelength-specific variants
+    has_wl_variant = {
+        base: any(key.startswith(f"{base}_wl") for key in params.dict.keys())
+        for base in paramtitles
+    }
+
+    for base in paramtitles:
+        # Robust ptype lookup: fall back to any existing variant if needed
+        try:
+            ptype = getattr(params, base).ptype
+        except AttributeError:
+            pkey = next(
+                (k for k in params.dict.keys()
+                 if k == base or k.startswith(f"{base}_wl")
+                 or k.startswith(f"{base}_ch")),
+                base,
+            )
+            ptype = getattr(params, pkey).ptype
+
         for c in range(nspecchan):
-            name = param
-            if c > 0:
-                name += f'_ch{c}'
-            if name not in longparamlist[c]:
-                longparamlist[c].append(name)
+            wl = wl_groups[c]
+            chosen = resolve_param_key(base, params, channel=c, wl=wl)
 
-            if (name not in params.dict.keys() and
-                    getattr(params, param).ptype != 'independent' and
-                    (c == 0 or getattr(params, param).ptype != 'shared')):
-                # Set this parameter based on channel 0
-                params.__setattr__(name, params.dict[param])
+            # Guard: ensure the chosen key actually exists
+            if chosen not in params.dict:
+                if has_wl_variant[base]:
+                    msg = (
+                        f"Parameter '{base}' is required for wl=0 "
+                        f"(channel {c}) but was not defined. You defined "
+                        f"wavelength-scoped variants for '{base}' but no base "
+                        f"'{base}'. Define '{base}' for wl=0"
+                    )
+                    if c > 0:
+                        msg += f", or provide '{base}_ch{c}'."
+                    else:
+                        msg += "."
+                    raise AssertionError(msg)
+                msg = (
+                    f"Parameter '{base}' is not defined for channel {c}. "
+                    f"Define '{base}' (applies to ch=0/wl=0)"
+                )
+                if c > 0:
+                    msg += f" or '{base}_ch{c}'."
+                else:
+                    msg += "."
+                raise AssertionError(msg)
 
-    freenames = [key for key in params.dict.keys()
-                 if getattr(params, key).ptype in
-                 ['free', 'shared', 'white_fixed', 'white_free']]
-    # Sort the list based on the order input by the user
+            if chosen not in longparamlist[c]:
+                longparamlist[c].append(chosen)
+
+            # Auto-complete per-channel copies ONLY when:
+            # - param is not 'independent'
+            # - param is not 'shared' for c>0
+            # - user has NOT introduced any wavelength variants for this base
+            # - we're on a nonzero channel (implicit ch0 stays base)
+            # - the channel-specific key doesn't already exist
+            if (
+                ptype != "independent"
+                and (c == 0 or ptype != "shared")
+                and not has_wl_variant[base]
+                and c > 0
+            ):
+                ch_key = f"{base}_ch{c}"
+                if ch_key not in params.dict and base in params.dict:
+                    # Clone base (implicit ch0/wl0) into _ch{c}
+                    params.__setattr__(ch_key, params.dict[base])
+
+            # Ensure longparamlist holds the final resolved key (legacy parity)
+            final_chosen = resolve_param_key(base, params, channel=c, wl=wl)
+            if final_chosen not in longparamlist[c]:
+                try:
+                    idx = longparamlist[c].index(chosen)
+                    longparamlist[c][idx] = final_chosen
+                except ValueError:
+                    longparamlist[c].append(final_chosen)
+
+    # Determine free/shared parameter keys
+    freenames = [
+        key
+        for key in params.dict.keys()
+        if getattr(params, key).ptype in (
+            "free",
+            "shared",
+            "white_fixed",
+            "white_free",
+        )
+    ]
+
+    # Preserve user ordering while applying per-channel resolution
     freenames_sorted = []
-    for param in paramtitles:
+    for base in paramtitles:
         for c in range(nspecchan):
-            name = param
-            if c > 0:
-                name += f'_ch{c}'
-            if name in freenames and name not in freenames_sorted:
-                freenames_sorted.append(name)
+            wl = wl_groups[c]
+            chosen = resolve_param_key(base, params, channel=c, wl=wl)
+            if chosen in freenames and chosen not in freenames_sorted:
+                freenames_sorted.append(chosen)
 
     return longparamlist, paramtitles, freenames_sorted, params
 

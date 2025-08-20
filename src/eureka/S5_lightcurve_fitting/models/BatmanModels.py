@@ -112,7 +112,7 @@ class BatmanTransitModel(Model):
                 chan = channels[c]
             else:
                 chan = 0
-            wl = self.wavelengths[chan] if self.wavelengths is not None else 0
+            wl = self.wl_groups[chan] if self.wl_groups is not None else 0
 
             time = self.time
             if self.multwhite:
@@ -257,7 +257,7 @@ class BatmanEclipseModel(Model):
                 chan = channels[c]
             else:
                 chan = 0
-            wl = self.wavelengths[chan] if self.wavelengths is not None else 0
+            wl = self.wl_groups[chan] if self.wl_groups is not None else 0
 
             time = self.time
             if self.multwhite:
