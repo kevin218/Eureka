@@ -13,7 +13,8 @@ allapers        False       # Run S4 on all of the apertures considered in S3? O
 
 # Manually mask pixel columns by index number
 # mask_columns  []
-mad_sigma       7       # The number of sigmas an unbinned MAD value must be from the rolling median (using box_width) to be considered an outlier.  Outlier columns are masked.
+mad_sigma       7       # The number of sigmas an unbinned MAD value must be from the rolling median (using mad_box_width) to be considered an outlier.  Outlier columns are masked.
+mad_box_width   21      # The rolling median box width to use when computing whether a wavelength element's MAD is an outlier
 
 # Parameters for drift correction of 1D spectra
 recordDrift     False   # Set True to record drift/jitter in 1D spectra (always recorded if correctDrift is True)
