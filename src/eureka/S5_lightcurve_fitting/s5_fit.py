@@ -1102,7 +1102,8 @@ def make_longparamlist(meta, params, chanrng):
 
     # Strip both _ch# and _wl# to get base names
     paramtitles = sorted(
-        np.unique([k.split("_ch")[0].split("_wl")[0] for k in params.dict.keys()]),
+        np.unique([k.split("_ch")[0].split("_wl")[0]
+                   for k in params.dict.keys()]),
         key=order.get,
     )
 
