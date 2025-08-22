@@ -655,9 +655,9 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
 
     # Write optimal extraction results for detectors with multiple orders
     def writeOptSpexMultiOrder(arg):
-        optspec, opterr, _, n, k = arg
-        data['optspec'][n, :, k] = optspec
-        data['opterr'][n, :, k] = opterr
+        optspec, opterr, _, n, order = arg
+        data['optspec'].sel(order=order)[n] = optspec
+        data['opterr'].sel(order=order)[n] = opterr
         return
 
     # Perform optimal extraction on each of the integrations
