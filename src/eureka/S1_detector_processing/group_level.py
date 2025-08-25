@@ -67,6 +67,7 @@ def GLBS(input_model, log, meta):
         data['mask'] = (['time', 'y', 'x'], grp_mask)
         data.attrs['intstart'] = meta.intstart
         meta.bg_dir = 'CxC'
+        meta.skip_bg = False
         if meta.inst == 'miri':
             meta.isrotate = 0
 
