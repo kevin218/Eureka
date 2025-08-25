@@ -400,6 +400,10 @@ def optphot(data, meta, i, saved_photometric_profile):
         position = [np.median(data.centroid_x.values),
                     np.median(data.centroid_y.values)]
 
+    if meta.photap_b is None or meta.aperture_shape == 'circle':
+        # For circular apertures, photap_b is the same as photap
+        meta.photap_b = meta.photap
+
     if saved_photometric_profile is None:
         profile = np.ma.masked_invalid(data.medflux.values)
         xpx = np.arange(profile.shape[1])
@@ -537,6 +541,10 @@ def photutils_apphot(data, meta, i):
     else:
         position = [np.median(data.centroid_x.values),
                     np.median(data.centroid_y.values)]
+
+    if meta.photap_b is None or meta.aperture_shape == 'circle':
+        # For circular apertures, photap_b is the same as photap
+        meta.photap_b = meta.photap
 
     # Grab the current frame and mask
     mask = data.mask.values[i]
