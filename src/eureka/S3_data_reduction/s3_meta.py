@@ -210,7 +210,7 @@ class S3MetaClass(MetaClass):
                 self.photap_b = getattr(self, 'photap_b', self.photap)
                 self.photap_theta = getattr(self, 'photap_theta', 0)
             else:
-                self.photap_b = self.photap
+                self.photap_b = None
                 self.photap_theta = 0
         elif self.phot_method == 'poet':
             self.aperture_edge = getattr(self, 'aperture_edge', 'center')

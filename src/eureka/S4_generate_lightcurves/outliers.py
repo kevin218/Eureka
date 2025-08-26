@@ -50,9 +50,9 @@ def get_outliers(meta, spec):
     mask = np.isnan(mad)
     x = spec.x[iwmin:iwmax]
     x_mask = x[~mask]
-    smoothed_mad = smooth.medfilt(mad[~mask], window_len=meta.box_width)
+    smoothed_mad = smooth.medfilt(mad[~mask], window_len=meta.mad_box_width)
     residual_mad = mad[~mask] - smoothed_mad
-    smoothed_dev = smooth.medfilt(dev[~mask], window_len=meta.box_width)
+    smoothed_dev = smooth.medfilt(dev[~mask], window_len=meta.mad_box_width)
     residual_dev = dev[~mask] - smoothed_dev
 
     # Identify only high outliers from residuals
