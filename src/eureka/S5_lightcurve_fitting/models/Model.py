@@ -29,6 +29,7 @@ class Model:
         self.nchannel = kwargs.get('nchannel', 1)
         self.nchannel_fitted = kwargs.get('nchannel_fitted', 1)
         self.fitted_channels = kwargs.get('fitted_channels', [0, ])
+        self.wl_groups = kwargs.get('wl_groups', None)
         self.multwhite = kwargs.get('multwhite')
         self.nints = kwargs.get('nints')
         self.fitter = kwargs.get('fitter', None)
