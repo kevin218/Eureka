@@ -2,6 +2,9 @@ import numpy as np
 
 from ..lib.readECF import MetaClass
 
+# FINDME: Placeholder code until jaxoplanet.starry support is added
+starry = None
+
 
 class S5MetaClass(MetaClass):
     '''A class to hold Eureka! S5 metadata.
@@ -151,6 +154,31 @@ class S5MetaClass(MetaClass):
             if self.run_pfrac <= 0 or self.run_pfrac >= 1:
                 raise ValueError(
                     'run_pfrac must be between 0 and 1, exclusive.')
+
+        # numpyro NUTS sampler settings
+        self.jaxopt_first = getattr(self, 'jaxopt_first', False)
+        self.chains = getattr(self, 'chains', 3)
+        # Set this to True if you have really tight covariances or are getting
+        # divergences (will be more RAM and compute intensive)
+        self.dense_mass = getattr(self, 'dense_mass', False)
+        if 'nuts' in self.fit_method:
+            # Must be provided in the ECF if relevant
+            self.run_nsteps = getattr(self, 'run_nsteps')
+            self.run_nburn = getattr(self, 'run_nburn')
+
+        # Starry eclipse mapping pixel-sampling parameters
+        self.pixelsampling = getattr(self, 'pixelsampling', False)
+        self.oversample = getattr(self, 'oversample', 3)
+        if self.pixelsampling:
+            # Must be provided in the ECF if relevant
+            self.ydeg = getattr(self, 'ydeg')
+            # Compute the number of pixels used in sampling
+            map = starry.Map(ydeg=self.ydeg)
+            A = map.get_pixel_transforms(oversample=self.oversample)[3]
+            self.npix = A.shape[1]
+        else:
+            self.ydeg = getattr(self, 'ydeg', None)
+            self.npix = 0
 
         # GP inputs
         self.kernel_inputs = getattr(self, 'kernel_inputs', ['time'])

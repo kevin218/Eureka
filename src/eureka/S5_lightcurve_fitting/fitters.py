@@ -89,6 +89,16 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
             'your initial parameter values are outside of the bounds of its '
             'prior.')
 
+    # Plot Harmonica string starting point
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter=calling_function+'StartingPoint')
+
+    if not np.isfinite(start_lnprob):
+        raise AssertionError(
+            'The starting lnprob value must be finite. Most likely, one of '
+            'your priors is outside of its bounds.')
+
     def neg_lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
         return -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
     global lsq_t0
@@ -312,6 +322,11 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot Harmonica string starting point
     if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
             and meta.isplots_S5 >= 3):
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter='emceeStartingPoint')
+
+    # Plot Harmonica string starting point
+    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_harmonica_string(lc, model, meta,
                                     fitter='emceeStartingPoint')
 

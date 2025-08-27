@@ -25,7 +25,7 @@ dependencies:
     - pandas
     - photutils
     - pip # required for the pip installs below
-    - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest, an asdf package, and something in the pymc3 set of installs. Needed for testing
+    - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest and asdf. Needed for testing
     - pytest-cov # Needed for testing
     - pytest-doctestplus # Needed for testing
     - requests
@@ -41,7 +41,7 @@ dependencies:
         - celerite2 # Needed for GP
         - crds
         - exotic-ld==3.2.0 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
-        - fleck
+        - fleck@git+https://github.com/bmorris3/fleck.git@main
         - george # Needed for GP
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
         - jwst==1.18.0

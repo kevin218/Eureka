@@ -141,7 +141,7 @@ class TransitModel():
 
         # Make the star object
         star = fleck.Star(spot_contrast=pl_params.spotcon,
-                          u_ld=pl_params.u,
+                          u_ld=[pl_params.u1, pl_params.u2],
                           rotation_period=pl_params.spotrot)
 
         # Make the transit model

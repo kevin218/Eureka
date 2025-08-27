@@ -6,8 +6,14 @@ from copy import deepcopy
 import astraeus.xarrayIO as xrio
 
 from .s5_meta import S5MetaClass
-from . import lightcurve
 from . import models as m
+from . import lightcurve
+try:
+    from . import jax_models as jm
+    from . import jax_lightcurve
+except ModuleNotFoundError:
+    # jax hasn't been installed
+    jm = None
 from ..lib import manageevent as me
 from ..lib import util, logedit
 from ..lib.readEPF import Parameters
@@ -63,6 +69,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
     meta = S5MetaClass(**me.mergeevents(meta, s4_meta).__dict__)
     meta.set_defaults()
+
+    # Check to make sure that jm is accessible if using jm models/fitters
+    if jm is None and ('jaxopt' in meta.fit_method or
+                       'nuts' in meta.fit_method):
+        raise AssertionError(f"meta.fit_method is set to {meta.fit_method}, "
+                             "but could not import jax-related packages. "
+                             "Ensure that you installed the jax-related "
+                             "packages when installing Eureka!.")
 
     if meta.testing_S5:
         # Only fit a single channel while testing unless doing a shared fit,
@@ -518,28 +532,53 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         log.writelog("=========================")
         return meta, params
 
-    LightCurve = lightcurve.LightCurve
-    AstroModel = m.AstroModel
-    BatmanEclipseModel = m.BatmanEclipseModel
-    BatmanTransitModel = m.BatmanTransitModel
-    CatwomanTransitModel = m.CatwomanTransitModel
-    CentroidModel = m.CentroidModel
-    CommonModeModel = m.CommonModeModel
-    DampedOscillatorModel = m.DampedOscillatorModel
-    ExpRampModel = m.ExpRampModel
-    FleckTransitModel = m.FleckTransitModel
-    GPModel = m.GPModel
-    HarmonicaTransitModel = m.HarmonicaTransitModel
-    HSTRampModel = m.HSTRampModel
-    LorentzianModel = m.LorentzianModel
-    PoetEclipseModel = m.PoetEclipseModel
-    PoetPCModel = m.PoetPCModel
-    PoetTransitModel = m.PoetTransitModel
-    PolynomialModel = m.PolynomialModel
-    QuasiLambertianPhaseCurve = m.QuasiLambertianPhaseCurve
-    SinusoidModel = m.SinusoidPhaseCurveModel
-    StepModel = m.StepModel
-    CompositeModel = m.CompositeModel
+    if 'jaxopt' in meta.fit_method or 'nuts' in meta.fit_method:
+        LightCurve = jax_lightcurve.LightCurve
+        AstroModel = jm.AstroModel
+        CentroidModel = jm.CentroidModel
+        DampedOscillatorModel = jm.DampedOscillatorModel
+        ExpRampModel = jm.ExpRampModel
+        FleckTransitModel = jm.FleckTransitModel
+        GPModel = jm.GPModel
+        HarmonicaTransitModel = jm.HarmonicaTransitModel
+        HSTRampModel = jm.HSTRampModel
+        JaxoplanetModel = jm.JaxoplanetModel
+        LorentzianModel = jm.LorentzianModel
+        PolynomialModel = jm.PolynomialModel
+        QuasiLambertianPhaseCurve = jm.QuasiLambertianPhaseCurve
+        SinusoidModel = jm.SinusoidPhaseCurveModel
+        StarryModel = jm.JaxoplanetStarryModel
+        StepModel = jm.StepModel
+        CompositeModel = jm.CompositeJaxModel
+
+        # Need to replace masked arrays with regular arrays for jax
+        # Will replace masked elements with NaN
+        time = time.filled(np.nan)
+        flux = flux.filled(np.nan)
+        flux_err = flux_err.filled(np.nan)
+    else:
+        LightCurve = lightcurve.LightCurve
+        AstroModel = m.AstroModel
+        BatmanEclipseModel = m.BatmanEclipseModel
+        BatmanTransitModel = m.BatmanTransitModel
+        CatwomanTransitModel = m.CatwomanTransitModel
+        CentroidModel = m.CentroidModel
+        CommonModeModel = m.CommonModeModel
+        DampedOscillatorModel = m.DampedOscillatorModel
+        ExpRampModel = m.ExpRampModel
+        FleckTransitModel = m.FleckTransitModel
+        GPModel = m.GPModel
+        HarmonicaTransitModel = m.HarmonicaTransitModel
+        HSTRampModel = m.HSTRampModel
+        LorentzianModel = m.LorentzianModel
+        PoetEclipseModel = m.PoetEclipseModel
+        PoetPCModel = m.PoetPCModel
+        PoetTransitModel = m.PoetTransitModel
+        PolynomialModel = m.PolynomialModel
+        QuasiLambertianPhaseCurve = m.QuasiLambertianPhaseCurve
+        SinusoidModel = m.SinusoidPhaseCurveModel
+        StepModel = m.StepModel
+        CompositeModel = m.CompositeModel
 
     # Load the relevant values into the LightCurve model object
     lc_model = LightCurve(time, flux, chan, chanrng, log,
@@ -580,11 +619,31 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     # Make the astrophysical and detector models
     modellist = []
     if 'starry' in meta.run_myfuncs:
-        raise NotImplementedError(
-            'PyMC3/starry support within Eureka! had to be dropped because'
-            ' PyMC3 is now extremely deprecated and incompatible with the '
-            'current jwst pipeline version. For the time being, you must '
-            'instead use the numpy-based models.')
+        t_starry = StarryModel(parameters=params,
+                               fmt='r--', log=log,
+                               time=time, time_units=time_units,
+                               freenames=freenames,
+                               longparamlist=lc_model.longparamlist,
+                               nchannel=chanrng,
+                               nchannel_fitted=nchannel_fitted,
+                               fitted_channels=fitted_channels,
+                               paramtitles=paramtitles,
+                               ld_from_S4=meta.use_generate_ld,
+                               ld_from_file=meta.ld_file,
+                               ld_coeffs=ldcoeffs,
+                               recenter_ld_prior=meta.recenter_ld_prior,
+                               spotcon_file=spotcon_file,
+                               recenter_spotcon_prior=meta.recenter_spotcon_prior,  # noqa: E501
+                               compute_ltt=meta.compute_ltt,
+                               multwhite=lc_model.multwhite,
+                               nints=lc_model.nints,
+                               num_planets=meta.num_planets,
+                               mutualOccultations=meta.mutualOccultations,
+                               force_positivity=meta.force_positivity,
+                               pixelsampling=meta.pixelsampling,
+                               oversample=meta.oversample,
+                               ydeg=meta.ydeg, npix=meta.npix)
+        modellist.append(t_starry)
     if 'batman_tr' in meta.run_myfuncs:
         t_transit = BatmanTransitModel(parameters=params,
                                        fmt='r--', log=log, time=time,
@@ -619,6 +678,25 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        nints=lc_model.nints,
                                        num_planets=meta.num_planets)
         modellist.append(t_eclipse)
+    if 'jaxoplanet' in meta.run_myfuncs:
+        t_transit = JaxoplanetModel(parameters=params,
+                                    fmt='r--', log=log, time=time,
+                                    time_units=time_units,
+                                    freenames=freenames,
+                                    longparamlist=lc_model.longparamlist,
+                                    nchannel=chanrng,
+                                    nchannel_fitted=nchannel_fitted,
+                                    fitted_channels=fitted_channels,
+                                    paramtitles=paramtitles,
+                                    ld_from_S4=meta.use_generate_ld,
+                                    ld_from_file=meta.ld_file,
+                                    ld_coeffs=ldcoeffs,
+                                    recenter_ld_prior=meta.recenter_ld_prior,
+                                    compute_ltt=meta.compute_ltt,
+                                    multwhite=lc_model.multwhite,
+                                    nints=lc_model.nints,
+                                    num_planets=meta.num_planets)
+        modellist.append(t_transit)
     if 'catwoman_tr' in meta.run_myfuncs:
         t_transit = CatwomanTransitModel(parameters=params,
                                          fmt='r--', log=log, time=time,
@@ -981,11 +1059,17 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
             'current jwst pipeline version. For the time being, you must '
             'instead use the numpy-based models.')
     if 'nuts' in meta.fit_method:
-        raise NotImplementedError(
-            'PyMC3/starry support within Eureka! had to be dropped because'
-            ' PyMC3 is now extremely deprecated and incompatible with the '
-            'current jwst pipeline version. For the time being, you must '
-            'instead use the numpy-based models.')
+        log.writelog("Starting NUTS fit.")
+        model.fitter = 'nuts'
+        lc_model.fit(model, meta, log, fitter='nuts')
+        log.writelog("Completed NUTS fit.")
+        log.writelog("-------------------------")
+    if 'jaxopt' in meta.fit_method:
+        log.writelog("Starting jaxopt fit.")
+        model.fitter = 'jaxopt'
+        lc_model.fit(model, meta, log, fitter='jaxopt')
+        log.writelog("Completed jaxopt fit.")
+        log.writelog("-------------------------")
     log.writelog("=========================")
 
     # Plot the results from the fit(s)
