@@ -1,8 +1,8 @@
 import os
 import matplotlib
-from matplotlib import rcdefaults, rcParams
+from matplotlib import rcdefaults, rcParams, font_manager
+from matplotlib import style as mpl_style
 from functools import wraps
-import matplotlib.pyplot as plt
 
 # Global configuration dictionary (used by decorator and set_rc)
 _current_style = {
@@ -85,6 +85,9 @@ def _set_style():
     from_scratch = _current_style["from_scratch"]
     kwargs = _current_style["kwargs"]
 
+    if backend is not None:
+        matplotlib.use(backend)
+
     if from_scratch:
         rcdefaults()
 
@@ -92,7 +95,29 @@ def _set_style():
         rcParams.update(**kwargs)
     elif style == 'eureka':
         style_path = os.path.join(os.path.dirname(__file__), 'eureka.mplstyle')
-        plt.style.use(style_path)
+        mpl_style.use(style_path)
+
+        # After loading the style, sanitize the font list
+        have_stix2 = any("STIX Two Text" in f.name
+                         for f in font_manager.fontManager.ttflist)
+
+        if not have_stix2:
+            # Remove STIX Two Text from font.family / font.serif if it's first
+            families = rcParams["font.family"]
+            if isinstance(families, str):
+                families = [families]
+            families = [f for f in families if "STIX Two Text" not in f]
+            if not families:  # ensure we have a fallback
+                families = ["STIXGeneral", "DejaVu Serif", "serif"]
+            rcParams["font.family"] = families
+
+            serifs = rcParams["font.serif"]
+            if isinstance(serifs, str):
+                serifs = [serifs]
+            serifs = [f for f in serifs if "STIX Two Text" not in f]
+            if not serifs:  # ensure we have a fallback
+                serifs = ["STIXGeneral", "DejaVu Serif", "serif"]
+            rcParams["font.serif"] = serifs
     elif style == 'default':
         rcdefaults()
     elif style == 'preserve' or style is None:
@@ -109,9 +134,6 @@ def _set_style():
     elif layout == 'tight':
         rcParams.update({'figure.autolayout': True})
 
-    if backend is not None:
-        matplotlib.use(backend)
-
 
 def apply_style(func):
     """Decorator to apply the current or default Eureka matplotlib style."""
@@ -119,7 +141,7 @@ def apply_style(func):
     def wrapper(*args, **kwargs):
         if _current_style["style"] is None:
             _current_style["style"] = "eureka"
-        with plt.rc_context():
+        with matplotlib.rc_context():
             _set_style()
             return func(*args, **kwargs)
     return wrapper
