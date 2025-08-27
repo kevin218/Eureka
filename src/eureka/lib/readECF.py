@@ -16,21 +16,6 @@ class MetaClass:
 
     This class loads a Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2009-01-02 Christopher Campo
-        Initial Version.
-    - 2010-03-08 Patricio Cubillos
-        Modified from ccampo version.
-    - 2010-10-27 Patricio Cubillos
-        Docstring updated
-    - 2011-02-12 Patricio Cubillos
-        Merged with ccampo's tepclass.py
-    - 2022-03-24 Taylor J Bell
-        Significantly modified for Eureka
     '''
 
     def __init__(self, folder='.'+os.sep, file=None, eventlabel=None,
@@ -53,13 +38,6 @@ class MetaClass:
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial Version based on old readECF code.
         '''
         if folder is None:
             folder = '.'+os.sep
@@ -68,11 +46,24 @@ class MetaClass:
             file = f'S{stage}_{eventlabel}.ecf'
 
         self.params = {}
-        if file is not None and os.path.exists(os.path.join(folder, file)):
+
+        # Determine if a file should be read
+        file_path = os.path.join(folder, file) if file is not None else None
+        if file_path is not None and os.path.exists(file_path):
             self.read(folder, file)
-        elif file is not None:
-            raise ValueError(f"The file {os.path.join(folder, file)} "
-                             "does not exist.")
+        elif file_path is not None and not kwargs:
+            raise ValueError(f"The file {file_path} does not exist and no "
+                             "kwargs were provided.")
+        # else: assume kwargs will populate everything
+
+        self.version = version
+        if stage is not None:
+            self.stage = stage
+        self.eventlabel = eventlabel
+        self.datetime = time_pkg.strftime('%Y-%m-%d')
+
+        # If the data format hasn't been specified, must be eureka output
+        self.data_format = getattr(self, 'data_format', 'eureka')
 
         self.version = version
         if stage is not None:
@@ -102,13 +93,6 @@ class MetaClass:
         str
             A string representation of what is contained in the
             MetaClass object.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial version.
         '''
         output = ''
         for par in self.params:
@@ -128,13 +112,6 @@ class MetaClass:
         str
             A string representation of what is contained in the MetaClass
             object in a manner that could reproduce a similar MetaClass object.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial version.
         '''
         # Get the fully qualified name of the class
         output = type(self).__module__+'.'+type(self).__qualname__+'('
@@ -165,7 +142,8 @@ class MetaClass:
         else:
             stage = 0
 
-        if item == 'inst' and value == 'wfc3' and stage < 4:
+        if (item == 'inst' and value == 'wfc3' and stage != '4cal'
+                and stage < 4):
             # Fix issues with CRDS server set for JWST
             if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for JWST and not HST.'
@@ -181,7 +159,8 @@ class MetaClass:
             self.pmap = getattr(self, 'pmap',
                                 crds.get_context_name('hst')[4:-5])
             os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
-        elif item == 'inst' and value is not None and stage < 4:
+        elif (item == 'inst' and value is not None and stage != '4cal'
+              and stage < 4):
             # Fix issues with CRDS server set for HST
             if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for HST and not JWST.'
@@ -194,13 +173,15 @@ class MetaClass:
             # If a specific CRDS context is entered in the ECF, apply it.
             # Otherwise, log and fix the default CRDS context to make sure
             # it doesn't change between different segments.
-            self.pmap = getattr(self, 'pmap',
-                                crds.get_context_name('jwst')[5:-5])
+            self.pmap = getattr(self, 'pmap', None)
+            if self.pmap is None:
+                # Only need an internet connection if pmap is None
+                self.pmap = crds.get_context_name('jwst')[5:-5]
             os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
 
         if ((item == 'pmap') and hasattr(self, 'pmap') and
                 (self.pmap is not None) and (self.pmap != value) and
-                (stage < 4)):
+                (stage != '4cal') and (stage < 4)):
             print(f'WARNING: pmap was set to {self.pmap} in the previous stage'
                   f' but is now set to {value} in this stage. This may cause '
                   'unexpected or undesireable behaviors.')
@@ -228,15 +209,6 @@ class MetaClass:
             The folder containing an ECF file to be read in.
         file : str
             The ECF filename to be read in.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial Version based on old readECF code.
-        - April 25, 2022 Taylor J Bell
-            Joining topdir and inputdir/outputdir here.
         """
         self.filename = file
         self.folder = folder
@@ -300,15 +272,6 @@ class MetaClass:
         ----------
         folder : str
             The folder where the ECF file should be written.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial Version.
-        - Oct 2022 Eva-Maria Ahrer
-            Update parameters and replace
         """
 
         for i in range(len(self.lines)):
@@ -336,13 +299,6 @@ class MetaClass:
         NOTE: This will update the inputdir of the ECF file to point to the
         exact inputdir used to avoid ambiguity later and ensure that the ECF
         could be used to make the same outputs.
-
-        Notes
-        -----
-        History:
-
-        - Mar 2022 Taylor J Bell
-            Initial Version based on old readECF code.
         """
         # Copy ecf (and update inputdir to be precise which exact inputs
         # were used)

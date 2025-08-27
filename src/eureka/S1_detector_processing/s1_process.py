@@ -47,8 +47,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
         meta = S1MetaClass(**input_meta.__dict__)
 
     # Create directories for Stage 1 processing outputs
-    run = util.makedirectory(meta, 'S1')
-    meta.outputdir = util.pathdirectory(meta, 'S1', run)
+    meta.run_s1 = util.makedirectory(meta, 'S1')
+    meta.outputdir = util.pathdirectory(meta, 'S1', meta.run_s1)
     # Make a separate folder for plot outputs
     if not os.path.exists(meta.outputdir+'figs'):
         os.makedirs(meta.outputdir+'figs')
@@ -90,22 +90,30 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
 
     for m in range(istart, meta.num_data_files):
         # Report progress
+        meta.m = m
         filename = meta.segment_list[m]
-        log.writelog(f'Starting file {m + 1} of {meta.num_data_files}: ' +
-                     filename.split(os.sep)[-1])
+        log.writelog(f'Starting file {m + 1} of {meta.num_data_files}')
 
-        with fits.open(filename, mode='update') as hdulist:
-            # jwst 1.3.3 breaks unless NDITHPTS/NRIMDTPT are integers rather
-            # than the strings that they are in the old simulated NIRCam data
-            if hdulist[0].header['INSTRUME'] == 'NIRCAM':
-                hdulist[0].header['NDITHPTS'] = 1
-                hdulist[0].header['NRIMDTPT'] = 1
+        need_update = False
+        with fits.open(filename) as hdulist:
+            if (hdulist[0].header['INSTRUME'] == 'NIRCam'
+                    and isinstance(hdulist[0].header['NDITHPTS'], str)):
+                need_update = True
 
-            meta.m = m
             meta.intstart = hdulist[0].header['INTSTART']-1
             meta.intend = hdulist[0].header['INTEND']
             meta.n_int = meta.intend-meta.intstart
-            EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
+
+        if need_update:
+            with fits.open(filename, mode='update') as hdulist:
+                # If the NDITHPTS header is a string, then it is an old
+                # simulated file and we need to change it to an integer
+                hdulist[0].header['NDITHPTS'] = int(
+                    hdulist[0].header['NDITHPTS'])
+                hdulist[0].header['NRIMDTPT'] = int(
+                    hdulist[0].header['NRIMDTPT'])
+
+        EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
 
     # Calculate total run time
     total = (time_pkg.time() - t0) / 60.
@@ -129,15 +137,6 @@ class EurekaS1Pipeline(Detector1Pipeline):
     '''A wrapper class for jwst.pipeline.calwebb_detector1.Detector1Pipeline
 
     This wrapper class allows non-standard changes to Stage 1 for Eureka!.
-
-    Notes
-    -----
-    History:
-
-    - October 2021 Aarynn Carter /  Eva-Maria Ahrer
-        Initial version
-    - February 2022 Aarynn Carter /  Eva-Maria Ahrer
-        Updated for JWST version 1.3.3, code restructure
     '''
 
     def run_eurekaS1(self, filename, meta, log):
@@ -151,22 +150,13 @@ class EurekaS1Pipeline(Detector1Pipeline):
             The metadata object.
         log : logedit.Logedit
             The open log in which notes from this step can be added.
-
-        Notes
-        -----
-        History:
-
-        - October 2021 Aarynn Carter /  Eva-Maria Ahrer
-            Initial version
-        - February 2022 Aarynn Carter /  Eva-Maria Ahrer
-            Updated for JWST version 1.3.3, code restructure
         '''
         # Define superbias offset procedure
         self.superbias = Eureka_SuperBiasStep()
         self.superbias.s1_meta = meta
         self.superbias.s1_log = log
 
-        # Reset suffix and assign whether to save and the output directory
+        # Reset suffix and assign whether to save the output directory
         self.suffix = None
         self.save_results = (not meta.testing_S1)
         self.output_dir = meta.outputdir
@@ -234,6 +224,6 @@ class EurekaS1Pipeline(Detector1Pipeline):
                     meta.default_ramp_fit_custom_exponents
 
         # Run Stage 1
-        self(filename)
+        self.run(filename)
 
         return

@@ -13,13 +13,13 @@ from scipy.optimize import minimize
 import lmfit
 import emcee
 
-from dynesty import NestedSampler
+from dynesty import NestedSampler, DynamicNestedSampler
 from dynesty.utils import resample_equal
 
 from .likelihood import (computeRedChiSq, lnprob, ln_like, ptform,
                          update_uncertainty)
 from . import plots_s5 as plots
-from ..lib import astropytable
+from ..lib import astropytable, util
 from ..lib.split_channels import get_trim
 
 from multiprocessing import Pool
@@ -76,10 +76,18 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta,
                               fitter=calling_function+'StartingPoint')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta,
-                                   fitter=calling_function+'StartingPoint')
+
+    # Plot Harmonica string starting point
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter=calling_function+'StartingPoint')
+
+    if not np.isfinite(start_lnprob):
+        raise AssertionError(
+            'The starting lnprob value must be finite. Most likely, one of '
+            'your initial parameter values are outside of the bounds of its '
+            'prior.')
 
     # Plot Harmonica string starting point
     if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
@@ -163,12 +171,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter=calling_function)
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter=calling_function)
 
     # Plot Harmonica string
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
         plots.plot_harmonica_string(lc, model, meta, fitter=calling_function)
 
     # Plot GP fit + components
@@ -242,13 +248,6 @@ def demcfitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation and arguments
     """
     best_model = None
     return best_model
@@ -274,23 +273,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation. Reduced repeated code.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter. Added statements to avoid some initial
-        state issues.
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-        Record an astropy table for mean, median, percentiles,
-        +/- 1 sigma, all params
     """
     # Group the different variable types
     freenames = lc.freenames
@@ -336,10 +318,12 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot star spots starting point
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='emceeStartingPoint')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta,
-                                   fitter='emceeStartingPoint')
+
+    # Plot Harmonica string starting point
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
+        plots.plot_harmonica_string(lc, model, meta,
+                                    fitter='emceeStartingPoint')
 
     # Plot Harmonica string starting point
     if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
@@ -461,12 +445,10 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='emcee')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter='emcee')
 
     # Plot Harmonica string
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
         plots.plot_harmonica_string(lc, model, meta, fitter='emcee')
 
     # Plot GP fit + components
@@ -592,17 +574,21 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames, freepars,
 
     # Make sure that no walkers are starting in the same place as
     # they would then exactly follow each other
-    repeat_pos = np.where([np.any(np.all(pos[i] == np.delete(pos, i, axis=0),
-                                         axis=1))
-                           for i in range(pos.shape[0])])[0]
-    while (len(repeat_pos) > 0 and
-           samples.shape[0] > (walkers_used+len(repeat_pos))):
-        pos[repeat_pos] = samples[:-walkers_used][-len(repeat_pos):]
-        walkers_used += len(repeat_pos)
-        repeat_pos = np.where([np.any(np.all(pos[i] ==
-                                             np.delete(pos, i, axis=0),
-                                             axis=1))
-                               for i in range(pos.shape[0])])[0]
+    repeat_pos = np.array([
+        i for i in range(pos.shape[0])
+        if np.any(np.all(pos[i] == np.delete(pos, i, axis=0), axis=1))
+    ])
+
+    while (
+        repeat_pos.size > 0
+        and samples.shape[0] > (walkers_used + repeat_pos.size)
+    ):
+        pos[repeat_pos] = samples[:-walkers_used][-repeat_pos.size:]
+        walkers_used += repeat_pos.size
+        repeat_pos = np.array([
+            i for i in range(pos.shape[0])
+            if np.any(np.all(pos[i] == np.delete(pos, i, axis=0), axis=1))
+        ])
 
     # If unable to initialize all walkers in unique starting locations,
     # use fewer walkers unless there'd be fewer walkers than dimensions
@@ -644,7 +630,8 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames, freepars,
                 new_pos[:, i] = temp_pos[:, i]
             else:
                 # This variable already existed, so just add it
-                new_pos[:, i] = pos[:, np.where(full_keys == key)[0][0]]
+                idx = np.flatnonzero(full_keys == key)[0]
+                new_pos[:, i] = pos[:, idx]
 
         pos = new_pos
 
@@ -695,15 +682,18 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
     if lsq_sol is not None and lsq_sol.cov_mat is not None:
         step_size = np.diag(lsq_sol.cov_mat)
         if np.any(step_size == 0.):
-            ind_zero_u = np.where(step_size[u] == 0.)[0]
-            ind_zero_lu = np.where(step_size[lu] == 0.)[0]
-            ind_zero_n = np.where(step_size[n] == 0.)[0]
-            step_size[u][ind_zero_u] = (0.001*(prior2[u][ind_zero_u] -
-                                               prior1[u][ind_zero_u]))
-            step_size[lu][ind_zero_lu] = (0.001 *
-                                          (np.exp(prior2[lu][ind_zero_lu]) -
-                                           np.exp(prior1[lu][ind_zero_lu])))
-            step_size[n][ind_zero_n] = 0.1*prior2[n][ind_zero_n]
+            zero_u = np.flatnonzero(step_size[u] == 0.)
+            zero_lu = np.flatnonzero(step_size[lu] == 0.)
+            zero_n = np.flatnonzero(step_size[n] == 0.)
+
+            delta_u = prior2[u][zero_u] - prior1[u][zero_u]
+            step_size[u][zero_u] = 0.001 * delta_u
+
+            delta_lu = (np.exp(prior2[lu][zero_lu])
+                        - np.exp(prior1[lu][zero_lu]))
+            step_size[lu][zero_lu] = 0.001 * delta_lu
+
+            step_size[n][zero_n] = 0.1 * prior2[n][zero_n]
     else:
         # Sometimes the lsq fitter won't converge and will give None as
         # the covariance matrix. In that case, we need to establish the
@@ -719,10 +709,10 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
     nwalkers = meta.run_nwalkers
 
     # make it robust to lsq hitting the upper or lower bound of the param space
-    ind_max = np.where(freepars[u] - prior2[u] == 0.)[0]
-    ind_min = np.where(freepars[u] - prior1[u] == 0.)[0]
-    ind_max_LU = np.where(np.log(freepars[lu]) - prior2[lu] == 0.)[0]
-    ind_min_LU = np.where(np.log(freepars[lu]) - prior1[lu] == 0.)[0]
+    ind_max = np.flatnonzero(freepars[u] == prior2[u])
+    ind_min = np.flatnonzero(freepars[u] == prior1[u])
+    ind_max_LU = np.flatnonzero(np.log(freepars[lu]) == prior2[lu])
+    ind_min_LU = np.flatnonzero(np.log(freepars[lu]) == prior1[lu])
     pmid = (prior2+prior1)/2.
 
     if len(ind_max) > 0 or len(ind_max_LU) > 0:
@@ -829,77 +819,64 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     Returns
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The composite model after fitting
+        The composite model after fitting.
 
     Notes
     -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation. Reduced repeated code.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter.
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-        Record an astropy table for mean, median, percentiles,
-        +/- 1 sigma, all params
+    Uses either dynesty's static or dynamic nested sampling based on
+    the `meta.run_dynamic` flag.
     """
+    fittername = 'dynamicdynesty' if meta.run_dynamic else 'dynesty'
+
     # Group the different variable types
     freenames = lc.freenames
-    freepars, prior1, prior2, priortype, indep_vars = \
-        group_variables(model)
+    freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
     if meta.old_fitparams is not None:
-        freepars = load_old_fitparams(lc, meta, log, freenames, 'dynesty')
+        freepars = load_old_fitparams(lc, meta, log, freenames, fittername)
 
-    # DYNESTY
-    nlive = meta.run_nlive  # number of live points
-    bound = meta.run_bound  # use MutliNest algorithm for bounds
-    ndims = len(freepars)  # two parameters
-    sample = meta.run_sample  # uniform sampling
-    tol = meta.run_tol  # the stopping criterion
+    # Set up common dynesty parameters
+    ndims = len(freepars)
+    bound = meta.run_bound
+    sample = meta.run_sample
+    l_args = [lc, model, freenames]
 
+    # Handle 'min' for meta.run_nlive
+    nlive = meta.run_nlive
+    min_nlive = int(np.ceil(ndims * (ndims + 1) // 2))
+    if nlive == 'min':
+        nlive = min_nlive
+        nlive_log = (f'  Setting run_nlive = {nlive} (minimum '
+                     f'recommended for ndim = {ndims})')
+    elif nlive < min_nlive:
+        nlive_log = (f'**** WARNING: You should set run_nlive to at least '
+                     f'{min_nlive} ****')
+    else:
+        nlive_log = None
+
+    # Initial log-likelihood
     start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype,
                           freenames)
-    log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
+    log.writelog(f'  Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
     # Plot starting point
     if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta,
-                       fitter='dynestyStartingPoint')
+        plots.plot_fit(lc, model, meta, fitter=fittername+'StartingPoint')
         # Plot GP starting point
         if model.GP:
             plots.plot_GP_components(lc, model, meta,
-                                     fitter='dynestyStartingPoint')
+                                     fitter=fittername+'StartingPoint')
 
     # Plot star spots starting point
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_fleck_star(lc, model, meta, fitter='dynestyStartingPoint')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta,
-                                   fitter='dynestyStartingPoint')
+        plots.plot_fleck_star(lc, model, meta, fittername+'StartingPoint')
 
     # Plot Harmonica string starting point
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
         plots.plot_harmonica_string(lc, model, meta,
-                                    fitter='dynestyStartingPoint')
+                                    fitter=fittername+'StartingPoint')
 
-    # START DYNESTY
-    l_args = [lc, model, freenames]
-
-    log.writelog('Running dynesty...')
-
-    min_nlive = int(np.ceil(ndims*(ndims+1)//2))
-    if nlive == 'min':
-        nlive = min_nlive
-        log.writelog(f'Using {nlive} live points...')
-    elif nlive < min_nlive:
-        log.writelog(f'**** WARNING: You should set run_nlive to at least '
-                     f'{min_nlive} ****')
-
+    # Set up multiprocessing if applicable
     if meta.ncpu > 1:
         pool = Pool(meta.ncpu)
         queue_size = meta.ncpu
@@ -907,16 +884,53 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         meta.ncpu = 1
         pool = None
         queue_size = None
-    sampler = NestedSampler(ln_like, ptform, ndims, pool=pool,
-                            queue_size=queue_size, bound=bound, sample=sample,
-                            nlive=nlive, logl_args=l_args,
-                            ptform_args=[prior1, prior2, priortype])
-    sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
-    res = sampler.results  # get results dictionary from sampler
+
+    # Choose between dynamic and static nested sampling
+    if meta.run_dynamic:
+        log.writelog('  Using dynamic nested sampling...')
+        if nlive_log is not None:
+            log.writelog(nlive_log, mute=(not meta.verbose))
+
+        sampler = DynamicNestedSampler(
+            ln_like, ptform, ndims, pool=pool,
+            queue_size=queue_size, bound=bound, sample=sample,
+            logl_args=l_args, ptform_args=[prior1, prior2, priortype])
+
+        # Handle 'auto' for meta.run_nlive_batch
+        nlive_batch = meta.run_nlive_batch
+        if nlive_batch == 'auto':
+            nlive_batch = max(25, nlive // 2)
+            log.writelog(f'  Setting run_nlive_batch = {nlive_batch} (auto '
+                         f'default based on run_nlive = {nlive})',
+                         mute=(not meta.verbose))
+
+        # Run the sampler
+        sampler.run_nested(nlive_init=nlive, nlive_batch=nlive_batch,
+                           dlogz_init=meta.run_tol,
+                           wt_kwargs={"pfrac": meta.run_pfrac},
+                           print_progress=True)
+    else:
+        log.writelog('  Using static nested sampling...')
+        if nlive_log is not None:
+            log.writelog(nlive_log, mute=(not meta.verbose))
+
+        sampler = NestedSampler(
+            ln_like, ptform, ndims, nlive=nlive, pool=pool,
+            queue_size=queue_size, bound=bound, sample=sample,
+            logl_args=l_args, ptform_args=[prior1, prior2, priortype])
+
+        # Run the sampler
+        sampler.run_nested(dlogz=meta.run_tol, print_progress=True)
+
+    # Get the results from the sampler
+    res = sampler.results
+
+    # Clean up pool
     if meta.ncpu > 1:
         pool.close()
         pool.join()
 
+    # Log summary of results
     log.writelog('', mute=(not meta.verbose))
     # Need to temporarily redirect output since res.summar() prints rather
     # than returns a string
@@ -926,10 +940,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     sys.stdout = old_stdout
     log.writelog(mystdout.getvalue(), mute=(not meta.verbose))
 
-    # get function that resamples from the nested samples to give sampler
-    # with equal weight
-    # draw posterior samples
-    weights = np.exp(res['logwt'] - res['logz'][-1])
+    # Extract posterior samples
+    weights = np.exp(res.logwt - res.logz[-1])
     samples = resample_equal(res.samples, weights)
     log.writelog('Number of posterior samples is {}'.format(len(samples)),
                  mute=(not meta.verbose))
@@ -946,17 +958,19 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                             names=("Parameter", "Mean", "-1sigma", "+1sigma",
                                    "16th", "50th", "84th"))
 
-    upper_errs = q[2]-q[1]
-    lower_errs = q[1]-q[0]
+    upper_errs = q[2] - q[1]
+    lower_errs = q[1] - q[0]
 
+    # Update model and uncertainty
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
     lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
                                     lc.nchannel_fitted)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
+    save_fit(meta, lc, model, fittername, t_results, freenames, samples)
 
+    # Final log-likelihood
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype,
                         freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
@@ -964,7 +978,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
-    log.writelog('\nDYNESTY RESULTS:')
+    log.writelog(f'\n{fittername.upper()} RESULTS:')
     for i in range(ndims):
         if 'scatter_mult' in freenames[i]:
             chan = freenames[i].split('_')[-1]
@@ -987,42 +1001,40 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter='dynesty')
+        plots.plot_fit(lc, model, meta, fitter=fittername)
 
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_fleck_star(lc, model, meta, fitter='dynesty')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter='dynesty')
+        plots.plot_fleck_star(lc, model, meta, fitter=fittername)
 
     # Plot Harmonica string
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_harmonica_string(lc, model, meta, fitter='dynesty')
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
+        plots.plot_harmonica_string(lc, model, meta, fitter=fittername)
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
-        plots.plot_GP_components(lc, model, meta, fitter='dynesty')
+        plots.plot_GP_components(lc, model, meta, fitter=fittername)
 
     # Zoom in on phase variations
     if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
                                  or 'poet_pc' in meta.run_myfuncs
                                  or 'quasilambert_pc' in meta.run_myfuncs):
-        plots.plot_phase_variations(lc, model, meta, fitter='dynesty')
+        plots.plot_phase_variations(lc, model, meta, fitter=fittername)
 
     # Make RMS time-averaging plot
     if meta.isplots_S5 >= 3 and np.size(lc.flux) > 20:
         # mc3.stats.time_avg breaks when testing with a small
         # number of integrations
-        plots.plot_rms(lc, model, meta, fitter='dynesty')
+        plots.plot_rms(lc, model, meta, fitter=fittername)
 
     # Plot residuals distribution
     if meta.isplots_S5 >= 3:
-        plots.plot_res_distr(lc, model, meta, fitter='dynesty')
+        plots.plot_res_distr(lc, model, meta, fitter=fittername)
 
     # plot using corner.py
     if meta.isplots_S5 >= 5:
-        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
+        plots.plot_corner(samples, lc, meta, freenames, fitter=fittername)
 
     # Make a new model instance
     best_model = copy.deepcopy(model)
@@ -1053,17 +1065,6 @@ def lmfitter(lc, model, meta, log, **kwargs):
     -------
     best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Updated documentation. Reduced repeated code.
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter.
-    - Mar 13-Apr 18, 2022 Caroline Piaulet
-         Record an astropy table for parameter values
     """
     # TODO: Do something so that duplicate param names can all be handled
     # (e.g. two Polynomail models with c0). Perhaps append something to the
@@ -1119,12 +1120,10 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='lmfitter')
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter='lmfitter')
 
     # Plot Harmonica string
-    if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if ('harmonica_tr' in meta.run_myfuncs and 'a1' in freenames
+            and meta.isplots_S5 >= 3):
         plots.plot_harmonica_string(lc, model, meta, fitter='lmfitter')
 
     # Plot GP fit + components
@@ -1178,17 +1177,6 @@ def group_variables(model):
         Keywords indicating the type of prior for each free parameter.
     indep_vars : dict
         The frozen variables.
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved code to separate function to reduce repeated code.
-    - January 11, 2022 Megan Mansfield
-        Added ability to have shared parameters
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
     """
     parameters_dict = model.components[0].parameters.dict
     freenames = model.components[0].freenames
@@ -1244,13 +1232,6 @@ def group_variables_lmfit(model):
         The fitted variables.
     indep_vars : dict
         The frozen variables.
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved code to separate function to look similar to other fitters.
     """
     all_params = [i for j in [model.components[n].parameters.dict.items()
                   for n in range(len(model.components))] for i in j]
@@ -1377,20 +1358,10 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         xrio.writeXR(fname, ds)
 
     # Directory structure should not use expanded HW values
-    spec_hw_val = meta.spec_hw
-    bg_hw_val = meta.bg_hw
-    spec_hw_val //= meta.expand
-    if not isinstance(bg_hw_val, str):
-        # Only divide if value is not a string (spectroscopic modes)
-        bg_hw_val //= meta.expand
-    # Save the S5 outputs in a human readable ecsv file
-    if not isinstance(meta.bg_hw, str):
-        # Only divide if value is not a string (spectroscopic modes)
-        bg_hw = meta.bg_hw//meta.expand
-    else:
-        bg_hw = meta.bg_hw
-    event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw//meta.expand) + \
-        '_bg'+str(bg_hw)
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    event_ap_bg = meta.eventlabel+"_ap"+str(spec_hw_val) + \
+        '_bg'+str(bg_hw_val)
     meta.tab_filename_s5 = (meta.outputdir+'S5_'+event_ap_bg+"_Table_Save" +
                             channel_tag+'.txt')
     wavelengths = np.mean(np.append(meta.wave_low.reshape(1, -1),

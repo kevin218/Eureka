@@ -40,12 +40,6 @@ class S5MetaClass(MetaClass):
     def set_defaults(self):
         '''Set Stage 5 specific defaults for generic instruments.
 
-        Notes
-        -----
-        History:
-
-        - 2024-06 Taylor J Bell
-            Initial version setting defaults for any instrument.
         '''
         # Make sure the S3 expand parameter is defined
         # (to allow resuming from old analyses)
@@ -89,6 +83,12 @@ class S5MetaClass(MetaClass):
         self.num_planets = getattr(self, 'num_planets', 1)
         self.compute_ltt = getattr(self, 'compute_ltt', None)
         self.force_positivity = getattr(self, 'force_positivity', False)
+        # Path to ECSV file containing common mode variations
+        self.common_mode_file = getattr(self, 'common_mode_file', None)
+        if self.common_mode_file is not None:
+            # Require the common mode name to be specified
+            # if a common_mode_file is provided
+            self.common_mode_name = getattr(self, 'common_mode_name')
         # The following is only relevant for the starry model
         self.mutualOccultations = getattr(self, 'mutualOccultations', True)
 
@@ -143,6 +143,18 @@ class S5MetaClass(MetaClass):
         self.run_sample = getattr(self, 'run_sample', 'auto')
         self.run_tol = getattr(self, 'run_tol', 0.1)
 
+        # dynamic dynesty inputs
+        self.run_dynamic = getattr(self, 'run_dynamic', False)
+        if not isinstance(self.run_dynamic, bool):
+            raise TypeError(
+                'run_dynamic must be a boolean, not a string or other type.')
+        if self.run_dynamic:
+            self.run_nlive_batch = getattr(self, 'run_nlive_batch', 'auto')
+            self.run_pfrac = getattr(self, 'run_pfrac', 0.5)
+            if self.run_pfrac <= 0 or self.run_pfrac >= 1:
+                raise ValueError(
+                    'run_pfrac must be between 0 and 1, exclusive.')
+
         # numpyro NUTS sampler settings
         self.jaxopt_first = getattr(self, 'jaxopt_first', False)
         self.chains = getattr(self, 'chains', 3)
@@ -178,6 +190,7 @@ class S5MetaClass(MetaClass):
         self.interp = getattr(self, 'interp', True)
 
         # Diagnostics
+        self.interp = getattr(self, 'interp', False)
         self.isplots_S5 = getattr(self, 'isplots_S5', 3)
         self.nbin_plot = getattr(self, 'nbin_plot', None)
         self.testing_S5 = getattr(self, 'testing_S5', False)

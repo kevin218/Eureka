@@ -73,6 +73,8 @@ class S4MetaClass(MetaClass):
 
         # Spectral binning/trimming control
         self.nspecchan = getattr(self, 'nspecchan', None)
+        self.npixelbins = getattr(self, 'npixelbins', None)
+        self.npixelshift = getattr(self, 'npixelshift', 0)
         self.compute_white = getattr(self, 'compute_white', True)
         self.wave_input = getattr(self, 'wave_input', None)
         self.wave_min = getattr(self, 'wave_min', None)
@@ -115,6 +117,9 @@ class S4MetaClass(MetaClass):
         self.maxiters = getattr(self, 'maxiters', 20)
         self.boundary = getattr(self, 'boundary', 'fill')
         self.fill_value = getattr(self, 'fill_value', 'mask')
+        # Used in Fig 4106
+        self.mad_sigma = getattr(self, 'mad_sigma', 7)
+        self.mad_box_width = getattr(self, 'mad_box_width', 21)
 
         # HST/WFC3 temporal binning (sum together all reads from one scan)
         self.sum_reads = getattr(self, 'sum_reads', True)

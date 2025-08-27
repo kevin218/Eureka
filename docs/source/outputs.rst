@@ -126,6 +126,16 @@ In Stage 4:
 
       Fig 4103: Spectral Drift Plot
 
+   .. figure:: ../media/S4_out/fig4105_ch00_1D_BG.png
+      :alt: Stage 4 background flux plot
+
+      Fig 4105: Background Flux Plot
+
+   .. figure:: ../media/S4_out/fig4106_MAD_Outliers.png
+      :alt: Stage 4 MAD outliers plot
+
+      Fig 4106: MAD Outliers Plot
+
    - If ``isplots_S4`` = 3: ``Eureka!`` will plot the cross-correlated reference spectrum with the current spectrum for each integration, and the cross-correlation strength for each integration.
 
    .. figure:: ../media/S4_out/fig4301_int00_CC_Spec.png

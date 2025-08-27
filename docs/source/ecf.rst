@@ -434,6 +434,18 @@ subarray_halfwidth
 ''''''''''''''''''
 Only used if any element of xwindow or ywindow is set to None, and only used for MIRI photometry data. This sets the half-width of the xwindow, ywindow subarray in pixels and is centered on the approximate centroid position. For MIRI photometry, the default is 75 pixels, which is a good value for most datasets since the MIRI full frame images are very large and it is generally helpful and faster to zoom-in on the science target.
 
+orders
+''''''
+Only used for NIRISS. List of spectral orders to be reduced.
+
+trace_offset
+''''''''''''
+Only used for NIRISS. PASTASOSS v1.2 doesn't correctly compute the trace position for SUBSTRIP96 mode; therefore, we have to apply a manual offset in the cross-dispersion direction.  The default is -12 pixels for SUBSTRIP96 and should be good to within a pixel or two.  If you see in Fig. 3304 that the spectrum is not quite centered, you should adjust the ``trace_offset`` accordingly.
+
+src_ypos
+''''''''
+The user should only specify this parameter for NIRISS data. Spectral trace will be shifted to given vertical position.  Must be same size as meta.orders.
+
 src_pos_type
 ''''''''''''
 Determine the source position on the detector. Options: header, gaussian, weighted, max, or hst. The value 'header' uses the value of SRCYPOS in the FITS header.
@@ -825,6 +837,14 @@ fill_value
 ''''''''''
 Only used if sigma_clip=True. Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
+mad_sigma
+'''''''''
+The number of sigmas an unbinned MAD value must be from the rolling median (using mad_box_width) to be considered an outlier.  Outlier columns are masked.
+
+mad_box_width
+'''''''''''''
+The width of the box-car filter (used to calculated the rolling median) in units of number of wavelength elements. Used in calculating whether wavelength elements are outliers in the unbinned spectrum.
+
 sum_reads
 '''''''''
 Only used for HST analyses. Should differential non-destructive reads be summed together to reduce noise and data volume or not.
@@ -1032,11 +1052,11 @@ run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, harmonica_tr, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
+[batman_tr, batman_ecl, harmonica_tr, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, common_mode, GP].
 For theano-based differentiable functions, this can be one or more of the following:
 [starry, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
-The POET transit and eclipse models assume a symmetric transit shape and, thus, are best-suited for planets with small eccentricities (e < 0.2).  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1)
+The POET transit and eclipse models assume a symmetric transit shape and, thus, are best-suited for planets with small eccentricities (e < 0.2).  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1).
 
 compute_ltt
 '''''''''''
@@ -1051,6 +1071,14 @@ Optional. By default, the code will assume that you are only fitting for a singl
 force_positivity
 ''''''''''''''''
 Optional boolean. Used by the sinusoid_pc and poet_pc models. If True, force positive phase variations (phase variations that never go below the bottom of the eclipse). Physically speaking, a negative phase curve is impossible, but strictly enforcing this can hide issues with the decorrelation or potentially bias your measured minimum flux level. Either way, use caution when choosing the value of this parameter.
+
+common_mode_file
+''''''''''''''''
+Optional. Fully qualified path to the location of the common-mode file that you want to use. This is usually the ECSV generated from a Stage 5 white LC fit.
+
+common_mode_name
+''''''''''''''''
+Required when ``common_mode_file`` is given. ECSV parameter name that represents the common-mode variations.  This is usually ``GP`` or ``residuals``.
 
 pixelsampling
 '''''''''''''
@@ -1181,23 +1209,57 @@ Integer. The number of burn-in steps to run.
 
 Dynesty Fitting Parameters
 ''''''''''''''''''''''''''
-The following set the parameters for running dynesty. These options are described in more detail in: https://dynesty.readthedocs.io/en/latest/api.html?highlight=unif#module-dynesty.dynesty
+The following set the parameters for running dynesty. These options are described in more detail in: https://dynesty.readthedocs.io/en/latest/api.html#module-dynesty.dynesty
 
 run_nlive
 ^^^^^^^^^
-Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4. For convenience, this can be set to 'min' to automatically set run_nlive to (ndim * (ndim+1)) / 2.
+Integer or ``'min'``. Number of live points for dynesty to use. Should be at least greater than ``(ndim * (ndim + 1)) / 2``, where ``ndim`` is the number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4.
+
+For convenience, this can be set to ``'min'`` to automatically use the minimum recommended value.
 
 run_bound
 ^^^^^^^^^
-The bounding method to use. Options are: ['none', 'single', 'multi', 'balls', 'cubes']
+The bounding method to use. Options are: ``['none', 'single', 'multi', 'balls', 'cubes']``
 
 run_sample
 ^^^^^^^^^^
-The sampling method to use. Options are ['auto', 'unif', 'rwalk', 'rstagger', 'slice', 'rslice', 'hslice']
+The sampling method to use. Options are: ``['auto', 'unif', 'rwalk', 'rstagger', 'slice', 'rslice', 'hslice']``
 
 run_tol
 ^^^^^^^
-Float. The tolerance for the dynesty run. Determines the stopping criterion. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
+Float. The convergence tolerance for the dynesty run. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
+
+
+Dynamic Nested Sampling Parameters
+''''''''''''''''''''''''''''''''''
+The following parameters control dynesty's **dynamic nested sampling** behavior. These are only used if ``run_dynamic`` is set to ``True``. Dynamic nested sampling adaptively allocates live points to focus more efficiently on the posterior distribution. More details are available in the dynesty documentation: https://dynesty.readthedocs.io/en/stable/dynamic.html
+
+Dynamic nested sampling is typically preferred for complex or multimodal posteriors, as it adaptively allocates live points to focus more efficiently on the regions of interest.
+It is generally more efficient for parameter estimation, especially when the posterior has sharp features or multiple peaks.
+However, because it adds samples in batches based on runtime decisions, the estimated evidence (logZ) can vary more between runs.
+Static nested sampling, on the other hand, uses a fixed number of live points from start to finish, which can make evidence estimates more stable and repeatable; this is particularly useful if you are comparing models using Bayes factors or need exact reproducibility.
+If you are primarily focused on estimating parameters, dynamic sampling with a high ``run_pfrac`` (e.g., 0.8) is a good choice.
+If you care most about comparing models based on their evidence, consider using static sampling or dynamic sampling with a lower ``run_pfrac`` (e.g., 0.1-0.3).
+
+When ``run_dynamic = True``, dynesty uses ``run_nlive`` to set the number of live points in the initial exploratory phase. The parameters ``run_nlive_batch`` and ``run_pfrac`` then control the behavior of refinement batches. Other static parameters such as ``run_bound``, ``run_sample``, and ``run_tol`` still apply and should be set as usual.
+
+run_dynamic
+^^^^^^^^^^^
+Boolean. If ``True``, dynesty will use its ``DynamicNestedSampler`` instead of ``NestedSampler``. Dynamic nested sampling is often more efficient for complex or multimodal posteriors, as it adaptively refines high-posterior regions. If ``False``, static nested sampling will be used with a fixed number of live points (``run_nlive``).
+
+run_nlive_batch
+^^^^^^^^^^^^^^^
+Integer or ``'auto'``. The number of live points to allocate in each refinement batch during dynamic nested sampling. Controls how many new live points are used to zoom in on regions of high posterior probability.
+
+Typical values range from one-half to equal the value of ``run_nlive``. For example, if ``run_nlive = 200``, a common value for ``run_nlive_batch`` would be 100-200.
+
+If set to ``'auto'``, a safe default of ``max(25, run_nlive // 2)`` is used.
+
+run_pfrac
+^^^^^^^^^
+Float between 0 and 1 (exclusive). The fraction of samples to draw from the posterior distribution versus the prior during refinement. A higher value prioritizes detailed posterior exploration, while a lower value improves evidence (logZ) estimation.
+
+Use ``run_pfrac = 0.5`` for a balanced approach. Increase to ``0.7-0.9`` if you are primarily interested in posterior parameter estimation. If your goal is Bayesian model comparison, where precise estimation of the evidence (logZ) is important, consider lower values such as ``run_pfrac = 0.1-0.3``.
 
 
 NUTS Fitting Parameters
@@ -1374,7 +1436,7 @@ Available fitting parameters are:
       - ``spotnpts`` - The degree of spherical harmonics on the star (ydeg). ~30 is needed to appropriately model the spot.
 
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
-      - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
+      - ``c0--c9`` - Coefficients for 0th to 9th order polynomials.
 
          The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.).
          The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array.
@@ -1398,6 +1460,10 @@ Available fitting parameters are:
       - ``xwidth`` - Coefficient for linear decorrelation against changes in the PSF width in the x direction (cross-correlation width in the spectral direction for spectroscopy data).
       - ``ypos`` - Coefficient for linear decorrelation against drift/jitter in the y direction (spatial direction for spectroscopy data).
       - ``ywidth`` - Coefficient for linear decorrelation against changes in the PSF width in the y direction (spatial direction for spectroscopy data).
+
+      - ``cm1`` and ``cm2`` - Coefficients for the 1st and 2nd order common-mode systematics.
+
+         The common-mode systematics model is defined as follows: ``1 + cm1*cm_flux + cm2*cm_flux**2``, where ``cm1`` and ``cm2`` are common-mode amplitude parameters and ``cm_flux`` represents the common-mode flux variations.  The ``cm_flux`` array is read in from ``common_mode_file`` (generated from a Stage 5 white light curve fit) and uses mean-subtracted values from the ECSV parameter name ``common_mode_name`` (e.g., ``GP`` or ``residuals``).
 
       - ``A`` and ``m`` - The natural logarithm (``ln``) of the covariance amplitude and lengthscale to use for the GP model specified in your Stage 5 ECF.
 

@@ -9,15 +9,7 @@ from astropy.io import ascii
 
 
 def columnNames():
-    """Print column names from MAST Observation table.
-
-    Notes
-    -----
-    History:
-
-    - June 2022 Kevin Stevenson
-        Initial version
-    """
+    """Print column names from MAST Observation table."""
     meta_table = Observations.get_metadata("observations")
     for val in meta_table['Column Name']:
         print(val)
@@ -41,13 +33,6 @@ def writeTable_JWST(proposal_id, observation, visit, filename, format='csv'):
         where XXXXX is the proposal/program ID.
     filename : str; optional
         The file format to use. Defaults to 'csv'.
-
-    Notes
-    -----
-    History:
-
-    - July 2022 Kevin Stevenson
-        Initial version
     """
     # Convert to string
     if type(proposal_id) is not str:
@@ -76,28 +61,13 @@ def login(mast_token=None):
         This can be generated at https://auth.mast.stsci.edu/token.
         If not supplied, it will be prompted for if not in the keyring
         or set via $MAST_API_TOKEN.
-
-    Notes
-    -----
-    History:
-
-    - July 2022 Kevin Stevenson
-        Initial version
     """
     Observations.login(mast_token)
     return
 
 
 def logout():
-    """Log out of current MAST session.
-
-    Notes
-    -----
-    History:
-
-    - July 2022 Kevin Stevenson
-        Initial version
-    """
+    """Log out of current MAST session."""
     Observations.logout()
     return
 
@@ -128,13 +98,6 @@ def downloadHST(proposal_id, visit, inst='WFC3', download_dir='.',
     -------
     result : AstroPy Table
         The manifest of files downloaded.
-
-    Notes
-    -----
-    History:
-
-    - June 2022 Kevin Stevenson
-        Initial version
     """
     # Convert to string
     if type(proposal_id) is not str:
@@ -220,13 +183,6 @@ def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
     -------
     table : AstroPy Table
         The filtered table of data products.
-
-    Notes
-    -----
-    History:
-
-    - July 2022 Kevin Stevenson
-        Initial version
     """
     # Convert to string
     if type(proposal_id) is not str:
@@ -288,13 +244,6 @@ def consolidate(result, final_dir):
         mastDownload.download().
     final_dir : str
         Final destination of files.
-
-    Notes
-    -----
-    History:
-
-    - June 2022 Kevin Stevenson
-        Initial version
     """
     # Create directory
     if not os.path.exists(final_dir):
@@ -311,8 +260,16 @@ def consolidate(result, final_dir):
 
 
 def sortJWST(source_dir, target_dir, filetype):
-    """
+    """Sort files into subdirectories based on filetype.
 
+    Parameters
+    ----------
+    source_dir : str
+        Source directory containing files to be sorted.
+    target_dir : str
+        Target directory where sorted files will be moved.
+    filetype : str
+        File extension to filter files by (e.g., '.fits', '.txt').
     """
     # Create directory
     if not os.path.exists(target_dir):
@@ -340,13 +297,6 @@ def sortHST(final_dir, sci_dir='sci', cal_dir='cal'):
     cal_dir : str; optional
         Name of calibration subdirectory within 'final_dir'.
         Defaults to 'cal'.
-
-    Notes
-    -----
-    History:
-
-    - June 2022 Kevin Stevenson
-        Initial version
     """
     # Create directories
     if not os.path.exists(os.path.join(final_dir, sci_dir)):
@@ -378,13 +328,6 @@ def cleanup(download_dir='.'):
     download_dir : str; optional
         Temporary download directory specified for mastDownload.download().
         Defaults to '.'.
-
-    Notes
-    -----
-    History:
-
-    - June 2022 Kevin Stevenson
-        Initial version
     """
     src_dir = os.path.join(download_dir, 'mastDownload')
     for dirpath, _, _ in os.walk(src_dir, topdown=False):

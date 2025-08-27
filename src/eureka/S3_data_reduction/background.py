@@ -11,7 +11,7 @@ from . import plots_s3
 __all__ = ['BGsubtraction', 'fitbg', 'fitbg2']
 
 
-def BGsubtraction(data, meta, log, m, isplots=0):
+def BGsubtraction(data, meta, log, m, isplots=0, group=None):
     """Does background subtraction using inst.fit_bg & background.fitbg
 
     Parameters
@@ -28,13 +28,15 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     isplots : bool; optional
        Plots intermediate steps for the background fitting routine.
        Default is False.
+    group : int; optional
+        The group number (only applies to Stage 1).  Default is None.
 
     Returns
     -------
     data : Xarray Dataset
         Dataset object containing background subtracted data.
     """
-    if meta.bg_deg is None:
+    if meta.bg_deg is None or meta.skip_bg:
         # Need to skip doing background subtraction
         log.writelog('  Skipping background subtraction...',
                      mute=(not meta.verbose))
@@ -151,15 +153,16 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     # Make image+background plots
     if isplots >= 3:
         if meta.orders is None:
-            plots_s3.image_and_background(data, meta, log, m)
+            plots_s3.image_and_background(data, meta, log, m, group=group)
         else:
             for order in meta.orders:
                 plots_s3.image_and_background(data.sel(order=order), meta,
-                                              log, m, order=order)
+                                              log, m, order=order, group=group)
 
     return data
 
 
+@plots.apply_style
 def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
           isplots=0):
     '''Fit sky background with out-of-spectra data.
@@ -207,7 +210,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
         submask = np.concatenate((mask[:, :x1[0]].T, mask[:, x2[0]+1:].T)).T
         subdata = np.concatenate((dataim[:, :x1[0]].T,
                                   dataim[:, x2[0]+1:].T)).T
-        bg = np.zeros((ny, nx)) + np.median(subdata[np.where(submask)])
+        bg = np.zeros((ny, nx)) + np.median(subdata[submask])
     elif deg is None:
         # No background subtraction
         bg = np.zeros((ny, nx))
@@ -274,7 +277,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
                     fname = ('figs'+os.sep+'Fig3601_BG_'+str(j) +
-                             plots.figure_filetype)
+                             plots.get_filetype())
                     plt.savefig(meta.outputdir + fname, dpi=300)
                     plt.pause(0.01)
 
@@ -288,6 +291,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
     return bg, mask
 
 
+@plots.apply_style
 def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
            isplots=0):
     '''Fit sky background with out-of-spectra data.
@@ -317,13 +321,6 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
         Default is 0 (no rotation).
     isplots : int; optional
         The amount of plots saved; set in ecf. Default is 0.
-
-    Notes
-    -----
-    History:
-
-    - September 2016 Kevin Stevenson
-        Initial version
     '''
     # Assume x is the spatial direction and y is the wavelength direction
     # Otherwise, rotate array
@@ -385,7 +382,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
                         plt.plot(goodxvals, dataslice, 'bo')
                         plt.plot(goodxvals, model, 'g-')
                         fname = ('figs'+os.sep+'Fig6_BG_'+str(j) +
-                                 plots.figure_filetype)
+                                 plots.get_filetype())
                         plt.savefig(meta.outputdir + fname, dpi=300)
                         plt.pause(0.01)
 

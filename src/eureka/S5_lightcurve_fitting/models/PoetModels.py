@@ -196,9 +196,9 @@ class TransitModel():
                          * np.cos(2*np.pi*(t-tref)/self.per))**2)
 
         # Ignore close approach on other side of the orbit
-        self.z[np.where(np.bitwise_and(
-            (t-tref) % self.per > self.per/4,
-            (t-tref) % self.per < self.per*3/4))] = self.ars
+        phase = (t - tref) % self.per
+        mask = (phase > self.per / 4) & (phase < self.per * 3 / 4)
+        self.z[mask] = self.ars
 
     def light_curve(self, params):
         """
@@ -267,30 +267,24 @@ def uniform(z, rprs):
     -------
     y : ndarray
         The flux for each point in time.
-
-    Notes
-    -----
-    History:
-
-    - 2010-11-27 Kevin Stevenson
-        Original version
-    - 2024-01-28 Kevin Stevenson
-        Updated for Eureka!
     """
-    # INGRESS/EGRESS INDICES
-    iingress = np.where(np.bitwise_and((1-rprs) < z, z <= (1+rprs)))[0]
+    # INGRESS/EGRESS MASK
+    ingress_mask = ((1 - rprs) < z) & (z <= (1 + rprs))
+
     # COMPUTE k0 & k1
-    k0 = np.arccos((rprs**2 + z[iingress]**2 - 1) / 2 / rprs / z[iingress])
-    k1 = np.arccos((1 - rprs**2 + z[iingress]**2) / 2 / z[iingress])
+    z_ingress = z[ingress_mask]
+    k0 = np.arccos((rprs**2 + z_ingress**2 - 1) / (2 * rprs * z_ingress))
+    k1 = np.arccos((1 - rprs**2 + z_ingress**2) / (2 * z_ingress))
 
     # CALCULATE TRANSIT SHAPE
     # Baseline
     y = np.ones_like(z)
     # Full transit
-    y[np.where(z <= (1-rprs))] = 1.-rprs**2
+    y[z <= (1 - rprs)] = 1. - rprs**2
     # Ingress/egress
-    y[iingress] = 1. - 1./np.pi*(k0*rprs**2 + k1 - np.sqrt((4*z[iingress]**2
-                                 - (1 + z[iingress]**2 - rprs**2)**2)/4))
+    arg = 4 * z_ingress**2 - (1 + z_ingress**2 - rprs**2)**2
+    arg = np.clip(arg, 0, None)  # Avoid negative sqrt args
+    y[ingress_mask] = 1 - (1/np.pi)*(k0*rprs**2 + k1 - np.sqrt(arg/4))
 
     return y
 
@@ -314,14 +308,6 @@ def trnlldsp(z, rprs, u):
     -------
     y : ndarray
         The flux for each point in time.
-    Notes
-    -----
-    History:
-
-    - 2010-12-15 Kevin Stevenson
-        Converted to Python
-    - 2024-01-28 Kevin Stevenson
-        Updated for Eureka!
     """
 
     # DEFINE PARAMETERS
@@ -334,29 +320,41 @@ def trnlldsp(z, rprs, u):
         return y
 
     # INGRESS/EGRESS
-    iingress = np.where(np.bitwise_and(1 - rprs < z, z <= 1 + rprs))[0]
-    x = 1. - (z[iingress] - rprs) ** 2
-    I1star = 1. - u1 * (1. - 4. / 5. * np.sqrt(np.sqrt(x))) \
-                - u2 * (1. - 2. / 3. * np.sqrt(x)) \
-                - u3 * (1. - 4. / 7. * np.sqrt(np.sqrt(x * x * x))) \
-                - u4 * (1. - 4. / 8. * x)
-    y[iingress] = 1. - I1star \
-        * (rprs**2 * np.arccos((z[iingress] - 1.) / rprs) - (z[iingress] - 1.)
-           * np.sqrt(rprs ** 2 - (z[iingress] - 1.) ** 2)) / np.pi / Sigma4
+    ingress_mask = (1 - rprs < z) & (z <= 1 + rprs)
+    z_ing = z[ingress_mask]
+    x = 1. - (z_ing - rprs) ** 2
+    x = np.clip(x, 0.0, 1.0)  # Avoid sqrt of negative due to float precision
+    I1star = (
+        1.
+        - u1 * (1 - (4/5) * np.sqrt(np.sqrt(x)))
+        - u2 * (1 - (2/3) * np.sqrt(x))
+        - u3 * (1 - (4/7) * np.sqrt(np.sqrt(x**3)))
+        - u4 * (1 - (4/8) * x)
+    )
+    arccos_arg = (z_ing - 1.) / rprs
+    arccos_arg = np.clip(arccos_arg, -1.0, 1.0)  # domain-safe
+    arg1 = rprs**2 * np.arccos(arccos_arg)
+    arg2 = (z_ing-1) * np.sqrt(np.clip(rprs**2 - (z_ing-1)**2, 0., None))
+    term = arg1 - arg2
+    y[ingress_mask] = 1. - I1star * term / (np.pi * Sigma4)
 
-    # Full transit (except @ z=0)
-    itrans = np.where(np.bitwise_and(z <= 1 - rprs, z != 0.))
-    sig1 = np.sqrt(np.sqrt(1. - (z[itrans] - rprs) ** 2))
-    sig2 = np.sqrt(np.sqrt(1. - (z[itrans] + rprs) ** 2))
-    I2star = 1. \
-        - u1 * (1. + (sig2 ** 5 - sig1 ** 5) / 5. / rprs / z[itrans]) \
-        - u2 * (1. + (sig2 ** 6 - sig1 ** 6) / 6. / rprs / z[itrans]) \
-        - u3 * (1. + (sig2 ** 7 - sig1 ** 7) / 7. / rprs / z[itrans]) \
-        - u4 * (rprs ** 2 + z[itrans] ** 2)
-    y[itrans] = 1. - rprs ** 2 * I2star / Sigma4
+    # FULL TRANSIT (excluding z=0)
+    full_mask = (z <= 1 - rprs) & (z != 0)
+    z_trans = z[full_mask]
+    s1 = np.clip(1. - (z_trans - rprs)**2, 0.0, 1.0)
+    s2 = np.clip(1. - (z_trans + rprs)**2, 0.0, 1.0)
+    sig1 = np.sqrt(np.sqrt(s1))
+    sig2 = np.sqrt(np.sqrt(s2))
+    I2star = (
+        1. - u1 * (1. + (sig2**5 - sig1**5) / (5. * rprs * z_trans))
+        - u2 * (1. + (sig2**6 - sig1**6) / (6. * rprs * z_trans))
+        - u3 * (1. + (sig2**7 - sig1**7) / (7. * rprs * z_trans))
+        - u4 * (rprs**2 + z_trans**2)
+    )
+    y[full_mask] = 1. - rprs**2 * I2star / Sigma4
 
     # z=0 (midpoint)
-    y[np.where(z == 0.)] = 1. - rprs ** 2 / Sigma4
+    y[np.isclose(z, 0, atol=1e-12)] = 1. - rprs ** 2 / Sigma4
 
     return y
 
@@ -380,15 +378,6 @@ def trquad(z, rprs, u1, u2):
     -------
     y : ndarray
         The flux for each point in time.
-
-    Notes
-    -----
-    History:
-
-    - 2012-08-13 Kevin Stevenson
-        Modified from Jason Eastman's version
-    2024-01-28 Kevin Stevenson
-        Updated for Eureka!
     '''
 
     nz = np.size(z)
@@ -404,10 +393,10 @@ def trquad(z, rprs, u1, u2):
 
     rprs = np.abs(rprs)
 
-    z = np.where(np.abs(rprs - z) < tol, rprs, z)
-    z = np.where(np.abs(rprs - 1 - z) < tol, rprs - 1., z)
-    z = np.where(np.abs(1 - rprs - z) < tol, 1. - rprs, z)
-    z = np.where(z < tol, 0., z)
+    z = np.where(np.isclose(z, rprs, atol=tol), rprs, z)
+    z = np.where(np.isclose(z, rprs - 1., atol=tol), rprs - 1., z)
+    z = np.where(np.isclose(z, 1. - rprs, atol=tol), 1. - rprs, z)
+    z = np.where(z < tol, 0.0, z)
 
     x1 = (rprs - z) ** 2.
     x2 = (rprs + z) ** 2.
@@ -422,8 +411,8 @@ def trquad(z, rprs, u1, u2):
     # # Case 1 - the star is unocculted:
     # # only consider points with z < 1+rprs
 
-    notusedyet = np.where(z < 1. + rprs)[0]
-    if np.size(notusedyet) == 0:
+    notusedyet = np.atleast_1d(z < 1. + rprs).nonzero()[0]
+    if notusedyet.size == 0:
         muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
                      * (lambdad + 2. / 3. * (rprs > z)) + u2 * etad) \
             / omega
@@ -432,15 +421,15 @@ def trquad(z, rprs, u1, u2):
     # Case 11 - the source is completely occulted:
 
     if rprs >= 1.:
-        occulted = np.where(z[notusedyet] <= rprs - 1.)
-        if np.size(occulted) != 0:
+        occulted = np.atleast_1d(z[notusedyet] <= rprs - 1.).nonzero()[0]
+        if occulted.size != 0:
             ndxuse = notusedyet[occulted]
             etad[ndxuse] = 0.5  # corrected typo in paper
             lambdae[ndxuse] = 1.
 
             # lambdad = 0 already
 
-            notused2 = np.where(z[notusedyet] > rprs - 1)
+            notused2 = np.atleast_1d(z[notusedyet] > rprs - 1).nonzero()[0]
             if np.size(notused2) == 0:
                 muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2.
                              * u2) * (lambdad + 2. / 3. * (rprs > z))
@@ -450,21 +439,19 @@ def trquad(z, rprs, u1, u2):
 
     # Case 2, 7, 8 - ingress/egress (uniform disk only)
 
-    inegressuni = np.where((z[notusedyet] >= np.abs(1. - rprs))
-                           & (z[notusedyet] < 1. + rprs))
-    if np.size(inegressuni) != 0:
+    inegressuni = ((z[notusedyet] >= np.abs(1. - rprs))
+                   & (z[notusedyet] < 1. + rprs))
+    if np.any(inegressuni):
         ndxuse = notusedyet[inegressuni]
         tmp = (1. - rprs ** 2. + z[ndxuse] ** 2.) / 2. / z[ndxuse]
-        tmp = np.where(tmp > 1., 1., tmp)
-        tmp = np.where(tmp < -1., -1., tmp)
+        tmp = np.clip(tmp, -1., 1.)
         kap1 = np.arccos(tmp)
         tmp = (rprs ** 2. + z[ndxuse] ** 2 - 1.) / 2. / rprs / z[ndxuse]
-        tmp = np.where(tmp > 1., 1., tmp)
-        tmp = np.where(tmp < -1., -1., tmp)
+        tmp = np.clip(tmp, -1., 1.)
         kap0 = np.arccos(tmp)
         tmp = 4. * z[ndxuse] ** 2 - (1. + z[ndxuse] ** 2 - rprs ** 2) \
             ** 2
-        tmp = np.where(tmp < 0, 0, tmp)
+        tmp = np.clip(tmp, 0., None)
         lambdae[ndxuse] = (rprs ** 2 * kap0 + kap1 - 0.5 * np.sqrt(tmp)) \
             / np.pi
 
@@ -477,8 +464,8 @@ def trquad(z, rprs, u1, u2):
 
     # Case 5, 6, 7 - the edge of planet lies at origin of star
 
-    ocltor = np.where(z[notusedyet] == rprs)
-    if np.size(ocltor) != 0:
+    ocltor = z[notusedyet] == rprs
+    if np.any(ocltor):
         ndxuse = notusedyet[ocltor]
         if rprs < 0.5:
 
@@ -518,8 +505,8 @@ def trquad(z, rprs, u1, u2):
 
             lambdad[ndxuse] = 1. / 3. - 4. / np.pi / 9.
             etad[ndxuse] = 3. / 32.
-        notused3 = np.where(z[notusedyet] != rprs)
-        if np.size(notused3) == 0:
+        notused3 = ~np.isclose(z[notusedyet], rprs, atol=1e-12)
+        if not np.any(notused3):
             muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
                          * (lambdad + 2. / 3. * (rprs > z)) + u2
                          * etad) / omega
@@ -528,12 +515,15 @@ def trquad(z, rprs, u1, u2):
 
     # Case 2, Case 8 - ingress/egress (with limb darkening)
 
-    inegress = np.where((z[notusedyet] > 0.5 + np.abs(rprs - 0.5))
-                        & (z[notusedyet] < 1. + rprs) | (rprs > 0.5)
-                        & (z[notusedyet] > np.abs(1. - rprs))
-                        & (z[notusedyet] < rprs))  # , complement=notused4)
-    if np.size(inegress) != 0:
-        ndxuse = notusedyet[inegress]
+    cond1 = ((z[notusedyet] > 0.5 + np.abs(rprs - 0.5)) &
+             (z[notusedyet] < 1. + rprs))
+    cond2 = ((rprs > 0.5) &
+             (z[notusedyet] > np.abs(1. - rprs)) &
+             (z[notusedyet] < rprs))
+    inegress_mask = cond1 | cond2
+
+    if np.any(inegress_mask):
+        ndxuse = notusedyet[inegress_mask]
         q = np.sqrt((1. - x1[ndxuse]) / (x2[ndxuse] - x1[ndxuse]))
         (Ek, Kk) = ellke(q)
         n = 1. / x1[ndxuse] - 1.
@@ -546,25 +536,25 @@ def trquad(z, rprs, u1, u2):
                + (x2[ndxuse] - x1[ndxuse]) * (z[ndxuse] ** 2 + 7.
                * rprs ** 2 - 4.) * Ek - 3. * x3[ndxuse] / x1[ndxuse]
                * ellpic_bulirsch(n, q))
-        notused4 = np.where(
+        mask4 = (
             ((z[notusedyet] <= 0.5 + np.abs(rprs - 0.5)) |
-             (z[notusedyet] >= 1.0 + rprs))
-            & ((rprs <= 0.5) | (z[notusedyet] <= np.abs(1.0 - rprs)) |
-               (z[notusedyet] >= rprs)))
-
-        if np.size(notused4) == 0:
+             (z[notusedyet] >= 1.0 + rprs)) &
+            ((rprs <= 0.5) |
+             (z[notusedyet] <= np.abs(1.0 - rprs)) |
+             (z[notusedyet] >= rprs))
+        )
+        if not np.any(mask4):
             muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
-                         * (lambdad + 2. / 3. * (rprs > z)) + u2
-                         * etad) / omega
+                         * (lambdad + 2. / 3. * (rprs > z)) + u2 * etad)/omega
             return muo1
-        notusedyet = notusedyet[notused4]
+        notusedyet = notusedyet[mask4]
 
     # Case 3, 4, 9, 10 - planet completely inside star
 
     if rprs < 1.:
-        inside = np.where(z[notusedyet] <= 1. - rprs)
-        if np.size(inside) != 0:
-            ndxuse = notusedyet[inside]
+        mask_inside = z[notusedyet] <= 1. - rprs
+        if np.any(mask_inside):
+            ndxuse = notusedyet[mask_inside]
 
             # # eta_2
 
@@ -576,41 +566,46 @@ def trquad(z, rprs, u1, u2):
 
             # # Case 4 - edge of planet hits edge of star
 
-            edge = np.where(z[ndxuse] == 1. - rprs)
-            if np.size(edge[0]) != 0:
+            is_edge = z[ndxuse] == 1. - rprs
+            if np.any(is_edge):
+                edge_indices = ndxuse[is_edge]
 
-                # # lambda_5
-
-                lambdad[ndxuse[edge]] = 2. / 3. / np.pi \
-                    * np.arccos(1. - 2. * rprs) \
-                    - 4. / 9. / np.pi * np.sqrt(rprs * (1. - rprs)) \
-                    * (3. + 2. * rprs - 8. * rprs ** 2)
+                # lambda_5
+                lambdad_val = (2. / 3. / np.pi * np.arccos(1. - 2. * rprs)
+                               - 4. / 9. / np.pi * np.sqrt(rprs * (1. - rprs))
+                               * (3. + 2. * rprs - 8. * rprs ** 2))
                 if rprs > 0.5:
-                    lambdad[ndxuse[edge]] -= 2. / 3.
-                notused6 = np.where(z[ndxuse] != 1. - rprs)
-                if np.size(notused6) == 0:
-                    muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1
-                                 + 2. * u2) * (lambdad + 2. / 3.
-                                 * (rprs > z)) + u2 * etad) / omega
+                    lambdad_val -= 2. / 3.
+
+                lambdad[edge_indices] = lambdad_val
+
+                # Check for early return
+                not_edge_mask = z[ndxuse] != 1. - rprs
+                if not np.any(not_edge_mask):
+                    muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae +
+                                 (u1 + 2*u2) * (lambdad + 2/3*(rprs > z)) +
+                                 u2 * etad) / omega
                     return muo1
-                ndxuse = ndxuse[notused6[0]]
+
+                ndxuse = ndxuse[not_edge_mask]
 
             # # Case 10 - origin of planet hits origin of star
 
-            origin = np.where(z[ndxuse] == 0)
-            if np.size(origin) != 0:
+            is_origin = z[ndxuse] == 0
+            if np.any(is_origin):
+                origin_indices = ndxuse[is_origin]
 
-                # # lambda_6
+                # lambda_6
+                lambdad[origin_indices] = -2. / 3. * (1. - rprs ** 2) ** 1.5
 
-                lambdad[ndxuse[origin]] = -2. / 3. * (1. - rprs ** 2) \
-                    ** 1.5
-                notused7 = np.where(z[ndxuse] != 0)
-                if np.size(notused7) == 0:
-                    muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1
-                                 + 2. * u2) * (lambdad + 2. / 3.
-                                 * (rprs > z)) + u2 * etad) / omega
+                not_origin_mask = z[ndxuse] != 0
+                if not np.any(not_origin_mask):
+                    muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae +
+                                 (u1+2*u2) * (lambdad + 2. / 3. * (rprs > z)) +
+                                 u2 * etad) / omega
                     return muo1
-                ndxuse = ndxuse[notused7[0]]
+
+                ndxuse = ndxuse[not_origin_mask]
 
             q = np.sqrt((x2[ndxuse] - x1[ndxuse]) / (1. - x1[ndxuse]))
             n = x2[ndxuse] / x1[ndxuse] - 1.
@@ -647,18 +642,6 @@ def ellke(k):
         elliptic integral of the first kind
     kk : 1D array
         elliptic integral of the second kind
-
-
-    Notes
-    -----
-    History:
-
-    - 2008-ish Jason Eastman
-        Originally written in IDL (Eastman et al. 2013, PASP 125, 83)
-    - 2010-ish Kevin Stevenson
-        Converted to Python
-    - 2024-01-29 Kevin B Stevenson
-        Modified for Eureka!
     """
     m1 = 1. - k ** 2
     logm1 = np.log(m1)
@@ -697,6 +680,8 @@ def ellpic_bulirsch(n, k):
     Computes the complete elliptical integral of the third kind using
     the algorithm of Bulirsch (1965).
 
+    Originally written in IDL (Eastman et al. 2013, PASP 125, 83).
+
     Parameters
     ----------
     n : float
@@ -710,17 +695,6 @@ def ellpic_bulirsch(n, k):
     -------
     ellpic : ndarray
         The elliptical integral
-
-    Notes
-    -----
-    History:
-
-    - 2008-ish Jason Eastman
-        Originally written in IDL (Eastman et al. 2013, PASP 125, 83)
-    - 2010-ish Kevin Stevenson
-        Converted to Python
-    - 2024-01-29 Kevin B Stevenson
-        Modified for Eureka!
     """
     kc = np.sqrt(1. - k ** 2)
     p = n + 1.

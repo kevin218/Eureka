@@ -41,19 +41,6 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
     -------
     centers : list
         Centroids
-
-    Notes
-    -----
-    History:
-
-    - November 2013, Kevin Stevenson
-        Initial version
-    - March 2016, Kevin Stevenson
-        Added IRSUB256
-    - December 8, 2021, Taylor J Bell
-        Updated for Eureka
-    - December 15, 2023, Kevin Stevenson
-        Cleaned up function
     '''
     nfiles = len(filenames)
     centers = []
@@ -148,15 +135,6 @@ def calcTrace(x, centroid, grism):
     -------
     y : ndarray
         Computed trace.
-
-    Notes
-    -----
-    History:
-
-    - LK
-        Initial version
-    - November 2021, Kevin Stevenson
-        Modified
     '''
     yref, xref = centroid
 
@@ -211,15 +189,6 @@ def calibrateLambda(x, centroid, grism):
     -------
     y : ndarray
         Computed wavelength values
-
-    Notes
-    -----
-    History:
-
-    - LK
-        Initial version
-    - November 2021, Kevin Stevenson
-        Modified
     '''
     yref, xref = centroid
 
@@ -285,13 +254,6 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
     mask_master : list
         Single bad-pixel mask image. Boolean, where True values
         should be masked.
-
-    Notes
-    -----
-    History:
-
-    - November 2012, Kevin Stevenson
-        Initial version.
     '''
     # Read in flat frames
     hdulist = fits.open(flatfile)
@@ -337,25 +299,25 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
             # Points that are outliers, do this for the high and low
             # sides separately
             # 1. Reject points < 0
-            index = np.where(flat_norm < 0)
+            index = np.nonzero(flat_norm < 0)
             flat_norm[index] = 1.
             mask_window[index] = True
             # 2. Reject outliers from low side
-            ilow = np.where(flat_norm < 1)
+            ilow = np.nonzero(flat_norm < 1)
             # Make distribution symetric about 1
             dbl = np.concatenate((flat_norm[ilow], 1+(1-flat_norm[ilow])))
             # MAD
             std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
-            ibadpix = np.where((1-flat_norm[ilow]) > sigma*std)
+            ibadpix = np.nonzero((1 - flat_norm[ilow]) > sigma * std)[0]
             flat_norm[ilow[0][ibadpix], ilow[1][ibadpix]] = 1.
             mask_window[ilow[0][ibadpix], ilow[1][ibadpix]] = True
             # 3. Reject outliers from high side
-            ihi = np.where(flat_norm > 1)
+            ihi = np.nonzero(flat_norm > 1)
             # Make distribution symetric about 1
             dbl = np.concatenate((flat_norm[ihi], 2-flat_norm[ihi]))
             # MAD
             std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
-            ibadpix = np.where((flat_norm[ihi]-1) > sigma*std)
+            ibadpix = np.nonzero((flat_norm[ihi] - 1) > sigma * std)[0]
             flat_norm[ihi[0][ibadpix], ihi[1][ibadpix]] = 1.
             mask_window[ihi[0][ibadpix], ihi[1][ibadpix]] = True
 
@@ -397,15 +359,6 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
     mask_master : list
         Single bad-pixel mask image. Boolean, where True values
         should be masked.
-
-    Notes
-    -----
-    History:
-
-    - November 2012, Kevin Stevenson
-        Initial version.
-    - February 2018, Kevin Stevenson
-        Removed wavelength dependence.
     '''
     # Read in flat frames
     hdulist = fits.open(flatfile)
@@ -440,25 +393,25 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
         # Points that are outliers, do this for the high and low
         # sides separately
         # 1. Reject points < 0
-        index = np.where(flat_norm < 0)
+        index = np.nonzero(flat_norm < 0)
         flat_norm[index] = 1.
         mask_window[index] = True
         # 2. Reject outliers from low side
-        ilow = np.where(flat_norm < 1)
+        ilow = np.nonzero(flat_norm < 1)
         # Make distribution symetric about 1
         dbl = np.concatenate((flat_norm[ilow], 1+(1-flat_norm[ilow])))
         # MAD
         std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
-        ibadpix = np.where((1-flat_norm[ilow]) > sigma*std)
+        ibadpix = np.nonzero((1 - flat_norm[ilow]) > sigma * std)[0]
         flat_norm[ilow[0][ibadpix], ilow[1][ibadpix]] = 1.
         mask_window[ilow[0][ibadpix], ilow[1][ibadpix]] = True
         # 3. Reject outliers from high side
-        ihi = np.where(flat_norm > 1)
+        ihi = np.nonzero(flat_norm > 1)
         # Make distribution symetric about 1
         dbl = np.concatenate((flat_norm[ihi], 2-flat_norm[ihi]))
         # MAD
         std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
-        ibadpix = np.where((flat_norm[ihi]-1) > sigma*std)
+        ibadpix = np.nonzero((flat_norm[ihi] - 1) > sigma * std)[0]
         flat_norm[ihi[0][ibadpix], ihi[1][ibadpix]] = 1.
         mask_window[ihi[0][ibadpix], ihi[1][ibadpix]] = True
 
@@ -503,7 +456,7 @@ def calcDrift2D(im1, im2, n):
                                   'installed with Eureka and is required for '
                                   'HST analyses.\nYou can install all '
                                   'HST-related dependencies with '
-                                  '`pip install .[hst]`')
+                                  '`pip install eureka-bang[hst]`')
     drift2D = imr.chi2_shift(im1, im2, boundary='constant', nthreads=1,
                              zeromean=False, return_error=False)
     return drift2D, n

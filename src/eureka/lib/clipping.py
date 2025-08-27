@@ -61,13 +61,6 @@ def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
         A boolean array where True for values that were clipped.
     noutliers : int
         The number of outliers identified.
-
-    Notes
-    -----
-    History:
-
-    - Jan 29-31, 2022 Taylor Bell
-        Initial version, added logging
     '''
     data = np.ma.masked_invalid(np.ma.copy(data))
     data = np.ma.masked_where(mask, data)
@@ -134,13 +127,6 @@ def replace_moving_mean(data, outliers, kernel):
     data : ndarray (boolean)
         An array with the same dimensions as the input array with outliers
         replaced with fill_value.
-
-    Notes
-    -----
-    History:
-
-    - Jan 29, 2022 Taylor Bell
-        Initial version
     '''
     # First set outliers to NaN so they don't bias moving mean
     data[outliers] = np.nan

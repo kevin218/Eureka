@@ -141,13 +141,6 @@ class LightCurve(Model):
             The name of the fitter to use.
         **kwargs : dict
             Arbitrary keyword arguments.
-
-        Notes
-        -----
-        History:
-
-        - Dec 29, 2021 Taylor Bell
-            Updated documentation and reduced repeated code
         """
         if fitter == 'lmfit':
             self.fitter_func = fitters.lmfitter
@@ -180,6 +173,7 @@ class LightCurve(Model):
         if fit_model is not None:
             self.results.append(copy(fit_model))
 
+    @plots.apply_style
     def plot(self, meta, fits=True):
         """Plot the light curve with all available fits. (Figs 5103 and 5306)
 
@@ -217,7 +211,8 @@ class LightCurve(Model):
                 binned_unc = util.binData_time(unc, time, nbin=nbin_plot,
                                                err=True)
 
-            fig = plt.figure(5103, figsize=(8, 6))
+            fig = plt.figure(5103)
+            fig.set_size_inches(8, 6, forward=True)
             fig.clf()
             # Draw the data
             ax = fig.gca()
@@ -251,7 +246,7 @@ class LightCurve(Model):
                 ch_number = str(channel).zfill(len(str(self.nchannel)))
                 fname_tag = f'ch{ch_number}'
             fname = (f'figs{os.sep}fig5103_{fname_tag}_all_fits' +
-                     plots.figure_filetype)
+                     plots.get_filetype())
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if not meta.hide_plots:
                 plt.pause(0.2)
@@ -289,7 +284,7 @@ class LightCurve(Model):
                     ch_number = str(channel).zfill(len(str(self.nchannel)))
                     fname_tag = f'ch{ch_number}'
                 fname = (f'figs{os.sep}fig5306_{fname_tag}_all_fits' +
-                         plots.figure_filetype)
+                         plots.get_filetype())
                 fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
                 if not meta.hide_plots:
                     plt.pause(0.2)

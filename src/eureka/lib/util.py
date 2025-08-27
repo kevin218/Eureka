@@ -412,13 +412,6 @@ def find_fits(meta):
     meta : eureka.lib.readECF.MetaClass
         The meta object with the updated inputdir pointing to the location of
         the input files to use.
-
-    Notes
-    -----
-    History:
-
-    - April 25, 2022 Taylor Bell
-        Initial version.
     '''
     fnames = glob.glob(meta.inputdir+'*'+meta.suffix + '.fits')
     if len(fnames) == 0:
@@ -601,7 +594,7 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
     # Normalize the spectrum
     if meta.inst == 'wfc3':
         for p in range(2):
-            iscans = np.where(scandir == p)[0]
+            iscans = np.atleast_1d(scandir == p).nonzero()[0]
             if len(iscans) > 0:
                 for r in range(meta.nreads):
                     normFactor = np.ma.abs(np.ma.mean(
@@ -639,7 +632,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
         The current log.
     wave_1d : ndarray
         Wavelength array (nx) with trimmed edges depending on xwindow and
-        ywindow which have been set in the S3 ecf
+        ywindow which have been set in the S3 ecf.
     optspec : ndarray
         Optimally extracted spectra, 2D array (time, nx)
     optmask : ndarray (1D); optional
@@ -649,7 +642,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     wave_min : float; optional
         Minimum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose a lower limit.
-    wave_maxf : float; optional
+    wave_max : float; optional
         Maximum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose an upper limit.
     scandir : ndarray; optional
@@ -662,6 +655,12 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     mad : float
         Single MAD value in ppm
     """
+    # Make sure wavelengths are in ascending order
+    if wave_1d[0] > wave_1d[-1]:
+        wave_1d = wave_1d[::-1]
+        optspec = optspec[::-1]
+        optmask = optmask[::-1]
+
     optspec = np.ma.masked_invalid(optspec)
     optspec = np.ma.masked_where(optmask, optspec)
 
@@ -686,7 +685,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
 
         # Compute the MAD for each scan direction
         for p in range(2):
-            iscans = np.where(scandir == p)[0]
+            iscans = np.atleast_1d(scandir == p).nonzero()[0]
             if len(iscans) > 0:
                 # Compute the MAD
                 for m in range(n_wav):
@@ -976,8 +975,6 @@ def make_citations(meta, stage=None):
             other_cites.append("catwoman")
         if "fleck_tr" in meta.run_myfuncs:
             other_cites.append("fleck")
-        if "starry" in meta.run_myfuncs:
-            other_cites.append("starry")
         if "GP" in meta.run_myfuncs:
             if hasattr(meta, "GP_package"):
                 other_cites.append(meta.GP_package)
@@ -1142,3 +1139,37 @@ def load_attrs_from_xarray(data):
                            for citations in attrs[attr]]
 
     return attrs
+
+
+def get_unexpanded_hws(expand, spec_hw_val, bg_hw_val):
+    """Get the unexpanded half-width values for the spectrum and background.
+
+    Parameters
+    ----------
+    expand : int
+        The super-sampling factor.
+    spec_hw_val : float
+        The half-width value for the spectrum.
+    bg_hw_val : float
+        The half-width value for the background.
+
+    Returns
+    -------
+    spec_hw_val_unexpanded : float
+        The unexpanded half-width value for the spectrum.
+    bg_hw_val_unexpanded : float
+        The unexpanded half-width value for the background.
+    """
+    if not isinstance(bg_hw_val, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        if isinstance(bg_hw_val, float):
+            bg_hw_val /= expand
+        else:
+            bg_hw_val //= expand
+
+    if isinstance(spec_hw_val, float):
+        spec_hw_val /= expand
+    else:
+        spec_hw_val //= expand
+
+    return spec_hw_val, bg_hw_val
