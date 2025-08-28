@@ -1,3 +1,4 @@
+
 import numpy as np
 from copy import deepcopy
 import pandas as pd
@@ -731,6 +732,110 @@ def load_s5_saves(meta, log, fit_methods):
             samples = np.zeros((meta.nspecchan, 1))
 
     return samples
+
+
+def compute_strings(meta, log, fit_methods, limb):
+    """
+    Compute transit depth at morning/evening limb.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    fit_methods : string
+        The type of uncertainty fitting method used in Stage 5.
+    limb : string
+        Can be either 'morning' or 'evening'
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated meta data object.
+    """
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    suffix = ''
+    if meta.planetNumber > 0:
+        suffix += f'_pl{meta.planetNumber}'
+    if meta.channelNumber > 0:
+        suffix += f'_ch{meta.channelNumber}'
+
+    # Load a0 string coefficients
+    meta.y_param = 'rp'+suffix
+    rp = load_s5_saves(meta, log, fit_methods)
+    if all(np.all(v == 0) for v in rp):
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    n_samples = len(rp[0])
+
+
+    # Load string coefficients
+    coeffs = ['a1', 'b1', 'a2', 'b2', 'a3', 'b3']
+    ab_list = []
+    for coeff in coeffs:
+        meta.y_param = coeff+suffix
+        vals = load_s5_saves(meta, log, fit_methods, n_samples=n_samples)
+        if all(np.all(v == 0) for v in vals):
+            # The parameter could not be found - assume fixed to 0
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters, assumed to be 0.')
+        ab_list.append(vals)
+    a1, b1, a2, b2, a3, b3 = ab_list
+
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+
+    # Convert full angle in degrees to half angle in radians
+    # e.g., an angle of 60 degrees spans -30 to +30 degrees
+    rad = meta.strings_angle*np.pi/360
+    if limb == 'morning':
+        theta = np.linspace(-rad, rad, 100)
+    elif limb == 'evening':
+        theta = np.linspace(np.pi-rad, np.pi+rad, 100)
+
+    # Choose a subset of samples
+    ss = meta.strings_stepsize
+
+    ht = HarmonicaTransit()
+    for i in tqdm(range(meta.nspecchan)):
+        if np.all(rp[i] == 0):
+            # Channel wasn't found
+            meta.spectrum_median.append(np.nan)
+            meta.spectrum_err.append([np.nan, np.nan])
+        else:
+            # Compute transmission string
+            ab = np.array([rp[i][::ss],
+                           a1[i][::ss], b1[i][::ss],
+                           a2[i][::ss], b2[i][::ss],
+                           a3[i][::ss], b3[i][::ss]]).T
+            ht.set_planet_transmission_string(ab)
+            samples = ht.get_planet_transmission_string(theta)
+            sm_16, sm_50, sm_84 = np.percentile(samples**2,
+                                                [16., 50., 84.], axis=0)
+            # Mean transit depth over range of angles
+            sm_mean = np.mean(sm_50)
+            meta.spectrum_median.append(sm_mean)
+            # Two-sided uncertainty over range of angles
+            meta.spectrum_err.append([np.mean(sm_84)-sm_mean,
+                                     sm_mean-np.mean(sm_16)])
+
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+
+    return meta
 
 
 def compute_offset(meta, log, fit_methods):

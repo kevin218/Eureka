@@ -85,8 +85,7 @@ def jump_rejection_threshold_s1(x, eventlabel, s1_meta_GA, s2_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -171,8 +170,7 @@ def bg_deg_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta_GA, s4_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -267,8 +265,7 @@ def bg_method_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta_GA, s4_meta_GA,
     # Calculate the fitness value based on the specified scaling factors
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * (sum(s4_meta.mad_s4_binned) / 
-                             len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -353,8 +350,7 @@ def p3thresh_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta_GA, s4_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -438,8 +434,7 @@ def window_len_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -524,8 +519,7 @@ def expand_mask_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -590,8 +584,8 @@ def xwindow_crop(x, eventlabel, ev, pixel_wave_min, pixel_wave_max, s3_meta_GA,
       boundaries are violated.
 
       The objective formula is given by a fitness value INDEPENDENT from the
-      other objective functions used = `0.1*s3_meta.mad_s3 + s4_meta.mad_s4 +
-      sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned)`, which weighs
+      other objective functions used = `0.1*s3_meta.mad_s3 + s4_meta.mad_s4 + 
+      s4_meta.mad_s4_binned[0]`, which weighs
       contributions from Stage 3 and Stage 4 light curves.
 
     - There are commented-out lines that appear to remove directories once
@@ -627,7 +621,7 @@ def xwindow_crop(x, eventlabel, ev, pixel_wave_min, pixel_wave_max, s3_meta_GA,
         fitness_value = (
             0.05 * s3_meta.mad_s3 +
             0.5 * s4_meta.mad_s4 +
-            1.0 * sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned)
+            1.0 * s4_meta.mad_s4_binned[0]
         )
 
         return fitness_value
@@ -695,7 +689,7 @@ def ywindow_crop(x, eventlabel, ev, s3_meta_GA, s4_meta_GA):
 
       The objective formula is given by a fitness value INDEPENDENT from the
       other objective functions used = `0.1*s3_meta.mad_s3 + s4_meta.mad_s4 +
-      sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned)`, which weighs
+      s4_meta.mad_s4_binned[0]`, which weighs
       contributions from Stage 3 and Stage 4 light curves.
 
     - There are commented-out lines that appear to remove directories once
@@ -723,7 +717,7 @@ def ywindow_crop(x, eventlabel, ev, s3_meta_GA, s4_meta_GA):
         fitness_value = (
             0.05 * s3_meta.mad_s3 +
             0.5 * s4_meta.mad_s4 +
-            1.0 * sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned)
+            1.0 * s4_meta.mad_s4_binned[0]
         )
 
         return fitness_value
@@ -817,14 +811,13 @@ def ywindow_crop(x, eventlabel, ev, s3_meta_GA, s4_meta_GA):
 #     fitness_value = (
 #         scaling_MAD_spec * s4_meta.mad_s4 +
 #         scaling_MAD_white *
-#         (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+#         s4_meta.mad_s4_binned[0]
 #     )
 
 #     # fitness_value = (scaling_chi2red * s5_meta.chi2red) + \
 #     #                 (scaling_MAD_spec * s4_meta.mad_s4) + \
 #     #                 (scaling_MAD_white * \
-#     #                 (sum(s4_meta.mad_s4_binned) / \
-#     #                 len(s4_meta.mad_s4_binned)))
+#     #                 s4_meta.mad_s4_binned[0])
 
 #     return fitness_value
 
@@ -914,8 +907,7 @@ def dqmask(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
     # Calculate the fitness value based on the specified scaling factors
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * 
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -1000,8 +992,7 @@ def expand(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -1086,8 +1077,7 @@ def bg_thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -1183,8 +1173,7 @@ def bg_hw_spec_hw(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA,
 
         fitness_value = (
             scaling_MAD_spec * s4_meta.mad_s4 +
-            scaling_MAD_white *
-            (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+            scaling_MAD_white * s4_meta.mad_s4_binned[0]
         )
 
         return fitness_value
@@ -1275,8 +1264,7 @@ def bg_deg(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -1373,8 +1361,7 @@ def bg_method(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
     # Calculate the fitness value based on the specified scaling factors
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * (sum(s4_meta.mad_s4_binned) / 
-                             len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -1456,8 +1443,7 @@ def p3thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -1540,8 +1526,7 @@ def median_thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -1625,8 +1610,7 @@ def window_len(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -1711,8 +1695,7 @@ def p5thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -1796,8 +1779,7 @@ def p7thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -1889,8 +1871,7 @@ def p7thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
 #     fitness_value = (
 #         scaling_chi2red * s5_meta.chi2red +
 #         scaling_MAD_spec * s4_meta.mad_s4 +
-#         scaling_MAD_white *
-#         (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
 #     )
 
 #     return fitness_value
@@ -1982,8 +1963,7 @@ def p7thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
 #     fitness_value = (
 #         scaling_chi2red * s5_meta.chi2red +
 #         scaling_MAD_spec * s4_meta.mad_s4 +
-#         scaling_MAD_white *
-#         (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
 #     )
 
 #     return fitness_value
@@ -2068,8 +2048,7 @@ def sigma(x, eventlabel, last_s3_meta_outputdir, s3_meta, s4_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
@@ -2154,8 +2133,7 @@ def box_width(x, eventlabel, last_s3_meta_outputdir, s3_meta, s4_meta_GA,
 
     fitness_value = (
         scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white *
-        (sum(s4_meta.mad_s4_binned) / len(s4_meta.mad_s4_binned))
+        scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
