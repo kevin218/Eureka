@@ -1,3 +1,4 @@
+
 import numpy as np
 from copy import deepcopy
 import pandas as pd
@@ -819,7 +820,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if meta.channelNumber > 0:
         suffix += f'_ch{meta.channelNumber}'
 
-    # Load rp string coefficients
+    # Load a0 string coefficients
     meta.y_param = 'rp'+suffix
     rp = load_s5_saves(meta, log, fit_methods)
     if all(np.all(v == 0) for v in rp):

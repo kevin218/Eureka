@@ -1,0 +1,53 @@
+## EUREKA! OPTIMIZATION -- INPUT PARAMETERS -- NIRISS-SOSS ##
+
+
+## GENERAL ##
+eventlabel = 'HATP1b'
+
+## DETECTOR SELECTION ##
+order = 1                      # SOSS Order Number (options: 1 or 2)
+
+## DEFINE FILEPATHS ##
+# File path to save optimization results
+outputdir_optimization = "/home/DataAnalysis/JWST/HATP1b/NIRISS/Optimized/NIRISS/"
+
+# Path to observation data
+loc_sci = '/home/Data/JWST/NIRISS/HATP1b/SOSS_lite/Stage0/'
+
+
+################################################################################
+###########################   ADVANCED SETTINGS   ##############################
+################################################################################
+
+
+## OPTIMIZER ##
+optimizer = 'parametric'        # 'parametric' only current option for JWST
+target_fitness = 0              # Target fitness score (0 is default)
+
+# Fitness Scaling
+scaling_MAD_spec = 1.0          # Default = 0.04, Optimizer scaling for 2D MAD value 
+scaling_MAD_white = 0.1         # Default = 1.0 , Optimizer scaling for WLC MAD value 
+
+## BOX EXTRACTION ##
+xwindow_selection = 'auto'      # 'auto' --> xwindow = [6, 2043], 'manual' --> ECF values
+ywindow_selection = 'auto'      # 'auto' --> ywindow = [1, 250], 'manual' --> ECF values
+
+## DEFINE BOUNDS ##
+# Stage 1
+bounds_jump_rejection_threshold_s1 = 'auto'      # 'auto' --> bounds_jump_rejection_threshold_s1 = [4, 10], 'manual' --> ECF values
+
+# Stage 3
+bounds_dqmask = 'auto'          # 'auto' --> bounds_dqmask = [True, False], 'manual' --> ECF value
+bounds_bg_thresh = 'auto'       # 'auto' --> bounds_bg_thresh = [3, 7], 'manual' --> ECF value
+bounds_bg_hw = 'auto'           # 'auto' --> bounds_bg_hw = [17, 27], 'manual' --> ECF value
+bounds_spec_hw = 'auto'         # 'auto' --> bounds_spec_hw = [12, 22], 'manual' --> ECF value
+bounds_bg_method = 'auto'       # 'auto' --> bounds_bg_method = ['std', 'median', 'mean'], 'manual' --> ECF value
+bounds_p3thresh = 'auto'        # 'auto' --> bounds_p3thresh = [3, 15], 'manual' --> ECF value
+bounds_median_thresh = 'auto'   # 'auto' --> bounds_median_thresh = [3, 15], 'manual' --> ECF value
+bounds_window_len = 'auto'      # 'auto' --> bounds_window_len = [1, 21], 'manual' --> ECF value
+bounds_p7thresh = 'auto'        # 'auto' --> bounds_p7thresh = [5, 15], 'manual' --> ECF value
+bounds_expand = 'auto'          # 'auto' --> bounds_expand = [1, 5], 'manual' --> ECF value
+
+# Stage 4
+bounds_sigma = 'auto'           # 'auto' --> bounds_sigma = [3, 25]
+bounds_box_width = 'auto'       # 'auto' --> bounds_box_width = [10, 50]
