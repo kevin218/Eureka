@@ -10,13 +10,12 @@ from glob import glob
 from tqdm import tqdm
 import re
 from matplotlib.pyplot import rcParams
-import h5py
 from astraeus import xarrayIO as xrio
 
 try:
-    import starry
+    from harmonica import HarmonicaTransit
 except ModuleNotFoundError:
-    # starry hasn't been installed
+    # Harmonica hasn't been installed
     pass
 
 from .s6_meta import S6MetaClass
@@ -48,6 +47,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S6.
+    lc : Astreaus object
+        Data object of time-like arrays (light curve).
     '''
     s5_meta = deepcopy(s5_meta)
     input_meta = deepcopy(input_meta)
@@ -89,30 +90,31 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     meta.run_s6 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
-            if not isinstance(bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+            # Directory structure should not use expanded HW values
+            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+                meta.expand, spec_hw_val, bg_hw_val)
             meta.run_s6 = util.makedirectory(meta, 'S6', meta.run_s6,
-                                             ap=spec_hw_val//meta.expand,
+                                             ap=spec_hw_val,
                                              bg=bg_hw_val)
 
-    for meta.spec_hw_val in meta.spec_hw_range:
-        for meta.bg_hw_val in meta.bg_hw_range:
+    for spec_hw_val in meta.spec_hw_range:
+        for bg_hw_val in meta.bg_hw_range:
 
             t0 = time_pkg.time()
+
+            meta.spec_hw = spec_hw_val
+            meta.bg_hw = bg_hw_val
 
             # Load in the S5 metadata used for this particular aperture pair
             meta = load_specific_s5_meta_info(meta)
 
             # Directory structure should not use expanded HW values
-            meta.spec_hw_val //= meta.expand
-            if not isinstance(meta.bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                meta.bg_hw_val //= meta.expand
+            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+                meta.expand, spec_hw_val, bg_hw_val)
             # Get the directory for Stage 6 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S6', meta.run_s6,
-                                                ap=meta.spec_hw_val,
-                                                bg=meta.bg_hw_val)
+                                                ap=spec_hw_val,
+                                                bg=bg_hw_val)
 
             # Copy existing S5 log file and resume log
             meta.s6_logname = meta.outputdir+'S6_'+meta.eventlabel+'.log'
@@ -188,11 +190,15 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
                 meta.spectrum_median = None
                 meta.spectrum_err = None
+                meta.upper_limits = False
 
                 # Read in S5 fitted values
                 if meta.y_param_basic == 'fn':
                     # Compute nightside flux
                     meta = compute_fn(meta, log, fit_methods)
+                elif meta.y_param_basic == 'fp':
+                    # Compute dayside flux
+                    meta = compute_fp(meta, log, fit_methods)
                 elif 'offset_order' in meta.y_param:
                     # Compute phase curve offset of given order
                     meta = compute_offset(meta, log, fit_methods)
@@ -205,6 +211,14 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 elif 'pc_amp' in meta.y_param:
                     # Compute phase curve amplitude from all orders
                     meta = compute_pc_amp(meta, log, fit_methods)
+                elif 'morning_limb' in meta.y_param:
+                    # Compute Harmonica's planet transmission strings
+                    meta = compute_strings(meta, log, fit_methods,
+                                           limb='morning')
+                elif 'evening_limb' in meta.y_param:
+                    # Compute Harmonica's planet transmission strings
+                    meta = compute_strings(meta, log, fit_methods,
+                                           limb='evening')
                 else:
                     # Just load the parameter
                     if meta.sharedp:
@@ -368,7 +382,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 save_table(meta, log)
 
             # Copy S5 text files to a single h5 file
-            convert_s5_LC(meta, log)
+            meta, lc = convert_s5_LC(meta, log)
 
             # make citations for current stage
             util.make_citations(meta, 6)
@@ -384,7 +398,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
             log.closelog()
 
-    return meta
+    return meta, lc
 
 
 def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
@@ -600,9 +614,26 @@ def convert_s5_LC(meta, log):
     '''
     Loads spectroscopic light curves save files from S5 and write as
     single Xarray save file.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated meta data object.
+    lc : Astreaus object
+        Data object of time-like arrays (light curve).
     '''
-    event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
-                   str(meta.bg_hw_val))
+    # Directory structure should not use expanded HW values
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val) +
+                   '_bg' + str(bg_hw_val))
 
     if meta.sharedp:
         niter = 1
@@ -660,14 +691,34 @@ def convert_s5_LC(meta, log):
         dict[colnames[i]] = lc_da[-1]
 
     # Create Xarray Dataset
-    ds = xrio.makeDataset(dict)
+    lc = xrio.makeDataset(dict)
     # Write to file
     meta.lc_filename_s6 = (meta.outputdir+'S6_'+event_ap_bg + "_LC")
-    xrio.writeXR(meta.lc_filename_s6, ds)
-    return meta
+    xrio.writeXR(meta.lc_filename_s6, lc)
+    return meta, lc
 
 
-def load_s5_saves(meta, log, fit_methods):
+def load_s5_saves(meta, log, fit_methods, n_samples=1):
+    """
+    Return samples from Stage 5 uncertainty fits.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    fit_methods : string
+        The type of uncertainty fitting method used in Stage 5.
+    n_samples : int; optional
+        The number of samples used when parameter is not found.
+        Default is 1.
+
+    Returns
+    -------
+    samples : list
+        A list of sample arrays, one for each channel.
+    """
     if 'dynesty' in fit_methods:
         fitter = 'dynesty'
     elif 'emcee' in fit_methods:
@@ -704,22 +755,14 @@ def load_s5_saves(meta, log, fit_methods):
             full_fname = meta.inputdir+fname+'.h5'
             ds = xrio.readXR(full_fname, verbose=False)
             if ds is None:
-                # Working with an old save file
-                with h5py.File(full_fname, 'r') as hf:
-                    sample = hf['samples'][:]
-                # Need to figure out which columns are which
-                fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
-                fitted_values = pd.read_csv(meta.inputdir+fname,
-                                            escapechar='#',
-                                            skipinitialspace=True)
-                full_keys = np.array(fitted_values["Parameter"])
-                ind = np.where(full_keys == meta.y_param)[0]
-                sample = sample[:, ind].flatten()
+                sample = np.zeros(n_samples)
             else:
                 if meta.y_param in list(ds._variables):
                     sample = ds[meta.y_param].values
+                    if ch == 0:
+                        n_samples = len(sample)
                 else:
-                    sample = np.zeros(1)
+                    sample = np.zeros(n_samples)
             samples.append(sample)
     else:
         # No samples for lsq, so just shape it as a single value
@@ -763,7 +806,7 @@ def compute_strings(meta, log, fit_methods, limb):
     if meta.channelNumber > 0:
         suffix += f'_ch{meta.channelNumber}'
 
-    # Load a0 string coefficients
+    # Load rp string coefficients
     meta.y_param = 'rp'+suffix
     rp = load_s5_saves(meta, log, fit_methods)
     if all(np.all(v == 0) for v in rp):
@@ -773,7 +816,6 @@ def compute_strings(meta, log, fit_methods, limb):
         log.writelog(f'  Skipping {y_param}')
         return meta
     n_samples = len(rp[0])
-
 
     # Load string coefficients
     coeffs = ['a1', 'b1', 'a2', 'b2', 'a3', 'b3']
@@ -907,10 +949,6 @@ def compute_offset(meta, log, fit_methods):
 
 
 def compute_amp(meta, log, fit_methods):
-    if (('nuts' in fit_methods or 'exoplanet' in fit_methods) and
-            'sinusoid_pc' not in meta.run_myfuncs):
-        return compute_amp_starry(meta, log, fit_methods)
-
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -1318,9 +1356,7 @@ def compute_pc_amp(meta, log, fit_methods):
     return meta
 
 
-def compute_amp_starry(meta, log, fit_methods, nsamp=1e3):
-    nsamp = int(nsamp)
-
+def compute_fp(meta, log, fit_methods):
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -1334,68 +1370,44 @@ def compute_amp_starry(meta, log, fit_methods, nsamp=1e3):
     meta.y_param = 'fp'+suffix
     fp = load_s5_saves(meta, log, fit_methods)
     if all(np.all(v == 0) for v in fp):
+        # The parameter could not be found - try fpfs
         meta.y_param = 'fpfs'+suffix
         fp = load_s5_saves(meta, log, fit_methods)
         if all(np.all(v == 0) for v in fp):
-            # The parameter could not be found - skip it
             log.writelog('  Planet flux (fp or fpfs) was not in the list of '
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
 
-    nsamp = min([nsamp, len(fp[0])])
-    inds = np.random.randint(0, len(fp[0]), nsamp)
-
-    class temp_class:
-        def __init__(self):
-            pass
-
-    # Load map parameters
-    if y_param[-1].isnumeric():
-        ydeg = int(y_param[-1])
-    else:
-        ydeg = 1
-    temp = temp_class()
-    ell = ydeg
-    for m in range(-ell, ell+1):
-        meta.y_param = f'Y{ell}{m}{suffix}'
-        val = load_s5_saves(meta, log, fit_methods)
-        if val.shape[-1] != 0:
-            setattr(temp, f'Y{ell}{m}{suffix}', val[:, inds])
-
     # Reset meta.y_param
     meta.y_param = y_param
 
-    # If no parameters could not be found - skip it
-    if len(temp.__dict__.keys()) == 0:
-        log.writelog('  No Ylm parameters were found...')
-        log.writelog(f'  Skipping {y_param}')
-        return meta
-
     meta.spectrum_median = []
     meta.spectrum_err = []
-
-    planet_map = starry.Map(ydeg=ydeg, nw=nsamp)
-    planet_map2 = starry.Map(ydeg=ydeg, nw=nsamp)
+    meta.upper_limits_3sig = np.zeros(meta.nspecchan)
+    meta.upper_limits_bool = np.zeros(meta.nspecchan, dtype=bool)
+    meta.upper_limits_ind = []
     for i in range(meta.nspecchan):
-        inds = np.random.randint(0, len(fp[i]), nsamp)
-        ell = ydeg
-        for m in range(-ell, ell+1):
-            if hasattr(temp, f'Y{ell}{m}{suffix}'):
-                planet_map[ell, m, :] = getattr(temp, f'Y{ell}{m}{suffix}')[i]
-                planet_map2[ell, m, :] = getattr(temp, f'Y{ell}{m}{suffix}')[i]
-        planet_map.amp = fp[i][inds]/planet_map2.flux(theta=0)[0]
-
-        theta = np.linspace(0, 359, 360)
-        fluxes = np.array(planet_map.flux(theta=theta).eval())
-        min_fluxes = np.min(fluxes, axis=0)
-        max_fluxes = np.max(fluxes, axis=0)
-        amps = (max_fluxes-min_fluxes)
-        amp = np.percentile(amps, [16, 50, 84])[[1, 2, 0]]
-        amp[1] -= amp[0]
-        amp[2] = amp[0]-amp[2]
-        meta.spectrum_median.append(amp[0])
-        meta.spectrum_err.append(amp[1:])
+        # Compute distribution of fp values
+        flux = np.percentile(np.array(fp[i]), [16, 50, 84])[[1, 2, 0]]
+        # Convert percentiles to upper and lower uncertainties
+        flux[1] -= flux[0]
+        flux[2] = flux[0]-flux[2]
+        meta.spectrum_median.append(flux[0])
+        meta.spectrum_err.append(flux[1:])
+        # Look for fp values that have < 3-sigma detection significance
+        if (flux[0] - 3*flux[2]) < 0:
+            meta.upper_limits_ind.append(i)
+        # Record 99.7th percentile (not 99.85) as 3-sigma upper limit
+        # since this is NOT a two-sided distribution (like above)
+        meta.upper_limits_3sig[i] = np.percentile(np.array(fp[i]), 99.7)
+    if len(meta.upper_limits_ind) > 0:
+        meta.upper_limits = True
+        meta.upper_limits_bool[meta.upper_limits_ind] = True
+        log.writelog("  The following channels have < 3-sigma detection" +
+                     " significances and should have their dayside" +
+                     " fluxes (fp) reported as upper limits:\n" +
+                     f"  {meta.upper_limits_ind}")
 
     # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
@@ -1408,10 +1420,7 @@ def compute_amp_starry(meta, log, fit_methods, nsamp=1e3):
 
 
 def compute_fn(meta, log, fit_methods):
-    if (('nuts' in fit_methods or 'exoplanet' in fit_methods) and
-            'sinusoid_pc' not in meta.run_myfuncs):
-        return compute_fn_starry(meta, log, fit_methods)
-    elif ('poet_pc' in meta.run_myfuncs and
+    if ('poet_pc' in meta.run_myfuncs and
             'sinusoid_pc' not in meta.run_myfuncs):
         return compute_fn_poet(meta, log, fit_methods)
     elif ('quasilambert_pc' in meta.run_myfuncs):
@@ -1465,14 +1474,31 @@ def compute_fn(meta, log, fit_methods):
 
     meta.spectrum_median = []
     meta.spectrum_err = []
-
+    meta.upper_limits_3sig = np.zeros(meta.nspecchan)
+    meta.upper_limits_bool = np.zeros(meta.nspecchan, dtype=bool)
+    meta.upper_limits_ind = []
     for i in range(meta.nspecchan):
+        # Compute distribution of fn values
         fluxes = fp[i]*(1-2*ampcos[i])
         flux = np.percentile(np.array(fluxes), [16, 50, 84])[[1, 2, 0]]
+        # Convert percentiles to upper and lower uncertainties
         flux[1] -= flux[0]
         flux[2] = flux[0]-flux[2]
         meta.spectrum_median.append(flux[0])
         meta.spectrum_err.append(flux[1:])
+        # Look for fn values that have < 3-sigma detection significance
+        if meta.force_positivity and (flux[0] - 3*flux[2]) < 0:
+            meta.upper_limits_ind.append(i)
+        # Record 99.7th percentile (not 99.85) as 3-sigma upper limit
+        # since this is NOT a two-sided distribution (like above)
+        meta.upper_limits_3sig[i] = np.percentile(np.array(fluxes), 99.7)
+    if len(meta.upper_limits_ind) > 0:
+        meta.upper_limits = True
+        meta.upper_limits_bool[meta.upper_limits_ind] = True
+        log.writelog("  The following channels have < 3-sigma detection" +
+                     " significances and should have their nightside" +
+                     " fluxes (fn) reported as upper limits:\n" +
+                     f"  {meta.upper_limits_ind}")
 
     # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
@@ -1537,6 +1563,9 @@ def compute_fn_poet(meta, log, fit_methods):
 
     meta.spectrum_median = []
     meta.spectrum_err = []
+    meta.upper_limits_3sig = np.zeros(meta.nspecchan)
+    meta.upper_limits_bool = np.zeros(meta.nspecchan, dtype=bool)
+    meta.upper_limits_ind = []
     # Only need to calculate the flux at two points,
     # anti-stellar (180 deg) and sub-stellar (0 deg)
     deg = np.array([180, 0])
@@ -1556,89 +1585,19 @@ def compute_fn_poet(meta, log, fit_methods):
         flux[2] = flux[0]-flux[2]
         meta.spectrum_median.append(flux[0])
         meta.spectrum_err.append(flux[1:])
-
-    # Convert the lists to an array
-    meta.spectrum_median = np.array(meta.spectrum_median)
-    if meta.fitter == 'lsq':
-        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
-    else:
-        meta.spectrum_err = np.array(meta.spectrum_err).T
-
-    return meta
-
-
-def compute_fn_starry(meta, log, fit_methods, nsamp=1e3):
-    nsamp = int(nsamp)
-
-    # Save meta.y_param
-    y_param = meta.y_param
-
-    suffix = ''
-    if meta.planetNumber > 0:
-        suffix += f'_pl{meta.planetNumber}'
-    if meta.channelNumber > 0:
-        suffix += f'_ch{meta.channelNumber}'
-
-    # Load eclipse depth
-    meta.y_param = 'fp'+suffix
-    fp = load_s5_saves(meta, log, fit_methods)
-    if all(np.all(v == 0) for v in fp):
-        # The parameter could not be found - try fpfs
-        meta.y_param = 'fpfs'+suffix
-        fp = load_s5_saves(meta, log, fit_methods)
-        if all(np.all(v == 0) for v in fp):
-            log.writelog('  Planet flux (fp or fpfs) was not in the list of '
-                         'fitted parameters')
-            log.writelog(f'  Skipping {y_param}')
-            return meta
-
-    nsamp = min([nsamp, len(fp[0])])
-    inds = np.random.randint(0, len(fp[0]), nsamp)
-
-    class temp_class:
-        def __init__(self):
-            pass
-
-    # Load map parameters
-    temp = temp_class()
-    for ell in range(1, meta.ydeg+1):
-        for m in range(-ell, ell+1):
-            meta.y_param = f'Y{ell}{m}{suffix}'
-            val = load_s5_saves(meta, log, fit_methods)
-            if val.shape[-1] != 0:
-                setattr(temp, f'Y{ell}{m}{suffix}', val[:, inds])
-
-    # Reset meta.y_param
-    meta.y_param = y_param
-
-    # If no parameters could not be found - skip it
-    if len(temp.__dict__.keys()) == 0:
-        log.writelog('  No Ylm parameters were found...')
-        log.writelog(f'  Skipping {y_param}')
-        return meta
-
-    meta.spectrum_median = []
-    meta.spectrum_err = []
-
-    planet_map = starry.Map(ydeg=meta.ydeg, nw=nsamp)
-    planet_map2 = starry.Map(ydeg=meta.ydeg, nw=nsamp)
-    for i in range(meta.nspecchan):
-        inds = np.random.randint(0, len(fp[i]), nsamp)
-        for ell in range(1, meta.ydeg+1):
-            for m in range(-ell, ell+1):
-                if hasattr(temp, f'Y{ell}{m}{suffix}'):
-                    planet_map[ell, m, :] = getattr(temp,
-                                                    f'Y{ell}{m}{suffix}')[i]
-                    planet_map2[ell, m, :] = getattr(temp,
-                                                     f'Y{ell}{m}{suffix}')[i]
-        planet_map.amp = fp[i][inds]/planet_map2.flux(theta=0)[0]
-
-        fluxes = planet_map.flux(theta=180)[0].eval()
-        flux = np.percentile(np.array(fluxes), [16, 50, 84])[[1, 2, 0]]
-        flux[1] -= flux[0]
-        flux[2] = flux[0]-flux[2]
-        meta.spectrum_median.append(flux[0])
-        meta.spectrum_err.append(flux[1:])
+        # Look for fn values that have < 3-sigma detection significance
+        if meta.force_positivity and (flux[0] - 3*flux[2]) < 0:
+            meta.upper_limits_ind.append(i)
+        # Record 99.7th percentile (not 99.85) as 3-sigma upper limit
+        # since this is NOT a two-sided distribution (like above)
+        meta.upper_limits_3sig[i] = np.percentile(np.array(fluxes), 99.7)
+    if len(meta.upper_limits_ind) > 0:
+        meta.upper_limits = True
+        meta.upper_limits_bool[meta.upper_limits_ind] = True
+        log.writelog("  The following channels have < 3-sigma detection" +
+                     " significances and should have their nightside" +
+                     " fluxes (fn) reported as upper limits:\n" +
+                     f"  {meta.upper_limits_ind}")
 
     # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
@@ -1678,14 +1637,14 @@ def compute_scale_height(meta, log):
                                             constants.R_sun)).si.value
     meta.planet_g = ((constants.G*meta.planet_Mass*constants.M_jup) /
                      (meta.planet_Rad*constants.R_jup)**2).si.value
-    log.writelog(f'  Calculated g={np.round(meta.planet_g,2)} m/s^2 '
+    log.writelog(f'  Calculated g={np.round(meta.planet_g, 2)} m/s^2 '
                  f'with Rp={np.round(meta.planet_Rad, 2)} R_jup '
                  f'and Mp={meta.planet_Mass} M_jup')
     scale_height = (constants.k_B*(meta.planet_Teq*units.K) /
                     ((meta.planet_mu*units.u) *
                      (meta.planet_g*units.m/units.s**2)))
     scale_height = scale_height.si.to('km')
-    log.writelog(f'  Calculated H={np.round(scale_height,2)} with '
+    log.writelog(f'  Calculated H={np.round(scale_height, 2)} with '
                  f'g={np.round(meta.planet_g, 2)} m/s^2, '
                  f'Teq={meta.planet_Teq} K, and '
                  f'mu={meta.planet_mu} u')
@@ -1710,13 +1669,10 @@ def load_specific_s5_meta_info(meta):
         The current meta data object with values from earlier stages.
     """
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
-    # Get directory containing S5 outputs for this aperture pair
-    if not isinstance(meta.bg_hw, str):
-        # Only divide if value is not a string (spectroscopic modes)
-        bg_hw = meta.bg_hw//meta.expand
-    else:
-        bg_hw = meta.bg_hw
-    inputdir += f'ap{meta.spec_hw//meta.expand}_bg{bg_hw}'+os.sep
+    # Directory structure should not use expanded HW values
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    inputdir += f'ap{spec_hw_val}_bg{bg_hw_val}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir
@@ -1810,8 +1766,11 @@ def save_table(meta, log):
     """
     log.writelog('  Saving results as an astropy table')
 
-    event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
-                   str(meta.bg_hw_val))
+    # Directory structure should not use expanded HW values
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val) +
+                   '_bg' + str(bg_hw_val))
     clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
     meta.tab_filename_s6 = (meta.outputdir+'S6_'+event_ap_bg+'_' +
                             clean_y_param+"_Table_Save.txt")
@@ -1823,9 +1782,16 @@ def save_table(meta, log):
     if len(set(wavelengths)) == 1:
         wavelengths = wavelengths[0]
         wave_errs = wave_errs[0]
-    astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param, wavelengths,
-                              wave_errs, meta.spectrum_median,
-                              meta.spectrum_err)
+    if meta.upper_limits:
+        astropytable.savetable_S6_ul(meta.tab_filename_s6, meta.y_param,
+                                     wavelengths, wave_errs,
+                                     meta.spectrum_median, meta.spectrum_err,
+                                     meta.upper_limits_3sig,
+                                     meta.upper_limits_bool)
+    else:
+        astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param,
+                                  wavelengths, wave_errs, meta.spectrum_median,
+                                  meta.spectrum_err)
 
     transit_latex_table(meta, log)
 
@@ -1850,13 +1816,6 @@ def roundToSigFigs(x, sigFigs=2):
     output : str
         x formatted as a string with the requested number of significant
         figures.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-22, Taylor J Bell
-        Imported code written for SPCA, and optimized for Python3.
     """
     if not np.isfinite(x) or not np.isfinite(np.log10(np.abs(x))):
         return np.nan, ""
@@ -1887,13 +1846,6 @@ def roundToDec(x, nDec=2):
     -------
     output : str
         x formatted as a string with the requested number of decimals.
-
-    Notes
-    -----
-    History:
-
-    - 2022-08-22, Taylor J Bell
-        Imported code written for SPCA, and optimized for Python3.
     """
     if not np.isfinite(nDec):
         return str(x)
@@ -1922,8 +1874,7 @@ def transit_latex_table(meta, log):
     """
     log.writelog('  Saving results as a LaTeX table')
 
-    data = pd.read_csv(meta.tab_filename_s6, comment='#',
-                       delim_whitespace=True)
+    data = pd.read_csv(meta.tab_filename_s6, comment='#', sep=r'\s+')
 
     # Figure out the number of rows and columns in the table
     nvals = data.shape[0]

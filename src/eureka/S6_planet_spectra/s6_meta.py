@@ -9,13 +9,6 @@ class S6MetaClass(MetaClass):
 
     This class loads a Stage 6 Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-06 Taylor J Bell
-        Made specific S6 class based on MetaClass
     '''
 
     def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
@@ -35,25 +28,15 @@ class S6MetaClass(MetaClass):
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - 2024-06 Taylor J Bell
-            Initial version.
         '''
+        # Remove the stage from kwargs if present
+        if 'stage' in kwargs:
+            kwargs.pop('stage')
+
         super().__init__(folder, file, eventlabel, stage=6, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 6 specific defaults for generic instruments.
-
-        Notes
-        -----
-        History:
-
-        - 2024-06 Taylor J Bell
-            Initial version setting defaults for any instrument.
         '''
         # Make sure the S3 expand parameter is defined
         # (to allow resuming from old analyses)
@@ -113,6 +96,11 @@ class S6MetaClass(MetaClass):
         self.pc_nstep = getattr(self, 'pc_nstep', 1000)
         # Sample spacing between independent MCMC steps
         self.pc_stepsize = getattr(self, 'pc_stepsize', 50)
+        self.strings_stepsize = getattr(self, 'strings_stepsize', 50)
+        # Harmonica strings angle (in degrees) to include in morning/evening
+        # limb calculation. An angle of 60 degrees will span -30 to +30 degrees
+        # for the morning limb.
+        self.strings_angle = getattr(self, 'strings_angle', 60)
 
         # Tabulating parameters
         self.ncols = getattr(self, 'ncols', 4)

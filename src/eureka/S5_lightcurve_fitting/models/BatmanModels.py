@@ -55,9 +55,9 @@ class BatmanTransitModel(Model):
                 else:
                     ld_array = self.ld_array
                 for u in self.coeffs:
-                    index = np.where(np.array(self.paramtitles) == u)[0]
-                    if len(index) != 0:
-                        item = self.longparamlist[c][index[0]]
+                    if u in self.paramtitles:
+                        index = self.paramtitles.index(u)
+                        item = self.longparamlist[c][index]
                         param = int(item.split('_')[0][-1])
                         ld_val = ld_array[chan][param-1]
                         log.writelog(f"{item}: {ld_val}")

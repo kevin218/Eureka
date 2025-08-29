@@ -24,13 +24,6 @@ def exotic_ld(meta, spec, log, white=False):
     -------
     ld_coeffs : tuple
         Linear, Quadratic, Non-linear (3 and 4) limb-darkening coefficients
-
-    Notes
-    -----
-    History:
-
-    - July 2022, Eva-Maria Ahrer
-        Initial version based on exotic_ld documentation.
     '''
     # Set the observing mode
     custom_wavelengths = None
@@ -208,13 +201,6 @@ def spam_ld(meta, white=False):
     -------
     ld_coeffs : tuple
         Linear, Quadratic, Non-linear (3 and 4) limb-darkening coefficients
-
-    Notes
-    -----
-    History:
-
-    - February 2024, Kevin Stevenson
-        Initial version based on exotic_ld above.
     '''
     # Compute wavelength ranges
     if white:
@@ -241,8 +227,7 @@ def spam_ld(meta, white=False):
     for i in range(meta.nspecchan):
         # Find valid indices
         wl_bin = wavelength_range[i]
-        ii = np.where(np.logical_and(sld_wave >= wl_bin[0],
-                                     sld_wave <= wl_bin[1]))[0]
+        ii = (sld_wave >= wl_bin[0]) & (sld_wave <= wl_bin[1])
         # Average limb-darkening coefficients for each bin
         for j in range(num_ld_coef):
             ld_coeffs[i, j] = np.mean(sld[j+1, ii])

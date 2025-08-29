@@ -104,25 +104,6 @@ def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
         >>> plt.title('Y slice of 2D Gaussian')
         >>> plt.xlabel('Y')
         >>> plt.ylabel('Z')
-
-    Notes
-    -----
-    History:
-
-    - 2007-09-17 0.1 jh@physics.ucf.edu
-        Initial version.
-    - 2007-10-02 0.2 jh@physics.ucf.edu
-        Started making N-dimensional, put width before center in args.
-    - 2007-11-13 0.3 jh@physics.ucf.edu
-        Fixed docs, bugs, added param, made N-dimensional.
-    - 2009-10-01 0.4 jh@physics.ucf.edu
-        Fixed docs.
-    - 2009-10-25 0.5 jh@physics.ucf.edu
-        Added examples and plot labels.
-    - 2011-05-03 patricio
-        Params option no longer sopported, Added bgpars to add a background.
-    - 2017-XX-XX bbrooks@stsci.edu
-        Added Patricio centering method.
     """
     ndim = np.ndim(x) - 1
     if ndim == 0:    # We use an indexing trick below that fails for 1D case.
@@ -251,13 +232,6 @@ def residuals(params, x, data, mask, weights, bgpars, fitbg):
         An array of the (unmasked) weighted residuals between data and
         a gaussian model determined by params (and bgpars when
         necessary).
-
-    Notes
-    -----
-    History:
-
-    - 2011-05-03  patricio pcubillos@fulbrightmail.org
-        Initial version.
     """
     # Use bgpars as default for background parameters, if those values
     # are being fitted update them:
@@ -286,7 +260,7 @@ def residuals(params, x, data, mask, weights, bgpars, fitbg):
     # Calculate residuals:
     res = (model - data) * weights
     # Return only unmasked values:
-    return res[np.where(~mask)]
+    return res[~mask]
 
 
 def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
@@ -486,24 +460,6 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
 
     Method: First guess the parameters (if no guess is provided), then
     call a Levenberg-Marquardt optimizer to finish the job.
-
-    History:
-
-    - 2007-09-17 Joe jh@physics.ucf.edu
-        Initial version, portions adapted from
-        http://www.scipy.org/Cookbook/FittingData.
-    - 2007-11-13  Joe
-        Made N-dimensional.
-    - 2008-12-02  Nate nlust@physics.ucf.edu
-        Included error calculation, and return Fixed a bug
-        in which if the initial guess was None, and incorrect
-        shape array was generated. This caused gaussian guess
-        to fail.
-    - 2009-10-25
-        Converted to standard doc header, fixed examples to
-        return 4 parameters.
-    - 2011-05-03  patricio pcubillos@fulbrightmail.org
-        Added mask, weights, and background-fitting options.
     """
     if x is None:
         x = np.indices(np.shape(y))

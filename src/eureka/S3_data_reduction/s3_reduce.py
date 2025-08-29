@@ -29,6 +29,7 @@ from copy import deepcopy
 import astraeus.xarrayIO as xrio
 from tqdm import tqdm
 import psutil
+from stdatamodels.jwst.datamodels import CubeModel
 
 from . import optspex
 from . import plots_s3, source_pos
@@ -61,6 +62,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
     Returns
     -------
+    spec : xarray.Dataset
+        The xarray Dataset containing the time-series of 1D spectra.
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S3.
     '''
@@ -122,12 +125,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             meta.eventlabel = eventlabel
-            if not isinstance(bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+            # Directory structure should not use expanded HW values
+            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+                meta.expand, spec_hw_val, bg_hw_val)
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
-                                             ap=spec_hw_val//meta.expand,
-                                             bg=bg_hw_val)
+                                             ap=spec_hw_val, bg=bg_hw_val)
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
@@ -138,10 +140,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             meta.spec_hw = spec_hw_val
             meta.bg_hw = bg_hw_val
             # Directory structure should not use expanded HW values
-            spec_hw_val //= meta.expand
-            if not isinstance(bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+                meta.expand, spec_hw_val, bg_hw_val)
             meta.outputdir = util.pathdirectory(meta, 'S3', meta.run_s3,
                                                 ap=spec_hw_val,
                                                 bg=bg_hw_val)
@@ -318,8 +318,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
                 # Odd numbers in DQ array are bad pixels. Do not use.
                 if meta.dqmask:
-                    dqmask = np.where(data.dq.values % 2 == 1)
-                    data.mask.values[dqmask] = True
+                    data.mask.values[data.dq.values % 2 == 1] = True
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if meta.manmask is not None:
@@ -384,11 +383,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                      'curved and may benefit from setting '
                                      'meta.curvature to "correct".')
 
-                    # Perform outlier rejection of
-                    # sky background along time axis
+                    # Perform outlier rejection of bg pix along time axis
                     meta.bg_y2 = meta.src_ypos + meta.bg_hw + 1
                     meta.bg_y1 = meta.src_ypos - meta.bg_hw
-                    if not meta.ff_outlier:
+                    if not meta.ff_outlier and not meta.skip_bg:
                         data = inst.flag_bg(data, meta, log)
 
                     # Do the background subtraction
@@ -440,8 +438,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 else:  # Do Photometry reduction
                     meta.photap = meta.spec_hw
+                    if meta.aperture_shape == 'circle':
+                        # Need to update photap_b for this particular
+                        # aperture size (since photap_b=photap for circles)
+                        meta.photap_b = meta.photap
                     meta.skyin, meta.skyout = np.array(meta.bg_hw.split('_')
-                                                       ).astype(int)
+                                                       ).astype(float)
+                    if meta.skyin == int(meta.skyin):
+                        meta.skyin = int(meta.skyin)
+                    if meta.skyout == int(meta.skyout):
+                        meta.skyout = int(meta.skyout)
 
                     if meta.calibrated_spectra:
                         # Instrument-specific steps for generating
@@ -470,7 +476,19 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                     # Determine coarse centroid position. We do this twice:
                     # first a coarse estimation, then a more precise one.
-                    if meta.ctr_guess is not None:
+                    if (isinstance(meta.ctr_guess, str)
+                            and meta.ctr_guess == 'fits'):
+                        log.writelog('  Using approximate centroid position '
+                                     'from FITS header for initial centroid '
+                                     'estimate', mute=(not meta.verbose))
+                        with CubeModel(meta.segment_list[0]) as model:
+                            guess = [model.meta.wcsinfo.crpix1,
+                                     model.meta.wcsinfo.crpix2]
+                        trim = np.array([meta.xwindow[0], meta.ywindow[0]])
+                        position_pri = guess - trim
+                        data.centroid_x.values[:] = position_pri[0]
+                        data.centroid_y.values[:] = position_pri[1]
+                    elif isinstance(meta.ctr_guess, list):
                         log.writelog('  Using ctr_guess for initial centroid '
                                      'estimate', mute=(not meta.verbose))
                         # Use the provided initial guess
@@ -636,20 +654,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             # make citations for current stage
             util.make_citations(meta, 3)
 
-            # Save Dataset object containing time-series of 1D spectra
-            if meta.save_output:
-                meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
-                                             "_SpecData.h5")
-
-                # Save Meta information to attributes of Xarray
-                util.add_meta_to_xarray(meta, spec)
-
-                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
-                                       verbose=True)
-
-                if not success:
-                    raise OSError('Failed to write S3_SpecData.')
-
             # Compute MAD value
             scandir = getattr(spec, 'scandir', None)
             if not meta.photometry:
@@ -682,11 +686,24 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     log.writelog("Could not compute Stage 3 MAD")
                     meta.mad_s3[i] = 0
 
+            # Save Dataset object containing time-series of 1D spectra
+            if meta.save_output:
+                meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
+                                             "_SpecData.h5")
+
+                # Save Meta information to attributes of Xarray
+                util.add_meta_to_xarray(meta, spec)
+
+                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
+                                       verbose=True)
+
+                if not success:
+                    raise OSError('Failed to write S3_SpecData.')
+
             if meta.isplots_S3 >= 1 and not meta.photometry:
                 log.writelog('Generating figures')
                 # 2D light curve without drift correction
                 inst.lc_nodriftcorr(spec, meta)
-            # return spec, meta # FINDME
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.

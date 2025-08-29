@@ -30,13 +30,6 @@ def saveevent(event, filename, save=[], delete=[], protocol=3):
     The input filename should not have the .dat nor the .h5 extentions.
     Side effect: This routine deletes all parameters except 'event' after
     saving it.
-
-    History:
-
-    - 2010-07-10  patricio
-        Added documentation.
-    - 2010-11-12  patricio
-        reimplemented using exec()
     """
     if save != []:
         with h5.File(filename + '.h5', 'w') as handle:
@@ -80,13 +73,6 @@ def loadevent(filename, load=[], loadfilename=None):
     -------
     eureka.lib.readECF.MetaClass
         The requested metadata object.
-
-    History:
-
-    - 2010-07-10  patricio
-        Added documentation.
-    - 2010-11-12  patricio
-        reimplemented using exec()
     """
 
     if '_Meta_Save' in filename:
@@ -107,26 +93,13 @@ def loadevent(filename, load=[], loadfilename=None):
             # All Eureka! save files should have the data_format,
             # so this must be a custom file
             meta_attrs['data_format'] = 'custom'
+        # Remove the file attribute to avoid reading in the old meta file
+        meta_attrs.pop('file', None)
         # Now create the Meta class and assign attrs
         event = readECF.MetaClass(**meta_attrs)
     else:
         raise AssertionError(f'Unrecognized metadata save file {filename}'
                              'contains neither "_Meta_Save" or "SpecData".')
-
-    # FINDME: Do we really need this following code anymore?
-    if load != []:
-        if loadfilename is None:
-            loadfilename = filename
-
-        with h5.File(loadfilename + '.h5', 'r') as handle:
-            for param in load:
-                exec('event.' + param + ' = handle["' + param + '"][:]')
-                # calibration data:
-                if event.havecalaor:
-                    exec('event.pre' + param + ' = handle["pre' + param +
-                         '"][:]')
-                    exec('event.post' + param + ' = handle["post' + param +
-                         '"][:]')
 
     return event
 
@@ -153,13 +126,6 @@ def updateevent(event, filename, add):
     Notes
     -----
     The input filename should not have the .dat nor the .h5 extentions.
-
-    History:
-
-    - 2010-07-10  patricio
-        Initial version.
-    - 2010-11-12  patricio
-        reimplemented using exec()
     """
     event2 = loadevent(filename, load=add)
 
@@ -202,13 +168,6 @@ def findevent(meta, stage, allowFail=False):
     ------
     AssertionError
         Unable to find a metadata save file and allowFail was False.
-
-    Notes
-    -----
-    History:
-
-    - April 25, 2022 Taylor Bell
-        Initial version.
     """
     # Search for the output metadata in the inputdir provided
     # First just check the specific inputdir folder, then check children

@@ -26,7 +26,22 @@ Optional. If you want to use a specific CRDS context pmap (e.g. to reproduce som
 
 ramp_fit_algorithm
 ''''''''''''''''''
-Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
+Algorithm to use to fit a ramp to the frame-level images of uncalibrated files.
+The current options offerered by the JWST pipeline are ``'OLS_C'`` (Ordinary Least-Squares, which can also be specified as ``'default'``),
+``'OLS'`` (which is the same as ``'OLS_C'`` but only uses python),
+and ``'LIKELY'`` (which uses a maximum likelihood estimator). The default is ``'OLS_C'``.
+
+ramp_fit_firstgroup
+'''''''''''''''''''
+A zero-indexed integer that specifies the first group to use for all pixels when fitting the slopes of the ramps. If set to ``None`` or ``0``, the first group will be used (unless marked as DO_NOT_USE by another step). By default is set to ``None``.
+
+ramp_fit_lastgroup
+''''''''''''''''''
+A zero-indexed integer that specifies the last group to use for all pixels when fitting the slopes of the ramps. If set to ``None`` or the number of groups minus 1, the last group will be used (unless marked as DO_NOT_USE by another step). By default is set to ``None``.
+
+ramp_fit_suppress_one_group
+'''''''''''''''''''''''''''
+A boolean that specifies whether the slope should be set to zero or estimated for pixels with either a single group or the single frame zero value. By default is set to ``True`` which sets the slopes of such pixels to zero.
 
 
 maximum_cores
@@ -48,6 +63,11 @@ If True, skip the named step.
 .. note::
    Note that some instruments and observing modes might skip a step either way! See the `calwebb_detector1 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
 
+emicorr_algorithm
+'''''''''''''''''
+A string that specifies the ``jwst`` EMI-correction algorithm to use if ``skip_emicorr`` is set to ``False``. The options are ``'joint'`` (default), which should work well for all observations (even with few groups per integration),
+and ``'sequential'``, which is the legacy algorithm and works poorly on observations with few groups per integration.
+
 custom_linearity
 ''''''''''''''''
 Boolean. If True, allows user to supply a custom linearity correction file and overwrite the default file.
@@ -62,7 +82,7 @@ Boolean. If True, allows user to supply a custom bad pixel mask file and overwri
 
 mask_file
 '''''''''
-The fully qualified path to the custom bad pixel mask file to use if custom_mask is True. The mask file should be a FITS file that is formatted like the ``mask`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/dq_init/reference_files.html#mask-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__ with any additional bad pixels marked by changing the pixel value to the "DO_NOT_USE" value (see `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags>`__ for more details on data quality flags)
+The fully qualified path to the custom bad pixel mask file to use if custom_mask is True. The mask file should be a FITS file that is formatted like the ``mask`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/dq_init/reference_files.html#mask-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__ with any additional bad pixels marked by changing the pixel value to the "DO_NOT_USE" value (see `the data quality flags documentation <https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags>`__ for more details on data quality flags)
 
 bias_correction
 '''''''''''''''
@@ -211,14 +231,18 @@ testing_S1
 ''''''''''
 If True, only a single file will be used, outputs won't be saved, and plots won't be made. Useful for making sure most of the code can run.
 
+
+
 default_ramp_fit_weighting
 ''''''''''''''''''''''''''
-Define the method by which individual frame pixels will be weighted during the default ramp fitting process. The is specifically for the case where ``ramp_fit_algorithm`` is ``default``. Options are ``default``, ``fixed``, ``interpolated``, ``flat``, or ``custom``.
+Define the method by which individual frame pixels will be weighted during the ramp fitting process. The is specifically for the case where ``ramp_fit_algorithm`` is ``'OLS_C'`` / ``default`` or ``'OLS'``. Options are ``default``, ``unweighted``, ``fixed``, ``interpolated``, ``uniform``, or ``custom``.
 
 
-``default``: Slope estimation using a least-squares algorithm with an "optimal" weighting, see the `ramp_fitting docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`__.
+``default``: Algorithm provided by the ``jwst`` pipeline. Slope estimation using a least-squares algorithm with an "optimal" weighting, see the `ramp_fitting docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`__.
 
 In short this weights each pixel, :math:`i`, within a slope following :math:`w_i = (i - i_{midpoint})^P`, where the exponent :math:`P` is selected depending on the estimated signal-to-noise ratio of each pixel (see link above).
+
+``unweighted``: Algorithm provided by the ``jwst`` pipeline. Slope estimation using a least-squares algorithm with no weighting.
 
 
 ``fixed``: As with default, except the weighting exponent :math:`P` is fixed to a precise value through the ``default_ramp_fit_fixed_exponent`` entry
@@ -404,6 +428,24 @@ Below an example with the following setting:
 
 Everything outside of the box will be discarded and not used in the analysis.
 
+For most datasets, any element of xwindow or ywindow can be set to None to use the full frame in that direction. However, for MIRI photometry, any element of xwindow or ywindow that is set to None will be replaced by a default based on the value of ``subarray_halfwidth`` (described below).
+
+subarray_halfwidth
+''''''''''''''''''
+Only used if any element of xwindow or ywindow is set to None, and only used for MIRI photometry data. This sets the half-width of the xwindow, ywindow subarray in pixels and is centered on the approximate centroid position. For MIRI photometry, the default is 75 pixels, which is a good value for most datasets since the MIRI full frame images are very large and it is generally helpful and faster to zoom-in on the science target.
+
+orders
+''''''
+Only used for NIRISS. List of spectral orders to be reduced.
+
+trace_offset
+''''''''''''
+Only used for NIRISS. PASTASOSS v1.2 doesn't correctly compute the trace position for SUBSTRIP96 mode; therefore, we have to apply a manual offset in the cross-dispersion direction.  The default is -12 pixels for SUBSTRIP96 and should be good to within a pixel or two.  If you see in Fig. 3304 that the spectrum is not quite centered, you should adjust the ``trace_offset`` accordingly.
+
+src_ypos
+''''''''
+The user should only specify this parameter for NIRISS data. Spectral trace will be shifted to given vertical position.  Must be same size as meta.orders.
+
 src_pos_type
 ''''''''''''
 Determine the source position on the detector. Options: header, gaussian, weighted, max, or hst. The value 'header' uses the value of SRCYPOS in the FITS header.
@@ -569,7 +611,7 @@ Only used for photometry analyses. Selects the method used for determining the c
 
 ctr_guess
 '''''''''
-Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess.
+Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess. If set to 'fits', the code will use the approximate centroid position information contained in the FITS header as an starting point. If set to None, the code will first perform centroiding on whole frame (which can sometimes fail).
 
 ctr_cutout_size
 '''''''''''''''
@@ -795,6 +837,14 @@ fill_value
 ''''''''''
 Only used if sigma_clip=True. Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
+mad_sigma
+'''''''''
+The number of sigmas an unbinned MAD value must be from the rolling median (using mad_box_width) to be considered an outlier.  Outlier columns are masked.
+
+mad_box_width
+'''''''''''''
+The width of the box-car filter (used to calculated the rolling median) in units of number of wavelength elements. Used in calculating whether wavelength elements are outliers in the unbinned spectrum.
+
 sum_reads
 '''''''''
 Only used for HST analyses. Should differential non-destructive reads be summed together to reduce noise and data volume or not.
@@ -924,6 +974,12 @@ base_dur
 Baseline duration used before t1 and after t4 (in days).  Flux for the baseline region combines data points from (t1 - base_dur) to t1 and from t4 to (t4 + base_dur).
 
 
+apcorr
+''''''
+Float specifying the multiplicative scalar necessary for correcting extracted imaging and spectroscopic photometry to the equivalent of an infinite aperture.
+By default is set to `1.0`, but if set to this you will need to manually estimate the aperture correction value yourself by repeating the same procedure on one or (ideally) many calibrator targets and comparing the extracted flux to a stellar model.
+Aperture corrections are also hosted on `CRDS <https://jwst-crds.stsci.edu/>`_, and you can learn more about the `APCORR reference file here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/apcorr_reffile.html>`_.
+
 sigma_thresh
 ''''''''''''
 Sigma threshold when flagging outliers along the wavelength axis.  Process is performed X times, where X is the length of the list. Defaults to [4, 4, 4].
@@ -938,9 +994,13 @@ nbin_plot
 '''''''''
 The number of bins that should be used for figures 5104 and 5304. Defaults to 100.
 
+s4cal_plotErrorType
+'''''''''''''''''''
+The type of error bar to be plotted in Figure 4201. The currently supported options are: 'stderr' (the standard error of the mean), and 'stddev' (the standard deviation of the data). Defaults to 'stderr'.
+The standard error of the mean is the standard deviation of the sample divided by the square root of the number of samples.
 
 hide_plots
-^^^^^^^^^^
+''''''''''
 If True, plots will automatically be closed rather than popping up on the screen.
 
 
@@ -992,11 +1052,11 @@ run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
+[batman_tr, batman_ecl, harmonica_tr, catwoman_tr, fleck_tr, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, common_mode, GP].
 For theano-based differentiable functions, this can be one or more of the following:
 [starry, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
-The POET transit and eclipse models assume a symmetric transit shape and, thus, are best-suited for planets with small eccentricities (e < 0.2).  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1)
+The POET transit and eclipse models assume a symmetric transit shape and, thus, are best-suited for planets with small eccentricities (e < 0.2).  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1).
 
 compute_ltt
 '''''''''''
@@ -1011,6 +1071,14 @@ Optional. By default, the code will assume that you are only fitting for a singl
 force_positivity
 ''''''''''''''''
 Optional boolean. Used by the sinusoid_pc and poet_pc models. If True, force positive phase variations (phase variations that never go below the bottom of the eclipse). Physically speaking, a negative phase curve is impossible, but strictly enforcing this can hide issues with the decorrelation or potentially bias your measured minimum flux level. Either way, use caution when choosing the value of this parameter.
+
+common_mode_file
+''''''''''''''''
+Optional. Fully qualified path to the location of the common-mode file that you want to use. This is usually the ECSV generated from a Stage 5 white LC fit.
+
+common_mode_name
+''''''''''''''''
+Required when ``common_mode_file`` is given. ECSV parameter name that represents the common-mode variations.  This is usually ``GP`` or ``residuals``.
 
 pixelsampling
 '''''''''''''
@@ -1141,23 +1209,57 @@ Integer. The number of burn-in steps to run.
 
 Dynesty Fitting Parameters
 ''''''''''''''''''''''''''
-The following set the parameters for running dynesty. These options are described in more detail in: https://dynesty.readthedocs.io/en/latest/api.html?highlight=unif#module-dynesty.dynesty
+The following set the parameters for running dynesty. These options are described in more detail in: https://dynesty.readthedocs.io/en/latest/api.html#module-dynesty.dynesty
 
 run_nlive
 ^^^^^^^^^
-Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4. For convenience, this can be set to 'min' to automatically set run_nlive to (ndim * (ndim+1)) / 2.
+Integer or ``'min'``. Number of live points for dynesty to use. Should be at least greater than ``(ndim * (ndim + 1)) / 2``, where ``ndim`` is the number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4.
+
+For convenience, this can be set to ``'min'`` to automatically use the minimum recommended value.
 
 run_bound
 ^^^^^^^^^
-The bounding method to use. Options are: ['none', 'single', 'multi', 'balls', 'cubes']
+The bounding method to use. Options are: ``['none', 'single', 'multi', 'balls', 'cubes']``
 
 run_sample
 ^^^^^^^^^^
-The sampling method to use. Options are ['auto', 'unif', 'rwalk', 'rstagger', 'slice', 'rslice', 'hslice']
+The sampling method to use. Options are: ``['auto', 'unif', 'rwalk', 'rstagger', 'slice', 'rslice', 'hslice']``
 
 run_tol
 ^^^^^^^
-Float. The tolerance for the dynesty run. Determines the stopping criterion. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
+Float. The convergence tolerance for the dynesty run. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
+
+
+Dynamic Nested Sampling Parameters
+''''''''''''''''''''''''''''''''''
+The following parameters control dynesty's **dynamic nested sampling** behavior. These are only used if ``run_dynamic`` is set to ``True``. Dynamic nested sampling adaptively allocates live points to focus more efficiently on the posterior distribution. More details are available in the dynesty documentation: https://dynesty.readthedocs.io/en/stable/dynamic.html
+
+Dynamic nested sampling is typically preferred for complex or multimodal posteriors, as it adaptively allocates live points to focus more efficiently on the regions of interest.
+It is generally more efficient for parameter estimation, especially when the posterior has sharp features or multiple peaks.
+However, because it adds samples in batches based on runtime decisions, the estimated evidence (logZ) can vary more between runs.
+Static nested sampling, on the other hand, uses a fixed number of live points from start to finish, which can make evidence estimates more stable and repeatable; this is particularly useful if you are comparing models using Bayes factors or need exact reproducibility.
+If you are primarily focused on estimating parameters, dynamic sampling with a high ``run_pfrac`` (e.g., 0.8) is a good choice.
+If you care most about comparing models based on their evidence, consider using static sampling or dynamic sampling with a lower ``run_pfrac`` (e.g., 0.1-0.3).
+
+When ``run_dynamic = True``, dynesty uses ``run_nlive`` to set the number of live points in the initial exploratory phase. The parameters ``run_nlive_batch`` and ``run_pfrac`` then control the behavior of refinement batches. Other static parameters such as ``run_bound``, ``run_sample``, and ``run_tol`` still apply and should be set as usual.
+
+run_dynamic
+^^^^^^^^^^^
+Boolean. If ``True``, dynesty will use its ``DynamicNestedSampler`` instead of ``NestedSampler``. Dynamic nested sampling is often more efficient for complex or multimodal posteriors, as it adaptively refines high-posterior regions. If ``False``, static nested sampling will be used with a fixed number of live points (``run_nlive``).
+
+run_nlive_batch
+^^^^^^^^^^^^^^^
+Integer or ``'auto'``. The number of live points to allocate in each refinement batch during dynamic nested sampling. Controls how many new live points are used to zoom in on regions of high posterior probability.
+
+Typical values range from one-half to equal the value of ``run_nlive``. For example, if ``run_nlive = 200``, a common value for ``run_nlive_batch`` would be 100-200.
+
+If set to ``'auto'``, a safe default of ``max(25, run_nlive // 2)`` is used.
+
+run_pfrac
+^^^^^^^^^
+Float between 0 and 1 (exclusive). The fraction of samples to draw from the posterior distribution versus the prior during refinement. A higher value prioritizes detailed posterior exploration, while a lower value improves evidence (logZ) estimation.
+
+Use ``run_pfrac = 0.5`` for a balanced approach. Increase to ``0.7-0.9`` if you are primarily interested in posterior parameter estimation. If your goal is Bayesian model comparison, where precise estimation of the evidence (logZ) is important, consider lower values such as ``run_pfrac = 0.1-0.3``.
 
 
 NUTS Fitting Parameters
@@ -1234,7 +1336,8 @@ This file describes the transit/eclipse and systematics parameters and their pri
 Available fitting parameters are:
 
    - Transit and Eclipse Depth Parameters
-      - ``rp`` or ``rprs`` - planet-to-star radius ratio, for the transit models.
+      - ``rp`` or ``rprs`` - planet-to-star radius ratio, for all transit models.
+      - ``a#`` and/or ``b#`` - nth harmonic amplitude (Harmonica only).  Add  ``a1`` to fit different morning/evening limbs.  Add ``b1`` to fit different north/south limbs.  Higher-order harmonics (up to ``n=3``) are also available.  We recommend starting with ``rp`` and ``a1`` as free parameters. See the `Harmonica documentation <https://harmonica.readthedocs.io/en/latest/views/transmission_strings.html#>`__ for a detailed description of transmission strings and the Fourier series used to parameterize them.
       - ``fp`` or ``fpfs`` - planet-to-star flux ratio, for the eclipse models.
       - ``rp2`` or ``rprs2`` - an additional planet-to-star radius ratio for use with the catwoman transit model to model transit limb-asymmetries.
       - ``phi`` - the angle (in degrees) of the line separating the semi-circles defined by ``rp`` and ``rp2`` in the catwoman transit model. If ``phi`` is set to 90 degrees (the parameter's default value), the ``rp`` is the trailing hemisphere and ``rp2`` is the leading hemisphere. If ``phi`` is set to 0, then ``rp`` is the northern hemisphere and ``rp2`` is the southern hemisphere.
@@ -1245,9 +1348,12 @@ Available fitting parameters are:
       - ``t0`` - transit time (in the same units as your input data - most likely BMJD_TDB)
       - ``time_offset`` - (optional), the absolute time offset of your time-series data (in days)
       - ``inc`` - orbital inclination (in degrees)
+
+        - OR, ``b`` - orbital impact parameter (unitless)
       - ``a`` or ``ars`` - a/R*, the ratio of the semimajor axis to the stellar radius
-      - ``ecc`` - orbital eccentricity
-      - ``w`` - argument of periapsis (degrees)
+      - ``ecc`` and ``w`` - orbital eccentricity (unitless) and argument of periapsis (degrees)
+
+        - OR, ``ecosw`` and ``esinw`` - the orbital eccentricity and argument of periapsis converted into a basis in which you can apply [0,1] uniform priors without biasing your results away from ``ecc ~ 0``.
       - ``t_secondary`` - (optional) time of secondary eclipse
       - ``Rs`` - the host star's radius in units of solar radii.
 
@@ -1330,7 +1436,7 @@ Available fitting parameters are:
       - ``spotnpts`` - The degree of spherical harmonics on the star (ydeg). ~30 is needed to appropriately model the spot.
 
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
-      - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
+      - ``c0--c9`` - Coefficients for 0th to 9th order polynomials.
 
          The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.).
          The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array.
@@ -1354,6 +1460,10 @@ Available fitting parameters are:
       - ``xwidth`` - Coefficient for linear decorrelation against changes in the PSF width in the x direction (cross-correlation width in the spectral direction for spectroscopy data).
       - ``ypos`` - Coefficient for linear decorrelation against drift/jitter in the y direction (spatial direction for spectroscopy data).
       - ``ywidth`` - Coefficient for linear decorrelation against changes in the PSF width in the y direction (spatial direction for spectroscopy data).
+
+      - ``cm1`` and ``cm2`` - Coefficients for the 1st and 2nd order common-mode systematics.
+
+         The common-mode systematics model is defined as follows: ``1 + cm1*cm_flux + cm2*cm_flux**2``, where ``cm1`` and ``cm2`` are common-mode amplitude parameters and ``cm_flux`` represents the common-mode flux variations.  The ``cm_flux`` array is read in from ``common_mode_file`` (generated from a Stage 5 white light curve fit) and uses mean-subtracted values from the ECSV parameter name ``common_mode_name`` (e.g., ``GP`` or ``residuals``).
 
       - ``A`` and ``m`` - The natural logarithm (``ln``) of the covariance amplitude and lengthscale to use for the GP model specified in your Stage 5 ECF.
 
@@ -1404,8 +1514,9 @@ timescales. It is also possible to plot
 'fn' (the nightside flux from a sinusoidal phase curve),
 'pc_offset' (the sinusoidal offset of the phase curve),
 'pc_amp' (the sinusoidal amplitude of the phase curve),
-'offset_order1' or 'offset_order2' (the first or second order sinusoidal offset of the phase curve), and
-'amp_order1' or 'amp_order2' (the first or second order sinusoidal amplitude of the phase curve).
+'offset_order1' or 'offset_order2' (the first or second order sinusoidal offset of the phase curve),
+'amp_order1' or 'amp_order2' (the first or second order sinusoidal amplitude of the phase curve), and
+'morning_limb' or 'evening_limb' (the Harmonica transmission spectrum for the morning or evening limb).
 y_params can also be formatted as a list to make many different plots. A "cleaned" version
 of y_params will be used in the filenames of the figures and save files relevant for that y_param
 (e.g. '1/r1' would not work in a filename, so it becomes '1-r1').
@@ -1443,6 +1554,16 @@ The number of time steps used to sample the phase variation when computing the p
 pc_stepsize
 '''''''''''
 Computing uncertainties on the phase curve amplitude and offset can be slow; however, thinning the number of MCMC samples will speed up the calculation.  Increasing ``pc_stepsize`` to larger integer values will steadily decrease the computation time at the cost of accuracy.  Defaults to 50.  Use 1 for no thinning.
+
+strings_stepsize
+''''''''''''''''
+Same as ``pc_stepsize`` but applied to the Harmonica strings morning/evening limb calculation.  Defaults to 50.  Use 1 for no thinning.
+
+strings_angle
+'''''''''''''
+Harmonica strings angle (in degrees) to include in morning/evening limb calculation. As shown in the figure below, the default angle of 60 degrees will span 0+/-30 degrees for the morning limb and 180+/-30 degrees for the evening limb.
+
+.. image:: ../media/HarmonicaStringAngle_60.png
 
 ncol
 ''''

@@ -52,7 +52,12 @@ run_nburn       500     # How many of run_nsteps should be discarded as burn-in 
 run_nlive       'min'    # Must be > ndim * (ndim + 1) // 2
 run_bound       'multi'
 run_sample      'auto'
-run_tol         0.1
+run_tol         0.01
+
+# dynamic dynesty fitter (in addition to the dynesty fitter parameters)
+run_dynamic     False   # If False, use only dynesty static fitter; if True, use dynamic dynesty fitter
+run_nlive_batch 'auto'  # Number of live points per batch for dynamic nested sampling; use int or 'auto' for minimum safe default (max(25, run_nlive // 2)).
+run_pfrac        0.5    # Fraction of samples from posterior vs prior during refinement; 0.5 is balanced, higher favors posterior precision, lower improves evidence precision.
 
 # PyMC3 NUTS fitter
 exoplanet_first False   # Initialize with an initial exoplanet optimizer call (generally not recommended, but can sometimes be helpful if your initial manual guess is quite poor)
