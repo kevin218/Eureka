@@ -1,3 +1,4 @@
+import numpy as np
 import eureka.S1_detector_processing.s1_process as s1
 import eureka.S2_calibrations.s2_calibrate as s2
 import eureka.S3_data_reduction.s3_reduce as s3
@@ -5,7 +6,7 @@ import eureka.S4_generate_lightcurves.s4_genLC as s4
 import shutil
 
 """
-Eureka! Optimization Tools: Objective Functions for optimization of 
+Eureka! Optimization Tools: Objective Functions for optimization of
 targeted focus parameters in Light Curve Analysis
 
 Description:
@@ -28,7 +29,7 @@ x : list
 eventlabel : str
     A label or identifier for the event being analyzed.
 
-s3_meta_GA, s4_meta_GA : objects
+s3_meta, s4_meta : objects
     Metadata objects for Stages 3 and 4, respectively. These get
     modified within the function based on the optimization variable `x`.
 
@@ -60,595 +61,610 @@ Author: Reza Ashtari
 Date: 08/22/2023
 """
 
+def single(val, eventlabel, meta, s3_meta, s4_meta):
 
-# Objective Function
-def jump_rejection_threshold_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, 
-                                s3_meta_GA, s4_meta_GA, 
-                                scaling_MAD_white, scaling_MAD_spec):
+    # Set variables to be optimized
+    if hasattr(s3_meta, meta.opt_param_name):
+        setattr(s3_meta, meta.opt_param_name, val)
+    if hasattr(s4_meta, meta.opt_param_name):
+        setattr(s4_meta, meta.opt_param_name, val)
 
-    # Define Variables to be optimized
-    # Stage 1
-    s1_meta_GA.jump_rejection_threshold = x[0]
+    # s3_meta.inputdir = meta.s2_inputdir
 
-    s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
-    s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
-
-    shutil.rmtree(s1_meta.outputdir)
-    shutil.rmtree(s2_meta.outputdir)
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
-
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
-
-    return fitness_value
-
-
-def bg_deg_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta_GA, s4_meta_GA, 
-              scaling_MAD_white, scaling_MAD_spec):
-
-    # Define Variables to be optimized
-    # Stage 1
-    s1_meta_GA.bg_deg = x[0]
-
-    s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
-    s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
-
-    shutil.rmtree(s1_meta.outputdir)
-    shutil.rmtree(s2_meta.outputdir)
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
-
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
-
-    return fitness_value
-
-
-def bg_method_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta_GA, s4_meta_GA, 
-                 scaling_MAD_white, scaling_MAD_spec):
-
-    def remove_apostrophes(s):
-        return s.replace("'", "")
-
-    # Set bg_method in metadata for each stage based on the input string
-    bg_method_value = remove_apostrophes(x[0])  # Assumes x[0] is string
-    # bg_method_value = x[0]  # Assuming x[0] is a string, e.g. 'std'
-    s1_meta_GA.bg_method = bg_method_value
-
-    s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
-    s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
-
-    shutil.rmtree(s1_meta.outputdir)
-    shutil.rmtree(s2_meta.outputdir)
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
-
-    # Calculate the fitness value based on the specified scaling factors
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
-
-    return fitness_value
-
-
-def p3thresh_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta_GA, s4_meta_GA, 
-                scaling_MAD_white, scaling_MAD_spec):
-
-    # Define Variables to be optimized
-    # Stage 1
-    s1_meta_GA.p3thresh = x[0]
-
-    s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
-    s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
-
-    shutil.rmtree(s1_meta.outputdir)
-    shutil.rmtree(s2_meta.outputdir)
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
-
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
-
-    return fitness_value
-
-
-def window_len_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta_GA, 
-                  s4_meta_GA, scaling_MAD_white, scaling_MAD_spec):
-
-    # Define Variables to be optimized
-    # Stage 1
-    s1_meta_GA.window_len = x[0]
-
-    s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
-    s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
-
-    shutil.rmtree(s1_meta.outputdir)
-    shutil.rmtree(s2_meta.outputdir)
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
-
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
-
-    return fitness_value
-
-
-def expand_mask_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta_GA, 
-                   s4_meta_GA, scaling_MAD_white, scaling_MAD_spec):
-
-    # Define Variables to be optimized
-    # Stage 1
-    s1_meta_GA.expand_mask = x[0]
-
-    s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
-    s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
-
-    shutil.rmtree(s1_meta.outputdir)
-    shutil.rmtree(s2_meta.outputdir)
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
-
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
-
-    return fitness_value
-
-
-def xwindow_crop(x, eventlabel, ev, pixel_wave_min, pixel_wave_max, s3_meta_GA,
-                 s4_meta_GA):
-
-    try:
-
-        # Define Variables to be optimized
-        # Stage 3
-        s3_meta_GA.xwindow = [ev.xwindow[0] + x[0], ev.xwindow[1] - x[0]]
-
-        # Check conditions for xwindow values
-
-        # if s3_meta_GA.xwindow[0] > pixel_wave_min-3 or \
-        #    s3_meta_GA.xwindow[1] < pixel_wave_max+3:
-
-        if s3_meta_GA.xwindow[0] > pixel_wave_min or \
-           s3_meta_GA.xwindow[1] < pixel_wave_max:
-
-            raise ValueError("xwindow boundaries violated")
-
-        s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-        s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                           s3_meta=s3_meta)
-        # shutil.rmtree(s3_meta.outputdir)
-        # shutil.rmtree(s4_meta.outputdir)
-
-        fitness_value = (
-            0.05 * s3_meta.mad_s3 +
-            0.5 * s4_meta.mad_s4 +
-            1.0 * s4_meta.mad_s4_binned[0]
-        )
-
-        return fitness_value
-
-    except:
-
-        fitness_value = float('inf')
-
-        return fitness_value
-
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
-
-
-def ywindow_crop(x, eventlabel, ev, s3_meta_GA, s4_meta_GA):
-
-    try:
-
-        # Define Variables to be optimized
-        # Stage 3
-        s3_meta_GA.ywindow = [ev.ywindow[0] + x[0], ev.ywindow[1] - x[0]]
-
-        # Check conditions for ywindow values --> Maybe Later, Gator
-
-        s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-        s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                           s3_meta=s3_meta)
-        # shutil.rmtree(s3_meta.outputdir)
-        # shutil.rmtree(s4_meta.outputdir)
-
-        fitness_value = (
-            0.05 * s3_meta.mad_s3 +
-            0.5 * s4_meta.mad_s4 +
-            1.0 * s4_meta.mad_s4_binned[0]
-        )
-
-        return fitness_value
-
-    except:
-
-        fitness_value = float('inf')
-
-        return fitness_value
-
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
-
-
-def dqmask(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA, 
-           scaling_MAD_white, scaling_MAD_spec):
-
-    # Convert the optimization variable to boolean for dqmask
-    dqmask_value = bool(x[0])
-
-    # Update dqmask in metadata for each stage
-    s3_meta_GA.dqmask = dqmask_value
-    s4_meta_GA.dqmask = dqmask_value
-
-    s3_meta_GA.inputdir = last_s2_meta_outputdir
-
-    # Perform the light curve processing for each stage
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA, 
-                                       s3_meta=s3_meta)
-
-    # Clean up the directories for each stage
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
-
-    # Calculate the fitness value based on the specified scaling factors
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
-
-    return fitness_value
-
-
-def expand(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA, 
-           scaling_MAD_white, scaling_MAD_spec):
-
-    # Define Variables to be optimized
-    # Stage 3
-    s3_meta_GA.expand = x[0]
-    # Stage 4
-    s4_meta_GA.expand = x[0]
-
-    s3_meta_GA.inputdir = last_s2_meta_outputdir
-
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
+    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
                                        s3_meta=s3_meta)
 
     shutil.rmtree(s3_meta.outputdir)
     shutil.rmtree(s4_meta.outputdir)
 
     fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
+        meta.scaling_MAD_spec * s4_meta.mad_s4 +
+        meta.scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
 
 
-def bg_thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA, 
-              scaling_MAD_white, scaling_MAD_spec):
 
-    # Define Variables to be optimized
-    # Stage 3
-    s3_meta_GA.bgthresh = x[0]
-    # Stage 4
-    s4_meta_GA.bgthresh = x[0]
+def double(val, eventlabel, meta, s3_meta, s4_meta):
 
-    s3_meta_GA.inputdir = last_s2_meta_outputdir
+    # Set values of the two variables to be optimized
+    param_names = meta.opt_param_name.split('__')
+    assert len(param_names) == len(val) == 2, \
+        "Expected two parameters for optimization."
+    for p, v in zip(param_names, val):
+        if hasattr(s3_meta, p):
+            setattr(s3_meta, p, v)
+        if hasattr(s4_meta, p):
+            setattr(s4_meta, p, v)
 
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
+    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+                                        s3_meta=s3_meta)
 
     shutil.rmtree(s3_meta.outputdir)
     shutil.rmtree(s4_meta.outputdir)
 
     fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
+        meta.scaling_MAD_spec * s4_meta.mad_s4 +
+        meta.scaling_MAD_white * s4_meta.mad_s4_binned[0]
     )
 
     return fitness_value
 
 
-def bg_hw_spec_hw(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, 
-                  s4_meta_GA, scaling_MAD_white, scaling_MAD_spec):
+# # Objective Function
+# def jump_rejection_threshold_s1(x, eventlabel, s1_meta_GA, s2_meta_GA,
+#                                 s3_meta, s4_meta,
+#                                 scaling_MAD_white, scaling_MAD_spec):
 
-    if x[0] >= x[1]:
+#     # Define Variables to be optimized
+#     # Stage 1
+#     s1_meta_GA.jump_rejection_threshold = x[0]
 
-        # Define Variables to be optimized
-        # Stage 3
-        s3_meta_GA.bg_hw = x[0]
-        s3_meta_GA.spec_hw = x[1]
+#     s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
+#     s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
 
-        # Stage 4
-        s4_meta_GA.bg_hw = x[0]
-        s4_meta_GA.spec_hw = x[1]
-        
-        s3_meta_GA.inputdir = last_s2_meta_outputdir
+#     shutil.rmtree(s1_meta.outputdir)
+#     shutil.rmtree(s2_meta.outputdir)
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
 
-        s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-        s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                           s3_meta=s3_meta)
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
 
-        shutil.rmtree(s3_meta.outputdir)
-        shutil.rmtree(s4_meta.outputdir)
+#     return fitness_value
 
-        fitness_value = (
-            scaling_MAD_spec * s4_meta.mad_s4 +
-            scaling_MAD_white * s4_meta.mad_s4_binned[0]
-        )
 
-        return fitness_value
+# def bg_deg_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta, s4_meta,
+#               scaling_MAD_white, scaling_MAD_spec):
 
-    else:
+#     # Define Variables to be optimized
+#     # Stage 1
+#     s1_meta_GA.bg_deg = x[0]
 
-        fitness_value = float('inf')
+#     s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
+#     s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
 
-        return fitness_value
+#     shutil.rmtree(s1_meta.outputdir)
+#     shutil.rmtree(s2_meta.outputdir)
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
 
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
 
-def bg_deg(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA, 
-           scaling_MAD_white, scaling_MAD_spec):
+#     return fitness_value
 
-    # Define Variables to be optimized
-    # Stage 3
-    s3_meta_GA.bg_deg = x[0]
-    # Stage 4
-    s4_meta_GA.bg_deg = x[0]
 
-    s3_meta_GA.inputdir = last_s2_meta_outputdir
+# def bg_method_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta, s4_meta,
+#                  scaling_MAD_white, scaling_MAD_spec):
 
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
+#     def remove_apostrophes(s):
+#         return s.replace("'", "")
 
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
+#     # Set bg_method in metadata for each stage based on the input string
+#     bg_method_value = remove_apostrophes(x[0])  # Assumes x[0] is string
+#     # bg_method_value = x[0]  # Assuming x[0] is a string, e.g. 'std'
+#     s1_meta_GA.bg_method = bg_method_value
 
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
+#     s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
+#     s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
 
-    return fitness_value
+#     shutil.rmtree(s1_meta.outputdir)
+#     shutil.rmtree(s2_meta.outputdir)
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
 
+#     # Calculate the fitness value based on the specified scaling factors
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
 
-def bg_method(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA, 
-              scaling_MAD_white, scaling_MAD_spec):
+#     return fitness_value
 
-    def remove_apostrophes(s):
-        return s.replace("'", "")
 
-    # Set bg_method in metadata for each stage based on the input string
-    bg_method_value = remove_apostrophes(x[0])  # Assuming x[0] is a string
-    # bg_method_value = x[0]  # Assuming x[0] is a string, e.g. 'std'
-    s3_meta_GA.bg_method = bg_method_value
-    s4_meta_GA.bg_method = bg_method_value
+# def p3thresh_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta, s4_meta,
+#                 scaling_MAD_white, scaling_MAD_spec):
 
-    s3_meta_GA.inputdir = last_s2_meta_outputdir
+#     # Define Variables to be optimized
+#     # Stage 1
+#     s1_meta_GA.p3thresh = x[0]
 
-    # Perform the light curve processing for each stage
-    s3_spec, s3_meta = s3.reduce(eventlabel, 
-                                 input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, 
-                                       input_meta=s4_meta_GA, s3_meta=s3_meta)
+#     s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
+#     s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
 
-    # Clean up the directories for each stage
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
+#     shutil.rmtree(s1_meta.outputdir)
+#     shutil.rmtree(s2_meta.outputdir)
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
 
-    # Calculate the fitness value based on the specified scaling factors
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
 
-    return fitness_value
+#     return fitness_value
 
 
-def p3thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA, 
-             scaling_MAD_white, scaling_MAD_spec):
+# def window_len_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta,
+#                   s4_meta, scaling_MAD_white, scaling_MAD_spec):
 
-    # Define Variables to be optimized
-    # Stage 3
-    s3_meta_GA.p3thresh = x[0]
-    # Stage 4
-    s4_meta_GA.p3thresh = x[0]
+#     # Define Variables to be optimized
+#     # Stage 1
+#     s1_meta_GA.window_len = x[0]
 
-    s3_meta_GA.inputdir = last_s2_meta_outputdir
+#     s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
+#     s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
 
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
+#     shutil.rmtree(s1_meta.outputdir)
+#     shutil.rmtree(s2_meta.outputdir)
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
 
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
 
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
+#     return fitness_value
 
-    return fitness_value
 
+# def expand_mask_s1(x, eventlabel, s1_meta_GA, s2_meta_GA, s3_meta,
+#                    s4_meta, scaling_MAD_white, scaling_MAD_spec):
 
-def median_thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, 
-                  s4_meta_GA, scaling_MAD_white, scaling_MAD_spec):
+#     # Define Variables to be optimized
+#     # Stage 1
+#     s1_meta_GA.expand_mask = x[0]
 
-    # Define Variables to be optimized
-    # Stage 3
-    s3_meta_GA.median_thresh = x[0]
-    # Stage 4
-    s4_meta_GA.median_thresh = x[0]
+#     s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta_GA)
+#     s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta_GA)
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
 
-    s3_meta_GA.inputdir = last_s2_meta_outputdir
+#     shutil.rmtree(s1_meta.outputdir)
+#     shutil.rmtree(s2_meta.outputdir)
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
 
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
 
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
+#     return fitness_value
 
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
 
-    return fitness_value
+# def xwindow_crop(x, eventlabel, ev, pixel_wave_min, pixel_wave_max, s3_meta,
+#                  s4_meta):
 
+#     try:
 
-# Objective Function
-def window_len(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
-               scaling_MAD_white, scaling_MAD_spec):
+#         # Define Variables to be optimized
+#         # Stage 3
+#         s3_meta.xwindow = [ev.xwindow[0] + x[0], ev.xwindow[1] - x[0]]
 
-    # Define Variables to be optimized
-    # Stage 3
-    s3_meta_GA.window_len = x[0]
-    # Stage 4
-    s4_meta_GA.window_len = x[0]
+#         # Check conditions for xwindow values
 
-    s3_meta_GA.inputdir = last_s2_meta_outputdir
+#         # if s3_meta.xwindow[0] > pixel_wave_min-3 or \
+#         #    s3_meta.xwindow[1] < pixel_wave_max+3:
 
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
+#         if s3_meta.xwindow[0] > pixel_wave_min or \
+#            s3_meta.xwindow[1] < pixel_wave_max:
 
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
+#             raise ValueError("xwindow boundaries violated")
 
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
+#         s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#         s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                            s3_meta=s3_meta)
+#         # shutil.rmtree(s3_meta.outputdir)
+#         # shutil.rmtree(s4_meta.outputdir)
 
-    return fitness_value
+#         fitness_value = (
+#             0.05 * s3_meta.mad_s3 +
+#             0.5 * s4_meta.mad_s4 +
+#             1.0 * s4_meta.mad_s4_binned[0]
+#         )
 
+#         return fitness_value
 
-# Objective Function
-def p5thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA, 
-             scaling_MAD_white, scaling_MAD_spec):
+#     except:
 
-    # Define Variables to be optimized
-    # Stage 3
-    s3_meta_GA.p5thresh = x[0]
-    # Stage 4
-    s4_meta_GA.p5thresh = x[0]
+#         fitness_value = float('inf')
 
-    s3_meta_GA.inputdir = last_s2_meta_outputdir
+#         return fitness_value
 
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
 
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
 
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
+# def ywindow_crop(x, eventlabel, ev, s3_meta, s4_meta):
 
-    return fitness_value
+#     try:
 
+#         # Define Variables to be optimized
+#         # Stage 3
+#         s3_meta.ywindow = [ev.ywindow[0] + x[0], ev.ywindow[1] - x[0]]
 
-# Objective Function
-def p7thresh(x, eventlabel, last_s2_meta_outputdir, s3_meta_GA, s4_meta_GA,
-             scaling_MAD_white, scaling_MAD_spec):
+#         # Check conditions for ywindow values --> Maybe Later, Gator
 
-    # Define Variables to be optimized
-    # Stage 3
-    s3_meta_GA.p7thresh = x[0]
-    # Stage 4
-    s4_meta_GA.p7thresh = x[0]
+#         s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#         s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                            s3_meta=s3_meta)
+#         # shutil.rmtree(s3_meta.outputdir)
+#         # shutil.rmtree(s4_meta.outputdir)
 
-    s3_meta_GA.inputdir = last_s2_meta_outputdir
+#         fitness_value = (
+#             0.05 * s3_meta.mad_s3 +
+#             0.5 * s4_meta.mad_s4 +
+#             1.0 * s4_meta.mad_s4_binned[0]
+#         )
 
-    s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta_GA)
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
+#         return fitness_value
 
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
+#     except:
 
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
+#         fitness_value = float('inf')
 
-    return fitness_value
+#         return fitness_value
 
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
 
-def sigma(x, eventlabel, last_s3_meta_outputdir, s3_meta, s4_meta_GA,
-          scaling_MAD_white, scaling_MAD_spec):
 
-    # Define Variables to be optimized
-    # Stage 4
-    s4_meta_GA.sigma = x[0]
+# def dqmask(x, eventlabel, s2_inputdir, s3_meta, s4_meta,
+#            scaling_MAD_white, scaling_MAD_spec):
 
-    s4_meta_GA.inputdir = last_s3_meta_outputdir
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
+#     # Convert the optimization variable to boolean for dqmask
+#     dqmask_value = bool(x[0])
 
-    shutil.rmtree(s4_meta.outputdir)
+#     # Update dqmask in metadata for each stage
+#     s3_meta.dqmask = dqmask_value
+#     s4_meta.dqmask = dqmask_value
 
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
+#     s3_meta.inputdir = s2_inputdir
 
-    return fitness_value
+#     # Perform the light curve processing for each stage
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
 
+#     # Clean up the directories for each stage
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
 
-def box_width(x, eventlabel, last_s3_meta_outputdir, s3_meta, s4_meta_GA, 
-              scaling_MAD_white, scaling_MAD_spec):
+#     # Calculate the fitness value based on the specified scaling factors
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
 
-    # Define Variables to be optimized
-    # Stage 4
-    s4_meta_GA.box_width = x[0]
+#     return fitness_value
 
-    s4_meta_GA.inputdir = last_s3_meta_outputdir
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta_GA,
-                                       s3_meta=s3_meta)
 
-    shutil.rmtree(s4_meta.outputdir)
+# def expand(x, eventlabel, s2_inputdir, s3_meta, s4_meta,
+#            scaling_MAD_white, scaling_MAD_spec):
 
-    fitness_value = (
-        scaling_MAD_spec * s4_meta.mad_s4 +
-        scaling_MAD_white * s4_meta.mad_s4_binned[0]
-    )
+#     # Define Variables to be optimized
+#     # Stage 3
+#     s3_meta.expand = x[0]
+#     # Stage 4
+#     s4_meta.expand = x[0]
 
-    return fitness_value
+#     s3_meta.inputdir = s2_inputdir
+
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
+
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
+
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
+
+#     return fitness_value
+
+
+# def bg_thresh(x, eventlabel, s2_inputdir, s3_meta, s4_meta,
+#               scaling_MAD_white, scaling_MAD_spec):
+
+#     # Define Variables to be optimized
+#     # Stage 3
+#     s3_meta.bgthresh = x[0]
+#     # Stage 4
+#     s4_meta.bgthresh = x[0]
+
+#     s3_meta.inputdir = s2_inputdir
+
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
+
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
+
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
+
+#     return fitness_value
+
+
+# def bg_deg(x, eventlabel, s2_inputdir, s3_meta, s4_meta,
+#            scaling_MAD_white, scaling_MAD_spec):
+
+#     # Define Variables to be optimized
+#     # Stage 3
+#     s3_meta.bg_deg = x[0]
+#     # Stage 4
+#     s4_meta.bg_deg = x[0]
+
+#     s3_meta.inputdir = s2_inputdir
+
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
+
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
+
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
+
+#     return fitness_value
+
+
+# def bg_method(x, eventlabel, s2_inputdir, s3_meta, s4_meta,
+#               scaling_MAD_white, scaling_MAD_spec):
+
+#     def remove_apostrophes(s):
+#         return s.replace("'", "")
+
+#     # Set bg_method in metadata for each stage based on the input string
+#     bg_method_value = remove_apostrophes(x[0])  # Assuming x[0] is a string
+#     # bg_method_value = x[0]  # Assuming x[0] is a string, e.g. 'std'
+#     s3_meta.bg_method = bg_method_value
+#     s4_meta.bg_method = bg_method_value
+
+#     s3_meta.inputdir = s2_inputdir
+
+#     # Perform the light curve processing for each stage
+#     s3_spec, s3_meta = s3.reduce(eventlabel,
+#                                  input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel,
+#                                        input_meta=s4_meta, s3_meta=s3_meta)
+
+#     # Clean up the directories for each stage
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
+
+#     # Calculate the fitness value based on the specified scaling factors
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
+
+#     return fitness_value
+
+
+# def p3thresh(x, eventlabel, s2_inputdir, s3_meta, s4_meta,
+#              scaling_MAD_white, scaling_MAD_spec):
+
+#     # Define Variables to be optimized
+#     # Stage 3
+#     s3_meta.p3thresh = x[0]
+#     # Stage 4
+#     s4_meta.p3thresh = x[0]
+
+#     s3_meta.inputdir = s2_inputdir
+
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
+
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
+
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
+
+#     return fitness_value
+
+
+# def median_thresh(x, eventlabel, s2_inputdir, s3_meta,
+#                   s4_meta, scaling_MAD_white, scaling_MAD_spec):
+
+#     # Define Variables to be optimized
+#     # Stage 3
+#     s3_meta.median_thresh = x[0]
+#     # Stage 4
+#     s4_meta.median_thresh = x[0]
+
+#     s3_meta.inputdir = s2_inputdir
+
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
+
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
+
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
+
+#     return fitness_value
+
+
+# # Objective Function
+# def window_len(x, eventlabel, s2_inputdir, s3_meta, s4_meta,
+#                scaling_MAD_white, scaling_MAD_spec):
+
+#     # Define Variables to be optimized
+#     # Stage 3
+#     s3_meta.window_len = x[0]
+#     # Stage 4
+#     s4_meta.window_len = x[0]
+
+#     s3_meta.inputdir = s2_inputdir
+
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
+
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
+
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
+
+#     return fitness_value
+
+
+# # Objective Function
+# def p5thresh(x, eventlabel, s2_inputdir, s3_meta, s4_meta,
+#              scaling_MAD_white, scaling_MAD_spec):
+
+#     # Define Variables to be optimized
+#     # Stage 3
+#     s3_meta.p5thresh = x[0]
+#     # Stage 4
+#     s4_meta.p5thresh = x[0]
+
+#     s3_meta.inputdir = s2_inputdir
+
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
+
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
+
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
+
+#     return fitness_value
+
+
+# # Objective Function
+# def p7thresh(x, eventlabel, s2_inputdir, s3_meta, s4_meta,
+#              scaling_MAD_white, scaling_MAD_spec):
+
+#     # Define Variables to be optimized
+#     # Stage 3
+#     s3_meta.p7thresh = x[0]
+#     # Stage 4
+#     s4_meta.p7thresh = x[0]
+
+#     s3_meta.inputdir = s2_inputdir
+
+#     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
+
+#     shutil.rmtree(s3_meta.outputdir)
+#     shutil.rmtree(s4_meta.outputdir)
+
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
+
+#     return fitness_value
+
+
+# def sigma(x, eventlabel, last_s3_meta_outputdir, s3_meta, s4_meta,
+#           scaling_MAD_white, scaling_MAD_spec):
+
+#     # Define Variables to be optimized
+#     # Stage 4
+#     s4_meta.sigma = x[0]
+
+#     s4_meta.inputdir = last_s3_meta_outputdir
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
+
+#     shutil.rmtree(s4_meta.outputdir)
+
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
+
+#     return fitness_value
+
+
+# def box_width(x, eventlabel, last_s3_meta_outputdir, s3_meta, s4_meta,
+#               scaling_MAD_white, scaling_MAD_spec):
+
+#     # Define Variables to be optimized
+#     # Stage 4
+#     s4_meta.box_width = x[0]
+
+#     s4_meta.inputdir = last_s3_meta_outputdir
+#     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+#                                        s3_meta=s3_meta)
+
+#     shutil.rmtree(s4_meta.outputdir)
+
+#     fitness_value = (
+#         scaling_MAD_spec * s4_meta.mad_s4 +
+#         scaling_MAD_white * s4_meta.mad_s4_binned[0]
+#     )
+
+#     return fitness_value
