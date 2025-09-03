@@ -7,13 +7,14 @@ from .Model import Model
 from .KeplerOrbit import KeplerOrbit
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
+from ...lib.util import resolve_param_key
 
 
 class PlanetParams():
     """
     Define planet parameters.
     """
-    def __init__(self, model, pid=0, channel=0, eval=True):
+    def __init__(self, model, pid=0, channel=0, wl=0, eval=True):
         """
         Set attributes to PlanetParams object.
 
@@ -27,6 +28,10 @@ class PlanetParams():
         channel : int, optional
             The channel number for multi-wavelength fits or mutli-white fits.
             Defaults to 0.
+        wl : int, optional
+            The wavelength channel for multi-wavelength fits. Can be used for
+            shared parameters in multi-white fits which should be different
+            between channels. Defaults to 0.
         eval : bool; optional
             If true evaluate the model, otherwise simply compile the model.
             Defaults to True.
@@ -41,18 +46,16 @@ class PlanetParams():
                 'JAX support is not yet implemented. '
                 'Please use eval=True to evaluate the model in numpy mode.')
 
-        # Planet ID
+        # Planet/Channel/Wavelength identifiers (ids remain for external uses)
         self.pid = pid
-        if pid == 0:
-            self.pid_id = ''
-        else:
-            self.pid_id = f'_pl{self.pid}'
-        # Channel ID
+        self.pid_id = '' if pid == 0 else f'_pl{self.pid}'
+
         self.channel = channel
-        if channel == 0:
-            self.channel_id = ''
-        else:
-            self.channel_id = f'_ch{self.channel}'
+        self.channel_id = '' if channel == 0 else f'_ch{self.channel}'
+
+        self.wl = wl
+        self.wl_id = '' if wl == 0 else f'_wl{self.wl}'
+
         # Transit/eclipse parameters
         self.t0 = None
         self.rprs = None
@@ -121,10 +124,7 @@ class PlanetParams():
         self.npix = len([s for s in model.parameters.dict.keys()
                          if 'pixel' in s and '_' not in s])
         for pix in range(self.npix):
-            # read radii, latitudes, longitudes, and contrasts
-            pixname = 'pixel'
-            if pix > 0:
-                pixname += f'{pix}'
+            pixname = 'pixel' if pix == 0 else f'pixel{pix}'
             setattr(self, pixname, 0.)
 
         # Figure out how many planet Ylm spherical harmonics
@@ -140,104 +140,92 @@ class PlanetParams():
         else:
             self.ydeg = 0
 
-        # Load in all the values for each astro parameter
-        for item in self.__dict__.keys():
-            item0 = item+self.pid_id
+        # ----- Local helper for wl>ch>base resolution ------------------------
+        def _get_param(base, pid_override=None):
+            """Return value for base at (pid, channel, wl) or None."""
+            pid_use = self.pid if pid_override is None else pid_override
+            key = resolve_param_key(
+                base, model.parameters, pid=pid_use,
+                channel=self.channel, wl=self.wl
+            )
+            if key in model.parameters.dict:
+                val = getattr(parameterObject, key)
+                return val.value if eval else val
+            return None
+        # ---------------------------------------------------------------------
+
+        # Load in values using resolver; keep defaults if not found
+        for item in list(self.__dict__.keys()):
+            item_base = item
             try:
-                item_temp = item0 + self.channel_id
-                if item_temp in model.parameters.dict.keys():
-                    item0 = item_temp
-                value = getattr(parameterObject, item0)
-                if eval:
-                    value = value.value
-                setattr(self, item, value)
+                val = _get_param(item_base, pid_override=self.pid)
+                if val is None:
+                    if (item in [f'u{i}' for i in range(1, 5)] or
+                            item.startswith('spot')):
+                        val = _get_param(item_base, pid_override=0)
+                if val is not None:
+                    setattr(self, item, val)
             except (KeyError, AttributeError):
-                # Item not in model.parameters, so check for some special cases
-                if (item in [f'u{i}' for i in range(1, 5)] or
-                        'spot' == item[:4]):
-                    # Limb darkening and spots probably don't vary with planet
-                    try:
-                        item0 = item
-                        item_temp = item0 + self.channel_id
-                        if item_temp in model.parameters.dict.keys():
-                            item0 = item_temp
-                        value = getattr(parameterObject, item0)
-                        if eval:
-                            value = value.value
-                        setattr(self, item, value)
-                    except (KeyError, AttributeError):
-                        # Item not in model.parameters, so leave it as default
-                        pass
+                # Item not in model.parameters, so leave it as default
+                pass
+
         # Allow for rp or rprs
-        if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
-            item0 = 'rp' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            value = getattr(parameterObject, item0)
-            if eval:
-                value = value.value
-            self.rprs = value
-        if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
-            item0 = 'rprs' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            value = getattr(parameterObject, item0)
-            if eval:
-                value = value.value
-            self.rp = value
+        if self.rprs is None:
+            val = _get_param('rp', pid_override=self.pid)
+            if val is not None:
+                self.rprs = val
+        if self.rp is None:
+            val = _get_param('rprs', pid_override=self.pid)
+            if val is not None:
+                self.rp = val
+
         # Allow for rp2 or rprs2
-        if (self.rprs2 is None) and ('rp2' in model.parameters.dict.keys()):
-            item0 = 'rp2' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            value = getattr(parameterObject, item0)
-            if eval:
-                value = value.value
-            self.rprs2 = value
-        if (self.rp2 is None) and ('rprs2' in model.parameters.dict.keys()):
-            item0 = 'rprs2' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            value = getattr(parameterObject, item0)
-            if eval:
-                value = value.value
-            self.rp2 = value
+        if self.rprs2 is None:
+            val = _get_param('rp2', pid_override=self.pid)
+            if val is not None:
+                self.rprs2 = val
+        if self.rp2 is None:
+            val = _get_param('rprs2', pid_override=self.pid)
+            if val is not None:
+                self.rp2 = val
+
         # Allow for a or ars
-        if (self.ars is None) and ('a' in model.parameters.dict.keys()):
-            item0 = 'a' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            value = getattr(parameterObject, item0)
-            if eval:
-                value = value.value
-            self.ars = value
-        if (self.a is None) and ('ars' in model.parameters.dict.keys()):
-            item0 = 'ars' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            value = getattr(parameterObject, item0)
-            if eval:
-                value = value.value
-            self.a = value
-        # Allow for inc or b
-        if (self.b is None) and ('inc' in model.parameters.dict.keys()):
-            item0 = 'inc' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            inc_value = getattr(parameterObject, item0)
+        if self.ars is None:
+            val = _get_param('a', pid_override=self.pid)
+            if val is not None:
+                self.ars = val
+        if self.a is None:
+            val = _get_param('ars', pid_override=self.pid)
+            if val is not None:
+                self.a = val
+
+        # b from inc (only if inc and a exist; validate inc range)
+        if self.b is None:
+            inc_value = _get_param('inc', pid_override=self.pid)
             a_value = self.a
-            if eval:
-                inc_value = inc_value.value
-            self.b = a_value*lib.cos(inc_value*np.pi/180)
-        if (self.inc is None) and ('b' in model.parameters.dict.keys()):
-            item0 = 'b' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            b_value = getattr(parameterObject, item0)
+            if (inc_value is not None) and (a_value is not None):
+                if not (0.0 <= inc_value <= 180.0):
+                    raise AssertionError(
+                        f"inc={inc_value}° is outside [0, 180]."
+                    )
+                self.b = a_value * lib.cos(inc_value * np.pi / 180.0)
+        # inc from b (domain-safe; clamp only tiny roundoff)
+        if self.inc is None:
+            b_value = _get_param('b', pid_override=self.pid)
             a_value = self.a
-            if eval:
-                b_value = b_value.value
-            self.inc = lib.arccos(b_value/a_value)*180/np.pi
+            if (b_value is not None and a_value is not None
+                    and a_value != 0):
+                tol = 1e-12
+                ratio = b_value / a_value
+                if not lib.isfinite(ratio):
+                    raise AssertionError('Invalid b/a: non-finite value.')
+                if ratio < -1.0 - tol or ratio > 1.0 + tol:
+                    raise AssertionError(
+                        'Inconsistent geometry: b/a outside [-1, 1].'
+                    )
+                ratio = min(1.0, max(-1.0, ratio))
+                self.inc = lib.arccos(ratio) * 180.0 / np.pi
+
         # Allow for (ecc, w) or (ecosw, esinw)
         if (self.ecosw is None) and self.ecc == 0:
             self.ecosw = 0.
@@ -245,73 +233,50 @@ class PlanetParams():
         elif (self.ecc is None) and self.ecosw == 0 and self.esinw == 0:
             self.ecc = 0.
             self.w = 180.
-        if (self.ecosw is None) and ('ecc' in model.parameters.dict.keys()):
-            item0 = 'ecc' + self.pid_id
-            item1 = 'w' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            if model.parameters.dict[item1][1] == 'free':
-                item1 += self.channel_id
-            value0 = getattr(parameterObject, item0)
-            value1 = getattr(parameterObject, item1)
-            if eval:
-                value0 = value0.value
-                value1 = value1.value
-            ecc = value0
-            w = value1
-            self.ecosw = ecc*lib.cos(w*np.pi/180)
-            self.esinw = ecc*lib.sin(w*np.pi/180)
-        elif (self.ecc is None) and ('ecosw' in model.parameters.dict.keys()):
-            item0 = 'ecosw' + self.pid_id
-            item1 = 'esinw' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            if model.parameters.dict[item1][1] == 'free':
-                item1 += self.channel_id
-            value0 = getattr(parameterObject, item0)
-            value1 = getattr(parameterObject, item1)
-            if eval:
-                value0 = value0.value
-                value1 = value1.value
-            ecosw = value0
-            esinw = value1
-            self.ecc = lib.sqrt(ecosw**2+esinw**2)
-            self.w = lib.arctan2(esinw, ecosw)*180/np.pi
+        if self.ecosw is None:
+            ecc_val = _get_param('ecc', pid_override=self.pid)
+            w_val = _get_param('w', pid_override=self.pid)
+            if ecc_val is not None and w_val is not None:
+                self.ecosw = ecc_val * lib.cos(w_val * np.pi / 180.0)
+                self.esinw = ecc_val * lib.sin(w_val * np.pi / 180.0)
+        if self.ecc is None:
+            ecosw_val = _get_param('ecosw', pid_override=self.pid)
+            esinw_val = _get_param('esinw', pid_override=self.pid)
+            if ecosw_val is not None and esinw_val is not None:
+                self.ecc = lib.sqrt(ecosw_val**2 + esinw_val**2)
+                self.w = lib.arctan2(esinw_val, ecosw_val) * 180.0 / np.pi
+
         # Allow for fp or fpfs
-        if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
-            item0 = 'fp' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            value = getattr(parameterObject, item0)
-            if eval:
-                value = value.value
-            self.fpfs = value
-        elif self.fpfs is None:
+        if self.fpfs is None:
+            val = _get_param('fp', pid_override=self.pid)
+            if val is not None:
+                self.fpfs = val
+        if self.fp is None:
+            val = _get_param('fpfs', pid_override=self.pid)
+            if val is not None:
+                self.fp = val
+        if self.fpfs is None:
             self.fpfs = 0.
-        if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
-            item0 = 'fpfs' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            value = getattr(parameterObject, item0)
-            if eval:
-                value = value.value
-            self.fp = value
-        elif self.fp is None:
+        if self.fp is None:
             self.fp = 0.
+
         # Set stellar radius
-        if 'Rs' in model.parameters.dict.keys():
-            item0 = 'Rs'
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
+        if 'Rs' in model.parameters.dict:
+            ptype_Rs = model.parameters.dict['Rs'][1]
+            if ptype_Rs == 'free':
+                rs_key = resolve_param_key('Rs', model.parameters,
+                                           channel=self.channel, wl=self.wl)
+            else:
+                rs_key = 'Rs'
+
             try:
-                value = getattr(parameterObject, item0)
-            except AttributeError as message:
-                message = ('Missing required parameter Rs in your EPF. Make'
-                           ' sure it is not set to \'independent\' as'
-                           ' this is no longer a supported option; you can set'
-                           ' these parameters to fixed if you want to maintain'
-                           ' the old \'independent\' behavior.')
-                raise AssertionError(message)
+                value = getattr(parameterObject, rs_key)
+            except AttributeError:
+                msg = ('Missing required parameter Rs in your EPF. '
+                       'Make sure it is not set to "independent" as this is '
+                       'no longer supported; set it to "fixed" to keep the '
+                       'old "independent" behavior.')
+                raise AssertionError(msg)
             if eval:
                 value = value.value
             self.Rs = value
@@ -341,9 +306,9 @@ class PlanetParams():
 
         # Nicely packaging Harmonica coefficients
         self.ab = lib.array([self.rp,
-                            self.a1, self.b1,
-                            self.a2, self.b2,
-                            self.a3, self.b3])
+                             self.a1, self.b1,
+                             self.a2, self.b2,
+                             self.a3, self.b3])
 
         # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
         if self.ecc is None:

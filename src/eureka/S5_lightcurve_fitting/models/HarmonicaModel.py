@@ -69,6 +69,7 @@ class HarmonicaTransitModel(BatmanTransitModel):
                 chan = channels[c]
             else:
                 chan = 0
+            wl = self.wl_groups[chan] if self.wl_groups is not None else 0
 
             time = self.time
             if self.multwhite:
@@ -78,7 +79,7 @@ class HarmonicaTransitModel(BatmanTransitModel):
             light_curve = np.ma.ones(len(time))
             for pid in pid_iter:
                 # Initialize planet
-                pl_params = PlanetParams(self, pid, chan)
+                pl_params = PlanetParams(self, pid, chan, wl)
 
                 # Enforce physicality to avoid crashes from Harmonica by
                 # returning something that should be a horrible fit

@@ -1173,3 +1173,66 @@ def get_unexpanded_hws(expand, spec_hw_val, bg_hw_val):
         spec_hw_val //= expand
 
     return spec_hw_val, bg_hw_val
+
+
+def resolve_param_key(base, params, pid=0, channel=0, wl=0):
+    """Resolve a parameter key with consistent suffix precedence.
+
+    This function chooses the most appropriate parameter key for a given
+    planet, channel, and wavelength grouping. The priority is:
+
+        1. ``base[+_plN]_wl{wl}`` if ``wl > 0`` and key exists
+        2. ``base[+_plN]_ch{channel}`` if ``channel > 0`` and key exists
+        3. ``base[+_plN]`` as the fallback (implicit ``wl=0`` and ``ch=0``)
+
+    The planet suffix is also implicit for ``pid=0`` (no ``_pl0``).
+    Keys with ``_wl0`` or ``_ch0`` are never required.
+
+    Parameters
+    ----------
+    base : str
+        The base parameter name (e.g., 'fp', 'per').
+    params : eureka.lib.readEPF.Parameters
+        Parameters object containing a ``dict`` of all defined parameter keys.
+    pid : int, optional
+        Planet index (0-based). Default is 0 (no ``_pl`` suffix).
+    channel : int, optional
+        Channel index (0-based). Default is 0 (no ``_ch`` suffix).
+    wl : int, optional
+        Wavelength group index (0-based). Default is 0 (no ``_wl`` suffix).
+
+    Returns
+    -------
+    key : str
+        The resolved parameter key to use.
+
+    Notes
+    -----
+    The intended precedence is strictly wavelength group first, then
+    channel, then base. Keys with combined suffixes such as ``_chX_wlY``
+    are not considered.
+    """
+    param_keys = params.dict.keys()
+
+    # Planet suffix (_plN only when pid > 0)
+    pid_id = "" if pid == 0 else f"_pl{pid}"
+    root = f"{base}{pid_id}"
+
+    # Suffixes (empty string for implicit 0)
+    wl_id = "" if wl == 0 else f"_wl{wl}"
+    ch_id = "" if channel == 0 else f"_ch{channel}"
+
+    # Prefer wavelength-specific key if defined
+    if wl_id:
+        wl_key = f"{root}{wl_id}"
+        if wl_key in param_keys:
+            return wl_key
+
+    # Otherwise prefer channel-specific key if defined
+    if ch_id:
+        ch_key = f"{root}{ch_id}"
+        if ch_key in param_keys:
+            return ch_key
+
+    # Fallback: base (implicit wl=0, ch=0, pid=0)
+    return root
