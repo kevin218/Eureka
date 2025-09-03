@@ -161,13 +161,13 @@ Date: 08/22/2023
 #     return best_params, best_fitness
 
 
-# Parametric sweep function
-def sweep_single(
+def sweep_range_single(
     eventlabel,
     bounds_var,
     meta,
     s3_meta,
     s4_meta,
+    log,
 ):
     """
     Stage 3 Parametric Sweep
@@ -222,19 +222,21 @@ def sweep_single(
                 best_params = val
 
         except Exception as e:
-            print(f"Could not calculate fitness score. Error: {e}")
+            log.writelog("Could not calculate fitness score for " +
+                         f"{meta.opt_param_name} = {val}.")
+            log.writelog(f"Error: {e}")
             continue
 
     return best_params, best_fitness
 
 
-# Parametric sweep function
-def sweep_list(
+def sweep_list_single(
     eventlabel,
     bounds_var,
     meta,
     s3_meta,
     s4_meta,
+    log,
 ):
     """
     Stage 3 Parametric Sweep
@@ -289,22 +291,92 @@ def sweep_list(
                 best_params = val
 
         except Exception as e:
-            print(f"Could not calculate fitness score. Error: {e}")
+            log.writelog("Could not calculate fitness score for " +
+                         f"{meta.opt_param_name} = {val}.")
+            log.writelog(f"Error: {e}")
             continue
 
     return best_params, best_fitness
 
 
-# Parametric sweep function for two interdependent variables
-def sweep_gte(
+def sweep_list_double(
     eventlabel,
     bounds_var,
     meta,
     s3_meta,
     s4_meta,
+    log,
 ):
     """
-    Parametric sweep for two interdependent variables where var1 >= var2.
+    Parametric sweep for two independent variables.
+
+    Description:
+    -----------
+    Conducts an exhaustive search over the range of two independent
+    variables to minimize the objective function. It searches every
+    combination of values within the specified bounds for both variables
+    to find the set that produces the lowest result from the provided
+    objective function.
+
+    Parameters:
+    ----------
+
+    Returns:
+    -------
+    best_params : ndarray
+        The optimal parameters (as an array) found for the objective function.
+
+    best_fitness : float
+        The best (lowest) fitness score found.
+
+    Notes:
+    -----
+    If there is an error in calculating the fitness for a particular parameter
+    set, it will print an error message including the problematic parameters
+    and skip that set. This ensures robustness in the face of potentially
+    problematic parameter combinations.
+    """
+
+    best_fitness = np.inf
+    best_params = None
+
+    for var1 in bounds_var[0]:
+        for var2 in bounds_var[1]:
+            try:
+                val = np.array([var1, var2])
+                fitness_value = of.double(
+                    val,
+                    eventlabel,
+                    meta,
+                    s3_meta,
+                    s4_meta,
+                )
+
+                if fitness_value < best_fitness:
+                    best_fitness = fitness_value
+                    best_params = val
+
+            except Exception as e:
+                param_names = meta.opt_param_name.split("__")
+                log.writelog("Could not calculate fitness score for " +
+                             f"{param_names[0]} = {var1} & " +
+                             f"{param_names[1]} = {var2}.")
+                log.writelog(f"Error: {e}")
+                continue
+
+    return best_params, best_fitness
+
+
+def sweep_list_lt(
+    eventlabel,
+    bounds_var,
+    meta,
+    s3_meta,
+    s4_meta,
+    log,
+):
+    """
+    Parametric sweep for two interdependent variables where var1 < var2.
 
     Description:
     -----------
@@ -335,13 +407,11 @@ def sweep_gte(
 
     best_fitness = np.inf
     best_params = None
-    bounds_var1 = bounds_var[0]
-    bounds_var2 = bounds_var[1]
 
-    for var1 in range(bounds_var1[0], bounds_var1[1] + 1):
-        for var2 in range(bounds_var2[0], bounds_var2[1] + 1):
+    for var1 in bounds_var[0]:
+        for var2 in bounds_var[1]:
             try:
-                if var1 >= var2:
+                if var1 < var2:
                     val = np.array([var1, var2])
                     fitness_value = of.double(
                         val,
@@ -356,12 +426,164 @@ def sweep_gte(
                         best_params = val
 
             except Exception as e:
-                print(f"var1 = {var1} & var2 = {var2}. Error: {e}")
+                param_names = meta.opt_param_name.split("__")
+                log.writelog("Could not calculate fitness score for " +
+                             f"{param_names[0]} = {var1} & " +
+                             f"{param_names[1]} = {var2}.")
+                log.writelog(f"Error: {e}")
                 continue
 
     return best_params, best_fitness
 
 
+
+
+# FINDME: update code below
+def plot_fitness_scores(best_fitness_values):
+    """
+    Eureka! Optimization Tools: Visualization Mechanism for
+    Genetic Algorithm (GA) Fitness Progression
+
+    Description:
+    -----------
+    Visualizes the progress of the best fitness scores across generations in a
+    genetic algorithm optimization. This provides insights into the evolution
+    of the optimization process over time and aids in understanding the
+    convergence of the GA.
+
+    Parameters:
+    ----------
+    best_fitness_values : list of float
+        A list of fitness scores corresponding to the best individual of each
+        generation. The lower the fitness score, the better the individual.
+
+    Outputs:
+    -------
+    A plot that illustrates the trend of best fitness scores across
+    generations.
+
+    Notes:
+    -----
+    - The function assumes that a lower fitness score is better.
+    - The x-axis represents the generation number (starting from 1), and the
+      y-axis represents the best fitness score.
+    - The function has a commented-out label (`plt.ylabel`) that provides an
+      example of using LaTeX syntax in plot labels. Users can uncomment and
+      adjust this line to customize the y-axis label, especially if the
+      fitness score represents a reduced chi-squared value.
+
+    Author: Reza Ashtari
+    Date: 08/22/2023
+    """
+    plt.cla()
+    plt.plot(range(1, len(best_fitness_values) + 1), best_fitness_values)
+    plt.xticks(range(1, len(best_fitness_values) + 1))  # Set ticks as integers
+    plt.xlabel("Generation")
+    plt.ylabel("Best Fitness Score")  # Use LaTeX syntax for underscript
+    # plt.ylabel("Best Fitness Score ($\chi^2_{\mathrm{red}}$)")  # Use LaTeX
+    plt.title("Best Fitness Score vs. Generation")
+    plt.show()
+
+
+def read_inputs(filename):
+    """
+    Eureka! Optimization Tools: Input Parsing Mechanism for Configurations
+
+    Description:
+    -----------
+    This function reads an input file that contains various parameters
+    specified in a key=value format. The function intelligently handles
+    different data types, like integers, floats, booleans, lists, and
+    strings. Moreover, it can efficiently ignore comments and process lines
+    even if they contain commented sections. This functionality ensures that
+    the configurations specified in the file are parsed correctly and can be
+    utilized in further computational processes.
+
+    Parameters:
+    ----------
+    filename : str
+        The path to the input file that needs to be read. The file should
+        contain parameters in the format of `key=value` with each parameter
+        on a separate line.
+
+    Outputs:
+    -------
+    parameters : dict
+        A dictionary containing all the key-value pairs parsed from the input
+        file. The dictionary values could be of type int, float, bool, list,
+        or str, depending on the content of the input file.
+
+    Notes:
+    -----
+    - Lines starting with a '#' or containing a '#' are considered as
+      containing comments. Everything after the '#' is ignored during the
+      processing of that line.
+    - The function can handle quoted strings, lists specified within square
+      brackets, integers, floats, and boolean values (true/false) specified as
+      values.
+    - If the line doesn't follow the expected `key=value` format, the function
+      will print a warning indicating the problematic line.
+    - The function has a mechanism to trim spaces, ensuring that unnecessary
+      spaces do not affect the parsed values.
+    - For list values, the function uses the `eval()` function to parse the
+      string representation of the list. This approach assumes that the list
+      in the file is formatted correctly.
+
+    Author: Reza Ashtari
+    Date: 08/22/2023
+    """
+
+    parameters = {}
+    with open(filename, "r") as file:
+        for line in file:
+            # Strip off any comment from the line
+            line = line.split("#", 1)[0].strip()
+
+            # Ignore lines that are now empty
+            if not line:
+                continue
+
+            # Check if the line doesn't contain '='
+            if "=" not in line:
+                print(f"Problematic line: {line}")
+                continue
+
+            key, value = line.split("=", 1)  # Split only once at the first '='
+            key = key.strip()
+            value = value.strip()
+
+            # Remove double quotes or single quotes around strings
+            if (value.startswith('"') and value.endswith('"')) or (
+                value.startswith("'") and value.endswith("'")
+            ):
+                value = value[1:-1]
+
+            # Check for and convert data types
+            # If value is a list, convert it from string to list
+            if value.startswith("[") and value.endswith("]"):
+                value = eval(value)
+            # If value is a boolean string, convert to actual boolean
+            elif value.lower() == "true":
+                value = True
+            elif value.lower() == "false":
+                value = False
+            # If value is an integer
+            elif value.isdigit():
+                value = int(value)
+            # If value is a float
+            elif (
+                "." in value
+                and all(
+                    char.isdigit() or char == "."
+                    for char in value
+                )
+            ):
+                value = float(value)
+
+            # Add key-value pair to the dictionary
+            parameters[key] = value
+
+    return parameters
 
 # # Parametric sweep function
 # def parametric_sweep_p7thresh_S3(
@@ -1048,148 +1270,3 @@ def sweep_gte(
 
 
 
-def plot_fitness_scores(best_fitness_values):
-    """
-    Eureka! Optimization Tools: Visualization Mechanism for
-    Genetic Algorithm (GA) Fitness Progression
-
-    Description:
-    -----------
-    Visualizes the progress of the best fitness scores across generations in a
-    genetic algorithm optimization. This provides insights into the evolution
-    of the optimization process over time and aids in understanding the
-    convergence of the GA.
-
-    Parameters:
-    ----------
-    best_fitness_values : list of float
-        A list of fitness scores corresponding to the best individual of each
-        generation. The lower the fitness score, the better the individual.
-
-    Outputs:
-    -------
-    A plot that illustrates the trend of best fitness scores across
-    generations.
-
-    Notes:
-    -----
-    - The function assumes that a lower fitness score is better.
-    - The x-axis represents the generation number (starting from 1), and the
-      y-axis represents the best fitness score.
-    - The function has a commented-out label (`plt.ylabel`) that provides an
-      example of using LaTeX syntax in plot labels. Users can uncomment and
-      adjust this line to customize the y-axis label, especially if the
-      fitness score represents a reduced chi-squared value.
-
-    Author: Reza Ashtari
-    Date: 08/22/2023
-    """
-    plt.cla()
-    plt.plot(range(1, len(best_fitness_values) + 1), best_fitness_values)
-    plt.xticks(range(1, len(best_fitness_values) + 1))  # Set ticks as integers
-    plt.xlabel("Generation")
-    plt.ylabel("Best Fitness Score")  # Use LaTeX syntax for underscript
-    # plt.ylabel("Best Fitness Score ($\chi^2_{\mathrm{red}}$)")  # Use LaTeX
-    plt.title("Best Fitness Score vs. Generation")
-    plt.show()
-
-
-def read_inputs(filename):
-    """
-    Eureka! Optimization Tools: Input Parsing Mechanism for Configurations
-
-    Description:
-    -----------
-    This function reads an input file that contains various parameters
-    specified in a key=value format. The function intelligently handles
-    different data types, like integers, floats, booleans, lists, and
-    strings. Moreover, it can efficiently ignore comments and process lines
-    even if they contain commented sections. This functionality ensures that
-    the configurations specified in the file are parsed correctly and can be
-    utilized in further computational processes.
-
-    Parameters:
-    ----------
-    filename : str
-        The path to the input file that needs to be read. The file should
-        contain parameters in the format of `key=value` with each parameter
-        on a separate line.
-
-    Outputs:
-    -------
-    parameters : dict
-        A dictionary containing all the key-value pairs parsed from the input
-        file. The dictionary values could be of type int, float, bool, list,
-        or str, depending on the content of the input file.
-
-    Notes:
-    -----
-    - Lines starting with a '#' or containing a '#' are considered as
-      containing comments. Everything after the '#' is ignored during the
-      processing of that line.
-    - The function can handle quoted strings, lists specified within square
-      brackets, integers, floats, and boolean values (true/false) specified as
-      values.
-    - If the line doesn't follow the expected `key=value` format, the function
-      will print a warning indicating the problematic line.
-    - The function has a mechanism to trim spaces, ensuring that unnecessary
-      spaces do not affect the parsed values.
-    - For list values, the function uses the `eval()` function to parse the
-      string representation of the list. This approach assumes that the list
-      in the file is formatted correctly.
-
-    Author: Reza Ashtari
-    Date: 08/22/2023
-    """
-
-    parameters = {}
-    with open(filename, "r") as file:
-        for line in file:
-            # Strip off any comment from the line
-            line = line.split("#", 1)[0].strip()
-
-            # Ignore lines that are now empty
-            if not line:
-                continue
-
-            # Check if the line doesn't contain '='
-            if "=" not in line:
-                print(f"Problematic line: {line}")
-                continue
-
-            key, value = line.split("=", 1)  # Split only once at the first '='
-            key = key.strip()
-            value = value.strip()
-
-            # Remove double quotes or single quotes around strings
-            if (value.startswith('"') and value.endswith('"')) or (
-                value.startswith("'") and value.endswith("'")
-            ):
-                value = value[1:-1]
-
-            # Check for and convert data types
-            # If value is a list, convert it from string to list
-            if value.startswith("[") and value.endswith("]"):
-                value = eval(value)
-            # If value is a boolean string, convert to actual boolean
-            elif value.lower() == "true":
-                value = True
-            elif value.lower() == "false":
-                value = False
-            # If value is an integer
-            elif value.isdigit():
-                value = int(value)
-            # If value is a float
-            elif (
-                "." in value
-                and all(
-                    char.isdigit() or char == "."
-                    for char in value
-                )
-            ):
-                value = float(value)
-
-            # Add key-value pair to the dictionary
-            parameters[key] = value
-
-    return parameters
