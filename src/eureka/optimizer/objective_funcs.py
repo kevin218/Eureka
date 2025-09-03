@@ -63,20 +63,19 @@ Date: 08/22/2023
 
 def single(val, eventlabel, meta, s3_meta, s4_meta):
 
-    # Set variables to be optimized
+    # Set value of the variable to be optimized
     if hasattr(s3_meta, meta.opt_param_name):
         setattr(s3_meta, meta.opt_param_name, val)
     if hasattr(s4_meta, meta.opt_param_name):
         setattr(s4_meta, meta.opt_param_name, val)
 
-    # s3_meta.inputdir = meta.s2_inputdir
-
     s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
                                        s3_meta=s3_meta)
 
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
+    if meta.delete_intermediate:
+        shutil.rmtree(s3_meta.outputdir)
+        shutil.rmtree(s4_meta.outputdir)
 
     fitness_value = (
         meta.scaling_MAD_spec * s4_meta.mad_s4 +
@@ -103,8 +102,9 @@ def double(val, eventlabel, meta, s3_meta, s4_meta):
     s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
                                         s3_meta=s3_meta)
 
-    shutil.rmtree(s3_meta.outputdir)
-    shutil.rmtree(s4_meta.outputdir)
+    if meta.delete_intermediate:
+        shutil.rmtree(s3_meta.outputdir)
+        shutil.rmtree(s4_meta.outputdir)
 
     fitness_value = (
         meta.scaling_MAD_spec * s4_meta.mad_s4 +
