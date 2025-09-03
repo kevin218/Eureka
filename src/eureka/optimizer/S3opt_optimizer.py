@@ -167,8 +167,9 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
 
         # Save Results in "best" Dictionary
         param_names = p.split("__")
-        if type(best_param_value) is not list:
-            best_param_value = [best_param_value]
+        if (type(best_param_value) is not list) and \
+            (type(best_param_value) is not np.ndarray):
+                best_param_value = [best_param_value]
         for i, param in enumerate(param_names):
             best[param] = best_param_value[i]
 
