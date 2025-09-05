@@ -87,6 +87,10 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
         os.mkdir(s3opt_meta.outputdir)
     log = logedit.Logedit(s3opt_meta.s3_logname)
 
+    # Copy ecf
+    log.writelog('Copying S3opt control file', mute=(not s3opt_meta.verbose))
+    s3opt_meta.copy_ecf()
+
     # Create dictionaries to keep track of optimization metrics
     best = {}
     history_MAD_white = {}
@@ -140,9 +144,9 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
                 eventlabel,
                 bounds,
                 meta,
-                s3_meta,
-                s4_meta,
                 log,
+                s3_meta=s3_meta,
+                s4_meta=s4_meta,
             )
         elif "__" in p:
             # Optimize two independent parameters simultaneously
@@ -150,9 +154,9 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
                 eventlabel,
                 bounds,
                 meta,
-                s3_meta,
-                s4_meta,
                 log,
+                s3_meta=s3_meta,
+                s4_meta=s4_meta,
             )
         else:
             # Optimize single parameter
@@ -160,9 +164,9 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
                 eventlabel,
                 bounds,
                 meta,
-                s3_meta,
-                s4_meta,
                 log,
+                s3_meta=s3_meta,
+                s4_meta=s4_meta,
             )
 
         # Save Results in "best" Dictionary
@@ -180,4 +184,5 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
 
         history_fitness_score[p] = best_fitness_value
 
+    optimizers.plot_fitness_scores(history_fitness_score, meta)
     log.closelog()
