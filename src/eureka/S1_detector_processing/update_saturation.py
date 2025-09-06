@@ -60,6 +60,7 @@ def update_sat(input_model, log, meta):
             is_col_sat = np.sum(median_sat_mask[i, :, :], axis=0).astype(bool)
             new_sat_mask[i, :, :] = np.broadcast_to(is_col_sat, (ncols, nrows))
     elif meta.dq_sat_mode == "defined":
+        log.writelog('  Creating a saturation map based on the user defined columns.')
         for i in range(ngrp):
             c1 = meta.dq_sat_columns[i][0]
             c2 = meta.dq_sat_columns[i][1]
