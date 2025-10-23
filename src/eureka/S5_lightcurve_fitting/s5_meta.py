@@ -1,11 +1,4 @@
 import numpy as np
-try:
-    import starry
-    starry.config.quiet = True
-    starry.config.lazy = True
-except ModuleNotFoundError:
-    # PyMC3 hasn't been installed
-    pass
 
 from ..lib.readECF import MetaClass
 
@@ -15,13 +8,6 @@ class S5MetaClass(MetaClass):
 
     This class loads a Stage 5 Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-06 Taylor J Bell
-        Made specific S5 class based on MetaClass
     '''
 
     def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
@@ -41,25 +27,16 @@ class S5MetaClass(MetaClass):
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - 2024-06 Taylor J Bell
-            Initial version.
         '''
+        # Remove the stage from kwargs if present
+        if 'stage' in kwargs:
+            kwargs.pop('stage')
+
         super().__init__(folder, file, eventlabel, stage=5, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 5 specific defaults for generic instruments.
 
-        Notes
-        -----
-        History:
-
-        - 2024-06 Taylor J Bell
-            Initial version setting defaults for any instrument.
         '''
         # Make sure the S3 expand parameter is defined
         # (to allow resuming from old analyses)
@@ -103,6 +80,12 @@ class S5MetaClass(MetaClass):
         self.num_planets = getattr(self, 'num_planets', 1)
         self.compute_ltt = getattr(self, 'compute_ltt', None)
         self.force_positivity = getattr(self, 'force_positivity', False)
+        # Path to ECSV file containing common mode variations
+        self.common_mode_file = getattr(self, 'common_mode_file', None)
+        if self.common_mode_file is not None:
+            # Require the common mode name to be specified
+            # if a common_mode_file is provided
+            self.common_mode_name = getattr(self, 'common_mode_name')
         # The following is only relevant for the starry model
         self.mutualOccultations = getattr(self, 'mutualOccultations', True)
 
@@ -157,28 +140,17 @@ class S5MetaClass(MetaClass):
         self.run_sample = getattr(self, 'run_sample', 'auto')
         self.run_tol = getattr(self, 'run_tol', 0.1)
 
-        # PyMC3 NUTS sampler settings
-        self.exoplanet_first = getattr(self, 'exoplanet_first', False)
-        self.chains = getattr(self, 'chains', 3)
-        self.target_accept = getattr(self, 'target_accept', 0.85)
-        if 'nuts' in self.fit_method:
-            # Must be provided in the ECF if relevant
-            self.tune = getattr(self, 'tune')
-            self.draws = getattr(self, 'draws')
-
-        # Starry eclipse mapping pixel-sampling parameters
-        self.pixelsampling = getattr(self, 'pixelsampling', False)
-        self.oversample = getattr(self, 'oversample', 3)
-        if self.pixelsampling:
-            # Must be provided in the ECF if relevant
-            self.ydeg = getattr(self, 'ydeg')
-            # Compute the number of pixels used in sampling
-            map = starry.Map(ydeg=self.ydeg)
-            A = map.get_pixel_transforms(oversample=self.oversample)[3]
-            self.npix = A.shape[1]
-        else:
-            self.ydeg = getattr(self, 'ydeg', None)
-            self.npix = 0
+        # dynamic dynesty inputs
+        self.run_dynamic = getattr(self, 'run_dynamic', False)
+        if not isinstance(self.run_dynamic, bool):
+            raise TypeError(
+                'run_dynamic must be a boolean, not a string or other type.')
+        if self.run_dynamic:
+            self.run_nlive_batch = getattr(self, 'run_nlive_batch', 'auto')
+            self.run_pfrac = getattr(self, 'run_pfrac', 0.5)
+            if self.run_pfrac <= 0 or self.run_pfrac >= 1:
+                raise ValueError(
+                    'run_pfrac must be between 0 and 1, exclusive.')
 
         # GP inputs
         self.kernel_inputs = getattr(self, 'kernel_inputs', ['time'])
@@ -186,7 +158,11 @@ class S5MetaClass(MetaClass):
         self.GP_package = getattr(self, 'GP_package', 'celerite')
         self.useHODLR = getattr(self, 'useHODLR', False)
 
+        # Plotting controls
+        self.interp = getattr(self, 'interp', True)
+
         # Diagnostics
+        self.interp = getattr(self, 'interp', False)
         self.isplots_S5 = getattr(self, 'isplots_S5', 3)
         self.nbin_plot = getattr(self, 'nbin_plot', None)
         self.testing_S5 = getattr(self, 'testing_S5', False)

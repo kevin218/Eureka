@@ -80,7 +80,7 @@ def centerdriver(method, data, meta, i=None, m=None):
         sy, sx, y, x = gmin.mingauss(flux, mask, yxguess=loc, meta=meta)
 
     # only plot when we do the second fit
-    if (meta.isplots_S3 >= 5 and method[-4:] == '_sec' and i < meta.nplots):
+    if (meta.isplots_S3 >= 3 and method[-4:] == '_sec' and i < meta.nplots):
         plots_s3.phot_centroid_fgc(flux, mask, x, y, sx, sy, i, m, meta)
 
     # Make trimming correction, then store centroid positions and

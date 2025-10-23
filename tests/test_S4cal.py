@@ -6,17 +6,12 @@ import time as time_pkg
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
-import eureka.lib.plots
 from eureka.S2_calibrations import s2_calibrate as s2
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4cal_StellarSpectra import s4cal_StellarSpec as s4cal
 
 
 def test_S4cal(capsys):
-    # Set up some parameters to make plots look nicer.
-    # You can set usetex=True if you have LaTeX installed
-    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
-
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
@@ -46,7 +41,7 @@ def test_S4cal(capsys):
     # run assertions for S2
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage2{os.sep}')
-    name = pathdirectory(meta, 'S2', 1,
+    name = pathdirectory(meta, 'S2', s2_meta.run_s2,
                          old_datetime=s2_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -54,7 +49,7 @@ def test_S4cal(capsys):
     # run assertions for S3
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage3{os.sep}')
-    name = pathdirectory(meta, 'S3', 1, ap=5, bg=6,
+    name = pathdirectory(meta, 'S3', s3_meta.run_s3, ap=5, bg=6,
                          old_datetime=s3_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -62,7 +57,7 @@ def test_S4cal(capsys):
     # run assertions for S4cal
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage4cal{os.sep}')
-    name = pathdirectory(meta, 'S4cal', 1,
+    name = pathdirectory(meta, 'S4cal', s4_meta.run_S4cal,
                          old_datetime=s4_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')

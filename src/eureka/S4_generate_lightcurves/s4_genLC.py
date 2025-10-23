@@ -24,6 +24,7 @@ from astropy.convolution import Box1DKernel
 from tqdm import tqdm
 
 from . import plots_s4, drift, generate_LD, wfc3
+from .outliers import get_outliers
 from .s4_meta import S4MetaClass
 from ..lib import logedit
 from ..lib import manageevent as me
@@ -92,11 +93,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     meta.run_s4 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
-            if not isinstance(bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+            # Directory structure should not use expanded HW values
+            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+                meta.expand, spec_hw_val, bg_hw_val)
             meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
-                                             ap=spec_hw_val//meta.expand,
+                                             ap=spec_hw_val,
                                              bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:
@@ -111,10 +112,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if meta.data_format == 'eureka':
                 meta = load_specific_s3_meta_info(meta)
             # Directory structure should not use expanded HW values
-            spec_hw_val //= meta.expand
-            if not isinstance(bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+                meta.expand, spec_hw_val, bg_hw_val)
 
             # Get directory for Stage 4 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
@@ -200,7 +199,39 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.nplots = meta.n_int
 
             # Determine wavelength bins
-            if meta.nspecchan is None:
+            if meta.wave_input is not None:
+                # bins defined by file input. 2 columns: low and high edges
+                meta.wave_low, meta.wave_hi = np.genfromtxt(meta.wave_input).T
+                meta.wave = (meta.wave_low + meta.wave_hi)/2
+                meta.nspecchan = len(meta.wave)
+                log.writelog(f'  Using input file to create {meta.nspecchan} '
+                             'channels.')
+            elif meta.nspecchan is None and meta.npixelbins is not None:
+                # User wants bins defined by the given number of pixels
+                mask = (wave_1d >= meta.wave_min)
+                if not np.any(mask):
+                    raise ValueError(f"No wavelengths ≥ {meta.wave_min}")
+                istart = np.nonzero(mask)[0][0]
+
+                mask = (wave_1d >= meta.wave_max)
+                if not np.any(mask):
+                    raise ValueError(f"No wavelengths ≥ {meta.wave_max}")
+                iend = np.nonzero(mask)[0][0]
+                # Shift bins by some number of pixels (only useful for MIRI)
+                istart += meta.npixelshift
+                iend += meta.npixelshift
+                edges = wave_1d[istart:iend+meta.npixelbins:meta.npixelbins]
+                dwav = np.ediff1d(
+                    wave_1d[istart:iend+meta.npixelbins])[::meta.npixelbins]/2
+                if len(edges) != len(dwav):
+                    edges = edges[:len(dwav)]
+                meta.wave_low = (edges-dwav)[:-1]
+                meta.wave_hi = (edges-dwav)[1:]
+                meta.wave = (meta.wave_low + meta.wave_hi)/2
+                meta.nspecchan = len(meta.wave)
+                log.writelog(f'  Creating {meta.nspecchan} channels of '
+                             f'width {meta.npixelbins} pixels each.')
+            elif meta.nspecchan is None:
                 # User wants unbinned spectra
                 dwav = np.ediff1d(wave_1d)/2
                 # Approximate the first neg_dwav as the same as the second
@@ -215,11 +246,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.wave_low = meta.wave-neg_dwav
                 meta.wave_hi = meta.wave+pos_dwav
                 meta.nspecchan = len(meta.wave)
-            elif meta.wave_input is not None:
-                # bins defined by file input. 2 columns: low and high edges
-                meta.wave_low, meta.wave_hi = np.genfromtxt(meta.wave_input).T
-                meta.wave = (meta.wave_low + meta.wave_hi)/2
-                meta.nspecchan = len(meta.wave)
+                log.writelog(f'  Creating {meta.nspecchan} channels at '
+                             f'native resolution.')
             elif meta.wave_hi is None or meta.wave_low is None:
                 binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
                 meta.wave_low = np.round(np.linspace(meta.wave_min,
@@ -229,6 +257,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                                     meta.wave_max,
                                                     meta.nspecchan), 3)
                 meta.wave = (meta.wave_low + meta.wave_hi)/2
+                log.writelog('  Using defined wave_hi and wave_low arrays.')
             else:
                 # wave_low and wave_hi were passed in - make them arrays
                 meta.wave_low = np.array(meta.wave_low)
@@ -303,11 +332,27 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             lc.wave_mid.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
+            # Use spectroscopic MAD values to identify outliers
+            if not meta.photometry and meta.mad_sigma is not None:
+                outliers, pp = get_outliers(meta, spec)
+                if np.any(outliers):
+                    # Create unique list of outliers
+                    log.writelog(f'Identified {np.size(outliers)} outlier' +
+                                 ' columns.', mute=(not meta.verbose))
+                    meta.mask_columns = np.union1d(meta.mask_columns,
+                                                   outliers).astype(int)
+                if meta.isplots_S4 >= 1:
+                    plots_s4.mad_outliers(meta, pp)
+
             # Manually mask pixel columns by index number
             for w in meta.mask_columns:
-                log.writelog(f"Masking detector pixel column {w}.")
-                index = np.where(spec.optmask.x == w)[0][0]
-                spec.optmask[:, index] = True
+                log.writelog(f"  Masking detector pixel column {w}.")
+                matches = np.nonzero(spec.optmask.x.values == w)[0]
+                if matches.size == 0:
+                    log.writelog(
+                        f"  Warning: Pixel column {w} not found in optmask.x.")
+                    continue
+                spec.optmask[:, matches[0]] = True
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.clip_unbinned:
@@ -425,14 +470,22 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
             # Loop over spectroscopic channels
             meta.mad_s4_binned = []
+            meta.mad_s4_binned_bg = []
             for i in range(meta.nspecchan):
                 if not meta.photometry:
                     log.writelog(f"  Bandpass {i} = "
                                  f"{lc.wave_low.values[i]:.3f} - "
                                  f"{lc.wave_hi.values[i]:.3f}")
-                    # Compute valid indeces within wavelength range
-                    index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
-                                     (spec.wave_1d < lc.wave_hi.values[i]))[0]
+                    # Compute valid indices within wavelength range
+                    index = np.nonzero(
+                        (spec.wave_1d.values >= lc.wave_low.values[i]) &
+                        (spec.wave_1d.values < lc.wave_hi.values[i]))[0]
+                    if index.size > 0:
+                        log.writelog(f"    indices {index[0]} - {index[-1]}, "
+                                     f"{len(index)} in total")
+                    else:
+                        log.writelog(
+                            "    No indices found in this wavelength range.")
                     # Make masked arrays for easy summing
                     optspec_ma = np.ma.masked_where(
                         spec.optmask.values[:, index],
@@ -493,10 +546,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if meta.compute_white and not meta.photometry:
                 log.writelog("Generating white-light light curve")
 
-                # Compute valid indeces within wavelength range
-                index = np.where((spec.wave_1d >= meta.wave_min) *
-                                 (spec.wave_1d < meta.wave_max))[0]
-                central_wavelength = np.mean(spec.wave_1d[index].values)
+                # Compute valid indices within wavelength range
+                index = np.nonzero((spec.wave_1d.values >= meta.wave_min) &
+                                   (spec.wave_1d.values < meta.wave_max))[0]
+                if index.size > 0:
+                    central_wavelength = np.mean(spec.wave_1d[index].values)
+                else:
+                    raise ValueError(
+                        "No wavelengths found in the specified range.")
                 lc['flux_white'] = xrio.makeTimeLikeDA(np.zeros(meta.n_int),
                                                        lc.time,
                                                        lc.data.flux_units,
@@ -684,12 +741,10 @@ def load_specific_s3_meta_info(meta):
     """
     # Get directory containing S3 outputs for this aperture pair
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
-    if not isinstance(meta.bg_hw, str):
-        # Only divide if value is not a string (spectroscopic modes)
-        bg_hw = meta.bg_hw//meta.expand
-    else:
-        bg_hw = meta.bg_hw
-    inputdir += f'ap{meta.spec_hw//meta.expand}_bg{bg_hw}'+os.sep
+    # Directory structure should not use expanded HW values
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    inputdir += f'ap{spec_hw_val}_bg{bg_hw_val}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir

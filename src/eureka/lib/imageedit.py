@@ -57,13 +57,6 @@ def trimimage(data, c, r, mask=None, uncd=None):
         [[ True  False  False  True  False]
         [ True  False  False  True  False]
         [ True  False  False  False  False]]
-
-    Notes
-    -----
-    History:
-
-    - 2010-07-11  patricio, pcubillos@fulbrightmail.org
-        Added documentation.
     """
     (yc, xc) = c
     (yr, xr) = r
@@ -174,15 +167,6 @@ def pasteimage(data, subim, dy_, syx=(None, None)):
         [0, 0, 0, 0, 1],
         [0, 0, 0, 0, 1],
         [0, 0, 0, 0, 0]]
-
-    Notes
-    -----
-    History:
-
-    - 2010-07-11  patricio pcubillos@fulbrightmail.org
-        Added documentation.
-    - 2022-08-03  szieba
-        changed (syc, sxc) is (None, None) to (syc, sxc) == (None, None)
     """
     (dyc, dxc) = dy_
     (syc, sxc) = syx

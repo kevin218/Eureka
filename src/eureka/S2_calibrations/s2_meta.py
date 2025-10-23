@@ -6,13 +6,6 @@ class S2MetaClass(MetaClass):
 
     This class loads a Stage 2 Eureka! Control File (ecf) and lets you
     query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-03 Taylor J Bell
-        Made specific S2 class based on MetaClass
     '''
 
     def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
@@ -32,29 +25,19 @@ class S2MetaClass(MetaClass):
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version.
         '''
+        # Remove the stage from kwargs if present
+        if 'stage' in kwargs:
+            kwargs.pop('stage')
+
         super().__init__(folder, file, eventlabel, stage=2, **kwargs)
+
+        # Set a default data file suffix
+        self.suffix = getattr(self, 'suffix', 'rateints')
 
     def set_defaults(self):
         '''Set Stage 2 specific defaults for generic instruments.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial version setting defaults for any instrument.
         '''
-        # Data file suffix
-        self.suffix = getattr(self, 'suffix', 'rateints')
-
         # Generic pipeline steps that'd usually be run for TSO data
         # Run by default for instruments that call the function, but not all
         # instruments call it so True is a safe default
@@ -99,25 +82,11 @@ class S2MetaClass(MetaClass):
 
     def set_MIRI_defaults(self):
         '''Set Stage 2 specific defaults for MIRI.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for MIRI.
         '''
         return
 
     def set_NIRCam_defaults(self):
         '''Set Stage 2 specific defaults for NIRCam.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRCam.
         '''
         self.tsgrism_extract_height = getattr(self, 'tsgrism_extract_height',
                                               None)
@@ -125,13 +94,6 @@ class S2MetaClass(MetaClass):
 
     def set_NIRSpec_defaults(self):
         '''Set Stage 2 specific defaults for NIRSpec.
-
-        Notes
-        -----
-        History:
-
-        - 2024-07 Taylor J Bell
-            Initial version setting defaults for NIRSpec.
         '''
         self.slit_y_low = getattr(self, 'slit_y_low', -1)
         self.slit_y_high = getattr(self, 'slit_y_high', 50)
@@ -141,12 +103,5 @@ class S2MetaClass(MetaClass):
 
     def set_NIRISS_defaults(self):
         '''Set Stage 2 specific defaults for NIRISS.
-
-        Notes
-        -----
-        History:
-
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRISS.
         '''
         return

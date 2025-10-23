@@ -1,19 +1,7 @@
 import numpy as np
 import astropy.constants as const
-from copy import deepcopy
+from copy import copy
 import inspect
-
-try:
-    import theano
-    theano.config.gcc__cxxflags += " -fexceptions"
-    import theano.tensor as tt
-
-    # Avoid tonnes of "Cannot construct a scalar test value" messages
-    import logging
-    logger = logging.getLogger("theano.tensor.opt")
-    logger.setLevel(logging.ERROR)
-except ImportError:
-    pass
 
 from .Model import Model
 from .KeplerOrbit import KeplerOrbit
@@ -48,9 +36,10 @@ class PlanetParams():
             parameterObject = model.parameters
             lib = np
         else:
-            # PyMC3 model that is being compiled
-            parameterObject = model.model
-            lib = tt
+            # No other option is currently supported until jax is added
+            raise NotImplementedError(
+                'JAX support is not yet implemented. '
+                'Please use eval=True to evaluate the model in numpy mode.')
 
         # Planet ID
         self.pid = pid
@@ -72,6 +61,7 @@ class PlanetParams():
         self.rp2 = None
         self.phi = 90.
         self.inc = None
+        self.b = None
         self.ars = None
         self.a = None
         self.per = None
@@ -82,6 +72,13 @@ class PlanetParams():
         self.fpfs = None
         self.fp = None
         self.t_secondary = None
+        # Harmonica parameters
+        self.a1 = 0.
+        self.b1 = 0.
+        self.a2 = 0.
+        self.b2 = 0.
+        self.a3 = 0.
+        self.b3 = 0.
         # POET phase curve parameters
         self.cos1_amp = 0.
         self.cos1_off = 0.
@@ -111,11 +108,12 @@ class PlanetParams():
         for n in range(1, self.nspots):
             # read radii, latitudes, longitudes, and contrasts
             spot_id = f'{n}'
-            setattr(self, f'spotrad{spot_id}', 0)
-            setattr(self, f'spotlat{spot_id}', 0)
-            setattr(self, f'spotlon{spot_id}', 0)
-            setattr(self, f'spotcon{spot_id}', 0)
-        self.spotstari = 90
+            setattr(self, f'spotrad{spot_id}', 0.)
+            setattr(self, f'spotlat{spot_id}', 0.)
+            setattr(self, f'spotlon{spot_id}', 0.)
+            setattr(self, f'spotcon{spot_id}', 0.)
+        self.spotstari = 90.
+        self.spotstarobl = 0.
         self.spotrot = None
         self.spotnpts = None
 
@@ -127,19 +125,18 @@ class PlanetParams():
             pixname = 'pixel'
             if pix > 0:
                 pixname += f'{pix}'
-            setattr(self, pixname, 0)
+            setattr(self, pixname, 0.)
 
         # Figure out how many planet Ylm spherical harmonics
-        ylm_params = np.where(['Y' == par[0] and par[1].isnumeric()
-                               for par in list(model.parameters.dict.keys())
-                               ])[0]
+        ylm_params = [i for i, par in enumerate(model.parameters.dict.keys())
+                      if par.startswith('Y') and par[1:].isnumeric()]
         if len(ylm_params) > 0:
             l_vals = [int(list(model.parameters.dict.keys())[ind][1])
                       for ind in ylm_params]
             self.ydeg = max(l_vals)
             for ell in range(1, self.ydeg+1):
                 for m in range(-ell, ell+1):
-                    setattr(self, f'Y{ell}{m}', 0)
+                    setattr(self, f'Y{ell}{m}', 0.)
         else:
             self.ydeg = 0
 
@@ -147,28 +144,30 @@ class PlanetParams():
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
             try:
-                if model.parameters.dict[item0][1] == 'free':
-                    item0 += self.channel_id
+                item_temp = item0 + self.channel_id
+                if item_temp in model.parameters.dict.keys():
+                    item0 = item_temp
                 value = getattr(parameterObject, item0)
                 if eval:
                     value = value.value
                 setattr(self, item, value)
-            except KeyError:
+            except (KeyError, AttributeError):
+                # Item not in model.parameters, so check for some special cases
                 if (item in [f'u{i}' for i in range(1, 5)] or
                         'spot' == item[:4]):
                     # Limb darkening and spots probably don't vary with planet
                     try:
                         item0 = item
-                        if model.parameters.dict[item0][1] == 'free':
-                            item0 += self.channel_id
+                        item_temp = item0 + self.channel_id
+                        if item_temp in model.parameters.dict.keys():
+                            item0 = item_temp
                         value = getattr(parameterObject, item0)
                         if eval:
                             value = value.value
                         setattr(self, item, value)
-                    except KeyError:
+                    except (KeyError, AttributeError):
+                        # Item not in model.parameters, so leave it as default
                         pass
-                else:
-                    pass
         # Allow for rp or rprs
         if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
             item0 = 'rp' + self.pid_id
@@ -220,6 +219,25 @@ class PlanetParams():
             if eval:
                 value = value.value
             self.a = value
+        # Allow for inc or b
+        if (self.b is None) and ('inc' in model.parameters.dict.keys()):
+            item0 = 'inc' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            inc_value = getattr(parameterObject, item0)
+            a_value = self.a
+            if eval:
+                inc_value = inc_value.value
+            self.b = a_value*lib.cos(inc_value*np.pi/180)
+        if (self.inc is None) and ('b' in model.parameters.dict.keys()):
+            item0 = 'b' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            b_value = getattr(parameterObject, item0)
+            a_value = self.a
+            if eval:
+                b_value = b_value.value
+            self.inc = lib.arccos(b_value/a_value)*180/np.pi
         # Allow for (ecc, w) or (ecosw, esinw)
         if (self.ecosw is None) and self.ecc == 0:
             self.ecosw = 0.
@@ -312,26 +330,37 @@ class PlanetParams():
         elif self.limb_dark == 'kipping2013':
             self.limb_dark = 'quadratic'
             if eval:
-                self.u_original = np.copy(self.u)
-                u1 = 2*np.sqrt(self.u[0])*self.u[1]
-                u2 = np.sqrt(self.u[0])*(1-2*self.u[1])
-                self.u = np.array([u1, u2])
+                self.u_original = copy(self.u)
+                self.u1 = 2*lib.sqrt(self.u[0])*self.u[1]
+                self.u2 = lib.sqrt(self.u[0])*(1-2*self.u[1])
+                self.u = lib.array([self.u1, self.u2])
             else:
-                u1 = 2*tt.sqrt(self.u1)*self.u2
-                u2 = tt.sqrt(self.u1)*(1-2*self.u2)
-                self.u = np.array([u1, u2])
+                self.u1 = 2*lib.sqrt(self.u1)*self.u2
+                self.u2 = lib.sqrt(self.u1)*(1-2*self.u2)
+                self.u = lib.array([self.u1, self.u2])
+
+        # Nicely packaging Harmonica coefficients
+        self.ab = lib.array([self.rp,
+                            self.a1, self.b1,
+                            self.a2, self.b2,
+                            self.a3, self.b3])
 
         # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
         if self.ecc is None:
-            self.ecc = 0
+            self.ecc = 0.
             self.w = 180.
-            self.ecosw = 0
-            self.esinw = 0
+            self.ecosw = 0.
+            self.esinw = 0.
 
         if self.spotrot is None:
             # spotrot will default to 10k years (important if t0 is not ~0)
-            self.spotrot = 3650000
+            self.spotrot = 3650000.
             self.fleck_fast = True
+        else:
+            self.fleck_fast = False
+
+        self.inc_rad = self.inc * np.pi / 180
+        self.w_rad = self.w * np.pi / 180
 
 
 class AstroModel(Model):
@@ -429,7 +458,7 @@ class AstroModel(Model):
             nchan = 1
             channels = [channel, ]
 
-        pid_input = deepcopy(pid)
+        pid_input = copy(pid)
         if pid_input is None:
             pid_iter = range(self.num_planets)
         else:
@@ -492,8 +521,8 @@ def get_ecl_midpt(params, lib=np):
     params : object
         Contains the physical parameters for the transit model.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
 
     Returns
     -------
@@ -527,8 +556,8 @@ def true_anomaly(model, t, lib=np, xtol=1e-10):
     t : ndarray
         The time in days.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
     xtol : float; optional
         tolarance on error in eccentric anomaly (calculated along the way).
         Defaults to 1e-10.
@@ -548,13 +577,13 @@ def eccentric_anomaly(model, t, lib=np, xtol=1e-10):
 
     Parameters
     ----------
-    model : pymc3.Model
-        The PyMC3 model (which contains the orbital parameters).
+    model : Model
+        The model (which contains the orbital parameters).
     t : ndarray
         The time in days.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
     xtol : float; optional
         tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
@@ -588,13 +617,13 @@ def FSSI_Eccentric_Inverse(model, M, lib=np, xtol=1e-10):
 
     Parameters
     ----------
-    model : pymc3.Model
-        The PyMC3 model (which contains the orbital parameters).
+    model : Model
+        The model (which contains the orbital parameters).
     M : ndarray
         The mean anomaly in radians.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to numpy.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to numpy.
     xtol : float; optional
         tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
@@ -631,8 +660,8 @@ def FSSI(Y, x, f, fP, lib=np):
     fP : callable
         The first derivative of the function f with respect to x.
     lib : library; optional
-        Either np (numpy) or tt (theano.tensor), depending on whether the
-        code is being run in numpy or theano mode. Defaults to np.
+        Either np (numpy) or jnp (jax.numpy), depending on whether the
+        code is being run in numpy or jax mode. Defaults to np.
 
     Returns
     -------

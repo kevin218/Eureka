@@ -5,7 +5,7 @@
 allapers        False # Run S6 on all of the apertures considered in S5? Otherwise will use newest output in the inputdir
 
 # Plotting parameters
-y_params        ['rp^2', 'u1', 'u2', 'c0', 'c1', 'scatter_mult']  # The parameter name as entered in your EPF file in Stage 5. rp^2, 1/r1, 1/r4, fn (nightside flux), pc_amp (phase curve amplitude), and pc_offset (phase curve offset), amp_order2 (second order phase curve amplitude), and offset_order2 (second order phase curve offset) are also permitted.
+y_params        ['rp^2', 'u1', 'u2', 'c0', 'c1', 'scatter_mult']  # The parameter name as entered in your EPF file in Stage 5. rp^2, 1/r1, 1/r4, fn (nightside flux), pc_amp (phase curve amplitude), and pc_offset (phase curve offset), amp_order2 (second order phase curve amplitude), and offset_order2 (second order phase curve offset) are also permitted. Use 'morning_limb' or 'evening_limb' to plot the corresponding limb when using Harmonica.
 y_labels        None  # The formatted string you want on the y-label. Set to None to use the default formatting.
 y_label_units   None  # The formatted string for the units you want on the y-label - e.g., (ppm), (seconds), '(days$^{-1})$', etc.. Set to None to automatically add any implied units from y_scalars (e.g. ppm), or set to '' to force no units.
 y_scalars       [100, 1, 1, 1, 1, 1]  # Can be used to convert to percent (100), ppm (1e6), etc.

@@ -36,23 +36,6 @@ def read(filename, data, meta, log):
         The metadata object.
     log : logedit.Logedit
         The current log.
-
-    Notes
-    -----
-    History:
-
-    - Nov 2012 Kevin Stevenson
-        Initial Version
-    - May 2021  Kevin Stevenson
-        Updated for NIRCam
-    - Jun 2021  Taylor Bell
-        Updated docs for MIRI
-    - Jun 2021  Sebastian Zieba
-        Updated for MIRI
-    - Apr 2022  Sebastian Zieba
-        Updated wavelength array
-    - Apr 21, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     '''
     hdulist = fits.open(filename)
 
@@ -173,12 +156,12 @@ def read(filename, data, meta, log):
         if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
                 meta.bg_hw == meta.bg_hw_range[0]):
             # If not, we've already done this and don't want to switch it back
-            if meta.ywindow[1] > 393:
+            if meta.ywindow[1] > 395:
                 log.writelog('WARNING: The MIRI/LRS wavelength solution is '
-                             'not defined for y-values > 393, while you '
+                             'not defined for y-values > 395, while you '
                              f'have set ywindow[1] to {meta.ywindow[1]}.\n'
                              '          It is strongly recommended to set '
-                             'ywindow[1] to be <= 393, otherwise you will '
+                             'ywindow[1] to be <= 395, otherwise you will '
                              'potentially end up with very strange results.')
 
             temp = np.copy(meta.ywindow)
@@ -234,13 +217,6 @@ def wave_MIRI_jwst(filename, meta, log):
     -------
     lam_x_full : list
         A list of the wavelengths
-
-    Notes
-    -----
-    History:
-
-    - August 2022  Taylor J Bell
-        Initial Version
     '''
     if meta.firstFile:
         log.writelog('  WARNING: Using the jwst package because the '
@@ -356,10 +332,13 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
-                                meta.bg_y2, deg=meta.bg_deg,
-                                threshold=meta.p3thresh, isrotate=2,
-                                isplots=isplots)
+    if meta.bg_dir == 'RxR':
+        y1, y2 = meta.bg_x1, meta.bg_x2
+    else:
+        y1, y2 = meta.bg_y1, meta.bg_y2
+    bg, mask = background.fitbg(dataim, meta, datamask, y1, y2,
+                                deg=meta.bg_deg, threshold=meta.p3thresh,
+                                isrotate=meta.isrotate, isplots=isplots)
     return bg, mask, n
 
 
@@ -392,13 +371,6 @@ def cut_aperture(data, meta, log):
         The v0 values over the aperture region.
     apmedflux : ndarray
         The median flux over the aperture region.
-
-    Notes
-    -----
-    History:
-
-    - 2022-06-17, Taylor J Bell
-        Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
 

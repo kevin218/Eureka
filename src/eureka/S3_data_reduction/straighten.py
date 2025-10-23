@@ -109,7 +109,7 @@ def roll_columns(data, shifts):
         # in each column
 
         arr = np.swapaxes(data[i], 0, -1)
-        all_idcs = np.ogrid[[slice(0, n) for n in arr.shape]]
+        all_idcs = list(np.ogrid[[slice(0, n) for n in arr.shape]])
 
         # make the shifts positive
         shifts_i = shifts[i]

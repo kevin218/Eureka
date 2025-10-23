@@ -13,9 +13,11 @@ manual_clip     None    # A list of lists specifying the start and end integrati
 
 fit_par         ./S5_fit_par_template.epf   # What fitting epf do you want to use?
 fit_method      [dynesty]                   #options are: lsq, emcee, dynesty, exoplanet, nuts (can list multiple types separated by commas)
-run_myfuncs     [batman_tr,polynomial]      # options are: batman_tr, batman_ecl, catwoman_tr, sinusoid_pc, quasilambert_pc, poet_tr, poet_ecl, poet_pc, fleck_tr, starry, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, and GP (can list multiple types separated by commas)
+run_myfuncs     [batman_tr,polynomial]      # options are: batman_tr, batman_ecl, catwoman_tr, sinusoid_pc, quasilambert_pc, poet_tr, poet_ecl, poet_pc, fleck_tr, starry, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, common_mode, and GP (can list multiple types separated by commas)
 compute_ltt     False                       # options are: True (correct model for the light travel time effect), or False (ignore the light travel time effect)
 force_positivity False                      # Optional boolean for sinusoid_pc and poet_pc models.  Set True to force positive phase variations.
+# common_mode_file    None                    # Fully qualified path to the location of the common-mode file that you want to use. This is usually the ECSV generated from a Stage 5 white LC fit.
+# common_mode_name    GP                      # ECSV parameter name that represents the common-mode variations.  This is usually GP or residuals.
 # pixelsampling   False                       # Optional boolean for starry's phase curve and/or eclipse mapping model. Set to True to use starry's pixel-sampling method to ensure non-negative fluxes across the planet and set priors on the pixel parameter(s) in your EPF. Set to False (default) or leave undefined if you want to use starry's spherical harmonic method and are okay with permitting negative fluxes, or if you intend to use Eureka!'s sinusoid_pc, quasilambert_pc, or poet_pc methods
 # ydeg            2                           # Integer specifying the spherical harmonic order to use with starry's phase curve and/or eclipse mapping model. This setting is mandatory if you set pixelsampling to True, otherwise the setting is optional and will be inferred from your EPF settings.
 # oversample      3                           # Optional integer specifying the oversampling factor to be used when converting spherical harmonics to pixels when pixelsampling has been set to True.
@@ -52,7 +54,12 @@ run_nburn       500     # How many of run_nsteps should be discarded as burn-in 
 run_nlive       'min'    # Must be > ndim * (ndim + 1) // 2
 run_bound       'multi'
 run_sample      'auto'
-run_tol         0.1
+run_tol         0.01
+
+# dynamic dynesty fitter (in addition to the dynesty fitter parameters)
+run_dynamic     False   # If False, use only dynesty static fitter; if True, use dynamic dynesty fitter
+run_nlive_batch 'auto'  # Number of live points per batch for dynamic nested sampling; use int or 'auto' for minimum safe default (max(25, run_nlive // 2)).
+run_pfrac        0.5    # Fraction of samples from posterior vs prior during refinement; 0.5 is balanced, higher favors posterior precision, lower improves evidence precision.
 
 # PyMC3 NUTS fitter
 exoplanet_first False   # Initialize with an initial exoplanet optimizer call (generally not recommended, but can sometimes be helpful if your initial manual guess is quite poor)

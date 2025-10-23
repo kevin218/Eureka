@@ -79,11 +79,13 @@ class TransitModel():
             raise ValueError('The fleck transit model only allows transits and'
                              ' not eclipses.')
 
-        if pl_params.limb_dark not in ['quadratic', 'kipping2013']:
+        if pl_params.limb_dark not in ['uniform', 'linear', 'quadratic',
+                                       'kipping2013']:
             raise ValueError('limb_dark was set to "'
                              f'{self.parameters.limb_dark.value}" in '
                              'your EPF, while the fleck transit model only '
-                             'allows "quadratic" or "kipping2013".')
+                             'allows "uniform", "linear", "quadratic" or '
+                             '"kipping2013".')
 
         # store t for later use
         self.t = t

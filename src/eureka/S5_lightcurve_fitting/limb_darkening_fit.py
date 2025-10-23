@@ -22,6 +22,7 @@ except ImportError:
     from bokeh.models.layouts import Tabs
 
 from . import utils
+from ..lib import plots
 # from . import modelgrid
 
 warnings.simplefilter('ignore', category=AstropyWarning)
@@ -466,7 +467,8 @@ class LDC:
         mean_i[mean_i == 0] = np.nan
 
         # Calculate limb darkening, I[mu]/I[1] vs. mu
-        ld = mean_i/mean_i[:, np.where(mu == max(mu))].squeeze(axis=-1)
+        idx_max_mu = np.argmax(mu)
+        ld = mean_i / mean_i[:, idx_max_mu][:, np.newaxis]
 
         # Rescale mu values to make f(mu=0)=ld_min
         # for the case where spherical models extend beyond limb
@@ -475,8 +477,7 @@ class LDC:
         mu = (mu - muz) / (1 - muz)
 
         # Trim to useful mu range
-        imu, = np.where(mu > mu_min)
-        scaled_mu, scaled_ld = mu[imu], ld[:, imu]
+        scaled_mu, scaled_ld = mu[mu > mu_min], ld[:, mu > mu_min]
 
         # Fit limb darkening coefficients for each wavelength bin
         for n, ldarr in enumerate(scaled_ld):
@@ -590,6 +591,7 @@ class LDC:
         else:
             return final
 
+    @plots.apply_style
     def plot(self, fig=None, show=False, **kwargs):
         """Plot the LDCs
 

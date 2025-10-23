@@ -5,7 +5,6 @@ from copy import copy
 
 from . import models as m
 from . import fitters
-from . import gradient_fitters
 from .utils import COLORS, color_gen
 from ..lib import plots, util
 from ..lib.split_channels import get_trim, split
@@ -56,18 +55,6 @@ class LightCurve(m.Model):
             Any parameter named log will not be loaded into the
             LightCurve object as Logedit objects cannot be pickled
             which is required for multiprocessing.
-
-        Notes
-        -----
-
-        History:
-        - Dec 29, 2021 Taylor Bell
-            Allowing for a constant uncertainty to be input with just a float.
-            Added a channel number.
-        - Jan. 15, 2022 Megan Mansfield
-            Added ability to share fit between all channels
-        - Oct. 2022 Erin May
-            Added ability to joint fit WLCs with different time arrays
         """
         # Initialize the model
         super().__init__(**kwargs)
@@ -152,13 +139,6 @@ class LightCurve(m.Model):
             The name of the fitter to use.
         **kwargs : dict
             Arbitrary keyword arguments.
-
-        Notes
-        -----
-        History:
-
-        - Dec 29, 2021 Taylor Bell
-            Updated documentation and reduced repeated code
         """
         if fitter == 'lmfit':
             self.fitter_func = fitters.lmfitter
@@ -171,9 +151,17 @@ class LightCurve(m.Model):
         elif fitter == 'dynesty':
             self.fitter_func = fitters.dynestyfitter
         elif fitter == 'exoplanet':
-            self.fitter_func = gradient_fitters.exoplanetfitter
+            raise NotImplementedError(
+                'PyMC3/starry support within Eureka! had to be dropped because'
+                ' PyMC3 is now extremely deprecated and incompatible with the '
+                'current jwst pipeline version. For the time being, you must '
+                'instead use the numpy-based models.')
         elif fitter == 'nuts':
-            self.fitter_func = gradient_fitters.nutsfitter
+            raise NotImplementedError(
+                'PyMC3/starry support within Eureka! had to be dropped because'
+                ' PyMC3 is now extremely deprecated and incompatible with the '
+                'current jwst pipeline version. For the time being, you must '
+                'instead use the numpy-based models.')
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
 
@@ -184,6 +172,7 @@ class LightCurve(m.Model):
         if fit_model is not None:
             self.results.append(copy(fit_model))
 
+    @plots.apply_style
     def plot(self, meta, fits=True):
         """Plot the light curve with all available fits. (Figs 5103 and 5306)
 
@@ -221,7 +210,8 @@ class LightCurve(m.Model):
                 binned_unc = util.binData_time(unc, time, nbin=nbin_plot,
                                                err=True)
 
-            fig = plt.figure(5103, figsize=(8, 6))
+            fig = plt.figure(5103)
+            fig.set_size_inches(8, 6, forward=True)
             fig.clf()
             # Draw the data
             ax = fig.gca()
@@ -255,7 +245,7 @@ class LightCurve(m.Model):
                 ch_number = str(channel).zfill(len(str(self.nchannel)))
                 fname_tag = f'ch{ch_number}'
             fname = (f'figs{os.sep}fig5103_{fname_tag}_all_fits' +
-                     plots.figure_filetype)
+                     plots.get_filetype())
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if not meta.hide_plots:
                 plt.pause(0.2)
@@ -266,8 +256,8 @@ class LightCurve(m.Model):
                 fig.clf()
                 # Draw the data
                 ax = fig.gca()
-                ax.plot(time, flux, '.', color=self.colors[i], zorder=0,
-                        alpha=0.01)
+                ax.errorbar(time, flux, unc, fmt='.', color=self.colors[i],
+                            zorder=0, alpha=0.1)
                 ax.errorbar(binned_time, binned_flux, binned_unc, fmt='.',
                             color=self.colors[i], zorder=1)
 
@@ -293,7 +283,7 @@ class LightCurve(m.Model):
                     ch_number = str(channel).zfill(len(str(self.nchannel)))
                     fname_tag = f'ch{ch_number}'
                 fname = (f'figs{os.sep}fig5306_{fname_tag}_all_fits' +
-                         plots.figure_filetype)
+                         plots.get_filetype())
                 fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
                 if not meta.hide_plots:
                     plt.pause(0.2)

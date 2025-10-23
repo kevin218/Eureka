@@ -46,15 +46,6 @@ class Logedit:
         >>> log.closelog()
 
         >>> # See the output files: 'out.log' and 'out2.log' to see results.
-
-    Notes
-    -----
-    History:
-
-    - 2010-07-10 Patricio Cubillos
-        Initial version
-    - 2010-11-24 Patricio Cubillos
-        logedit converted to a class.
     """
 
     def __init__(self, logname, read=None):

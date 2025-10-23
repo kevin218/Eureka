@@ -10,6 +10,7 @@ warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
 from ..lib import plots
 
 
+@plots.apply_style
 def plot_spectrum(meta, model_x=None, model_y=None,
                   y_scalar=1, ylabel=r'$R_{\rm p}/R_{\rm *}$',
                   xlabel=r'Wavelength ($\mu$m)',
@@ -36,10 +37,11 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         The reference radius for the scale height, by default None
     """
     if scaleHeight is not None:
-        fig = plt.figure(6301, figsize=(8, 4))
+        fig = plt.figure(6301)
     else:
-        fig = plt.figure(6101, figsize=(8, 4))
-    plt.clf()
+        fig = plt.figure(6101)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     ax = fig.subplots(1, 1)
 
     wavelength = deepcopy(meta.wavelengths)
@@ -125,7 +127,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
     fname += '_'+clean_y_param
 
-    fig.savefig(meta.outputdir+fname+plots.figure_filetype,
+    fig.savefig(meta.outputdir+fname+plots.get_filetype(),
                 bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)

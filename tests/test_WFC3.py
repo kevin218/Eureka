@@ -23,12 +23,7 @@ def test_WFC3(capsys):
         raise Exception("HST-relevant packages have not been installed,"
                         " so the WFC3 test is being skipped. You can install "
                         "all HST-related dependencies using "
-                        "`pip install .[hst]`.")
-
-    # Set up some parameters to make plots look nicer.
-    # You can set usetex=True if you have LaTeX installed
-    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.pdf')
-
+                        "`pip install eureka-bang[hst]`.")
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
@@ -53,7 +48,7 @@ def test_WFC3(capsys):
 
     # run assertions for S3
     meta.outputdir_raw = f'data{os.sep}WFC3{os.sep}Stage3{os.sep}'
-    name = pathdirectory(meta, 'S3', 1, ap=5, bg=8,
+    name = pathdirectory(meta, 'S3', s3_meta.run_s3, ap=5, bg=8,
                          old_datetime=s3_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
@@ -63,7 +58,7 @@ def test_WFC3(capsys):
 
     # run assertions for S4
     meta.outputdir_raw = f'data{os.sep}WFC3{os.sep}Stage4{os.sep}'
-    name = pathdirectory(meta, 'S4', 1, ap=5, bg=8,
+    name = pathdirectory(meta, 'S4', s4_meta.run_s4, ap=5, bg=8,
                          old_datetime=s4_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
