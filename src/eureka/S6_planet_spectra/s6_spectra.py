@@ -431,7 +431,10 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
         y_param = meta.y_param
 
     if 'dynesty' in fit_methods:
-        fitter = 'dynesty'
+        if meta.run_dynamic:
+            fitter = 'dynamicdynesty'
+        else:
+            fitter = 'dynesty'
     elif 'emcee' in fit_methods:
         fitter = 'emcee'
     elif 'lsq' in fit_methods:
@@ -449,7 +452,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
     medians = []
     errs = []
 
-    if fitter in ['dynesty', 'emcee', 'nuts']:
+    if fitter in ['dynamicdynesty', 'dynesty', 'emcee', 'nuts']:
         fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
         fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
                                     skipinitialspace=True)
@@ -719,7 +722,10 @@ def load_s5_saves(meta, log, fit_methods, n_samples=1):
         A list of sample arrays, one for each channel.
     """
     if 'dynesty' in fit_methods:
-        fitter = 'dynesty'
+        if meta.run_dynamic:
+            fitter = 'dynamicdynesty'
+        else:
+            fitter = 'dynesty'
     elif 'emcee' in fit_methods:
         fitter = 'emcee'
     elif 'lsq' in fit_methods:
@@ -734,7 +740,7 @@ def load_s5_saves(meta, log, fit_methods, n_samples=1):
                          f'{fit_methods}')
     meta.fitter = fitter
 
-    if fitter in ['nuts', 'dynesty', 'emcee']:
+    if fitter in ['dynamicdynesty', 'dynesty', 'emcee', 'nuts']:
         if meta.sharedp:
             niter = 1
         else:
