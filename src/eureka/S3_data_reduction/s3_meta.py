@@ -97,6 +97,9 @@ class S3MetaClass(MetaClass):
         self.use_estsig = getattr(self, 'use_estsig', False)
         # Require this parameter to be set
         self.bg_thresh = getattr(self, 'bg_thresh')
+        # If bg_thresh is float, convert to list for easier handling later
+        if isinstance(self.bg_thresh, float):
+            self.bg_thresh = [self.bg_thresh, self.bg_thresh]
 
         # Diagnostics
         self.isplots_S3 = getattr(self, 'isplots_S3', 3)
