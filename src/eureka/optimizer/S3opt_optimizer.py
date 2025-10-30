@@ -17,6 +17,7 @@ import eureka.S4_generate_lightcurves.s4_genLC as s4
 # from ..S1_detector_processing.s1_meta import S1MetaClass
 # from ..S2_calibrations.s2_meta import S2MetaClass
 from eureka.S3_data_reduction.s3_meta import S3MetaClass
+from eureka.S3_data_reduction import plots_s3
 from eureka.S4_generate_lightcurves.s4_meta import S4MetaClass
 from .S3opt_meta import S3optMetaClass
 from . import optimizers
@@ -64,20 +65,23 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
 
 def optimize(eventlabel, ecf_path=None, initial_run=False):
     """
-    Eureka! Optimization for JWST NIRSpec PRISM Data
-    ---------------------------------------------
+    Eureka! optimization wrapper for Stages 3 and 4.
 
-    Description:
-    This script is designed to optimize the stage 1-4 ECF parameters for JWST NIRSpec PRISM observations.
+    Parameters
+    ----------
+    eventlabel : str
+        The unique identifier for these data.
+    ecf_path : str; optional
+        The absolute or relative path to where ecfs are stored. Defaults to
+        None which resolves to './'.
+    initial_run : boolean; optional
+        Set to True to perform an initial run with default ECF parameters
+        before starting the optimization. Defaults to False.
 
-    Inputs:
-    - Loaded from an input text file, 'optimizer_inputs_nirspec_PRISM.txt'.
-    - Parameters not specified for optimization in the optimizer input text file will assume ECF values by default.
-
-    Outputs:
-    - Optimized parameter values saved in the "best" dictionary.
-    - Plot of optimization fitness values.
-    - Optimization results, printing the best ECF values and fitness scores (WLC MAD, 2D MAD, etc.).
+    Returns
+    -------
+    history_fitness_score : dict
+        The fitness score after optimizing each parameter.
     """
     # Load optimizer parameters from ECF
     s3opt_meta = S3optMetaClass(folder=ecf_path, eventlabel=eventlabel)
@@ -87,19 +91,18 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
         os.mkdir(s3opt_meta.outputdir)
     log = logedit.Logedit(s3opt_meta.s3_logname)
 
-    # Copy ecf
+    # Copy ECF to output directory
     log.writelog('Copying S3opt control file', mute=(not s3opt_meta.verbose))
     s3opt_meta.copy_ecf()
 
     # Create dictionaries to keep track of optimization metrics
     best = {}
-    history_MAD_white = {}
-    history_MAD_spec = {}
-    history_MAD_chi2red = {}
+    # history_MAD_white = {}
+    # history_MAD_spec = {}
+    # history_MAD_chi2red = {}
     history_fitness_score = {}
 
     if initial_run:
-
         # Setup Meta objects
         meta = deepcopy(s3opt_meta)
         s3_meta, s4_meta = initialize_meta(meta, eventlabel, ecf_path=None)
@@ -110,6 +113,7 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
         s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
                                            s3_meta=s3_meta)
 
+        # Record initial fitness score
         history_fitness_score["initial_run"] = (
             meta.scaling_MAD_spec * s4_meta.mad_s4 +
             meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
@@ -117,7 +121,6 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
                      f"{history_fitness_score["initial_run"]}\n")
 
     for p in s3opt_meta.params_to_optimize:
-
         # Setup Meta objects
         meta = deepcopy(s3opt_meta)
         meta.opt_param_name = p
@@ -129,6 +132,7 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
         else:
             log.writelog(f"Parameter {p} not recognized. Skipping...")
             continue
+
         # Update Meta parameters with best values from previous iterations
         for key, value in best.items():
             if key in s3_meta.__dict__.keys():
@@ -141,35 +145,20 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
             # Optimize both spec_hw and bg_hw simultaneously
             # Require that spec_hw < bg_hw
             best_param_value, best_fitness_value = optimizers.sweep_list_lt(
-                eventlabel,
-                bounds,
-                meta,
-                log,
-                s3_meta=s3_meta,
-                s4_meta=s4_meta,
-            )
+                eventlabel, bounds, meta, log,
+                s3_meta=s3_meta, s4_meta=s4_meta)
         elif "__" in p:
             # Optimize two independent parameters simultaneously
             best_param_value, best_fitness_value = optimizers.sweep_list_double(
-                eventlabel,
-                bounds,
-                meta,
-                log,
-                s3_meta=s3_meta,
-                s4_meta=s4_meta,
-            )
+                eventlabel, bounds, meta, log,
+                s3_meta=s3_meta, s4_meta=s4_meta)
         else:
             # Optimize single parameter
             best_param_value, best_fitness_value = optimizers.sweep_list_single(
-                eventlabel,
-                bounds,
-                meta,
-                log,
-                s3_meta=s3_meta,
-                s4_meta=s4_meta,
-            )
+                eventlabel, bounds, meta, log,
+                s3_meta=s3_meta, s4_meta=s4_meta)
 
-        # Save Results in "best" Dictionary
+        # Save results in "best" dictionary
         param_names = p.split("__")
         if (type(best_param_value) is not list) and \
             (type(best_param_value) is not np.ndarray):
@@ -177,12 +166,16 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
         for i, param in enumerate(param_names):
             best[param] = best_param_value[i]
 
-        # Print Results of Parametric Sweep
+        # Print results of parametric sweep
         log.writelog(f"Optimized parameter: {p}")
         log.writelog(f"Best parameter value(s): {best_param_value}")
         log.writelog(f"Best fitness value: {best_fitness_value}\n")
 
         history_fitness_score[p] = best_fitness_value
 
-    optimizers.plot_fitness_scores(history_fitness_score, meta)
+    if meta.isplots_S3opt >= 1:
+        plots_s3.fitness_scores(s3opt_meta, history_fitness_score)
+
     log.closelog()
+
+    return s3opt_meta, history_fitness_score
