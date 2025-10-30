@@ -1492,3 +1492,45 @@ def get_bounds(x, y=None):
         return xmin, xmax, ymin, ymax
     else:
         return xmin, xmax
+
+
+@plots.apply_style
+def fitness_scores(meta, history_fitness_score):
+    """
+    Visualizes the progress of best fitness scores across parameter sweeps.
+
+    Parameters:
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    history_fitness_score : dict
+        The fitness score after optimizing each parameter.  The lower the
+        fitness score, the better the individual.
+
+    Outputs:
+    -------
+    A plot that illustrates the trend of best fitness scores across
+    generations.
+
+    Notes:
+    -----
+    - The function assumes that a lower fitness score is better.
+    - The x-axis represents the generation number (starting from 1), and the
+      y-axis represents the best fitness score.
+    """
+    # Extract values from the history fitness score dictionary
+    best_fitness_values = [history_fitness_score[key]
+        for key in history_fitness_score.keys()]
+    params_to_optimize = history_fitness_score.keys()
+
+    fig = plt.figure(3110, figsize=(8, 6))
+    fig.clf()
+    plt.title("History of Best Fitness Scores")
+    plt.plot(range(1, len(best_fitness_values) + 1), best_fitness_values)
+    plt.xticks(range(1, len(params_to_optimize) + 1),
+               params_to_optimize, rotation=25, ha='right')
+    plt.ylabel("Best Fitness Score")
+    fname = f'figs{os.sep}fig3110_FitnessScore'+plots.get_filetype()
+    plt.savefig(meta.outputdir+fname, dpi=150)
+    if not meta.hide_plots:
+        plt.pause(0.2)
