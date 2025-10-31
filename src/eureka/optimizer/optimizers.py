@@ -26,9 +26,9 @@ def sweep_range_single(eventlabel, bounds_var, meta, log, **kwargs):
 
     Returns:
     -------
-    best_params : float
-         The optimal parametervalue found for the objective function.
-    best_fitness : float
+    best_param_value : float
+         The optimal parameter value found for the objective function.
+    best_fitness_value : float
         The best (lowest) fitness score found.
 
     Notes:
@@ -37,17 +37,17 @@ def sweep_range_single(eventlabel, bounds_var, meta, log, **kwargs):
     set, it will print an error message and skip that set. This ensures
     robustness in the face of potentially problematic parameter sets.
     """
-    best_fitness = np.inf
-    best_params = None
+    best_fitness_value = np.inf
+    best_param_value = None
 
     # Iterate over each value in the provided bounds
     for val in range(bounds_var[0], bounds_var[1] + 1):
         try:
             fitness_value = of.single(val, eventlabel, meta, **kwargs)
-            if fitness_value < best_fitness:
+            if fitness_value < best_fitness_value:
                 # Update best fitness and parameters if current is better
-                best_fitness = fitness_value
-                best_params = val
+                best_fitness_value = fitness_value
+                best_param_value = val
         except Exception as e:
             # Catch any errors during fitness calculation
             log.writelog("Could not calculate fitness score for " +
@@ -55,7 +55,7 @@ def sweep_range_single(eventlabel, bounds_var, meta, log, **kwargs):
             log.writelog(f"Error: {e}")
             continue
 
-    return best_params, best_fitness
+    return best_param_value, best_fitness_value
 
 
 def sweep_list_single(eventlabel, bounds_var, meta, log, **kwargs):
@@ -81,9 +81,9 @@ def sweep_list_single(eventlabel, bounds_var, meta, log, **kwargs):
 
     Returns:
     -------
-    best_params : float
-         The optimal parametervalue found for the objective function.
-    best_fitness : float
+    best_param_value : float
+         The optimal parameter value found for the objective function.
+    best_fitness_value : float
         The best (lowest) fitness score found.
 
     Notes:
@@ -92,17 +92,17 @@ def sweep_list_single(eventlabel, bounds_var, meta, log, **kwargs):
     set, it will print an error message and skip that set. This ensures
     robustness in the face of potentially problematic parameter sets.
     """
-    best_fitness = np.inf
-    best_params = None
+    best_fitness_value = np.inf
+    best_param_value = None
 
     # Iterate over each value in the provided bounds
     for val in bounds_var:
         try:
             fitness_value = of.single(val, eventlabel, meta, **kwargs)
-            if fitness_value < best_fitness:
+            if fitness_value < best_fitness_value:
                 # Update best fitness and parameters if current is better
-                best_fitness = fitness_value
-                best_params = val
+                best_fitness_value = fitness_value
+                best_param_value = val
         except Exception as e:
             # Catch any errors during fitness calculation
             log.writelog("Could not calculate fitness score for " +
@@ -110,7 +110,7 @@ def sweep_list_single(eventlabel, bounds_var, meta, log, **kwargs):
             log.writelog(f"Error: {e}")
             continue
 
-    return best_params, best_fitness
+    return best_param_value, best_fitness_value
 
 
 def sweep_list_double(eventlabel, bounds_var, meta, log, **kwargs):
@@ -136,9 +136,9 @@ def sweep_list_double(eventlabel, bounds_var, meta, log, **kwargs):
 
     Returns:
     -------
-    best_params : float
-         The optimal parametervalue found for the objective function.
-    best_fitness : float
+    best_param_value : float
+         The optimal parameter value found for the objective function.
+    best_fitness_value : float
         The best (lowest) fitness score found.
 
     Notes:
@@ -147,8 +147,8 @@ def sweep_list_double(eventlabel, bounds_var, meta, log, **kwargs):
     set, it will print an error message and skip that set. This ensures
     robustness in the face of potentially problematic parameter sets.
     """
-    best_fitness = np.inf
-    best_params = None
+    best_fitness_value = np.inf
+    best_param_value = None
 
     # Iterate over each value in the provided bounds
     for var1 in bounds_var[0]:
@@ -156,10 +156,10 @@ def sweep_list_double(eventlabel, bounds_var, meta, log, **kwargs):
             try:
                 val = np.array([var1, var2])
                 fitness_value = of.double(val, eventlabel, meta, **kwargs)
-                if fitness_value < best_fitness:
+                if fitness_value < best_fitness_value:
                     # Update best fitness and parameters if current is better
-                    best_fitness = fitness_value
-                    best_params = val
+                    best_fitness_value = fitness_value
+                    best_param_value = val
             except Exception as e:
                 # Catch any errors during fitness calculation
                 param_names = meta.opt_param_name.split("__")
@@ -169,7 +169,7 @@ def sweep_list_double(eventlabel, bounds_var, meta, log, **kwargs):
                 log.writelog(f"Error: {e}")
                 continue
 
-    return best_params, best_fitness
+    return best_param_value, best_fitness_value
 
 
 def sweep_list_lt(eventlabel, bounds_var, meta, log, **kwargs):
@@ -194,9 +194,9 @@ def sweep_list_lt(eventlabel, bounds_var, meta, log, **kwargs):
 
     Returns:
     -------
-    best_params : float
-         The optimal parametervalue found for the objective function.
-    best_fitness : float
+    best_param_value : float
+         The optimal parameter value found for the objective function.
+    best_fitness_value : float
         The best (lowest) fitness score found.
 
     Notes:
@@ -205,8 +205,8 @@ def sweep_list_lt(eventlabel, bounds_var, meta, log, **kwargs):
     set, it will print an error message and skip that set. This ensures
     robustness in the face of potentially problematic parameter sets.
     """
-    best_fitness = np.inf
-    best_params = None
+    best_fitness_value = np.inf
+    best_param_value = None
 
     # Iterate over each value in the provided bounds
     for var1 in bounds_var[0]:
@@ -215,11 +215,11 @@ def sweep_list_lt(eventlabel, bounds_var, meta, log, **kwargs):
                 if var1 < var2:
                     val = np.array([var1, var2])
                     fitness_value = of.double(val, eventlabel, meta, **kwargs)
-                    if fitness_value < best_fitness:
+                    if fitness_value < best_fitness_value:
                         # Update best fitness and parameters if current is
                         # better
-                        best_fitness = fitness_value
-                        best_params = val
+                        best_fitness_value = fitness_value
+                        best_param_value = val
             except Exception as e:
                 # Catch any errors during fitness calculation
                 param_names = meta.opt_param_name.split("__")
@@ -229,4 +229,4 @@ def sweep_list_lt(eventlabel, bounds_var, meta, log, **kwargs):
                 log.writelog(f"Error: {e}")
                 continue
 
-    return best_params, best_fitness
+    return best_param_value, best_fitness_value
