@@ -85,10 +85,14 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
     """
     # Load optimizer parameters from ECF
     s3opt_meta = S3optMetaClass(folder=ecf_path, eventlabel=eventlabel)
+
+    # Setup directories and log file
     s3opt_meta.s2_inputdir = os.path.join(s3opt_meta.topdir, s3opt_meta.inputdir)
     s3opt_meta.s3_logname = s3opt_meta.outputdir + f'S3opt_{eventlabel}.log'
     if not os.path.exists(s3opt_meta.outputdir):
         os.mkdir(s3opt_meta.outputdir)
+    if not os.path.exists(os.path.join(s3opt_meta.outputdir, "figs")):
+        os.makedirs(os.path.join(s3opt_meta.outputdir, "figs"))
     log = logedit.Logedit(s3opt_meta.s3_logname)
 
     # Copy ECF to output directory
@@ -97,9 +101,6 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
 
     # Create dictionaries to keep track of optimization metrics
     best = {}
-    # history_MAD_white = {}
-    # history_MAD_spec = {}
-    # history_MAD_chi2red = {}
     history_fitness_score = {}
 
     if initial_run:
@@ -158,20 +159,22 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
                 eventlabel, bounds, meta, log,
                 s3_meta=s3_meta, s4_meta=s4_meta)
 
-        # Save results in "best" dictionary
-        param_names = p.split("__")
-        if (type(best_param_value) is not list) and \
-            (type(best_param_value) is not np.ndarray):
-                best_param_value = [best_param_value]
-        for i, param in enumerate(param_names):
-            best[param] = best_param_value[i]
+        # Check that optimization was successful
+        if best_param_value is not None:
+            # Save results in "best" dictionary
+            param_names = p.split("__")
+            if (type(best_param_value) is not list) and \
+                (type(best_param_value) is not np.ndarray):
+                    best_param_value = [best_param_value]
+            for i, param in enumerate(param_names):
+                best[param] = best_param_value[i]
 
-        # Print results of parametric sweep
-        log.writelog(f"Optimized parameter: {p}")
-        log.writelog(f"Best parameter value(s): {best_param_value}")
-        log.writelog(f"Best fitness value: {best_fitness_value}\n")
+            # Print results of parametric sweep
+            log.writelog(f"Optimized parameter: {p}")
+            log.writelog(f"Best parameter value(s): {best_param_value}")
+            log.writelog(f"Best fitness value: {best_fitness_value}\n")
 
-        history_fitness_score[p] = best_fitness_value
+            history_fitness_score[p] = best_fitness_value
 
     if meta.isplots_S3opt >= 1:
         plots_s3.fitness_scores(s3opt_meta, history_fitness_score)
