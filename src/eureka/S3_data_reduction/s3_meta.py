@@ -98,7 +98,7 @@ class S3MetaClass(MetaClass):
         # Require this parameter to be set
         self.bg_thresh = getattr(self, 'bg_thresh')
         # If bg_thresh is float, convert to list for easier handling later
-        if isinstance(self.bg_thresh, float):
+        if not isinstance(self.bg_thresh, list):
             self.bg_thresh = [self.bg_thresh, self.bg_thresh]
 
         # Diagnostics
