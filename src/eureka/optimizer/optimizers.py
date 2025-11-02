@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import eureka.optimizer.objective_funcs as of
 
 
-def sweep_range_single(eventlabel, bounds_var, meta, log, **kwargs):
+def sweep_range_single(bounds_var, meta, log, **kwargs):
     """
     Optimize single parameter using parametric sweep.  This function returns
     the best parameter and resulting fitness score after sweeping through
@@ -11,8 +11,6 @@ def sweep_range_single(eventlabel, bounds_var, meta, log, **kwargs):
 
     Parameters:
     ----------
-    eventlabel : str
-        The unique identifier for these data.
     bounds_var : tuple (min, max)
         The bounds for the variable being optimized. The function will search
         every integer value within these bounds.
@@ -43,7 +41,7 @@ def sweep_range_single(eventlabel, bounds_var, meta, log, **kwargs):
     # Iterate over each value in the provided bounds
     for val in range(bounds_var[0], bounds_var[1] + 1):
         try:
-            fitness_value = of.single(val, eventlabel, meta, **kwargs)
+            fitness_value = of.single(val, meta, **kwargs)
             if fitness_value < best_fitness_value:
                 # Update best fitness and parameters if current is better
                 best_fitness_value = fitness_value
@@ -58,7 +56,7 @@ def sweep_range_single(eventlabel, bounds_var, meta, log, **kwargs):
     return best_param_value, best_fitness_value
 
 
-def sweep_list_single(eventlabel, bounds_var, meta, log, **kwargs):
+def sweep_list_single(bounds_var, meta, log, **kwargs):
     """
     Optimize single parameter using parametric sweep.  This function returns
     the best parameter and resulting fitness score after sweeping through
@@ -66,8 +64,6 @@ def sweep_list_single(eventlabel, bounds_var, meta, log, **kwargs):
 
     Parameters:
     ----------
-    eventlabel : str
-        The unique identifier for these data.
     bounds_var : range object
         The sequence of numbers to be evaluated for the variable being
         optimized.
@@ -98,7 +94,7 @@ def sweep_list_single(eventlabel, bounds_var, meta, log, **kwargs):
     # Iterate over each value in the provided bounds
     for val in bounds_var:
         try:
-            fitness_value = of.single(val, eventlabel, meta, **kwargs)
+            fitness_value = of.single(val, meta, **kwargs)
             if fitness_value < best_fitness_value:
                 # Update best fitness and parameters if current is better
                 best_fitness_value = fitness_value
@@ -113,7 +109,7 @@ def sweep_list_single(eventlabel, bounds_var, meta, log, **kwargs):
     return best_param_value, best_fitness_value
 
 
-def sweep_list_double(eventlabel, bounds_var, meta, log, **kwargs):
+def sweep_list_double(bounds_var, meta, log, **kwargs):
     """
     Optimize two independent variables using parametric sweep.  This function
     returns the best parameter and resulting fitness score after sweeping
@@ -121,8 +117,6 @@ def sweep_list_double(eventlabel, bounds_var, meta, log, **kwargs):
 
     Parameters:
     ----------
-    eventlabel : str
-        The unique identifier for these data.
     bounds_var : list of range objects
         The sequence of numbers to be evaluated for the variable being
         optimized.
@@ -155,7 +149,7 @@ def sweep_list_double(eventlabel, bounds_var, meta, log, **kwargs):
         for var2 in bounds_var[1]:
             try:
                 val = np.array([var1, var2])
-                fitness_value = of.double(val, eventlabel, meta, **kwargs)
+                fitness_value = of.double(val, meta, **kwargs)
                 if fitness_value < best_fitness_value:
                     # Update best fitness and parameters if current is better
                     best_fitness_value = fitness_value
@@ -172,7 +166,7 @@ def sweep_list_double(eventlabel, bounds_var, meta, log, **kwargs):
     return best_param_value, best_fitness_value
 
 
-def sweep_list_lt(eventlabel, bounds_var, meta, log, **kwargs):
+def sweep_list_lt(bounds_var, meta, log, **kwargs):
     """
     Parametric sweep for two interdependent variables where var1 < var2.
 
@@ -182,8 +176,6 @@ def sweep_list_lt(eventlabel, bounds_var, meta, log, **kwargs):
 
     Parameters:
     ----------
-    eventlabel : str
-        The unique identifier for these data.
     bounds_var : list of range objects
         The sequence of numbers to be evaluated for the variable being
         optimized.
@@ -214,7 +206,7 @@ def sweep_list_lt(eventlabel, bounds_var, meta, log, **kwargs):
             try:
                 if var1 < var2:
                     val = np.array([var1, var2])
-                    fitness_value = of.double(val, eventlabel, meta, **kwargs)
+                    fitness_value = of.double(val, meta, **kwargs)
                     if fitness_value < best_fitness_value:
                         # Update best fitness and parameters if current is
                         # better
