@@ -6,7 +6,7 @@ from copy import deepcopy
 # import astropy.io.fits as pf
 # import importlib, re
 # from datetime import datetime
-# import pickle, shutil, fileinput
+import pickle, shutil, fileinput
 # import warnings
 # warnings.filterwarnings("ignore")
 
@@ -137,26 +137,26 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
         # Update Meta parameters with best values from previous iterations
         for key, value in best.items():
             if key in s3_meta.__dict__.keys():
-                s3_meta.__dict__[key] = value
+                s3_meta.params[key] = value
             if key in s4_meta.__dict__.keys():
-                s4_meta.__dict__[key] = value
+                s4_meta.params[key] = value
 
         # Perform parametric sweep
         if p == "spec_hw__bg_hw":
             # Optimize both spec_hw and bg_hw simultaneously
             # Require that spec_hw < bg_hw
             best_param_value, best_fitness_value = optimizers.sweep_list_lt(
-                eventlabel, bounds, meta, log,
+                bounds, meta, log,
                 s3_meta=s3_meta, s4_meta=s4_meta)
         elif "__" in p:
             # Optimize two independent parameters simultaneously
             best_param_value, best_fitness_value = optimizers.sweep_list_double(
-                eventlabel, bounds, meta, log,
+                bounds, meta, log,
                 s3_meta=s3_meta, s4_meta=s4_meta)
         else:
             # Optimize single parameter
             best_param_value, best_fitness_value = optimizers.sweep_list_single(
-                eventlabel, bounds, meta, log,
+                bounds, meta, log,
                 s3_meta=s3_meta, s4_meta=s4_meta)
 
         # Check that optimization was successful
@@ -178,6 +178,26 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
 
     if meta.isplots_S3opt >= 1:
         plots_s3.fitness_scores(s3opt_meta, history_fitness_score)
+
+    # Save the best dictionary to a pickle file
+    with open(os.path.join(s3opt_meta.outputdir, "best_params.pkl"), "wb") as f:
+        pickle.dump(best, f)
+
+    # Define and create optimized ECF file path
+    opt_path = os.path.join(s3opt_meta.outputdir, "opt_ECFs")
+    if not os.path.exists(opt_path):
+        os.mkdir(opt_path)
+
+    # Update S3 and S4 ECF files with optimized parameters
+    for key, value in best.items():
+        if key in s3_meta.__dict__.keys():
+            s3_meta.params[key] = value
+        if key in s4_meta.__dict__.keys():
+            s4_meta.params[key] = value
+
+    # Write optimized ECF files
+    s3_meta.write(opt_path)
+    s4_meta.write(opt_path)
 
     log.closelog()
 

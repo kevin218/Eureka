@@ -6,15 +6,13 @@ import eureka.S4_generate_lightcurves.s4_genLC as s4
 import shutil
 
 
-def single(val, eventlabel, meta, **kwargs):
+def single(val, meta, **kwargs):
     """Single variable objective function.
 
     Parameters
     ----------
     val : float
         The variable value to be evaluated.
-    eventlabel : str
-        The unique identifier for these data.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     **kwargs : dict
@@ -57,15 +55,15 @@ def single(val, eventlabel, meta, **kwargs):
         setattr(s4_meta, meta.opt_param_name, val)
 
     if run_stage[0]:
-        s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta)
+        s1_meta = s1.rampfitJWST(meta.eventlabel, input_meta=s1_meta)
     if run_stage[1]:
-        s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta,
+        s2_meta = s2.calibrateJWST(meta.eventlabel, input_meta=s2_meta,
                                    s1_meta=s1_meta)
     if run_stage[2]:
-        s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta,
+        s3_spec, s3_meta = s3.reduce(meta.eventlabel, input_meta=s3_meta,
                                      s2_meta=s2_meta)
     if run_stage[3]:
-        s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+        s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, input_meta=s4_meta,
                                            s3_meta=s3_meta)
 
     if meta.delete_intermediate:
@@ -85,7 +83,7 @@ def single(val, eventlabel, meta, **kwargs):
     return fitness_value
 
 
-def double(val, eventlabel, meta, **kwargs):
+def double(val, meta, **kwargs):
     """Double variable objective function. Also works for more than two
     variables.
 
@@ -93,8 +91,6 @@ def double(val, eventlabel, meta, **kwargs):
     ----------
     val : float
         The variable value to be evaluated.
-    eventlabel : str
-        The unique identifier for these data.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     **kwargs : dict
@@ -142,15 +138,15 @@ def double(val, eventlabel, meta, **kwargs):
             setattr(s4_meta, p, v)
 
     if run_stage[0]:
-        s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta)
+        s1_meta = s1.rampfitJWST(meta.eventlabel, input_meta=s1_meta)
     if run_stage[1]:
-        s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta,
+        s2_meta = s2.calibrateJWST(meta.eventlabel, input_meta=s2_meta,
                                    s1_meta=s1_meta)
     if run_stage[2]:
-        s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta,
+        s3_spec, s3_meta = s3.reduce(meta.eventlabel, input_meta=s3_meta,
                                      s2_meta=s2_meta)
     if run_stage[3]:
-        s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+        s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, input_meta=s4_meta,
                                            s3_meta=s3_meta)
 
     if meta.delete_intermediate:

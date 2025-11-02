@@ -84,7 +84,7 @@ class S3optMetaClass(MetaClass):
         defaults = {
             # Stage 3
             "bounds_dqmask": [True, False],  # not a range
-            "bounds_bg_thresh": range(3, 5.5, 0.5),  # 3 → 5, step 0.5
+            "bounds_bg_thresh": np.arange(3, 5.5, 0.5),  # 3 → 5, step 0.5
             "bounds_bg_method": ["std", "mean", "median"],
             "bounds_bg_deg": range(0, 2),  # 0 → 1
             "bounds_p3thresh": range(3, 8),  # 3 → 7
