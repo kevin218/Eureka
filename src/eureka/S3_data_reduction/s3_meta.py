@@ -2,6 +2,7 @@ import numpy as np
 from jwst.datamodels import JwstDataModel
 
 from ..lib.readECF import MetaClass
+from ..lib import util
 
 
 class S3MetaClass(MetaClass):
@@ -37,6 +38,34 @@ class S3MetaClass(MetaClass):
 
         # Set a default data file suffix
         self.suffix = getattr(self, 'suffix', 'calints')
+
+        # Set optimization flag
+        self.isopt_S1 = getattr(self, 'isopt_S1', False)
+        self.isopt_S3 = getattr(self, 'isopt_S3', False)
+
+        # Create list of file segments
+        self = util.readfiles(self)
+
+        # First apply any instrument-specific defaults
+        if self.photometry:
+            if self.inst == 'miri':
+                self.set_MIRI_Photometry_defaults()
+            elif self.inst == 'nircam':
+                self.set_NIRCam_Photometry_defaults()
+        else:
+            if self.inst == 'miri':
+                self.set_MIRI_defaults()
+            elif self.inst == 'nircam':
+                self.set_NIRCam_defaults()
+            elif self.inst == 'nirspec':
+                self.set_NIRSpec_defaults()
+            elif self.inst == 'niriss':
+                self.set_NIRISS_defaults()
+            elif self.inst == 'wfc3':
+                self.set_WFC3_defaults()
+        # Then apply instrument-agnostic defaults
+        self.set_defaults()
+
 
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.
@@ -123,6 +152,7 @@ class S3MetaClass(MetaClass):
         # Directories relative to topdir
         self.inputdir = getattr(self, 'inputdir', 'Stage2')
         self.outputdir = getattr(self, 'outputdir', 'Stage3')
+
 
     def set_spectral_defaults(self):
         '''Set Stage 3 specific defaults for generic spectroscopic data.
@@ -277,6 +307,15 @@ class S3MetaClass(MetaClass):
         # When calibrated_spectra is True, flux values above the cutoff
         # will be set to zero.
         self.cutoff = getattr(self, 'cutoff', 1e-4)
+
+        self.ywindow = getattr(self, 'ywindow', [2, 28])
+        # Set default xwindow based on detector and grating
+        if self.detector == 'nrs1' and self.grating == 'prism':
+            self.xwindow = getattr(self, 'xwindow', [60, 480])    # PRISM
+        elif self.detector == 'nrs1' and self.grating == 'g395h':
+            self.xwindow = getattr(self, 'xwindow', [500, 2042])  # G395H/NRS1
+        elif self.detector == 'nrs2' and self.grating == 'g395h':
+            self.xwindow = getattr(self, 'xwindow', [5, 2028])    # G395H/NRS2
 
         self.set_spectral_defaults()
 
