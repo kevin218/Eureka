@@ -1,6 +1,4 @@
 import numpy as np
-from jwst.datamodels import JwstDataModel
-
 from ..lib.readECF import MetaClass
 from ..lib import util
 
@@ -66,7 +64,6 @@ class S3optMetaClass(MetaClass):
         # Then apply instrument-agnostic defaults
         self.set_defaults()
 
-
     def set_defaults(self):
         '''
         Set Optimizer specific defaults for generic instruments.
@@ -78,7 +75,6 @@ class S3optMetaClass(MetaClass):
 
         for key, default in defaults.items():
             setattr(self, key, getattr(self, key, default))
-
 
     def set_spectral_defaults(self):
         '''
@@ -105,13 +101,11 @@ class S3optMetaClass(MetaClass):
         for key, default in defaults.items():
             setattr(self, key, getattr(self, key, default))
 
-
     def set_photometric_defaults(self):
         '''
         Set Optimizer specific defaults for generic photometric data.
         '''
         return
-
 
     def set_MIRI_defaults(self):
         '''
@@ -130,7 +124,6 @@ class S3optMetaClass(MetaClass):
 
         self.set_spectral_defaults()
 
-
     def set_NIRCam_defaults(self):
         '''
         Set Optimizer specific defaults for NIRCam.
@@ -147,7 +140,6 @@ class S3optMetaClass(MetaClass):
                                               self.bounds_spec_hw])
 
         self.set_spectral_defaults()
-
 
     def set_NIRSpec_defaults(self):
         '''
@@ -166,7 +158,6 @@ class S3optMetaClass(MetaClass):
 
         self.set_spectral_defaults()
 
-
     def set_NIRISS_defaults(self):
         '''
         Set Optimizer specific defaults for NIRISS.
@@ -181,20 +172,17 @@ class S3optMetaClass(MetaClass):
 
         self.set_spectral_defaults()
 
-
     def set_WFC3_defaults(self):
         '''
         Set Optimizer specific defaults for WFC3.
         '''
         self.set_spectral_defaults()
 
-
     def set_NIRCam_Photometry_defaults(self):
         '''
         Set Optimizer specific defaults for NIRCam Photometry.
         '''
         self.set_photometric_defaults()
-
 
     def set_MIRI_Photometry_defaults(self):
         '''
