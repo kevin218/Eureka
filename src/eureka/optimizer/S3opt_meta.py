@@ -39,6 +39,10 @@ class S3optMetaClass(MetaClass):
         # Set a default data file suffix
         self.suffix = getattr(self, 'suffix', 'calints')
 
+        # Set optimization flag
+        self.isopt_S1 = getattr(self, 'isopt_S1', False)
+        self.isopt_S3 = getattr(self, 'isopt_S3', True)
+
         # Create list of file segments
         self = util.readfiles(self)
 
