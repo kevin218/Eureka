@@ -66,7 +66,6 @@ class S3MetaClass(MetaClass):
         # Then apply instrument-agnostic defaults
         self.set_defaults()
 
-
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.
         '''
@@ -152,7 +151,6 @@ class S3MetaClass(MetaClass):
         # Directories relative to topdir
         self.inputdir = getattr(self, 'inputdir', 'Stage2')
         self.outputdir = getattr(self, 'outputdir', 'Stage3')
-
 
     def set_spectral_defaults(self):
         '''Set Stage 3 specific defaults for generic spectroscopic data.

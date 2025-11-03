@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import eureka.optimizer.objective_funcs as of
 
 
