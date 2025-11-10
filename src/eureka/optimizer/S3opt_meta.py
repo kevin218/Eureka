@@ -34,6 +34,10 @@ class S3optMetaClass(MetaClass):
 
         super().__init__(folder, file, eventlabel, stage='3opt', **kwargs)
 
+        # Set default optimizer and target fitness score
+        self.optimizer = getattr(self, 'optimizer', 'parametric')
+        self.target_fitness = getattr(self, 'target_fitness', 0.0)
+
         # Set a default data file suffix
         self.suffix = getattr(self, 'suffix', 'calints')
 
@@ -145,6 +149,10 @@ class S3optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for NIRSpec.
         '''
+        # Fitness scaling factors
+        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 0.01)
+        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
+
         defaults = {
             "bounds_bg_hw": range(5, 16),
             "bounds_spec_hw": range(1, 10),
@@ -162,6 +170,10 @@ class S3optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for NIRISS.
         '''
+        # Fitness scaling factors
+        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 1.0)
+        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 0.1)
+
         defaults = {
             "bounds_bg_hw": range(15, 20),
             "bounds_spec_hw": range(17, 25),
@@ -188,5 +200,8 @@ class S3optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for MIRI Photometry.
         '''
+        # Fitness scaling factors
+        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 0.04)
+        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
 
         self.set_photometric_defaults()
