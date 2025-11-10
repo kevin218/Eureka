@@ -1,5 +1,3 @@
-import numpy as np
-# from .S3opt_meta import S3optMetaClass
 from ..lib.readECF import MetaClass
 from ..lib import util
 
@@ -35,8 +33,12 @@ class S1optMetaClass(MetaClass):
 
         super().__init__(folder, file, eventlabel, stage='1opt', **kwargs)
 
+        # Set default optimizer and target fitness score
+        self.optimizer = getattr(self, 'optimizer', 'parametric')
+        self.target_fitness = getattr(self, 'target_fitness', 0.0)
+
         # Set a default data file suffix
-        self.suffix = getattr(self, 'suffix', 'calints')
+        self.suffix = getattr(self, 'suffix', 'uncal')
 
         # Set optimization flag
         self.isopt_S1 = getattr(self, 'isopt_S1', True)
@@ -100,6 +102,10 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for NIRSpec.
         '''
+        # Fitness scaling factors
+        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 0.01)
+        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
+
         defaults = {
             "bounds_bg_hw": range(5, 16),
         }
