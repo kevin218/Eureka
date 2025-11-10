@@ -43,28 +43,28 @@ class S3MetaClass(MetaClass):
         self.isopt_S1 = getattr(self, 'isopt_S1', False)
         self.isopt_S3 = getattr(self, 'isopt_S3', False)
 
-        # Create list of file segments
-        self = util.readfiles(self)
+        # # Create list of file segments
+        # self = util.readfiles(self)
 
-        # First apply any instrument-specific defaults
-        if self.photometry:
-            if self.inst == 'miri':
-                self.set_MIRI_Photometry_defaults()
-            elif self.inst == 'nircam':
-                self.set_NIRCam_Photometry_defaults()
-        else:
-            if self.inst == 'miri':
-                self.set_MIRI_defaults()
-            elif self.inst == 'nircam':
-                self.set_NIRCam_defaults()
-            elif self.inst == 'nirspec':
-                self.set_NIRSpec_defaults()
-            elif self.inst == 'niriss':
-                self.set_NIRISS_defaults()
-            elif self.inst == 'wfc3':
-                self.set_WFC3_defaults()
-        # Then apply instrument-agnostic defaults
-        self.set_defaults()
+        # # First apply any instrument-specific defaults
+        # if self.photometry:
+        #     if self.inst == 'miri':
+        #         self.set_MIRI_Photometry_defaults()
+        #     elif self.inst == 'nircam':
+        #         self.set_NIRCam_Photometry_defaults()
+        # else:
+        #     if self.inst == 'miri':
+        #         self.set_MIRI_defaults()
+        #     elif self.inst == 'nircam':
+        #         self.set_NIRCam_defaults()
+        #     elif self.inst == 'nirspec':
+        #         self.set_NIRSpec_defaults()
+        #     elif self.inst == 'niriss':
+        #         self.set_NIRISS_defaults()
+        #     elif self.inst == 'wfc3':
+        #         self.set_WFC3_defaults()
+        # # Then apply instrument-agnostic defaults
+        # self.set_defaults()
 
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.
@@ -288,6 +288,8 @@ class S3MetaClass(MetaClass):
         self.isrotate = 2
         self.bg_dir = 'CxC'
         self.bg_row_by_row = False
+        self.ywindow = getattr(self, 'ywindow', [10, 72])
+        self.xwindow = getattr(self, 'xwindow', [70, 393])
 
     def set_NIRCam_defaults(self):
         '''Set Stage 3 specific defaults for NIRCam.
@@ -305,14 +307,13 @@ class S3MetaClass(MetaClass):
         # When calibrated_spectra is True, flux values above the cutoff
         # will be set to zero.
         self.cutoff = getattr(self, 'cutoff', 1e-4)
-
-        self.ywindow = getattr(self, 'ywindow', [2, 28])
+        self.ywindow = getattr(self, 'ywindow', [0, 32])
         # Set default xwindow based on detector and grating
-        if self.detector == 'nrs1' and self.grating == 'prism':
+        if self.inst_detector == 'nrs1' and self.inst_grating == 'prism':
             self.xwindow = getattr(self, 'xwindow', [60, 480])    # PRISM
-        elif self.detector == 'nrs1' and self.grating == 'g395h':
+        elif self.inst_detector == 'nrs1' and self.inst_grating == 'g395h':
             self.xwindow = getattr(self, 'xwindow', [500, 2042])  # G395H/NRS1
-        elif self.detector == 'nrs2' and self.grating == 'g395h':
+        elif self.inst_detector == 'nrs2' and self.inst_grating == 'g395h':
             self.xwindow = getattr(self, 'xwindow', [5, 2028])    # G395H/NRS2
 
         self.set_spectral_defaults()
@@ -326,6 +327,8 @@ class S3MetaClass(MetaClass):
         self.all_orders = getattr(self, 'all_orders', [1, 2])
         self.record_ypos = getattr(self, 'record_ypos', False)
         self.trace_offset = getattr(self, 'trace_offset', None)
+        self.xwindow = getattr(self, 'xwindow', [6, 2043])
+        self.ywindow = getattr(self, 'ywindow', [0, -1])
 
         self.set_spectral_defaults()
 
