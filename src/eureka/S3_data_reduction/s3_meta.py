@@ -1,7 +1,6 @@
 import numpy as np
 from jwst.datamodels import JwstDataModel
 
-from ..lib import util
 from ..lib.readECF import MetaClass
 
 
