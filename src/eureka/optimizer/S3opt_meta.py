@@ -84,6 +84,13 @@ class S3optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for generic spectroscopic data.
         '''
+        full_list = ['spec_hw__bg_hw ', 'dqmask', 'bg_thresh', 'bg_method',
+                     'bg_deg', 'p3thresh', 'median_thresh', 'window_len',
+                     'p7thresh', 'mad_sigma', 'mad_box_width', 'sigma',
+                     'box_width']
+        self.params_to_optimize = getattr(self, 'params_to_optimize',
+                                          full_list)
+
         # Spectral extraction parameters
         defaults = {
             # Stage 3
