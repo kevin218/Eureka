@@ -1520,7 +1520,7 @@ def fitness_scores(meta, history_fitness_score):
     """
     # Extract values from the history fitness score dictionary
     best_fitness_values = [history_fitness_score[key]
-        for key in history_fitness_score.keys()]
+                           for key in history_fitness_score.keys()]
     params_to_optimize = history_fitness_score.keys()
 
     fig = plt.figure(3110, figsize=(8, 6))

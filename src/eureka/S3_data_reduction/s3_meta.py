@@ -2,7 +2,6 @@ import numpy as np
 from jwst.datamodels import JwstDataModel
 
 from ..lib.readECF import MetaClass
-from ..lib import util
 
 
 class S3MetaClass(MetaClass):
