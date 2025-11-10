@@ -134,7 +134,7 @@ class MetaClass:
             stage = 0
 
         if (item == 'inst' and value == 'wfc3' and stage != '4cal'
-                and stage != '3opt' and stage < 4):
+                and stage != '1opt' and stage != '3opt' and stage < 4):
             # Fix issues with CRDS server set for JWST
             if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for JWST and not HST.'
@@ -151,7 +151,7 @@ class MetaClass:
                                 crds.get_context_name('hst')[4:-5])
             os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
         elif (item == 'inst' and value is not None and stage != '4cal'
-              and stage != '3opt' and stage < 4):
+              and stage != '1opt' and stage != '3opt' and stage < 4):
             # Fix issues with CRDS server set for HST
             if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for HST and not JWST.'
