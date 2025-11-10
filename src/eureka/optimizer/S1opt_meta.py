@@ -83,6 +83,10 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for generic spectroscopic data.
         '''
+        full_list = ['jump_rejection_threshold', 'expand_mask', 'bg_deg',
+                     'bg_method', 'p3thresh', 'window_len']
+        self.params_to_optimize = getattr(self, 'params_to_optimize',
+                                          full_list)
         # Spectral extraction parameters
         defaults = {
             # Stage 1
