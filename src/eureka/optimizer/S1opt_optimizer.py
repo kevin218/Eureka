@@ -1,11 +1,8 @@
 
-import os, sys
+import os
 import numpy as np
-import matplotlib.pyplot as plt
 from copy import deepcopy
-import pickle, shutil, fileinput
-# import warnings
-# warnings.filterwarnings("ignore")
+import pickle
 
 import eureka.S1_detector_processing.s1_process as s1
 import eureka.S2_calibrations.s2_calibrate as s2

@@ -1,9 +1,8 @@
 
-import os, sys
+import os
 import numpy as np
-import matplotlib.pyplot as plt
 from copy import deepcopy
-import pickle, shutil, fileinput
+import pickle
 
 import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4
