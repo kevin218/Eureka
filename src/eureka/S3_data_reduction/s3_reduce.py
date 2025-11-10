@@ -92,6 +92,29 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     else:
         meta = S3MetaClass(**me.mergeevents(meta, s2_meta).__dict__)
 
+    # Create list of file segments
+    meta = util.readfiles(meta)
+
+    # First apply any instrument-specific defaults
+    if meta.photometry:
+        if meta.inst == 'miri':
+            meta.set_MIRI_Photometry_defaults()
+        elif meta.inst == 'nircam':
+            meta.set_NIRCam_Photometry_defaults()
+    else:
+        if meta.inst == 'miri':
+            meta.set_MIRI_defaults()
+        elif meta.inst == 'nircam':
+            meta.set_NIRCam_defaults()
+        elif meta.inst == 'nirspec':
+            meta.set_NIRSpec_defaults()
+        elif meta.inst == 'niriss':
+            meta.set_NIRISS_defaults()
+        elif meta.inst == 'wfc3':
+            meta.set_WFC3_defaults()
+    # Then apply instrument-agnostic defaults
+    meta.set_defaults()
+
     # Setup range of spectral apertures
     meta.setup_aperture_radii()
 

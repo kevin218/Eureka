@@ -142,7 +142,7 @@ def get_inst(meta, file):
                                          hdulist[0].header['DETECTOR'].lower())
             meta.inst_filter = getattr(meta, 'inst_filter',
                                        hdulist[0].header['FILTER'].lower())
-            if meta.inst_dector == 'nirspec':
+            if meta.inst == 'nirspec':
                 meta.inst_grating = getattr(meta, 'inst_grating',
                     hdulist[0].header['GRATING'].lower())
             # Also figure out which pipeline we need to use
