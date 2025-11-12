@@ -25,23 +25,23 @@ def single(val, meta, **kwargs):
         given variable value. Lower values are preferred, suggesting a better
         configuration.
     """
-    run_stage = [False, False, False, False]
+    run_stage = [False, False, False, False, False]
     s1_meta = None
     s2_meta = None
     s3_meta = None
     s4_meta = None
-    if 's1_meta' in kwargs:
+    if 's1_meta' in kwargs and kwargs['s1_meta'] is not None:
         s1_meta = kwargs['s1_meta']
-        run_stage[0] = True
-    if 's2_meta' in kwargs:
-        s2_meta = kwargs['s2_meta']
         run_stage[1] = True
-    if 's3_meta' in kwargs:
-        s3_meta = kwargs['s3_meta']
+    if 's2_meta' in kwargs and kwargs['s2_meta'] is not None:
+        s2_meta = kwargs['s2_meta']
         run_stage[2] = True
-    if 's4_meta' in kwargs:
-        s4_meta = kwargs['s4_meta']
+    if 's3_meta' in kwargs and kwargs['s3_meta'] is not None:
+        s3_meta = kwargs['s3_meta']
         run_stage[3] = True
+    if 's4_meta' in kwargs and kwargs['s4_meta'] is not None:
+        s4_meta = kwargs['s4_meta']
+        run_stage[4] = True
 
     # Set value of the variable to be optimized
     if hasattr(s1_meta, meta.opt_param_name):
@@ -53,26 +53,26 @@ def single(val, meta, **kwargs):
     if hasattr(s4_meta, meta.opt_param_name):
         setattr(s4_meta, meta.opt_param_name, val)
 
-    if run_stage[0]:
-        s1_meta = s1.rampfitJWST(meta.eventlabel, input_meta=s1_meta)
     if run_stage[1]:
+        s1_meta = s1.rampfitJWST(meta.eventlabel, input_meta=s1_meta)
+    if run_stage[2]:
         s2_meta = s2.calibrateJWST(meta.eventlabel, input_meta=s2_meta,
                                    s1_meta=s1_meta)
-    if run_stage[2]:
+    if run_stage[3]:
         s3_spec, s3_meta = s3.reduce(meta.eventlabel, input_meta=s3_meta,
                                      s2_meta=s2_meta)
-    if run_stage[3]:
+    if run_stage[4]:
         s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, input_meta=s4_meta,
                                            s3_meta=s3_meta)
 
     if meta.delete_intermediate:
-        if run_stage[0]:
-            shutil.rmtree(s1_meta.outputdir)
         if run_stage[1]:
-            shutil.rmtree(s2_meta.outputdir)
+            shutil.rmtree(s1_meta.outputdir)
         if run_stage[2]:
-            shutil.rmtree(s3_meta.outputdir)
+            shutil.rmtree(s2_meta.outputdir)
         if run_stage[3]:
+            shutil.rmtree(s3_meta.outputdir)
+        if run_stage[4]:
             shutil.rmtree(s4_meta.outputdir)
 
     fitness_value = (
@@ -103,23 +103,23 @@ def double(val, meta, **kwargs):
         given variable value. Lower values are preferred, suggesting a better
         configuration.
     """
-    run_stage = [False, False, False, False]
+    run_stage = [False, False, False, False, False]
     s1_meta = None
     s2_meta = None
     s3_meta = None
     s4_meta = None
-    if 's1_meta' in kwargs:
+    if 's1_meta' in kwargs and kwargs['s1_meta'] is not None:
         s1_meta = kwargs['s1_meta']
-        run_stage[0] = True
-    if 's2_meta' in kwargs:
-        s2_meta = kwargs['s2_meta']
         run_stage[1] = True
-    if 's3_meta' in kwargs:
-        s3_meta = kwargs['s3_meta']
+    if 's2_meta' in kwargs and kwargs['s2_meta'] is not None:
+        s2_meta = kwargs['s2_meta']
         run_stage[2] = True
-    if 's4_meta' in kwargs:
-        s4_meta = kwargs['s4_meta']
+    if 's3_meta' in kwargs and kwargs['s3_meta'] is not None:
+        s3_meta = kwargs['s3_meta']
         run_stage[3] = True
+    if 's4_meta' in kwargs and kwargs['s4_meta'] is not None:
+        s4_meta = kwargs['s4_meta']
+        run_stage[4] = True
 
     # Set values of the two (or more) variables to be optimized
     param_names = meta.opt_param_name.split('__')
@@ -136,26 +136,26 @@ def double(val, meta, **kwargs):
         if hasattr(s4_meta, p):
             setattr(s4_meta, p, v)
 
-    if run_stage[0]:
-        s1_meta = s1.rampfitJWST(meta.eventlabel, input_meta=s1_meta)
     if run_stage[1]:
+        s1_meta = s1.rampfitJWST(meta.eventlabel, input_meta=s1_meta)
+    if run_stage[2]:
         s2_meta = s2.calibrateJWST(meta.eventlabel, input_meta=s2_meta,
                                    s1_meta=s1_meta)
-    if run_stage[2]:
+    if run_stage[3]:
         s3_spec, s3_meta = s3.reduce(meta.eventlabel, input_meta=s3_meta,
                                      s2_meta=s2_meta)
-    if run_stage[3]:
+    if run_stage[4]:
         s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, input_meta=s4_meta,
                                            s3_meta=s3_meta)
 
     if meta.delete_intermediate:
-        if run_stage[0]:
-            shutil.rmtree(s1_meta.outputdir)
         if run_stage[1]:
-            shutil.rmtree(s2_meta.outputdir)
+            shutil.rmtree(s1_meta.outputdir)
         if run_stage[2]:
-            shutil.rmtree(s3_meta.outputdir)
+            shutil.rmtree(s2_meta.outputdir)
         if run_stage[3]:
+            shutil.rmtree(s3_meta.outputdir)
+        if run_stage[4]:
             shutil.rmtree(s4_meta.outputdir)
 
     fitness_value = (

@@ -73,7 +73,7 @@ class S1optMetaClass(MetaClass):
         '''
         defaults = {
             "inputdir": 'Stage0',
-            "outputdir": 'Optimizer',
+            "outputdir": 'Stage1opt',
         }
 
         for key, default in defaults.items():

@@ -33,6 +33,6 @@ if __name__ == "__main__":
                                                  initial_run=True)
 
     # Stages 3 and 4 optimization
-    meta, history_fitness_score = s3opt.optimize(eventlabel,
-                                                 ecf_path=ecf_path,
-                                                 initial_run=True)
+    meta, history_fitness_score = s3opt.wrapper(eventlabel,
+                                                ecf_path=ecf_path,
+                                                initial_run=True)
