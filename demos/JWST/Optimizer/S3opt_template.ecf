@@ -9,11 +9,13 @@ scaling_MAD_white   1.0             # Optimizer scaling for WLC MAD value
 
 # List of single parameter options to optimize in Stage 3:
 #   dqmask, bg_thresh, bg_hw, bg_deg, bg_method, p3thresh, spec_hw, median_thresh, window_len, p7thresh
-# List of single parameter options to optimize in Stage 4:
-#   mad_sigma, mad_box_width, sigma, box_width
 # Double parameter options: any combination of the above, joined by two underscores (e.g., bg_hw__p3thresh)
 # Special cases: spec_hw__bg_hw (requires spec_hw < bg_hw)
-params_to_optimize  ['spec_hw__bg_hw ', 'dqmask', 'bg_thresh', 'bg_method', 'bg_deg', 'p3thresh', 'median_thresh', 'window_len', 'p7thresh', 'mad_sigma', 'mad_box_width', 'sigma', 'box_width']
+params_to_optimize_s3   ['spec_hw__bg_hw', 'dqmask', 'bg_thresh', 'bg_method', 'bg_deg', 'p3thresh', 'median_thresh', 'window_len', 'p7thresh']
+
+# List of single parameter options to optimize in Stage 4:
+#   mad_sigma, mad_box_width, sigma, box_width
+params_to_optimize_s4   ['mad_sigma', 'mad_box_width', 'sigma', 'box_width']
 
 # Range for parameter values to optimize
 # Only specify if overriding the default ranges in S3opt_meta.py

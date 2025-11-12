@@ -1,6 +1,7 @@
 import numpy as np
 from ..lib.readECF import MetaClass
 from ..lib import util
+from ..lib import manageevent as me
 
 
 class S3optMetaClass(MetaClass):
@@ -45,6 +46,11 @@ class S3optMetaClass(MetaClass):
         self.isopt_S1 = getattr(self, 'isopt_S1', False)
         self.isopt_S3 = getattr(self, 'isopt_S3', True)
 
+        # Locate the old MetaClass savefile, and load new ECF into
+        # that old MetaClass
+        _, self.inputdir, self.inputdir_raw = \
+            me.findevent(self, 'S2', allowFail=True)
+
         # Create list of file segments
         self = util.readfiles(self)
 
@@ -74,7 +80,7 @@ class S3optMetaClass(MetaClass):
         '''
         defaults = {
             "inputdir": 'Stage2',
-            "outputdir": 'Optimizer',
+            "outputdir": 'Stage3opt',
         }
 
         for key, default in defaults.items():
@@ -84,12 +90,14 @@ class S3optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for generic spectroscopic data.
         '''
-        full_list = ['spec_hw__bg_hw ', 'dqmask', 'bg_thresh', 'bg_method',
-                     'bg_deg', 'p3thresh', 'median_thresh', 'window_len',
-                     'p7thresh', 'mad_sigma', 'mad_box_width', 'sigma',
-                     'box_width']
-        self.params_to_optimize = getattr(self, 'params_to_optimize',
-                                          full_list)
+        full_list_s3 = ['spec_hw__bg_hw ', 'dqmask', 'bg_thresh', 'bg_method',
+                        'bg_deg', 'p3thresh', 'median_thresh', 'window_len',
+                        'p7thresh']
+        self.params_to_optimize_s3 = getattr(self, 'params_to_optimize_s3',
+                                             full_list_s3)
+        full_list_s4 = ['mad_sigma', 'mad_box_width', 'sigma', 'box_width']
+        self.params_to_optimize_s4 = getattr(self, 'params_to_optimize_s4',
+                                             full_list_s4)
 
         # Spectral extraction parameters
         defaults = {

@@ -14,46 +14,7 @@ from . import optimizers
 from ..lib import logedit
 
 
-def initialize_meta(meta, eventlabel, ecf_path=None):
-    """Initialize MetaClass objects for the optimization run.
-
-    Parameters
-    ----------
-    meta : eureka.lib.readECF.MetaClass
-        An S3opt metadata object
-    eventlabel : str
-        The unique identifier for these data.
-    ecf_path : str; optional
-        The absolute or relative path to where ecfs are stored. Defaults to
-        None which resolves to './'.
-
-    Returns
-    -------
-    s3_meta : eureka.lib.readECF.MetaClass
-        The Stage 3 metadata object.
-    s4_meta : eureka.lib.readECF.MetaClass
-        The Stage 4 metadata object.
-    """
-    # Setup Meta objects
-    s3_meta = S3MetaClass(folder=ecf_path, eventlabel=eventlabel)
-    s4_meta = S4MetaClass(folder=ecf_path, eventlabel=eventlabel)
-
-    # Overwrite certain Meta values
-    s3_meta.inputdir = meta.s2_inputdir
-    s3_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage3')
-    s4_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage4')
-    s3_meta.isplots_S3 = meta.isplots_S3opt
-    s4_meta.isplots_S4 = meta.isplots_S3opt
-    s3_meta.verbose = meta.verbose
-    s4_meta.verbose = meta.verbose
-    s3_meta.record_ypos = False
-    s4_meta.nspecchan = 1
-    s4_meta.compute_ld = False
-
-    return s3_meta, s4_meta
-
-
-def optimize(eventlabel, ecf_path=None, initial_run=False):
+def wrapper(eventlabel, ecf_path=None, initial_run=False):
     """
     Eureka! optimization wrapper for Stages 3 and 4.
 
@@ -70,8 +31,12 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
 
     Returns
     -------
-    history_fitness_score : dict
+    s3opt_meta : eureka.lib.readECF.MetaClass
+        An S3opt metadata object
+    history : dict
         The fitness score after optimizing each parameter.
+    best : dict
+        The best parameter values found during the optimization.
     """
     # Load optimizer parameters from ECF
     s3opt_meta = S3optMetaClass(folder=ecf_path, eventlabel=eventlabel)
@@ -91,81 +56,44 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
 
     # Create dictionaries to keep track of optimization metrics
     best = {}
-    history_fitness_score = {}
+    history = {}
 
     if initial_run:
         # Setup Meta objects
         meta = deepcopy(s3opt_meta)
-        s3_meta, s4_meta = initialize_meta(meta, eventlabel, ecf_path=None)
+        s3_meta, s4_meta = initialize_meta(meta, eventlabel, ecf_path=ecf_path)
 
         s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
         s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
                                            s3_meta=s3_meta)
 
         # Record initial fitness score
-        history_fitness_score["initial_run"] = (
+        history["initial_run"] = (
             meta.scaling_MAD_spec * s4_meta.mad_s4 +
             meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
         log.writelog("Initial fitness value: " +
-                     f"{history_fitness_score["initial_run"]}\n")
+                     f"{history["initial_run"]}\n")
 
-    for p in s3opt_meta.params_to_optimize:
-        # Setup Meta objects
-        meta = deepcopy(s3opt_meta)
-        meta.opt_param_name = p
-        s3_meta, s4_meta = initialize_meta(meta, eventlabel, ecf_path=None)
+    # Run optimization loop for Stage 3 parameters
+    for p in s3opt_meta.params_to_optimize_s3:
+        s3opt_meta, log, history, best = optimize(s3opt_meta, log, history,
+                                                  best, p, eventlabel,
+                                                  ecf_path, 3)
 
-        # Extract bounds for parameter(s) to optimize
-        if "bounds_" + p in meta.__dict__.keys():
-            bounds = meta.__dict__["bounds_" + p]
+    # Run optimization loop for Stage 4 parameters
+    for i, p in enumerate(s3opt_meta.params_to_optimize_s4):
+        if i == 0:
+            # Need to rerun Stage 3 first time around
+            stage = 3
         else:
-            log.writelog(f"Parameter {p} not recognized. Skipping...")
-            continue
-
-        # Update Meta parameters with best values from previous iterations
-        for key, value in best.items():
-            if key in s3_meta.__dict__.keys():
-                s3_meta.params[key] = value
-            if key in s4_meta.__dict__.keys():
-                s4_meta.params[key] = value
-
-        # Perform parametric sweep
-        if p == "spec_hw__bg_hw":
-            # Optimize both spec_hw and bg_hw simultaneously
-            # Require that spec_hw < bg_hw
-            best_param_value, best_fitness_value = optimizers.sweep_list_lt(
-                bounds, meta, log,
-                s3_meta=s3_meta, s4_meta=s4_meta)
-        elif "__" in p:
-            # Optimize two independent parameters simultaneously
-            best_param_value, best_fitness_value = optimizers.sweep_list_double(
-                bounds, meta, log,
-                s3_meta=s3_meta, s4_meta=s4_meta)
-        else:
-            # Optimize single parameter
-            best_param_value, best_fitness_value = optimizers.sweep_list_single(
-                bounds, meta, log,
-                s3_meta=s3_meta, s4_meta=s4_meta)
-
-        # Check that optimization was successful
-        if best_param_value is not None:
-            # Save results in "best" dictionary
-            param_names = p.split("__")
-            if (type(best_param_value) is not list) and \
-                (type(best_param_value) is not np.ndarray):
-                    best_param_value = [best_param_value]
-            for i, param in enumerate(param_names):
-                best[param] = best_param_value[i]
-
-            # Print results of parametric sweep
-            log.writelog(f"Optimized parameter: {p}")
-            log.writelog(f"Best parameter value(s): {best_param_value}")
-            log.writelog(f"Best fitness value: {best_fitness_value}\n")
-
-            history_fitness_score[p] = best_fitness_value
+            # Save time by not rerunning Stage 3 again
+            stage = 4
+        s3opt_meta, log, history, best = optimize(s3opt_meta, log, history,
+                                                  best, p, eventlabel,
+                                                  ecf_path, stage)
 
     if meta.isplots_S3opt >= 1:
-        plots_s3.fitness_scores(s3opt_meta, history_fitness_score)
+        plots_s3.fitness_scores(s3opt_meta, history)
 
     # Save the best dictionary to a pickle file
     with open(os.path.join(s3opt_meta.outputdir, "best_params.pkl"), "wb") as f:
@@ -177,6 +105,8 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
         os.mkdir(opt_path)
 
     # Update S3 and S4 ECF files with optimized parameters
+    s3_meta, s4_meta = initialize_meta(meta, eventlabel, ecf_path=ecf_path,
+                                       stage=3)
     for key, value in best.items():
         if key in s3_meta.__dict__.keys():
             s3_meta.params[key] = value
@@ -189,4 +119,143 @@ def optimize(eventlabel, ecf_path=None, initial_run=False):
 
     log.closelog()
 
-    return s3opt_meta, history_fitness_score
+    return s3opt_meta, history, best
+
+
+def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
+    """Optimize a single parameter via parametric sweep.
+
+    Parameters
+    ----------
+    s3opt_meta : eureka.lib.readECF.MetaClass
+        An S3opt metadata object
+    log : eureka.lib.logedit.Logedit
+        The log object for writing to the log file.
+    history : dict
+        The fitness score after optimizing each parameter.
+    best : dict
+        The best parameter values found so far.
+    p : str
+        The parameter to optimize.
+    eventlabel : str
+        The unique identifier for these data.
+    ecf_path : str; optional
+        The absolute or relative path to where ecfs are stored.
+    stage : int
+        The stage number (3 or 4) indicating which stage's parameters to
+        optimize.
+
+    Returns
+    -------
+    s3opt_meta : eureka.lib.readECF.MetaClass
+        An S3opt metadata object
+    log : eureka.lib.logedit.Logedit
+        The log object for writing to the log file.
+    history : dict
+        The fitness score after optimizing each parameter.
+    best : dict
+        The best parameter values found so far.
+    """
+    # Setup Meta objects
+    meta = deepcopy(s3opt_meta)
+    meta.opt_param_name = p
+    s3_meta, s4_meta = initialize_meta(meta, eventlabel, ecf_path=ecf_path,
+                                       stage=stage)
+
+    # Extract bounds for parameter(s) to optimize
+    if "bounds_" + p in meta.__dict__.keys():
+        bounds = meta.__dict__["bounds_" + p]
+    else:
+        log.writelog(f"Parameter {p} not recognized. Skipping...")
+        return s3opt_meta, log, history, best
+
+    # Update Meta parameters with best values from previous iterations
+    for key, value in best.items():
+        if s3_meta is not None and key in s3_meta.__dict__.keys():
+            s3_meta.params[key] = value
+            s3_meta.__dict__[key] = value
+        if key in s4_meta.__dict__.keys():
+            s4_meta.params[key] = value
+            s4_meta.__dict__[key] = value
+
+    # Perform parametric sweep
+    if p == "spec_hw__bg_hw":
+        # Optimize both spec_hw and bg_hw simultaneously
+        # Require that spec_hw < bg_hw
+        best_param_value, best_fitness_value = optimizers.sweep_list_lt(
+            bounds, meta, log, s3_meta=s3_meta, s4_meta=s4_meta)
+    elif "__" in p:
+        # Optimize two independent parameters simultaneously
+        best_param_value, best_fitness_value = optimizers.sweep_list_double(
+            bounds, meta, log, s3_meta=s3_meta, s4_meta=s4_meta)
+    else:
+        # Optimize single parameter
+        best_param_value, best_fitness_value = optimizers.sweep_list_single(
+            bounds, meta, log, s3_meta=s3_meta, s4_meta=s4_meta)
+
+    # Check that optimization was successful
+    if best_param_value is not None:
+        # Save results in "best" dictionary
+        param_names = p.split("__")
+        if (type(best_param_value) is not list) and \
+            (type(best_param_value) is not np.ndarray):
+                best_param_value = [best_param_value]
+        for i, param in enumerate(param_names):
+            best[param] = best_param_value[i]
+
+        # Print results of parametric sweep
+        log.writelog(f"Optimized parameter: {p}")
+        log.writelog(f"Best parameter value(s): {best_param_value}")
+        log.writelog(f"Best fitness value: {best_fitness_value}\n")
+
+        history[p] = best_fitness_value
+
+    return s3opt_meta, log, history, best
+
+
+def initialize_meta(meta, eventlabel, ecf_path=None, stage=3):
+    """Initialize MetaClass objects for the optimization run.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        An S3opt metadata object
+    eventlabel : str
+        The unique identifier for these data.
+    ecf_path : str; optional
+        The absolute or relative path to where ecfs are stored. Defaults to
+        None which resolves to './'.
+    stage : int; optional
+        The stage number (3 or 4) indicating which stage's parameters to
+        optimize. Defaults to 3.
+
+    Returns
+    -------
+    s3_meta : eureka.lib.readECF.MetaClass
+        The Stage 3 metadata object.
+    s4_meta : eureka.lib.readECF.MetaClass
+        The Stage 4 metadata object.
+    """
+    if stage == 4:
+        # Set meta to None to skip Stage 3 processing
+        s3_meta = None
+    else:
+        # Setup Meta objects and overwrite certain Meta values
+        s3_meta = S3MetaClass(folder=ecf_path, eventlabel=eventlabel)
+        s3_meta.inputdir = meta.s2_inputdir
+        s3_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage3')
+        s3_meta.isplots_S3 = meta.isplots_S3opt
+        s3_meta.verbose = meta.verbose
+        s3_meta.record_ypos = False
+
+    # Setup Meta objects and overwrite certain Meta values
+    s4_meta = S4MetaClass(folder=ecf_path, eventlabel=eventlabel)
+    s4_meta.inputdir = os.path.join(meta.outputdir, 'Stage3')
+    s4_meta.inputdir_raw = s4_meta.inputdir[len(meta.topdir):]
+    s4_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage4')
+    s4_meta.isplots_S4 = meta.isplots_S3opt
+    s4_meta.verbose = meta.verbose
+    s4_meta.nspecchan = 1
+    s4_meta.compute_ld = False
+
+    return s3_meta, s4_meta
