@@ -36,21 +36,13 @@ def test_S3opt(capsys):
                                               ecf_path=ecf_path,
                                               initial_run=True)
 
-    # run assertions for S3opt #FINDME
-    meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
-                          f'Stage3{os.sep}')
-    name = pathdirectory(meta, 'S3', s3_meta.run_s3, ap=5, bg=6,
-                         old_datetime=s3_meta.datetime)
-    assert os.path.exists(name)
-    assert os.path.exists(name+os.sep+'figs')
-
-    # run assertions for S4cal
-    # meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
-    #                       f'Stage4cal{os.sep}')
-    # name = pathdirectory(meta, 'S4cal', s4_meta.run_S4cal,
-    #                      old_datetime=s4_meta.datetime)
-    # assert os.path.exists(name)
-    # assert os.path.exists(name+os.sep+'figs')
+    # run assertions for S3opt
+    dirname = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
+               f'Stage3opt{os.sep}opt_ECFs{os.sep}')
+    filename_s3 = dirname + f'S3_NIRSpec.ecf'
+    filename_s4 = dirname + f'S4_NIRSpec.ecf'
+    assert os.path.exists(filename_s3)
+    assert os.path.exists(filename_s4)
 
     # remove temporary files
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3opt")
