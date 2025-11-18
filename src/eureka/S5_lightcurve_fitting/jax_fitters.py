@@ -20,6 +20,7 @@ from ..lib.split_channels import get_trim
 
 from .likelihood import lnprob
 
+
 def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
                  **kwargs):
     """Perform sampling using numpyro_ext.optim.optimize.

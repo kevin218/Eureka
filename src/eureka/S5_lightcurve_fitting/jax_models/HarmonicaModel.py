@@ -79,7 +79,8 @@ class HarmonicaTransitModel(JaxModel):
         self.max_fourier_term = 1
         for term in ['a3', 'b3', 'a2', 'b2', 'a1', 'b1']:
             if any(term in p for p in self.paramtitles):
-                self.max_fourier_term = 2 * int(term[1])+1  # e.g., "a3" → 2*3+1 = 7
+                # e.g., "a3" → 2*3+1 = 7
+                self.max_fourier_term = 2 * int(term[1])+1
                 break  # Keep highest used term only
         print(f"Using {self.max_fourier_term} Fourier terms in the model.")
 
