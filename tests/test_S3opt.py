@@ -1,10 +1,8 @@
 import sys
 import os
 from importlib import reload
-import time as time_pkg
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
-from eureka.lib.readECF import MetaClass
 from eureka.S2_calibrations import s2_calibrate as s2
 import eureka.optimizer.S3opt_optimizer as s3opt
 
