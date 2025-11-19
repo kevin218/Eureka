@@ -603,7 +603,7 @@ def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
         fname = f'figs{os.sep}fig5305_{fname_tag}_trace'
         fname += '_'+fitter
         fname += f'figure{i+1}of{nplots}'
-        fname += plots.figure_filetype
+        fname += plots.get_filetype()
         fig.savefig(meta.outputdir+fname, bbox_inches='tight',
                     pad_inches=0.05, dpi=300)
         if not meta.hide_plots:
