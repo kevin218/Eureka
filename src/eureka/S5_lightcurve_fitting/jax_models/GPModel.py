@@ -1,7 +1,8 @@
 import numpy as np
 import jax.numpy as jnp
 
-import celerite2.jax as celerite2
+# import celerite2.jax as celerite2
+import tinygp
 
 from . import JaxModel
 from ..likelihood import update_uncertainty
@@ -11,7 +12,7 @@ from ...lib.split_channels import split
 class GPModel(JaxModel):
     """Model for Gaussian Process (GP)"""
     def __init__(self, kernel_types, kernel_input_names, lc,
-                 gp_code_name='celerite', normalize=False,
+                 gp_code_name='tinygp', normalize=False,
                  **kwargs):
         """Initialize the GP model.
 
@@ -35,10 +36,10 @@ class GPModel(JaxModel):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        raise NotImplementedError('There is currently a bug with the '
-                                  'celerite2.jax package. Once that is '
-                                  'resolved, we will enable Eureka!\'s '
-                                  'jax_models.GPModel.')
+        # raise NotImplementedError('There is currently a bug with the '
+        #                           'celerite2.jax package. Once that is '
+        #                           'resolved, we will enable Eureka!\'s '
+        #                           'jax_models.GPModel.')
 
         # Inherit from JaxModel class
         super().__init__(kernel_types=kernel_types,
@@ -55,15 +56,15 @@ class GPModel(JaxModel):
         self.modeltype = 'GP'
 
         # Do some initial sanity checks and raise errors if needed
-        if self.gp_code_name != 'celerite':
-            raise AssertionError('Currently celerite2 is the only GP package '
+        if self.gp_code_name != 'tinygp':
+            raise AssertionError('Currently tinygp is the only GP package '
                                  'that can be used with the jax methods.')
         elif self.nkernels > 1:
-            raise AssertionError('Our celerite2 implementation cannot compute '
+            raise AssertionError('Our tinygp implementation cannot compute '
                                  'multi-dimensional GPs, please choose a '
                                  'different GP code.')
         elif self.kernel_types[0] != 'Matern32':
-            raise AssertionError('Our celerite2 implementation currently only '
+            raise AssertionError('Our tinygp implementation currently only '
                                  'supports a Matern32 kernel.')
 
     def setup(self, newparams):
@@ -101,8 +102,8 @@ class GPModel(JaxModel):
             The rest of the current model evaluated.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
-        gp : celerite2.GP; optional
-            The input GP object. Defaults to None.
+        gp : tinygp.GaussianProcess; optional
+            The input GaussianProcess object. Defaults to None.
         eval : bool; optional
             If true evaluate the model, otherwise simply compile the model.
             Defaults to True.
@@ -164,14 +165,13 @@ class GPModel(JaxModel):
             residuals = residuals[good]
 
             # Create the GP object with current parameters
-            if input_gp is None:
-                gp = self.setup_GP(chan, eval=eval)
-            else:
-                gp = input_gp
-
-            kernel_inputs = self.kernel_inputs[chan][0][good]
-            gp.compute(kernel_inputs, yerr=unc_fit)
-            mu = gp.predict(residuals)
+            gp = self.setup_GP(chan, unc_fit, good=good, eval=eval)
+            # mu = gp.predict(residuals)
+            kernel_inputs = self.kernel_inputs[c][0]
+            if good is not None:
+                kernel_inputs = kernel_inputs[good]
+            cond_gp = gp.condition(residuals, diag=unc_fit).gp
+            mu = cond_gp.loc
 
             # Re-insert and mask bad values
             mu_full = np.nan*lib.ones(len(time))
@@ -232,7 +232,7 @@ class GPModel(JaxModel):
 
             self.kernel_inputs.append(kernel_inputs_channel)
 
-    def setup_GP(self, c=0, eval=True):
+    def setup_GP(self, c=0, unc_fit=None, good=None, eval=True):
         """Set up GP kernels and GP object.
 
         Parameters
@@ -245,8 +245,8 @@ class GPModel(JaxModel):
 
         Returns
         -------
-        celerite2.GP
-            The GP object to use for this fit.
+        tinygp.GaussianProcess
+            The GaussianProcess object to use for this fit.
         """
         if c == 0:
             chankey = ''
@@ -259,6 +259,9 @@ class GPModel(JaxModel):
         else:
             lib = jnp
             model = self.model
+
+        if unc_fit is None:
+            unc_fit = self.unc_fit
 
         # Parse model attributes as coefficients
         coeffs = np.zeros((self.nkernels, 2)).tolist()
@@ -279,8 +282,12 @@ class GPModel(JaxModel):
         for k in range(1, self.nkernels):
             kernel += self.get_kernel(lib, self.kernel_types[k], coeffs, k, c)
 
+        kernel_inputs = self.kernel_inputs[c][0]
+        if good is not None:
+            kernel_inputs = kernel_inputs[good]
+
         # Make the gp object
-        return celerite2.GaussianProcess(kernel, mean=0, fit_mean=False)
+        return tinygp.GaussianProcess(kernel, X=kernel_inputs, mean=0.)
 
     def get_kernel(self, lib, kernel_name, coeffs, k, c=0):
         """Get individual kernels.
@@ -305,11 +312,11 @@ class GPModel(JaxModel):
             The requested kernel.
         """
         # get metric and amplitude for the current kernel and channel
-        sigma = lib.sqrt(lib.exp(coeffs[k][0]))
-        metric = lib.exp(coeffs[k][1])
+        amp = lib.exp(coeffs[k][0])
+        metric = lib.exp(coeffs[k][1]*2)
 
         # Currently only the Matern32 kernel is supported
-        kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=metric)
+        kernel = amp*tinygp.kernels.Matern32(metric)
 
         return kernel
 
@@ -326,7 +333,7 @@ class GPModel(JaxModel):
         Returns
         -------
         float
-            log likelihood of the GP evaluated by celerite2
+            log likelihood of the GP evaluated by tinygp
         """
         if channel is None:
             nchan = self.nchannel_fitted
@@ -366,12 +373,9 @@ class GPModel(JaxModel):
             residuals = residuals[good]
 
             # set up GP with current parameters
-            gp = self.setup_GP(chan, eval=True)
-
-            kernel_inputs = self.kernel_inputs[chan][0][good]
-            gp.compute(kernel_inputs, yerr=unc_fit)
-            logL_temp = gp.log_likelihood(residuals)
-
+            gp = self.setup_GP(chan, unc_fit, good=good, eval=True)
+            cond = gp.condition(residuals, diag=unc_fit)
+            logL_temp = cond.log_probability
             logL += logL_temp
 
         return logL
