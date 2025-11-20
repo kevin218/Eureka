@@ -2,18 +2,11 @@ import numpy as np
 import george
 from george import kernels
 import celerite2
+import tinygp
 
 from .Model import Model
 from ..likelihood import update_uncertainty
 from ...lib.split_channels import split
-
-# tinygp is not supported yet
-try:
-    import tinygp
-except ModuleNotFoundError:
-    # tinygp isn't supported yet, so don't throw an exception if it
-    # isn't installed
-    pass
 
 
 class GPModel(Model):
@@ -168,12 +161,13 @@ class GPModel(Model):
 
             # Remove poorly handled masked values
             good = ~np.ma.getmaskarray(residuals)
-            unc_fit = unc_fit[good]
-            residuals = residuals[good]
+            unc_fit = unc_fit[good].data
+            residuals = residuals[good].data
+            time_fit = time[good].data
 
             # Create the GP object with current parameters
             if input_gp is None:
-                gp = self.setup_GP(chan)
+                gp = self.setup_GP(chan, unc_fit, good)
             else:
                 gp = input_gp
 
@@ -186,7 +180,7 @@ class GPModel(Model):
                 gp.compute(kernel_inputs, yerr=unc_fit)
                 mu = gp.predict(residuals)
             elif self.gp_code_name == 'tinygp':
-                cond_gp = gp.condition(residuals, noise=unc_fit).gp
+                cond_gp = gp.condition(residuals, time_fit).gp
                 mu = cond_gp.loc
 
             # Re-insert and mask bad values
@@ -217,10 +211,10 @@ class GPModel(Model):
             else:
                 time = self.time
 
-            kernel_inputs_channel = np.ma.zeros((0, time.size))
+            kernel_inputs_channel = np.zeros((0, time.size))
             for name in self.kernel_input_names:
                 if name == 'time':
-                    x = np.ma.copy(self.time)
+                    x = np.copy(self.time)
                 else:
                     # add more input options here
                     raise ValueError('Currently, only GPs as a function of '
@@ -232,14 +226,14 @@ class GPModel(Model):
                     x = split([x, ], self.nints, chan)[0]
 
                 if self.normalize:
-                    x = (x-np.ma.mean(x))/np.ma.std(x)
+                    x = (x-np.nanmean(x))/np.nanstd(x)
 
-                kernel_inputs_channel = np.ma.append(kernel_inputs_channel,
-                                                     x[np.newaxis], axis=0)
+                kernel_inputs_channel = np.append(kernel_inputs_channel,
+                                                  x[np.newaxis], axis=0)
 
             self.kernel_inputs.append(kernel_inputs_channel)
 
-    def setup_GP(self, c=0):
+    def setup_GP(self, c=0, unc_fit=None, good=None):
         """Set up GP kernels and GP object.
 
         Parameters
@@ -258,6 +252,9 @@ class GPModel(Model):
         if self.kernel_inputs is None:
             self.setup_inputs()
 
+        if unc_fit is None:
+            unc_fit = self.unc_fit
+
         # get the kernel which is the sum of the individual kernel functions
         kernel = self.get_kernel(self.kernel_types[0], 0, c)
         for k in range(1, self.nkernels):
@@ -269,16 +266,17 @@ class GPModel(Model):
                 solver = george.solvers.HODLRSolver
             else:
                 solver = None
-            gp = george.GP(kernel, mean=0, fit_mean=False, solver=solver)
+            gp = george.GP(kernel, mean=0., fit_mean=False, solver=solver)
         elif self.gp_code_name == 'celerite':
-            gp = celerite2.GaussianProcess(kernel, mean=0, fit_mean=False)
+            gp = celerite2.GaussianProcess(kernel, mean=0., fit_mean=False)
         elif self.gp_code_name == 'tinygp':
             if self.nchannel_fitted > 1:
                 chan = self.fitted_channels[c]
             else:
                 chan = 0
             gp = tinygp.GaussianProcess(kernel, self.kernel_inputs[chan].T,
-                                        mean=0)
+                                        diag=unc_fit**2,
+                                        mean=0.)
 
         return gp
 
@@ -396,20 +394,20 @@ class GPModel(Model):
                 flux = self.flux
                 fit_temp = fit_lc
                 unc_fit = self.unc_fit
-            residuals = np.ma.masked_invalid(flux-fit_temp)
+            residuals = flux-fit_temp
             if self.multwhite:
                 time = split([self.time, ], self.nints, chan)[0]
             else:
                 time = self.time
-            residuals = np.ma.masked_where(time.mask, residuals)
 
-            # Remove poorly handled masked values
-            good = ~np.ma.getmaskarray(residuals)
+            # Remove poorly handled invalid values
+            good = np.isfinite(time) & np.isfinite(flux)
             unc_fit = unc_fit[good]
             residuals = residuals[good]
+            time_fit = time[good]
 
             # set up GP with current parameters
-            gp = self.setup_GP(chan)
+            gp = self.setup_GP(chan, unc_fit, good)
 
             if self.gp_code_name == 'george':
                 gp.compute(self.kernel_inputs[chan][:, good].T, unc_fit)
@@ -419,7 +417,7 @@ class GPModel(Model):
                 gp.compute(kernel_inputs, yerr=unc_fit)
                 logL_temp = gp.log_likelihood(residuals)
             elif self.gp_code_name == 'tinygp':
-                cond = gp.condition(residuals, diag=unc_fit)
+                cond = gp.condition(residuals, time_fit)
                 logL_temp = cond.log_probability
             logL += logL_temp
 
