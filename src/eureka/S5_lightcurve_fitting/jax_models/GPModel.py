@@ -163,14 +163,15 @@ class GPModel(JaxModel):
             good = np.isfinite(time) & np.isfinite(flux)
             unc_fit = unc_fit[good]
             residuals = residuals[good]
+            time_fit = time[good]
 
             # Create the GP object with current parameters
-            gp = self.setup_GP(chan, unc_fit, good=good, eval=eval)
-            # mu = gp.predict(residuals)
-            kernel_inputs = self.kernel_inputs[c][0]
-            if good is not None:
-                kernel_inputs = kernel_inputs[good]
-            cond_gp = gp.condition(residuals, diag=unc_fit).gp
+            if input_gp is None:
+                gp = self.setup_GP(chan, unc_fit, good, eval)
+            else:
+                gp = input_gp
+
+            cond_gp = gp.condition(residuals, time_fit).gp
             mu = cond_gp.loc
 
             # Re-insert and mask bad values
@@ -287,7 +288,9 @@ class GPModel(JaxModel):
             kernel_inputs = kernel_inputs[good]
 
         # Make the gp object
-        return tinygp.GaussianProcess(kernel, X=kernel_inputs, mean=0.)
+        return tinygp.GaussianProcess(kernel, X=kernel_inputs,
+                                      diag=unc_fit**2,
+                                      mean=0.)
 
     def get_kernel(self, lib, kernel_name, coeffs, k, c=0):
         """Get individual kernels.
@@ -371,10 +374,11 @@ class GPModel(JaxModel):
             good = np.isfinite(time) & np.isfinite(flux)
             unc_fit = unc_fit[good]
             residuals = residuals[good]
+            time_fit = time[good]
 
             # set up GP with current parameters
             gp = self.setup_GP(chan, unc_fit, good=good, eval=True)
-            cond = gp.condition(residuals, diag=unc_fit)
+            cond = gp.condition(residuals, time_fit)
             logL_temp = cond.log_probability
             logL += logL_temp
 
