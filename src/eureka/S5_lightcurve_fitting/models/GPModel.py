@@ -109,22 +109,22 @@ class GPModel(Model):
                 flux, unc_fit = split([self.flux, self.unc_fit],
                                       self.nints, chan)
                 if nchan > 1:
-                    fit_temp = split([fit_lc, ], self.nints, chan)[0]
+                    fit_lc_temp = split([fit_lc, ], self.nints, chan)[0]
                 else:
                     # If only a specific channel is being evaluated, then only
                     # that channel's fitted model will be passed in
-                    fit_temp = fit_lc
+                    fit_lc_temp = fit_lc
             else:
                 # get flux and uncertainties for current channel
                 flux = self.flux
-                fit_temp = fit_lc
+                fit_lc_temp = fit_lc
                 unc_fit = self.unc_fit
-            residuals = np.ma.masked_invalid(flux-fit_temp)
+            residuals = flux-fit_lc_temp
+
             if self.multwhite:
                 time = split([self.time, ], self.nints, chan)[0]
             else:
                 time = self.time
-            residuals = np.ma.masked_where(time.mask, residuals)
 
             # Remove poorly handled masked values
             good = ~np.ma.getmaskarray(residuals)
@@ -158,7 +158,7 @@ class GPModel(Model):
                 raise ValueError(f'Unknown gp_code_name: {self.gp_code_name}')
 
             # Re-insert and mask bad values
-            mu_full = np.ma.zeros(len(time))
+            mu_full = np.nan*np.ones(len(time))
             mu_full[good] = mu
             mu_full = np.ma.masked_where(~good, mu_full)
 
