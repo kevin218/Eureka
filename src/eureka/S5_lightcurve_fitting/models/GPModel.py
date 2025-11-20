@@ -133,7 +133,7 @@ class GPModel(Model):
 
             # Build or reuse the GP object
             if input_gp is None:
-                gp = self.setup_GP(chan)
+                gp = self.setup_GP(chan, unc_fit, good)
             else:
                 gp = input_gp
                 # If caller passed a pre-built GP, we may still need
@@ -184,7 +184,7 @@ class GPModel(Model):
             kin_chan = np.ma.zeros((0, time.size))
             for name in self.kernel_input_names:
                 if name == 'time':
-                    x = np.ma.copy(self.time)
+                    x = np.copy(self.time)
                 else:
                     # add more input options here
                     raise ValueError(
@@ -196,7 +196,7 @@ class GPModel(Model):
                     x = split([x, ], self.nints, chan)[0]
 
                 if self.normalize:
-                    x = (x-np.ma.mean(x))/np.ma.std(x)
+                    x = (x-np.nanmean(x))/np.nanstd(x)
 
                 kin_chan = np.ma.append(kin_chan, x[np.newaxis], axis=0)
 
@@ -229,9 +229,9 @@ class GPModel(Model):
                 solver = george.solvers.HODLRSolver
             else:
                 solver = None
-            gp = george.GP(kernel, mean=0, fit_mean=False, solver=solver)
+            gp = george.GP(kernel, mean=0., fit_mean=False, solver=solver)
         elif self.gp_code_name == 'celerite':
-            gp = celerite2.GaussianProcess(kernel, mean=0, fit_mean=False)
+            gp = celerite2.GaussianProcess(kernel, mean=0., fit_mean=False)
         elif self.gp_code_name == 'tinygp':
             if tinygp is None:
                 raise RuntimeError('tinygp is not available.')
@@ -359,12 +359,11 @@ class GPModel(Model):
                 flux = self.flux
                 fit_temp = fit_lc
                 unc_fit = self.unc_fit
-            residuals = np.ma.masked_invalid(flux-fit_temp)
+            residuals = flux-fit_temp
             if self.multwhite:
                 time = split([self.time, ], self.nints, chan)[0]
             else:
                 time = self.time
-            residuals = np.ma.masked_where(time.mask, residuals)
 
             # Remove poorly handled masked values
             good = ~np.ma.getmaskarray(residuals)
@@ -372,7 +371,7 @@ class GPModel(Model):
             res_good = residuals[good]
 
             # set up GP with current parameters
-            gp = self.setup_GP(chan)
+            gp = self.setup_GP(chan, unc_fit, good)
 
             if self.gp_code_name == 'george':
                 kin = self.kernel_inputs[chan][:, good].T
