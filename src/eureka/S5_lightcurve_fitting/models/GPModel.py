@@ -57,10 +57,10 @@ class GPModel(Model):
                     'celerite2 cannot compute multi-dimensional GPs. '
                     'Use a single kernel or a different GP backend.'
                 )
-            if self.kernel_types[0] != 'Matern32':
+            if self.kernel_types[0] not in ('Matern32', 'SHO'):
                 raise AssertionError(
                     'Our celerite2 implementation currently supports only '
-                    'a Matern32 kernel.'
+                    'Matern32 and SHO kernels.'
                 )
 
     def update(self, newparams, **kwargs):
@@ -302,13 +302,15 @@ class GPModel(Model):
                     'Supported: Matern32, ExpSquared, RationalQuadratic, Exp.'
                 )
         elif self.gp_code_name == 'celerite':
-            # celerite2: Matern32 term with sigma, rho
             sigma = np.sqrt(np.exp(amp_log))
             rho = np.exp(metric_log)
-            if kernel_name != 'Matern32':
-                raise AssertionError('celerite2 path only supports Matern32,'
-                                     f' got {kernel_name}.')
-            kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=rho)
+            if kernel_name == 'Matern32':
+                kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=rho)
+            if kernel_name == 'SHO':
+                w0 = np.sqrt(3) / rho
+                quality = np.exp(self._get_param_value(f'Q{ki}', chan=chan))
+                kernel = celerite2.terms.SHOTerm(
+                    S0=sigma**2 / w0, w0=w0, Q=quality)
         elif self.gp_code_name == 'tinygp':
             from ..jax_models.GPModel import build_tinygp_kernel
             kernel = build_tinygp_kernel(kernel_name, amp_log, metric_log)
