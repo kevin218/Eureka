@@ -4,7 +4,6 @@ import numpyro
 import jax.numpy as jnp
 from numpyro.distributions import (
     Normal, Uniform, LogUniform, LogNormal, TruncatedNormal)
-from celerite2.jax.distribution import CeleriteNormal
 
 from ..models import Model, CompositeModel
 from ...lib.split_channels import split, get_trim
@@ -359,15 +358,14 @@ class CompositeJaxModel(JaxModel, CompositeModel):
             for component in self.components:
                 if component.modeltype == 'GP':
                     gps = component.gps
-                    gp_component = component
 
             fit_lc = self.eval(eval=False, incl_GP=False)
             for c in range(self.nchannel_fitted):
                 if self.nchannel_fitted > 1:
                     chan = self.fitted_channels[c]
                     # get flux and uncertainties for current channel
-                    flux, unc_fit, fit_temp = split(
-                        [self.flux, self.scatter_array, fit_lc],
+                    flux, fit_temp = split(
+                        [self.flux, fit_lc],
                         self.nints, chan)
                     if self.multwhite:
                         time = split([self.time], self.nints, chan)[0]
@@ -377,20 +375,15 @@ class CompositeJaxModel(JaxModel, CompositeModel):
                     chan = 0
                     # get flux and uncertainties for current channel
                     flux = self.flux
-                    unc_fit = self.scatter_array
                     fit_temp = fit_lc
                     time = self.time
                 residuals = flux-fit_temp
 
                 # Remove poorly handled masked values
                 good = np.isfinite(time) & np.isfinite(flux)
-                unc_fit = unc_fit[good]
                 residuals = residuals[good]
-
-                kernel_inputs = gp_component.kernel_inputs[chan][0][good]
-                gps[c].compute(kernel_inputs, yerr=unc_fit)
                 setattr(self.model, f"obs_{c}",
-                        numpyro.sample(f"obs_{c}", CeleriteNormal(gps[c]),
+                        numpyro.sample(f"obs_{c}", gps[c].numpyro_dist(),
                                        obs=residuals))
         else:
             # The likelihood function assuming Gaussian uncertainty
