@@ -133,7 +133,7 @@ class GPModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        lcfinal = np.ma.array([])
+        lcfinal = np.zeros(0)
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -141,29 +141,35 @@ class GPModel(Model):
                 flux, unc_fit = split([self.flux, self.unc_fit],
                                       self.nints, chan)
                 if nchan > 1:
-                    fit_temp = split([fit_lc, ], self.nints, chan)[0]
+                    fit_lc_temp = split([fit_lc, ], self.nints, chan)[0]
                 else:
                     # If only a specific channel is being evaluated, then only
                     # that channel's fitted model will be passed in
-                    fit_temp = fit_lc
+                    fit_lc_temp = fit_lc
             else:
                 chan = 0
                 # get flux and uncertainties for current channel
                 flux = self.flux
-                fit_temp = fit_lc
+                fit_lc_temp = fit_lc
                 unc_fit = self.unc_fit
-            residuals = np.ma.masked_invalid(flux-fit_temp)
+            residuals = flux-fit_lc_temp
+
             if self.multwhite:
                 time = split([self.time, ], self.nints, chan)[0]
             else:
                 time = self.time
-            residuals = np.ma.masked_where(time.mask, residuals)
 
-            # Remove poorly handled masked values
-            good = ~np.ma.getmaskarray(residuals)
-            unc_fit = unc_fit[good].data
-            residuals = residuals[good].data
-            time_fit = time[good].data
+            # Remove poorly handled invalid values
+            good = np.isfinite(time) & np.isfinite(flux)
+            unc_fit = unc_fit[good]
+            if isinstance(unc_fit, np.ma.MaskedArray):
+                unc_fit = unc_fit.data
+            residuals = residuals[good]
+            if isinstance(residuals, np.ma.MaskedArray):
+                residuals = residuals.data
+            time_fit = time[good]
+            if isinstance(time_fit, np.ma.MaskedArray):
+                time_fit = time_fit.data
 
             # Create the GP object with current parameters
             if input_gp is None:
@@ -184,7 +190,7 @@ class GPModel(Model):
                 mu = cond_gp.loc
 
             # Re-insert and mask bad values
-            mu_full = np.ma.zeros(len(time))
+            mu_full = np.nan*np.ones(len(time))
             mu_full[good] = mu
             mu_full = np.ma.masked_where(~good, mu_full)
 
@@ -254,6 +260,8 @@ class GPModel(Model):
 
         if unc_fit is None:
             unc_fit = self.unc_fit
+        if isinstance(unc_fit, np.ma.MaskedArray):
+            unc_fit = unc_fit.data
 
         # get the kernel which is the sum of the individual kernel functions
         kernel = self.get_kernel(self.kernel_types[0], 0, c)
@@ -274,7 +282,10 @@ class GPModel(Model):
                 chan = self.fitted_channels[c]
             else:
                 chan = 0
-            gp = tinygp.GaussianProcess(kernel, self.kernel_inputs[chan].T,
+            kernel_inputs = self.kernel_inputs[chan][0]
+            if good is not None:
+                kernel_inputs = kernel_inputs[good]
+            gp = tinygp.GaussianProcess(kernel, kernel_inputs,
                                         diag=unc_fit**2,
                                         mean=0.)
 
@@ -401,10 +412,16 @@ class GPModel(Model):
                 time = self.time
 
             # Remove poorly handled invalid values
-            good = np.isfinite(time) & np.isfinite(flux)
+            good = np.isfinite(time) & np.isfinite(residuals)
             unc_fit = unc_fit[good]
+            if isinstance(unc_fit, np.ma.MaskedArray):
+                unc_fit = unc_fit.data
             residuals = residuals[good]
+            if isinstance(residuals, np.ma.MaskedArray):
+                residuals = residuals.data
             time_fit = time[good]
+            if isinstance(time_fit, np.ma.MaskedArray):
+                time_fit = time_fit.data
 
             # set up GP with current parameters
             gp = self.setup_GP(chan, unc_fit, good)
