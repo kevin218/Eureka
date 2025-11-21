@@ -308,9 +308,14 @@ class GPModel(Model):
                 kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=rho)
             if kernel_name == 'SHO':
                 w0 = np.sqrt(3) / rho
-                quality = np.exp(self._get_param_value(f'Q{ki}', chan=chan))
+                quality = self._get_param_value(f'Q{ki}', chan=chan)
                 kernel = celerite2.terms.SHOTerm(
                     S0=sigma**2 / w0, w0=w0, Q=quality)
+            else:
+                raise AssertionError(
+                    f'Unsupported kernel for celerite2: {kernel_name}. '
+                    'Supported: Matern32, SHO.'
+                )
         elif self.gp_code_name == 'tinygp':
             from ..jax_models.GPModel import build_tinygp_kernel
             kernel = build_tinygp_kernel(kernel_name, amp_log, metric_log)
