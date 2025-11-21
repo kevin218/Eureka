@@ -306,7 +306,7 @@ class GPModel(Model):
             rho = np.exp(metric_log)
             if kernel_name == 'Matern32':
                 kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=rho)
-            if kernel_name == 'SHO':
+            elif kernel_name == 'SHO':
                 w0 = np.sqrt(3) / rho
                 quality = self._get_param_value(f'Q{ki}', chan=chan)
                 kernel = celerite2.terms.SHOTerm(
