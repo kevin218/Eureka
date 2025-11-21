@@ -317,8 +317,8 @@ def evaluate_astrophysical_model_jax(
                 planet_flux = eclipses[pid]
             elif len(phasevariation_models) > 0:
                 # Simple fp-only planet term if only phase-curve models exist
-                fp = param_dict.get("fp", 0.)
-                planet_flux = fp
+                fp_key = 'fp' if pid == 0 else f"fp_pl{pid}"
+                planet_flux = param_dict.get(fp_key, 0.)
             else:
                 planet_flux = 0.
 
