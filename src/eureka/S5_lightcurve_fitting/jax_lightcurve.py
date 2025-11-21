@@ -4,7 +4,7 @@ from .jax_models import JaxModel
 from . import lightcurve
 
 
-class LightCurve(JaxModel, lightcurve.LightCurve):
+class LightCurve(lightcurve.LightCurve, JaxModel):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist,
                  parameters, freenames, unc=None, time_units='BJD',
                  name='My Light Curve', share=False, white=False,

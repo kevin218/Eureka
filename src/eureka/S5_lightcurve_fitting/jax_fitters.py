@@ -12,13 +12,11 @@ except ModuleNotFoundError:
     # jax hasn't been installed
     pass
 
-
-from .likelihood import computeRedChiSq, update_uncertainty
+from ..lib.split_channels import get_trim
+from .likelihood import computeRedChiSq, update_uncertainty, lnprob
 from . import plots_s5 as plots
 from .fitters import group_variables, load_old_fitparams, save_fit
-from ..lib.split_channels import get_trim
-
-from .likelihood import lnprob
+from .jax_models.JaxModel import make_numpyro_composite_model
 
 
 def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
@@ -37,7 +35,7 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
         The open log in which notes from this step can be added.
     calling_function: str, optional
         The fitter that is being run (e.g., may be 'emcee' if running lsqfitter
-        to initialize emcee walkers). Defailts to 'jaxopt'.
+        to initialize emcee walkers). Defaults to 'jaxopt'.
     **kwargs:
         Arbitrary keyword arguments.
 
@@ -48,94 +46,130 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
     """
     # Group the different variable types
     freenames = lc.freenames
-    freepars, prior1, prior2, priortype, indep_vars = \
-        group_variables(model)
+    freepars, prior1, prior2, priortype, _ = group_variables(model)
     if meta.old_fitparams is not None:
         freepars = load_old_fitparams(lc, meta, log, freenames, 'jaxopt')
 
-    start = {}
-    for name, val in zip(freenames, freepars):
-        start[name] = val
+    start = {name: val for name, val in zip(freenames, freepars)}
 
     # Set the model parameters to their starting values
     model.update(freepars)
 
-    start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype,
-                          freenames)
-    log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
+    start_lnprob = lnprob(
+        freepars, lc, model, prior1, prior2, priortype, freenames,
+    )
+    log.writelog(
+        f'Starting lnprob: {start_lnprob}',
+        mute=(not meta.verbose),
+    )
 
     # Plot starting point
     if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta,
-                       fitter=calling_function+'StartingPoint')
-        # Plot GP starting point
+        plots.plot_fit(
+            lc, model, meta,
+            fitter=calling_function + 'StartingPoint',
+        )
         if model.GP:
-            plots.plot_GP_components(lc, model, meta,
-                                     fitter=calling_function+'StartingPoint')
+            plots.plot_GP_components(
+                lc, model, meta,
+                fitter=calling_function + 'StartingPoint',
+            )
 
     # Plot star spots starting point
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_fleck_star(lc, model, meta,
-                              fitter=calling_function+'StartingPoint')
+        plots.plot_fleck_star(
+            lc, model, meta,
+            fitter=calling_function + 'StartingPoint',
+        )
     if 'jaxoplanet' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta,
-                                   fitter=calling_function+'StartingPoint')
+            plots.plot_starry_star(
+                lc, model, meta,
+                fitter=calling_function + 'StartingPoint',
+            )
 
     # Plot Harmonica string starting point
     if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_harmonica_string(lc, model, meta,
-                                    fitter=calling_function+'StartingPoint')
+        plots.plot_harmonica_string(
+            lc, model, meta,
+            fitter=calling_function + 'StartingPoint',
+        )
+
+    # Build a functional numpyro model from the composite model
+    numpyro_model = make_numpyro_composite_model(model)
 
     # Add some extra fitting controls
     optimizer = numpyro_ext.optim.JAXOptMinimize(
-        method=meta.lsq_method, tol=meta.lsq_tol,
+        method=meta.lsq_method,
+        tol=meta.lsq_tol,
         maxiter=meta.lsq_maxiter,
     )
     # Initialize the optimizer
     run_optim = numpyro_ext.optim.optimize(
-        model.setup,
+        numpyro_model,
         init_strategy=numpyro.infer.init_to_value(values=start),
-        optimizer=optimizer
+        optimizer=optimizer,
     )
 
     log.writelog('Running jaxopt optimizer...')
-    map_soln = run_optim(jax.random.PRNGKey(0),
-                         lc.time, lc.flux, lc.unc, freepars)
+    map_soln = run_optim(
+        jax.random.PRNGKey(0),
+        lc.time,
+        lc.flux,
+        lc.unc,
+    )
+
+    # Reset any JAX tracers stored on the model during optimization.
+    # This ensures that later calls to component.eval() (e.g., in save_fit
+    # and plotting) see plain NumPy arrays, not leaked JAX tracers.
+    model.time = np.array(lc.time)
+    model.flux = np.array(lc.flux)
+    model.lc_unc = np.array(lc.unc)
 
     # Get the best fit params
     fit_params = np.array([map_soln[name] for name in freenames])
     model.update(fit_params)
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
-                                    lc.nchannel_fitted)
+    lc.unc_fit = update_uncertainty(
+        fit_params,
+        lc.nints,
+        lc.unc,
+        freenames,
+        lc.nchannel_fitted,
+    )
 
-    t_results = table.Table([freenames, fit_params],
-                            names=("Parameter", "Mean"))
+    t_results = table.Table(
+        [freenames, fit_params],
+        names=('Parameter', 'Mean'),
+    )
 
     # Save the fit ASAP
     save_fit(meta, lc, model, calling_function, t_results, freenames)
 
-    end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype,
-                        freenames)
-    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
+    end_lnprob = lnprob(
+        fit_params, lc, model, prior1, prior2, priortype, freenames,
+    )
+    log.writelog(
+        f'Ending lnprob: {end_lnprob}',
+        mute=(not meta.verbose),
+    )
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
     log.writelog('\nJAXOPT RESULTS:')
-    for i in range(len(freenames)):
-        if 'scatter_mult' in freenames[i]:
-            chan = freenames[i].split('_ch')[-1].split('_')[0]
+    for i, name in enumerate(freenames):
+        if 'scatter_mult' in name:
+            chan = name.split('_ch')[-1].split('_')[0]
             if chan.isnumeric():
                 chan = int(chan)
             else:
                 chan = 0
             trim1, trim2 = get_trim(meta.nints, chan)
             unc = np.ma.median(lc.unc[trim1:trim2])
-            scatter_ppm = 1e6*fit_params[i]*unc
-            log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
+            scatter_ppm = 1e6 * fit_params[i] * unc
+            log.writelog(f'{name}: {fit_params[i]}; {scatter_ppm} ppm')
         else:
-            log.writelog(f'{freenames[i]}: {fit_params[i]}')
+            log.writelog(f'{name}: {fit_params[i]}')
     if meta.pixelsampling:
         log.writelog('\nSpherical Harmonic Basis:')
 
@@ -145,16 +179,18 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
             else:
                 chankey = f'_ch{chan}'
             if model.nchannel_fitted > 1:
-                log.writelog(f'  Channel {chan+1}:')
+                log.writelog(f'  Channel {chan + 1}:')
                 padding = '    '
             else:
                 padding = '  '
-            log.writelog(f'{padding}fp: {map_soln["fp"+chankey]}')
-            for ell in range(1, meta.ydeg+1):
-                for m in range(-ell, ell+1):
+            log.writelog(f'{padding}fp: {map_soln["fp" + chankey]}')
+            for ell in range(1, meta.ydeg + 1):
+                for m in range(-ell, ell + 1):
                     name = f'Y{ell}{m}'
-                    log.writelog(f'{padding}{name}: '
-                                 f'{map_soln[name+chankey][0]}')
+                    log.writelog(
+                        f'{padding}{name}: '
+                        f'{map_soln[name + chankey][0]}',
+                    )
     log.writelog('')
 
     # Plot fit
@@ -163,12 +199,10 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
 
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_fleck_star(lc, model, meta,
-                              fitter=calling_function)
+        plots.plot_fleck_star(lc, model, meta, fitter=calling_function)
     if 'jaxoplanet' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta,
-                                   fitter=calling_function)
+            plots.plot_starry_star(lc, model, meta, fitter=calling_function)
 
     # Plot Harmonica string
     if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
@@ -179,10 +213,18 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
         plots.plot_GP_components(lc, model, meta, fitter=calling_function)
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames
-                                 or 'sinusoid_pc' in meta.run_myfuncs
-                                 or 'quasilambert_pc' in meta.run_myfuncs):
-        plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
+    if (
+        meta.isplots_S5 >= 1
+        and (
+            'Y10' in freenames
+            or 'Y11' in freenames
+            or 'sinusoid_pc' in meta.run_myfuncs
+            or 'quasilambert_pc' in meta.run_myfuncs
+        )
+    ):
+        plots.plot_phase_variations(
+            lc, model, meta, fitter=calling_function,
+        )
 
     # FINDME: Not yet implemented
     # if meta.pixelsampling and meta.isplots_S5 >= 1:
@@ -200,7 +242,6 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
     if meta.isplots_S5 >= 3 and calling_function == 'jaxopt':
         plots.plot_res_distr(lc, model, meta, fitter=calling_function)
 
-    # Make a new model instance
     model.chi2red = chi2red
     model.fit_params = fit_params
 
@@ -242,56 +283,77 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         # Only call exoplanet fitter first if asked
         log.writelog('\nCalling jaxoptfitter first...')
         # RUN exoplanet optimizer
-        exo_sol = jaxoptfitter(lc, model, meta, log,
-                               calling_function='nuts_jaxopt', **kwargs)
+        exo_sol = jaxoptfitter(
+            lc, model, meta, log,
+            calling_function='nuts_jaxopt',
+            **kwargs,
+        )
 
         freepars = exo_sol.fit_params
         model.update(freepars)
 
-    start = {}
-    for name, val in zip(freenames, freepars):
-        start[name] = val
+    start = {name: val for name, val in zip(freenames, freepars)}
 
     # Plot starting point
     if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta,
-                       fitter='nutsStartingPoint')
+        plots.plot_fit(lc, model, meta, fitter='nutsStartingPoint')
         # Plot GP starting point
         if model.GP:
-            plots.plot_GP_components(lc, model, meta,
-                                     fitter='nutsStartingPoint')
+            plots.plot_GP_components(
+                lc, model, meta,
+                fitter='nutsStartingPoint',
+            )
 
     # Plot star spots starting point
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_fleck_star(lc, model, meta,
-                              fitter='nutsStartingPoint')
+        plots.plot_fleck_star(lc, model, meta, fitter='nutsStartingPoint')
     if 'jaxoplanet' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta,
-                                   fitter='nutsStartingPoint')
+            plots.plot_starry_star(lc, model, meta, fitter='nutsStartingPoint')
 
     # Plot Harmonica string starting point
     if 'harmonica_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_harmonica_string(lc, model, meta,
-                                    fitter='nutsStartingPoint')
+        plots.plot_harmonica_string(
+            lc, model, meta,
+            fitter='nutsStartingPoint',
+        )
 
     log.writelog('Running numpyro\'s NUTS sampler...')
-    numpyro.set_host_device_count(meta.ncpu)
-    kernel = NUTS(model.setup, dense_mass=meta.dense_mass,
-                  init_strategy=numpyro.infer.init_to_value(values=start))
-    mcmc = MCMC(sampler=kernel, num_warmup=meta.run_nburn,
-                num_samples=meta.run_nsteps, num_chains=meta.chains,
-                chain_method="parallel")
-    mcmc.run(jax.random.PRNGKey(1), lc.time, lc.flux, lc.unc, freepars)
-    samples = mcmc.get_samples()
+    if meta.ncpu > 1:
+        nhost = min([meta.ncpu, meta.chains])
+        numpyro.set_host_device_count(nhost)
+        chain_method = 'parallel'
+    else:
+        chain_method = 'sequential'
+
+    # Build a functional numpyro model from the composite model
+    numpyro_model = make_numpyro_composite_model(model)
+
+    kernel = NUTS(
+        numpyro_model,
+        dense_mass=meta.dense_mass,
+        init_strategy=numpyro.infer.init_to_value(values=start),
+    )
+    mcmc = MCMC(
+        sampler=kernel,
+        num_warmup=meta.run_nburn,
+        num_samples=meta.run_nsteps,
+        num_chains=meta.chains,
+        chain_method=chain_method,
+    )
+    mcmc.run(jax.random.PRNGKey(1), lc.time, lc.flux, lc.unc)
+    samples_dict = mcmc.get_samples()
     # Wait for multi-threaded execution to finish before continuing
-    jax.block_until_ready(samples)
+    jax.block_until_ready(samples_dict)
 
     # Log detailed convergence and sampling statistics
     sys.stderr.flush()
     sys.stdout.flush()
-    log.writelog('\n\nNUTS sampling statistics:', mute=(not meta.verbose),
-                 end='')
+    log.writelog(
+        '\n\nNUTS sampling statistics:',
+        mute=(not meta.verbose),
+        end='',
+    )
     # Need to temporarily redirect stdout since mcmc.print_summary() prints
     # to stdout rather than returning a string
     old_stdout = sys.stdout
@@ -303,14 +365,17 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     # FINDME: Currently unused code, but could be used to make some other
     # potentially helpful figures
     # (see https://python.arviz.org/en/latest/api/plots.html)
-    # posterior_predictive = numpyro.infer.Predictive(model.setup, samples)(
+    # posterior_predictive = numpyro.infer.Predictive(model, samples)(
     #     jax.random.PRNGKey(2), lc.time, lc.flux, lc.unc, freepars)
-    # prior = numpyro.infer.Predictive(model.setup, num_samples=500)(
+    # prior = numpyro.infer.Predictive(model, num_samples=500)(
     #     jax.random.PRNGKey(3), lc.time, lc.flux, lc.unc, freepars)
     # trace_az = arviz.from_numpyro(
     #     mcmc, prior=prior, posterior_predictive=posterior_predictive)
+
     trace_az = arviz.from_numpyro(mcmc)
-    samples = np.hstack([samples[name].reshape(-1, 1) for name in freenames])
+    samples = np.hstack(
+        [samples_dict[name].reshape(-1, 1) for name in freenames],
+    )
 
     # Record median + percentiles
     q = np.percentile(samples, [16, 50, 84], axis=0)
@@ -318,19 +383,31 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     mean_params = np.mean(samples, axis=0)
     errs = np.std(samples, axis=0)
 
-    # Create table of results
-    t_results = table.Table([freenames, mean_params, q[0]-q[1], q[2]-q[1],
-                             q[0], fit_params, q[2]],
-                            names=("Parameter", "Mean", "-1sigma", "+1sigma",
-                                   "16th", "50th", "84th"))
+    t_results = table.Table(
+        [freenames, mean_params, q[0] - q[1], q[2] - q[1],
+         q[0], fit_params, q[2]],
+        names=('Parameter', 'Mean', '-1sigma', '+1sigma',
+               '16th', '50th', '84th'),
+    )
+    upper_errs = q[2] - q[1]
+    lower_errs = q[1] - q[0]
 
-    upper_errs = q[2]-q[1]
-    lower_errs = q[1]-q[0]
+    # Reset any JAX tracers stored on the model during NUTS.
+    # This ensures that later calls to component.eval() (e.g., in save_fit
+    # and plotting) see plain NumPy arrays, not leaked JAX tracers.
+    model.time = np.array(lc.time)
+    model.flux = np.array(lc.flux)
+    model.lc_unc = np.array(lc.unc)
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
-                                    lc.nchannel_fitted)
+    lc.unc_fit = update_uncertainty(
+        fit_params,
+        lc.nints,
+        lc.unc,
+        freenames,
+        lc.nchannel_fitted,
+    )
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'nuts', t_results, freenames, samples)
@@ -340,23 +417,29 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     log.writelog('\nNUTS RESULTS:')
     for i in range(ndim):
-        if 'scatter_mult' in freenames[i]:
-            chan = freenames[i].split('_ch')[-1].split('_')[0]
+        name = freenames[i]
+        if 'scatter_mult' in name:
+            chan = name.split('_ch')[-1].split('_')[0]
             if chan.isnumeric():
                 chan = int(chan)
             else:
                 chan = 0
             trim1, trim2 = get_trim(meta.nints, chan)
             unc = np.ma.median(lc.unc[trim1:trim2])
-            scatter_ppm = 1e6*fit_params[i]*unc
-            scatter_ppm_upper = 1e6*upper_errs[i]*unc
-            scatter_ppm_lower = 1e6*lower_errs[i]*unc
-            log.writelog(f'{freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
-                         f' -{lower_errs[i]}); {scatter_ppm} '
-                         f'(+{scatter_ppm_upper}, -{scatter_ppm_lower}) ppm')
+            scatter_ppm = 1e6 * fit_params[i] * unc
+            scatter_ppm_upper = 1e6 * upper_errs[i] * unc
+            scatter_ppm_lower = 1e6 * lower_errs[i] * unc
+            log.writelog(
+                f'{name}: {fit_params[i]} (+{upper_errs[i]}, '
+                f'-{lower_errs[i]}); {scatter_ppm} '
+                f'(+{scatter_ppm_upper}, -{scatter_ppm_lower}) ppm',
+            )
         else:
-            log.writelog(f'{freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
-                         f' -{lower_errs[i]})')
+            log.writelog(
+                f'{name}: {fit_params[i]} '
+                f'(+{upper_errs[i]}, -{lower_errs[i]})',
+            )
+
     if meta.pixelsampling:
         log.writelog('\nSpherical Harmonic Basis:')
 
@@ -366,25 +449,28 @@ def nutsfitter(lc, model, meta, log, **kwargs):
             else:
                 chankey = f'_ch{chan}'
             if model.nchannel_fitted > 1:
-                log.writelog(f'  Channel {chan+1}:')
+                log.writelog(f'  Channel {chan + 1}:')
                 padding = '    '
             else:
                 padding = '  '
 
-            othernames = ['fp', ]
-            for ell in range(1, meta.ydeg+1):
-                for m in range(-ell, ell+1):
+            othernames = ['fp']
+            for ell in range(1, meta.ydeg + 1):
+                for m in range(-ell, ell + 1):
                     othernames.append(f'Y{ell}{m}')
 
             for name in othernames:
-                values = trace_az.posterior.stack(sample=("chain", "draw")
-                                                  )[name+chankey][:]
+                values = trace_az.posterior.stack(
+                    sample=('chain', 'draw'),
+                )[name + chankey][:]
                 q = np.percentile(values, [16, 50, 84])
-                medval = q[1]  # median
-                uppererr = q[2]-q[1]
-                lowererr = q[1]-q[0]
-                log.writelog(f'{padding}{name}: {medval} (+{uppererr},'
-                             f' -{lowererr})')
+                medval = q[1]
+                uppererr = q[2] - q[1]
+                lowererr = q[1] - q[0]
+                log.writelog(
+                    f'{padding}{name}: {medval} '
+                    f'(+{uppererr}, -{lowererr})',
+                )
     log.writelog('')
 
     # Plot fit
@@ -407,9 +493,15 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter='nuts')
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames
-                                 or 'sinusoid_pc' in meta.run_myfuncs
-                                 or 'quasilambert_pc' in meta.run_myfuncs):
+    if (
+        meta.isplots_S5 >= 1
+        and (
+            'Y10' in freenames
+            or 'Y11' in freenames
+            or 'sinusoid_pc' in meta.run_myfuncs
+            or 'quasilambert_pc' in meta.run_myfuncs
+        )
+    ):
         plots.plot_phase_variations(lc, model, meta, fitter='nuts')
 
     # FINDME: Not yet implemented
@@ -444,15 +536,17 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
                 # Grab all the Ylm values
                 ylm_names = []
-                for ell in range(1, meta.ydeg+1):
-                    for m in range(-ell, ell+1):
+                for ell in range(1, meta.ydeg + 1):
+                    for m in range(-ell, ell + 1):
                         ylm_names.append(f'Y{ell}{m}{chankey}')
                 ylms = []
                 for name in ylm_names:
                     # Grab all the Ylm values from the trace
-                    ylms.append(trace_az.posterior.stack(
-                        sample=("chain", "draw")
-                    )[name][:].to_numpy().flatten())
+                    ylms.append(
+                        trace_az.posterior.stack(
+                            sample=('chain', 'draw'),
+                        )[name][:].to_numpy().flatten(),
+                    )
 
                 # Replace pixel values with Ylms for a second corner plot
                 freenames_ylm = []
@@ -462,9 +556,14 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                         # Replace pixel values with Ylm values
                         freenames_ylm.extend(ylm_names)
                         samples_ylm.extend(ylms)
-                    elif (f'pixel{chankey}' not in freename or
-                            (chan == 0 and model.nchannel_fitted > 1
-                             and 'pixel_ch' in freename)):
+                    elif (
+                        f'pixel{chankey}' not in freename
+                        or (
+                            chan == 0
+                            and model.nchannel_fitted > 1
+                            and 'pixel_ch' in freename
+                        )
+                    ):
                         # Keep non-pixel values (or pixel values from
                         # upcoming channels) as they were
                         freenames_ylm.append(freename)
@@ -476,10 +575,14 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                 freenames_temp = np.copy(freenames_ylm)
                 samples_temp = np.copy(samples_ylm)
 
-            plots.plot_corner(samples_ylm, lc, meta, freenames_ylm,
-                              fitter='Ylm_nuts')
+            plots.plot_corner(
+                samples_ylm,
+                lc,
+                meta,
+                freenames_ylm,
+                fitter='Ylm_nuts',
+            )
 
-    # Make a new model instance
     model.chi2red = chi2red
     model.fit_params = fit_params
 

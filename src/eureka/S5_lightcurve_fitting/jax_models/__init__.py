@@ -1,5 +1,5 @@
 from .JaxModel import JaxModel, CompositeJaxModel
-from .AstroModel import AstroModel, PlanetParams
+from .AstroModel import AstroModel, compute_astroparams
 from .CentroidModel import CentroidModel
 from .DampedOscillator import DampedOscillatorModel
 from .ExpRampModel import ExpRampModel

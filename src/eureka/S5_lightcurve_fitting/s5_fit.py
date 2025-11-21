@@ -559,6 +559,12 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     StepModel = m.StepModel
     CompositeModel = m.CompositeModel
 
+        # Need to replace masked arrays with regular arrays for jax
+        # Will replace masked elements with NaN
+        time = time.filled(np.nan)
+        flux = flux.filled(np.nan)
+        flux_err = flux_err.filled(np.nan)
+
     # Load the relevant values into the LightCurve model object
     lc_model = LightCurve(time, flux, chan, chanrng, log,
                           longparamlist, params, freenames,

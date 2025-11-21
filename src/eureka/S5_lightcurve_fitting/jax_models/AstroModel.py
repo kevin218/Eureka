@@ -1,171 +1,429 @@
-import numpy as np
+from typing import Any, Dict, Optional, List
+import re
+
 import jax.numpy as jnp
+from jax.typing import ArrayLike
 
 from .JaxModel import JaxModel
 # Importing these here to give access to other differentiable models
-from ..models.AstroModel import PlanetParams, get_ecl_midpt, true_anomaly  # NOQA: F401, E501
+from ..models.AstroModel import get_ecl_midpt, true_anomaly  # NOQA: F401, E501
 from ...lib.split_channels import split
+
+
+def compute_astroparams(
+    param_dict: Dict[str, Any],
+    channel: int = 0,
+    pid: int = 0,
+) -> Dict[str, Any]:
+    """Compute derived astrophysical parameters for a planet and channel.
+
+    Parameters
+    ----------
+    param_dict : dict
+        Dictionary of model parameters. Keys may include global, per-planet,
+        per-channel, or per-planet-per-channel names, e.g.:
+        ``per``, ``per_pl1``, ``per_pl1_ch2``.
+    channel : int, optional
+        Channel index to select channel-specific parameters. Defaults to 0.
+    pid : int, optional
+        Planet ID index to select planet-specific parameters. Defaults to 0.
+
+    Returns
+    -------
+    astro : dict
+        Dictionary of derived and harmonized astrophysical parameters.
+        Contains core orbital parameters, limb-darkening coefficients,
+        Harmonica shape coefficients, and optional phase-curve / spot
+        parameters where defined.
+    """
+    astro: Dict[str, Any] = {}
+
+    pid_suffix = f"_pl{pid}" if pid != 0 else ""
+    ch_suffix = f"_ch{channel}" if channel != 0 else ""
+
+    def get_param(base_name: str, allow_global_fallback: bool = True) -> Any:
+        """Return the most specific matching parameter from param_dict."""
+        if allow_global_fallback:
+            keys: List[str] = [
+                f"{base_name}{pid_suffix}{ch_suffix}",
+                f"{base_name}{pid_suffix}",
+                f"{base_name}{ch_suffix}",
+                base_name,
+            ]
+        else:
+            keys = [f"{base_name}{pid_suffix}{ch_suffix}"]
+
+        for k in keys:
+            if k in param_dict:
+                return param_dict[k]
+        return None
+
+    # Core orbital and eclipse parameters
+    astro["t0"] = get_param("t0")
+    astro["per"] = get_param("per")
+    astro["a"] = get_param("a")
+    astro["ars"] = get_param("ars")
+    astro["rp"] = get_param("rp")
+    astro["rprs"] = get_param("rprs")
+    astro["rp2"] = get_param("rp2")
+    astro["rprs2"] = get_param("rprs2")
+    astro["inc"] = get_param("inc")
+    astro["b"] = get_param("b")
+    astro["ecc"] = get_param("ecc")
+    astro["w"] = get_param("w")
+    astro["ecosw"] = get_param("ecosw")
+    astro["esinw"] = get_param("esinw")
+    astro["fp"] = get_param("fp")
+    astro["fpfs"] = get_param("fpfs")
+    astro["t_secondary"] = get_param("t_secondary")
+
+    # Limb-darkening
+    for i in range(1, 5):
+        astro[f"u{i}"] = get_param(f"u{i}")
+
+    # Harmonica shape coefficients: a1, b1, a2, b2, ..., aN, bN
+    ab_keys = [
+        k for k in param_dict
+        if re.fullmatch(r"[ab][0-9]+(_pl[0-9]+)?(_ch[0-9]+)?", k)
+    ]
+    ab_keys = [
+        k for k in ab_keys
+        if ((f"_pl{pid}" in k) or (pid == 0 and "_pl" not in k))
+        and ((f"_ch{channel}" in k) or (channel == 0 and "_ch" not in k))
+    ]
+    ab_keys = sorted(
+        ab_keys,
+        key=lambda s: (int(re.findall(r"[0-9]+", s)[0]), s[0]),
+    )
+
+    ab_coeffs: List[Any] = []
+    if astro["rp"] is not None:
+        ab_coeffs.append(astro["rp"])
+    ab_coeffs.extend([param_dict[k] for k in ab_keys])
+    astro["ab"] = jnp.array(ab_coeffs) if ab_coeffs else jnp.array([])
+
+    # POET phase curve parameters
+    for k in ["cos1_amp", "cos1_off", "cos2_amp", "cos2_off"]:
+        astro[k] = get_param(k)
+
+    # Sinusoidal phase curve parameters
+    for k in ["AmpCos1", "AmpSin1", "AmpCos2", "AmpSin2"]:
+        astro[k] = get_param(k)
+
+    # Quasi-Lambertian parameters
+    for k in ["quasi_gamma", "quasi_offset"]:
+        astro[k] = get_param(k)
+
+    # Spot / starry model parameters
+    for k in [
+        "spotrad", "spotlat", "spotlon", "spotcon",
+        "spotstari", "spotstarobl", "spotrot", "spotnpts",
+    ]:
+        astro[k] = get_param(k)
+
+    # Additional pixel map and Ylm harmonics if defined
+    for k in param_dict:
+        if k.startswith("pixel") and (
+            (f"_ch{channel}" in k) or channel == 0
+        ):
+            astro[k] = param_dict[k]
+        if re.fullmatch(r"Y[0-9]+-?[0-9]+(_ch[0-9]+)?", k):
+            if (f"_ch{channel}" in k) or channel == 0:
+                astro[k] = param_dict[k]
+
+    # Eccentricity / argument-of-periastron conversions
+    if (
+        astro.get("ecc") is None
+        and astro.get("ecosw") is not None
+        and astro.get("esinw") is not None
+    ):
+        ecosw = astro["ecosw"]
+        esinw = astro["esinw"]
+        astro["ecc"] = jnp.sqrt(ecosw**2 + esinw**2)
+        astro["w"] = jnp.arctan2(esinw, ecosw) * 180. / jnp.pi
+    elif astro.get("ecc") is not None and astro.get("w") is not None:
+        ecc = astro["ecc"]
+        w_rad = astro["w"] * jnp.pi / 180.
+        astro["ecosw"] = ecc * jnp.cos(w_rad)
+        astro["esinw"] = ecc * jnp.sin(w_rad)
+
+    # Impact parameter / inclination conversion
+    if (
+        astro.get("b") is None
+        and astro.get("a") is not None
+        and astro.get("inc") is not None
+    ):
+        astro["b"] = astro["a"] * jnp.cos(astro["inc"] * jnp.pi / 180.)
+    elif (
+        astro.get("inc") is None
+        and astro.get("a") is not None
+        and astro.get("b") is not None
+    ):
+        astro["inc"] = (
+            jnp.arccos(astro["b"] / astro["a"]) * 180. / jnp.pi
+        )
+
+    # Harmonize radius and a/Rs variants
+    if astro.get("rprs") is None and astro.get("rp") is not None:
+        astro["rprs"] = astro["rp"]
+    if astro.get("rp") is None and astro.get("rprs") is not None:
+        astro["rp"] = astro["rprs"]
+
+    if astro.get("rprs2") is None and astro.get("rp2") is not None:
+        astro["rprs2"] = astro["rp2"]
+    if astro.get("rp2") is None and astro.get("rprs2") is not None:
+        astro["rp2"] = astro["rprs2"]
+
+    if astro.get("ars") is None and astro.get("a") is not None:
+        astro["ars"] = astro["a"]
+    if astro.get("a") is None and astro.get("ars") is not None:
+        astro["a"] = astro["ars"]
+
+    if astro.get("fpfs") is None and astro.get("fp") is not None:
+        astro["fpfs"] = astro["fp"]
+    if astro.get("fp") is None and astro.get("fpfs") is not None:
+        astro["fp"] = astro["fpfs"]
+
+    # Stellar radius
+    astro["Rs"] = get_param("Rs")
+
+    # spotrot fallback
+    if astro.get("spotrot") is None:
+        astro["spotrot"] = 3650000.
+        astro["fleck_fast"] = True
+    else:
+        astro["fleck_fast"] = False
+
+    # Derived angle versions
+    if astro.get("inc") is not None:
+        astro["inc_rad"] = astro["inc"] * jnp.pi / 180.
+    if astro.get("w") is not None:
+        astro["w_rad"] = astro["w"] * jnp.pi / 180.
+
+    # Handle Kipping2013 transformation if flag present
+    if param_dict.get("limb_dark") == "kipping2013":
+        q1 = astro["u1"]
+        q2 = astro["u2"]
+        astro["u1"] = 2. * jnp.sqrt(q1) * q2
+        astro["u2"] = jnp.sqrt(q1) * (1. - 2. * q2)
+        astro["u"] = jnp.array([astro["u1"], astro["u2"]])
+    else:
+        u_coeffs = [
+            astro.get(f"u{i}")
+            for i in range(1, 5)
+            if astro.get(f"u{i}") is not None
+        ]
+        astro["u"] = jnp.array(u_coeffs)
+
+    return astro
+
+
+def evaluate_astrophysical_model_jax(
+    time_global: ArrayLike,
+    nints: List[int],
+    multwhite: bool,
+    fitted_channels: List[int],
+    num_planets: int,
+    param_dict: Dict[str, float],
+    stellar_models: List[Any],
+    jaxoplanet_model: Optional[Any],
+    starry_model: Optional[Any],
+    phasevariation_models: List[Any],
+    **eval_kwargs: Any,
+) -> ArrayLike:
+    """Evaluate the full astrophysical model in a JAX-pure style.
+
+    This function mirrors the logic in :meth:`AstroModel.eval` but does not
+    depend on object state. All required inputs are supplied explicitly,
+    making it suitable for use inside a future ``jax_eval_composite`` or
+    NumPyro log-prob function.
+
+    Parameters
+    ----------
+    time_global : array-like
+        The full time array for the observation.
+    nints : list[int]
+        Number of integrations per channel.
+    multwhite : bool
+        Whether this is a multwhite fit.
+    fitted_channels : list[int]
+        List of channel indices to evaluate.
+    num_planets : int
+        Number of planetary components in the model.
+    param_dict : dict
+        Dictionary of parameter values (typically from a prior sample or
+        a flat parameter array decoded into a dict).
+    stellar_models : list
+        List of stellar/throughput models with an ``eval(param_dict, ...)``
+        method.
+    jaxoplanet_model : object or None
+        Jaxoplanet-based transit/eclipse model with ``eval`` or ``None``.
+    starry_model : object or None
+        Starry-based model with ``eval`` or ``None``.
+    phasevariation_models : list
+        List of phase-curve / variability models with ``eval``.
+    **eval_kwargs : dict
+        Extra keyword arguments forwarded to the component ``eval`` calls.
+
+    Returns
+    -------
+    jnp.ndarray
+        The combined astrophysical model flux across all evaluated channels.
+    """
+    time_global = jnp.array(time_global)
+    nchan = len(fitted_channels)
+
+    # Total length across selected channels
+    if multwhite:
+        total_len = sum(nints[chan] for chan in fitted_channels)
+    else:
+        total_len = time_global.size * nchan
+
+    lcfinal = jnp.zeros(total_len)
+    offset = 0
+
+    for chan in fitted_channels:
+        # Per-channel time array
+        if multwhite:
+            time = split([time_global], nints, chan)[0]
+        else:
+            time = time_global
+
+        # Stellar contribution
+        star_flux = jnp.ones_like(time)
+        for component in stellar_models:
+            star_flux *= component.eval(
+                param_dict, channel=chan, **eval_kwargs
+            )
+
+        if jaxoplanet_model is not None:
+            star_flux *= jaxoplanet_model.eval(
+                param_dict, channel=chan, **eval_kwargs
+            )
+
+        eclipses = None
+        if starry_model is not None:
+            result = starry_model.eval(
+                param_dict, channel=chan, piecewise=True, **eval_kwargs
+            )[0]
+            transits = result.pop(0)
+            eclipses = result
+            star_flux *= transits
+
+        # Planet contributions
+        planet_fluxes = jnp.zeros_like(time)
+        for pid in range(num_planets):
+            if starry_model is not None and eclipses is not None:
+                planet_flux = eclipses[pid]
+            elif len(phasevariation_models) > 0:
+                # Simple fp-only planet term if only phase-curve models exist
+                fp = param_dict.get("fp", 0.)
+                planet_flux = fp
+            else:
+                planet_flux = 0.
+
+            for model in phasevariation_models:
+                planet_flux *= model.eval(
+                    param_dict, pid, channel=chan, **eval_kwargs
+                )
+
+            planet_fluxes += planet_flux
+
+        piece = star_flux + planet_fluxes
+        lcfinal = lcfinal.at[offset:offset + len(piece)].set(piece)
+        offset += len(piece)
+
+    return lcfinal
 
 
 class AstroModel(JaxModel):
     """A model that combines all astrophysical components."""
-    def __init__(self, components, **kwargs):
-        """Initialize the phase curve model.
+    def __init__(self, components: List[Any], **kwargs: Any) -> None:
+        """Initialize the astrophysical model.
 
         Parameters
         ----------
         components : list
-            A list of eureka.S5_lightcurve_fitting.models.Model which together
-            comprise the astrophysical model.
+            A list of
+            ``eureka.S5_lightcurve_fitting.models.Model`` instances that
+            together comprise the astrophysical model.
         **kwargs : dict
-            Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.__init__().
-            Can pass in the parameters, longparamlist, nchan, and
-            paramtitles arguments here.
+            Additional parameters to pass to ``Model.__init__()``.
         """
-        # Inherit from Model class
         super().__init__(components=components, **kwargs)
         self.name = 'astrophysical model'
-
-        # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
     @property
-    def components(self):
-        """A getter for the components."""
+    def components(self) -> List[Any]:
+        """Return the list of component models."""
         return self._components
 
     @components.setter
-    def components(self, components):
-        """A setter for the components
-
-        Parameters
-        ----------
-        components : sequence
-            The collection of astrophysical model components.
-        """
+    def components(self, components: List[Any]) -> None:
+        """Assign and classify component models."""
         self._components = components
-        self.jaxoplanet_model = None
-        self.starry_model = None
-        self.phasevariation_models = []
-        self.stellar_models = []
-        for component in self.components:
-            if 'jaxoplanet' in component.name.lower():
+        self.jaxoplanet_model: Optional[Any] = None
+        self.starry_model: Optional[Any] = None
+        self.phasevariation_models: List[Any] = []
+        self.stellar_models: List[Any] = []
+        for component in self._components:
+            name = component.name.lower()
+            if 'jaxoplanet' in name:
                 self.jaxoplanet_model = component
-            elif 'starry' in component.name.lower():
+            elif 'starry' in name:
                 self.starry_model = component
-            elif 'phase curve' in component.name.lower():
+            elif 'phase curve' in name:
                 self.phasevariation_models.append(component)
             else:
                 self.stellar_models.append(component)
 
-    @property
-    def fit(self):
-        """A getter for the fit object."""
-        return self._fit
+    def eval(
+        self,
+        param_dict: Optional[Dict[str, float]] = None,
+        channel: Optional[int] = None,
+        **kwargs: Any,
+    ) -> ArrayLike:
+        """Evaluate the full astrophysical model.
 
-    @fit.setter
-    def fit(self, fit):
-        """A setter for the fit object.
-
-        Parameters
-        ----------
-        fit : object
-            The fit object
-        """
-        self._fit = fit
-        for component in self.components:
-            component.fit = fit
-
-    def eval(self, channel=None, eval=True, **kwargs):
-        """Evaluate the function with the given values.
+        This evaluates all stellar and planetary components (e.g., transits,
+        eclipses, phase curves) for one or more channels, combining their
+        flux contributions additively.
 
         Parameters
         ----------
-        channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
-        eval : bool; optional
-            If true evaluate the model, otherwise simply compile the model.
-            Defaults to True.
+        param_dict : dict, optional
+            If None, uses values from ``self.parameters`` (i.e., fitted mode).
+        channel : int, optional
+            If provided, evaluate only for the given channel.
         **kwargs : dict
-            Must pass in the time array here if not already set.
+            May contain the time array if not already set and any keyword
+            arguments required by sub-components.
 
         Returns
         -------
-        lcfinal : ndarray
-            The value of the model at the times self.time.
+        jnp.ndarray
+            The combined astrophysical model flux across all evaluated
+            channels.
         """
+        if param_dict is None:
+            param_dict = self._get_param_dict()
+
         if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
+            fitted_channels = self.fitted_channels
         else:
-            nchan = 1
-            channels = [channel, ]
+            fitted_channels = [channel]
 
-        # Can't separately evaluate jaxoplanet models to allow for
-        # mutual occultations
-        pid_iter = range(self.num_planets)
-
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
-
-        if eval:
-            lib = np
-            model = self.fit
-        else:
-            lib = jnp
-            model = self.model
-
-        # Set all parameters
-        lcfinal = jnp.zeros(0)
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-            else:
-                chan = 0
-
-            time = self.time
-            if self.multwhite:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
-
-            starFlux = lib.ones(len(time))
-            for component in self.stellar_models:
-                starFlux *= component.eval(channel=chan, eval=eval, **kwargs)
-            if self.jaxoplanet_model is not None:
-                starFlux *= self.jaxoplanet_model.eval(channel=chan, eval=eval,
-                                                       **kwargs)
-            if self.starry_model is not None:
-                result = self.starry_model.eval(channel=chan, eval=eval,
-                                                piecewise=True, **kwargs)[0]
-                transits = result.pop(0)
-                eclipses = result
-                starFlux *= transits
-
-            planetFluxes = lib.zeros(len(time))
-            for pid in pid_iter:
-                # Initial default value
-                planetFlux = 0
-
-                if self.starry_model is not None:
-                    # User is fitting an eclipse model
-                    planetFlux = eclipses[pid]
-                elif len(self.phasevariation_models) > 0:
-                    # User is dealing with phase variations of a
-                    # non-eclipsing object. Still require the fp parameter
-                    # for normalization purposes (since not all phase curve
-                    # models have terms that can be used to set the amplitude
-                    # of the model)
-                    pl_params = PlanetParams(self, pid, chan, eval=eval,
-                                             lib=lib)
-                    planetFlux = pl_params.fp
-
-                for model in self.phasevariation_models:
-                    planetFlux *= model.eval(pid, channel=chan, eval=eval,
-                                             **kwargs)
-
-                planetFluxes += planetFlux
-
-            lcfinal = lib.concatenate([lcfinal, starFlux+planetFluxes])
-        return lcfinal
+        return evaluate_astrophysical_model_jax(
+            time_global=self.time,
+            nints=self.nints,
+            multwhite=self.multwhite,
+            fitted_channels=fitted_channels,
+            num_planets=self.num_planets,
+            param_dict=param_dict,
+            stellar_models=self.stellar_models,
+            jaxoplanet_model=self.jaxoplanet_model,
+            starry_model=self.starry_model,
+            phasevariation_models=self.phasevariation_models,
+            **kwargs,
+        )
