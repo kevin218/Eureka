@@ -354,7 +354,7 @@ class GPModel(Model):
             rho = np.exp(self.coeffs[c, k, 1])
             if kernel_name == 'Matern32':
                 kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=rho)
-            if kernel_name == 'SHO':
+            elif kernel_name == 'SHO':
                 # reparametrize sigma, rho into omega_0 and S_0 as defined in celerite2
                 w0 = np.sqrt(3) / rho
                 S0 = (sigma**2) / w0
