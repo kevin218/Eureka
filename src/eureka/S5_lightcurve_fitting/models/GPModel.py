@@ -88,10 +88,6 @@ class GPModel(Model):
             else:
                 chankey = f'_ch{chan}'
 
-            #paramlist = ['A', 'm']
-            #if self.kernel_types[0]
-            #for i, par in enumerate(paramlist):
-            #    for k in range(self.nkernels):
             for k in range(self.nkernels):
                 paramlist = ['A', 'm']
                 if self.kernel_types[k] == "SHO":
@@ -352,16 +348,23 @@ class GPModel(Model):
                                      'ExpSquared, RationalQuadratic, Exp.')
         elif self.gp_code_name == 'celerite':
             # get metric and amplitude for the current kernel and channel
+            # "amp" and "metric" broadly correspond to "sigma" and "rho"
+            # which are the specific celerite2 parameter names
             sigma = np.sqrt(np.exp(self.coeffs[c, k, 0]))
             rho = np.exp(self.coeffs[c, k, 1])
             if kernel_name == 'Matern32':
                 kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=rho)
             if kernel_name == 'SHO':
+                # reparametrize sigma, rho into omega_0 and S_0 as defined in celerite2
                 w0 = np.sqrt(3) / rho
                 S0 = (sigma**2) / w0
-                Q = np.exp(self.coeffs[c, k, 2])
+                Q = self.coeffs[c, k, 2]
                 kernel = celerite2.terms.SHOTerm(S0=S0, w0=w0, Q=Q)
-
+            else:
+                raise AssertionError(f'The kernel {kernel_name} is not in the '
+                                     'currently supported list of kernels for '
+                                     'celerite2 which includes:\nMatern32 '
+                                     'and SHO.')
         elif self.gp_code_name == 'tinygp':
             # get metric and amplitude for the current kernel and channel
             sigma = np.sqrt(np.exp(self.coeffs[c, k, 0]))

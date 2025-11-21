@@ -1154,11 +1154,11 @@ Only used for fits with a GP. A list of the covariates to be used when fitting a
 
 kernel_class
 ^^^^^^^^^^^^
-Only used for fits with a GP. A list of the types of GP kernels to use. For the george GP package, this includes ExpSquared, Matern32, Exp, and RationalQuadratic. For the celerite package, this only includes Matern32. It is possible to sum multiple kernels possible for george by listing multiple kernels.
+Only used for fits with a GP. A list of the types of GP kernels to use. For the george and tinygp GP packages, this includes ExpSquared, Matern32, Exp, and RationalQuadratic. For the celerite package, this includes Matern32 and SHO. It is possible to sum multiple kernels possible for george by listing multiple kernels.
 
 GP_package
 ^^^^^^^^^^
-Only used for fits with a GP. The Python GP package to use, with the options of 'george' or 'celerite'.
+Only used for fits with a GP. The Python GP package to use, with the options of 'george', 'celerite' or 'tinygp'.
 
 useHODLR
 ^^^^^^^^
@@ -1470,6 +1470,8 @@ Available fitting parameters are:
          Significant care should be used when specifying the priors on these parameters as an excessively flexible GP model may end up competing with your astrophysical model.
          That said, there are no hard and fast rules about what your priors should be, and you will need to experiment to find what works best.
          If there are multiple kernels that are being added, the second kernel's parameters will be ``A1`` and ``m1``, and so on.
+
+      - ``Q`` - ``SHO`` kernel only (in addition to ``A`` and ``m``)! The quality factor of the damped harmonic oscillator for the ``SHO`` kernel as used in the ``celerite`` GP implementation. A detailed discussion of quality factors can be found in Section 3. of Foreman-Mackey et al. (2017, arxiv:1703.09710).
 
    - White Noise Parameters - options are ``scatter_mult`` for a multiplier to the expected noise from Stage 3 (recommended), or ``scatter_ppm`` to directly fit the noise level in ppm.
 
