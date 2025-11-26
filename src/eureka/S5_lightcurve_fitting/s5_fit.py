@@ -557,28 +557,42 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         flux = flux.filled(np.nan)
         flux_err = flux_err.filled(np.nan)
     else:
+        # LightCurve = jax_lightcurve.LightCurve
         LightCurve = lightcurve.LightCurve
+        # AstroModel = jm.AstroModel
         AstroModel = m.AstroModel
         BatmanEclipseModel = m.BatmanEclipseModel
         BatmanTransitModel = m.BatmanTransitModel
         CatwomanTransitModel = m.CatwomanTransitModel
+        # CentroidModel = jm.CentroidModel
         CentroidModel = m.CentroidModel
         CommonModeModel = m.CommonModeModel
         DampedOscillatorModel = m.DampedOscillatorModel
+        # ExpRampModel = jm.ExpRampModel
         ExpRampModel = m.ExpRampModel
         FleckTransitModel = m.FleckTransitModel
         GPModel = m.GPModel
+        # HarmonicaTransitModel = jm.HarmonicaTransitModel
         HarmonicaTransitModel = m.HarmonicaTransitModel
         HSTRampModel = m.HSTRampModel
+        JaxoplanetModel = jm.JaxoplanetModel
         LorentzianModel = m.LorentzianModel
         PoetEclipseModel = m.PoetEclipseModel
         PoetPCModel = m.PoetPCModel
         PoetTransitModel = m.PoetTransitModel
+        # PolynomialModel = jm.PolynomialModel
         PolynomialModel = m.PolynomialModel
         QuasiLambertianPhaseCurve = m.QuasiLambertianPhaseCurve
         SinusoidModel = m.SinusoidPhaseCurveModel
         StepModel = m.StepModel
+        # CompositeModel = jm.CompositeJaxModel
         CompositeModel = m.CompositeModel
+
+        # Need to replace masked arrays with regular arrays for jax
+        # Will replace masked elements with NaN
+        time = time.filled(np.nan)
+        flux = flux.filled(np.nan)
+        flux_err = flux_err.filled(np.nan)
 
     # Load the relevant values into the LightCurve model object
     lc_model = LightCurve(time, flux, chan, chanrng, log,
