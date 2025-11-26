@@ -63,10 +63,6 @@ class GPModel(Model):
                 raise AssertionError('Our celerite2 implementation currently '
                                      'only supports Matern32 or SHO kernels.')
 
-            #elif self.kernel_types[0] != 'Matern32' or self.kernel_types[0] != 'SHO':
-            #    raise AssertionError('Our celerite2 implementation currently '
-            #                         'only supports Matern32 or SHO kernels.')
-
         # Setup coefficients
         nparam = 2
         if 'SHO' in self.kernel_types: # SHO kernels need Q as well
@@ -367,18 +363,18 @@ class GPModel(Model):
                                      'and SHO.')
         elif self.gp_code_name == 'tinygp':
             # get metric and amplitude for the current kernel and channel
-            sigma = np.sqrt(np.exp(self.coeffs[c, k, 0]))
+            amp = np.exp(self.coeffs[c, k, 0])
             rho = np.exp(self.coeffs[c, k, 1])
 
             if kernel_name == 'Matern32':
-                kernel = tinygp.kernels.quasisep.Matern32(scale=rho, sigma=sigma)
+                kernel = tinygp.kernels.quasisep.Matern32(scale=rho, sigma=np.sqrt(amp))
             elif kernel_name == 'ExpSquared':
-                kernel = sigma*tinygp.kernels.ExpSquared(metric)
+                kernel = amp*tinygp.kernels.ExpSquared(metric)
             elif kernel_name == 'RationalQuadratic':
-                kernel = sigma*tinygp.kernels.RationalQuadratic(alpha=1,
+                kernel = amp*tinygp.kernels.RationalQuadratic(alpha=1,
                                                               scale=metric)
             elif kernel_name == 'Exp':
-                kernel = tinygp.kernels.quasisep.Exp(scale=metric, sigma=sigma)
+                kernel = tinygp.kernels.quasisep.Exp(scale=metric, sigma=np.sqrt(amp))
             else:
                 raise AssertionError(f'The kernel {kernel_name} is not in the '
                                      'currently supported list of kernels for '
