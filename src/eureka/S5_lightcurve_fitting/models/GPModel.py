@@ -150,8 +150,12 @@ class GPModel(Model):
                 gp.compute(kin, yerr=unc_fit)
                 mu = gp.predict(residuals)
             elif self.gp_code_name == 'tinygp':
-                cond_gp = gp.condition(residuals, gp.X).gp
-                mu = cond_gp.loc
+                if isinstance(gp.kernel, tinygp.kernels.quasisep.Quasisep):
+                    order = np.argsort(self.kernel_inputs[chan][0][good])
+                    mu = np.asarray(gp.predict(residuals[order]))[
+                        np.argsort(order)]
+                else:
+                    mu = gp.predict(residuals)
             else:
                 raise ValueError(f'Unknown gp_code_name: {self.gp_code_name}')
 
@@ -245,9 +249,15 @@ class GPModel(Model):
             kernel_inputs = self.kernel_inputs[chan][0]
             if good is not None:
                 kernel_inputs = kernel_inputs[good]
+            solver_kwargs = {}
+            if isinstance(kernel, tinygp.kernels.quasisep.Quasisep):
+                order = np.argsort(kernel_inputs)
+                kernel_inputs = kernel_inputs[order]
+                unc_fit = unc_fit[order]
+                solver_kwargs['assume_sorted'] = True
             gp = tinygp.GaussianProcess(kernel, np.asarray(kernel_inputs),
-                                        diag=unc_fit**2,
-                                        mean=0.)
+                                        diag=unc_fit**2, mean=0.,
+                                        **solver_kwargs)
 
         return gp
 
@@ -318,7 +328,8 @@ class GPModel(Model):
                 )
         elif self.gp_code_name == 'tinygp':
             from ..jax_models.GPModel import build_tinygp_kernel
-            kernel = build_tinygp_kernel(kernel_name, amp_log, metric_log)
+            kernel = build_tinygp_kernel(kernel_name, amp_log, metric_log,
+                                         quasiseparable=self.nkernels == 1)
         else:
             raise ValueError(f'Unknown gp_code_name: {self.gp_code_name}')
 
@@ -387,7 +398,9 @@ class GPModel(Model):
                 gp.compute(kin, yerr=unc_fit)
                 logL += gp.log_likelihood(residuals)
             elif self.gp_code_name == 'tinygp':
-                cond = gp.condition(residuals, gp.X)
-                logL += cond.log_probability
+                if isinstance(gp.kernel, tinygp.kernels.quasisep.Quasisep):
+                    order = np.argsort(self.kernel_inputs[chan][0][good])
+                    residuals = residuals[order]
+                logL += gp.log_probability(residuals)
 
         return logL

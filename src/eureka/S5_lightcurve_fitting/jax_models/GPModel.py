@@ -8,8 +8,15 @@ from ...lib.split_channels import split
 from .JaxModel import JaxModel, build_scatter_array_jax
 
 
-def build_tinygp_kernel(kernel_name, log_amplitude, log_metric):
+def build_tinygp_kernel(kernel_name, log_amplitude, log_metric, *,
+                        quasiseparable=False):
     """Build the shared tinygp kernel for ordinary and gradient fitters."""
+    scale = jnp.exp(2. * log_metric)
+    fast_kernels = {'Matern32': tinygp.kernels.quasisep.Matern32,
+                    'Exp': tinygp.kernels.quasisep.Exp}
+    if quasiseparable and kernel_name in fast_kernels:
+        return fast_kernels[kernel_name](
+            scale=scale, sigma=jnp.exp(0.5 * log_amplitude))
     kernels = {'Matern32': tinygp.kernels.Matern32,
                'ExpSquared': tinygp.kernels.ExpSquared,
                'RationalQuadratic': tinygp.kernels.RationalQuadratic,
@@ -18,7 +25,7 @@ def build_tinygp_kernel(kernel_name, log_amplitude, log_metric):
         raise AssertionError(f'Unsupported kernel for tinygp: {kernel_name}. '
                              f'Supported: {", ".join(kernels)}.')
     kwargs = {'alpha': 1.} if kernel_name == 'RationalQuadratic' else {}
-    kernel = kernels[kernel_name](scale=jnp.exp(2. * log_metric), **kwargs)
+    kernel = kernels[kernel_name](scale=scale, **kwargs)
     return jnp.exp(log_amplitude) * kernel
 
 
@@ -37,10 +44,8 @@ def build_gp_jax(time, uncertainty, param_dict, channel=0, normalize=False):
     if normalize:
         std = jnp.std(x)
         x = (x - jnp.mean(x)) / jnp.where(std > 0., std, 1.)
-    # The quasiseparable kernel uses a standard deviation, while A stores the
-    # log covariance amplitude. This preserves the same kernel as above.
-    kernel = tinygp.kernels.quasisep.Matern32(
-        scale=jnp.exp(2. * metric), sigma=jnp.exp(0.5 * amplitude))
+    kernel = build_tinygp_kernel('Matern32', amplitude, metric,
+                                 quasiseparable=True)
     return tinygp.GaussianProcess(kernel, X=x,
                                   diag=jnp.asarray(uncertainty)**2, mean=0.,
                                   assume_sorted=True)
