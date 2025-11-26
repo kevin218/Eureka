@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 from scipy.stats import norm
+import jax.numpy as jnp
 
 from ..lib.split_channels import get_trim
 
@@ -81,8 +82,18 @@ def ln_like(theta, lc, model, freenames):
                 ln_like_val += m.loglikelihood(model_lc)
     else:
         residuals = (lc.flux - model_lc)
-        ln_like_val = (-0.5*(np.ma.sum((residuals/lc.unc_fit)**2
-                       + np.ma.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
+        if (isinstance(lc.unc_fit, (np.ma.MaskedArray, np.ndarray)) and
+                isinstance(residuals, (np.ma.MaskedArray, np.ndarray))):
+            # Use NumPy masked logic
+            ln_like_val = -0.5 * np.ma.sum(
+                (residuals / lc.unc_fit)**2 +
+                np.ma.log(2.0 * np.pi * lc.unc_fit**2))
+        else:
+            # Assume dense array for JAX compatibility
+            ln_like_val = -0.5 * jnp.sum(
+                (residuals / lc.unc_fit)**2 +
+                jnp.log(2.0 * jnp.pi * lc.unc_fit**2))
+
     return ln_like_val
 
 
