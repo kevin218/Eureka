@@ -92,7 +92,7 @@ def wrapper(eventlabel, ecf_path=None, initial_run=False):
                                                   best, p, eventlabel,
                                                   ecf_path, stage)
 
-    if meta.isplots_S3opt >= 1:
+    if s3opt_meta.isplots_S3opt >= 1:
         plots_s3.fitness_scores(s3opt_meta, history)
 
     # Save the best dictionary to a pickle file
@@ -105,7 +105,7 @@ def wrapper(eventlabel, ecf_path=None, initial_run=False):
         os.mkdir(opt_path)
 
     # Update S3 and S4 ECF files with optimized parameters
-    s3_meta, s4_meta = initialize_meta(meta, eventlabel, ecf_path=ecf_path,
+    s3_meta, s4_meta = initialize_meta(s3opt_meta, eventlabel, ecf_path=ecf_path,
                                        stage=3)
     for key, value in best.items():
         if key in s3_meta.__dict__.keys():

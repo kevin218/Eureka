@@ -28,11 +28,11 @@ if __name__ == "__main__":
     # just comment them out below
 
     # Stage 1 optimization
-    meta, history_fitness_score = s1opt.optimize(eventlabel,
-                                                 ecf_path=ecf_path,
-                                                 initial_run=True)
+    s3opt_meta, history, best = s1opt.optimize(eventlabel,
+                                               ecf_path=ecf_path,
+                                               initial_run=True)
 
     # Stages 3 and 4 optimization
-    meta, history_fitness_score = s3opt.wrapper(eventlabel,
-                                                ecf_path=ecf_path,
-                                                initial_run=True)
+    s3opt_meta, history, best = s3opt.wrapper(eventlabel,
+                                              ecf_path=ecf_path,
+                                              initial_run=True)
