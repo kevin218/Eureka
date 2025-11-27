@@ -82,12 +82,9 @@ def wrapper(eventlabel, ecf_path=None, initial_run=False):
 
     # Run optimization loop for Stage 4 parameters
     for i, p in enumerate(s3opt_meta.params_to_optimize_s4):
-        if i == 0:
-            # Need to rerun Stage 3 first time around
-            stage = 3
-        else:
-            # Save time by not rerunning Stage 3 again
-            stage = 4
+        # Need to rerun Stage 3 first time around
+        # Otherwise, save time by not rerunning Stage 3 again
+        stage = 3 if i == 0 else 4
         s3opt_meta, log, history, best = optimize(s3opt_meta, log, history,
                                                   best, p, eventlabel,
                                                   ecf_path, stage)
@@ -105,8 +102,8 @@ def wrapper(eventlabel, ecf_path=None, initial_run=False):
         os.mkdir(opt_path)
 
     # Update S3 and S4 ECF files with optimized parameters
-    s3_meta, s4_meta = initialize_meta(s3opt_meta, eventlabel, ecf_path=ecf_path,
-                                       stage=3)
+    s3_meta, s4_meta = initialize_meta(s3opt_meta, eventlabel,
+                                       ecf_path=ecf_path, stage=3)
     for key, value in best.items():
         if key in s3_meta.__dict__.keys():
             s3_meta.params[key] = value
