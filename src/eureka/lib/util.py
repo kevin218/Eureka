@@ -514,9 +514,9 @@ def binData_time(data, time, mask=None, nbin=100, err=False):
     mask : ndarray (1D); optional
         A boolean array of bad values (marked with True) that should be masked.
         Defaults to None, in which case only non-finite values will be masked.
-    nbin : int, optional
+    nbin : int; optional
         The number of bins there should be. By default 100.
-    err : bool, optional
+    err : bool; optional
         If True, divide the binned data by sqrt(N) to get the error on the
         mean. By default False.
 
@@ -1036,7 +1036,7 @@ def supersample(data, expand, type, axis=1):
         Super-sampling factor along the given axis.
     type : str
         Options are: data, err, dq, or wave.
-    axis : int, Optional
+    axis : int; optional
         Axis along which interpolation is performed (default is 1).
 
     Returns
