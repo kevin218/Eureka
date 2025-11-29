@@ -1,171 +1,260 @@
-import numpy as np
-try:
-    import fleck.jax as fleck
-    import jax.numpy as jnp
-except ImportError:
-    print("Could not import fleck.jax. Functionality may be limited.")
+from typing import Any, Dict, List, Optional, Tuple
 
-from .. import models as m
-from .AstroModel import PlanetParams
+import fleck.jax as fleck
+import jax.numpy as jnp
+from jax.typing import ArrayLike
+
+from . import JaxModel
+from .AstroModel import compute_astroparams
 from ...lib.split_channels import split
 
 
-class FleckTransitModel(m.FleckTransitModel):
-    """Transit Model with Star Spots"""
-    def __init__(self, **kwargs):
+def _get_channel_param(
+    param_dict: Dict[str, Any],
+    base_name: str,
+    channel: int,
+) -> Any:
+    """Get a possibly channel-specific parameter from ``param_dict``.
+
+    Tries ``f'{base_name}_ch{channel}'`` first, then falls back to
+    ``base_name``. Returns ``None`` if neither is present.
+    """
+    if channel != 0:
+        ch_key = f'{base_name}_ch{channel}'
+        if ch_key in param_dict:
+            return param_dict[ch_key]
+    if base_name in param_dict:
+        return param_dict[base_name]
+    return None
+
+
+def _build_spot_arrays(
+    param_dict: Dict[str, Any],
+    spot_bases: List[str],
+    channel: int,
+) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
+    """Collect spot parameters into per-channel arrays.
+
+    Parameters
+    ----------
+    param_dict : dict
+        Flat parameter dictionary.
+    spot_bases : list of str
+        Base names for spots (e.g. ``['spotrad', 'spotrad1', ...]``),
+        without channel suffixes.
+    channel : int
+        Channel index.
+
+    Returns
+    -------
+    spotrad_arr, spotlat_arr, spotlon_arr, spotcon_arr : jnp.ndarray
+        Arrays of spot radius (in units of stellar radius), latitude (deg),
+        longitude (deg), and contrast, respectively.
+
+    Notes
+    -----
+    fleck requires that all spots share the same contrast. This helper
+    therefore enforces a single contrast per channel by taking the first
+    non-None contrast it finds (``spotcon[_ch#]``) and repeating it for all
+    spots. Any per-spot differences in contrast are ignored.
+    """
+    spot_rads: List[ArrayLike] = []
+    spot_lats: List[ArrayLike] = []
+    spot_lons: List[ArrayLike] = []
+
+    # Global contrast value for all spots in this channel
+    global_con = _get_channel_param(param_dict, 'spotcon', channel)
+
+    for base in spot_bases:
+        # base is 'spotrad', 'spotrad1', 'spotrad2', ...
+        suffix = base[len('spotrad'):]
+        rad = _get_channel_param(param_dict, f'spotrad{suffix}', channel)
+        lat = _get_channel_param(param_dict, f'spotlat{suffix}', channel)
+        lon = _get_channel_param(param_dict, f'spotlon{suffix}', channel)
+
+        spot_rads.append(jnp.asarray(rad))
+        spot_lats.append(jnp.asarray(lat))
+        spot_lons.append(jnp.asarray(lon))
+
+    if len(spot_rads) == 0:
+        # No valid spots: return empty arrays (fleck can handle this).
+        zero = jnp.array([])
+        return zero, zero, zero, zero
+
+    spotrad_arr = jnp.stack(spot_rads)
+    spotlat_arr = jnp.stack(spot_lats)
+    spotlon_arr = jnp.stack(spot_lons)
+    # Repeat the same contrast value for every spot, as required by fleck.
+    spotcon_arr = jnp.full(spotrad_arr.shape, global_con)
+
+    return spotrad_arr, spotlat_arr, spotlon_arr, spotcon_arr
+
+
+def evaluate_fleck_transit_model_jax(
+    time_global: ArrayLike,
+    nints: List[int],
+    multwhite: bool,
+    fitted_channels: List[int],
+    num_planets: int,
+    param_dict: Dict[str, Any],
+    spot_bases: List[str],
+) -> ArrayLike:
+    """Evaluate the fleck-based starspot + transit model in a JAX-pure way.
+
+    This mirrors :meth:`FleckTransitModel.eval` but takes all required inputs
+    explicitly, making it suitable for use inside a composite JAX model or
+    NumPyro log-prob function.
+
+    Parameters
+    ----------
+    time_global : array-like
+        Full time array for the observation.
+    nints : list[int]
+        Number of integrations per channel.
+    multwhite : bool
+        Whether this is a multwhite fit.
+    fitted_channels : list[int]
+        Channel indices to evaluate.
+    num_planets : int
+        Number of planets in the system.
+    param_dict : dict
+        Flat parameter dictionary (decoded from the free parameter vector).
+    spot_bases : list of str
+        Base names for starspot radii (e.g. ``['spotrad', 'spotrad1', ...]``).
+
+    Returns
+    -------
+    jnp.ndarray
+        The model light curve concatenated across all selected channels.
+    """
+    time_global = jnp.array(time_global)
+    light_curves: List[ArrayLike] = []
+
+    for chan in fitted_channels:
+        # Per-channel time array
+        if multwhite:
+            time_chan = split([time_global], nints, chan)[0]
+        else:
+            time_chan = time_global
+
+        time_chan = jnp.array(time_chan)
+        lc_chan = jnp.ones(time_chan.shape[0])
+
+        # Starspots for this channel
+        spotrad, spotlat, spotlon, spotcon = _build_spot_arrays(
+            param_dict=param_dict,
+            spot_bases=spot_bases,
+            channel=chan,
+        )
+
+        # Get star-oriented parameters (inclination, rotation) from pid=0
+        astro_star = compute_astroparams(param_dict, channel=chan, pid=0)
+        spotstari_deg = astro_star.get('spotstari')
+        spotrot = astro_star.get('spotrot')
+
+        # Construct the fleck ActiveStar (angles in radians)
+        star = fleck.ActiveStar(
+            times=time_chan,
+            lon=spotlon * jnp.pi / 180.,
+            lat=spotlat * jnp.pi / 180.,
+            rad=spotrad,
+            contrast=spotcon,
+            inclination=spotstari_deg * jnp.pi / 180.,
+            P_rot=spotrot,
+        )
+
+        for pid in range(num_planets):
+            astro = compute_astroparams(param_dict, channel=chan, pid=pid)
+
+            # Handle negative rp (signal inversion) without upsetting fleck.
+            rp_val = jnp.asarray(astro['rp'])
+            inverse = rp_val < 0.
+            rp_used = jnp.abs(rp_val)
+
+            lc_raw = star.transit_model(
+                t0=astro['t0'],
+                period=astro['per'],
+                rp=rp_used,
+                a=astro['a'],
+                inclination=astro['inc_rad'],
+                omega=astro['w_rad'],
+                ecc=astro['ecc'],
+                u1=astro['u1'],
+                u2=astro['u2'],
+                t0_rot=astro['t0']
+            )[0].reshape(-1)
+
+            # Invert if rp < 0
+            lc_planet = jnp.where(inverse, 2. - lc_raw, lc_raw)
+
+            lc_chan *= lc_planet
+
+        light_curves.append(lc_chan)
+
+    return jnp.concatenate(light_curves)
+
+
+class FleckTransitModel(JaxModel):
+    """Transit model with star spots using ``fleck.jax``."""
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize the fleck model
 
         Parameters
         ----------
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.__init__().
-            Can pass in the parameters, longparamlist, nchan, and
-            paramtitles arguments here.
+            ``eureka.S5_lightcurve_fitting.models.Model.__init__()``.
+            Can pass in ``parameters``, ``longparamlist``, ``nchan``,
+            and ``paramtitles`` arguments here.
         """
-        raise NotImplementedError('There is currently a bug with the fleck.jax'
-                                  ' package which prohibts the use of spot '
-                                  'contrasts.\nOnce that is resolved, we will'
-                                  'enable Eureka!\'s '
-                                  'jax_models.FleckTransitModel.')
-
-        # Inherit from models.FleckTransitModel class
         super().__init__(**kwargs)
         self.name = 'fleck transit'
-        # Define transit model to be used
-        self.transit_model = None
+        self.modeltype = 'physical'
 
-    def eval(self, eval=True, channel=None, pid=None, **kwargs):
-        """Evaluate the function with the given values.
+        # Precompute spot base names (no channel suffix), e.g. spotrad,
+        # spotrad1, etc. This mirrors the starry model logic.
+        self.spot_bases: List[str] = [
+            name
+            for name in self.parameters.dict.keys()
+            if 'spotrad' in name and '_' not in name
+        ]
+
+    def eval(
+        self,
+        param_dict: Optional[Dict[str, Any]] = None,
+        channel: Optional[int] = None,
+        **kwargs: Any,
+    ) -> ArrayLike:
+        """Evaluate the fleck transit model.
 
         Parameters
         ----------
-        eval : bool; optional
-            If true evaluate the model, otherwise simply compile the model.
-            Defaults to True.
+        param_dict : dict; optional
+            If None, uses values from ``self.parameters`` (fitted mode).
         channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
-        pid : int; optional
-            Planet ID, default is None which combines the models from
-            all planets.
+            If provided, only evaluate for the specified channel.
         **kwargs : dict
-            Must pass in the time array here if not already set.
+            Reserved for future keyword arguments (unused).
 
         Returns
         -------
-        lcfinal : ndarray
-            The value of the model at the times self.time.
+        jnp.ndarray
+            The model light curve evaluated at observation times.
         """
+        if param_dict is None:
+            param_dict = self._get_param_dict()
+
         if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
+            fitted_channels = list(self.fitted_channels)
         else:
-            nchan = 1
-            channels = [channel, ]
+            fitted_channels = [channel]
 
-        if pid is None:
-            pid_iter = range(self.num_planets)
-        else:
-            pid_iter = [pid,]
-
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
-
-        if eval:
-            lib = np
-        else:
-            lib = jnp
-
-        # Set all parameters
-        lcfinal = lib.array([])
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-            else:
-                chan = 0
-
-            time = self.time
-            if self.multwhite:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
-
-            # create arrays to hold values
-            spotrad = lib.array([])
-            spotlat = lib.array([])
-            spotlon = lib.array([])
-            spotcon = lib.array([])
-            pl_params = PlanetParams(self, 0, chan, eval=eval)
-            spotcon0 = getattr(pl_params, 'spotcon')
-            for n in range(pl_params.nspots):
-                # read radii, latitudes, longitudes, and contrasts
-                if n > 0:
-                    spot_id = f'{n}'
-                else:
-                    spot_id = ''
-                spotrad = lib.concatenate([
-                    spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
-                spotlat = lib.concatenate([
-                    spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
-                spotlon = lib.concatenate([
-                    spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
-                # If spotcon# isn't set, default to spotcon (from channel 0)
-                spotcon = lib.concatenate([
-                    spotcon, [getattr(pl_params, f'spotcon{spot_id}',
-                                      spotcon0),]])
-
-            if lib.any((lib.abs(spotlat) > 90) | (lib.abs(spotlon) > 180) |
-                       (spotrad > 1)):
-                # Returning nans or infs breaks the fits, so this was the
-                # best I could think of
-                return 1e6*lib.ones(time.shape)
-
-            light_curve = lib.ones(len(time))
-            for pid in pid_iter:
-                # Initialize planet
-                pl_params = PlanetParams(self, pid, chan, eval=eval)
-
-                # Enforce physicality to avoid crashes from Harmonica by
-                # returning something that should be a horrible fit
-                if (not ((0 < pl_params.per) and (0 < pl_params.inc <= 90) and
-                         (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
-                         (-1 <= pl_params.esinw <= 1))
-                    or (self.parameters.limb_dark.value == 'kipping2013' and
-                        pl_params.u_original[0] <= 0)):
-                    # Returning nans or infs breaks the fits, so this was the
-                    # best I could think of
-                    light_curve = 1e6*lib.ones(time.shape)
-                    continue
-
-                inverse = False
-                if pl_params.rp < 0:
-                    # The planet's radius is negative, so need to do some
-                    # tricks to avoid errors
-                    inverse = True
-                    pl_params.rp *= -1
-
-                # Make the star object (fleck uses radians, not degrees)
-                star = fleck.ActiveStar(
-                    times=time, lon=spotlon*np.pi/180,
-                    lat=spotlat*np.pi/180, rad=spotrad,
-                    contrast=spotcon,
-                    inclination=pl_params.spotstari*np.pi/180,
-                    P_rot=pl_params.spotrot)
-
-                # Compute the lightcurve (fleck uses radians, not degrees)
-                lc, _, _, _ = star.transit_model(
-                    t0=pl_params.t0, period=pl_params.per, rp=pl_params.rp,
-                    a=pl_params.a, inclination=pl_params.inc*np.pi/180,
-                    omega=pl_params.w*np.pi/180, ecc=pl_params.ecc,
-                    u1=pl_params.u1, u2=pl_params.u2)
-
-                # Invert the transit feature if rp<0
-                if inverse:
-                    lc = 2. - lc
-
-                # Apply the current lightcurve
-                light_curve *= lc
-
-            lcfinal = lib.append(lcfinal, light_curve)
-
-        return lcfinal
+        return evaluate_fleck_transit_model_jax(
+            time_global=self.time,
+            nints=self.nints,
+            multwhite=self.multwhite,
+            fitted_channels=fitted_channels,
+            num_planets=self.num_planets,
+            param_dict=param_dict,
+            spot_bases=self.spot_bases,
+        )
