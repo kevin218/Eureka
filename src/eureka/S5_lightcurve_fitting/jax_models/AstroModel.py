@@ -23,9 +23,9 @@ def compute_astroparams(
         Dictionary of model parameters. Keys may include global, per-planet,
         per-channel, or per-planet-per-channel names, e.g.:
         ``per``, ``per_pl1``, ``per_pl1_ch2``.
-    channel : int, optional
+    channel : int; optional
         Channel index to select channel-specific parameters. Defaults to 0.
-    pid : int, optional
+    pid : int; optional
         Planet ID index to select planet-specific parameters. Defaults to 0.
 
     Returns
@@ -41,7 +41,8 @@ def compute_astroparams(
     pid_suffix = f"_pl{pid}" if pid != 0 else ""
     ch_suffix = f"_ch{channel}" if channel != 0 else ""
 
-    def get_param(base_name: str, allow_global_fallback: bool = True) -> Any:
+    def get_param(base_name: str, allow_global_fallback: bool = True,
+                  default: float = None) -> Any:
         """Return the most specific matching parameter from param_dict."""
         if allow_global_fallback:
             keys: List[str] = [
@@ -56,7 +57,7 @@ def compute_astroparams(
         for k in keys:
             if k in param_dict:
                 return param_dict[k]
-        return None
+        return default
 
     # Core orbital and eclipse parameters
     astro["t0"] = get_param("t0")
@@ -114,12 +115,34 @@ def compute_astroparams(
     for k in ["quasi_gamma", "quasi_offset"]:
         astro[k] = get_param(k)
 
-    # Spot / starry model parameters
-    for k in [
-        "spotrad", "spotlat", "spotlon", "spotcon",
-        "spotstari", "spotstarobl", "spotrot", "spotnpts",
-    ]:
-        astro[k] = get_param(k)
+    # Identify which spot indices exist in param_dict for this planet/channel.
+    # We let `get_param` handle _ch# suffixes, so here we only look at the
+    # base names without _ch/_pl.
+    spot_indices: List[int] = []
+    for key in param_dict.keys():
+        # Match spotrad, spotrad1, spotrad2, ... (ignore any _ch/_pl in key)
+        m = re.match(r"^(spotrad)([0-9]*)(?:_pl[0-9]+)?(?:_ch[0-9]+)?$", key)
+        if m is None:
+            continue
+        idx_str = m.group(2)
+        idx = 0 if idx_str == "" else int(idx_str)
+        if idx not in spot_indices:
+            spot_indices.append(idx)
+    spot_indices.sort()
+    astro["nspots"] = len(spot_indices)
+
+    for sidx in spot_indices:
+        suffix = "" if sidx == 0 else str(sidx)
+        astro[f"spotrad{suffix}"] = get_param(f"spotrad{suffix}", default=0.)
+        astro[f"spotlat{suffix}"] = get_param(f"spotlat{suffix}", default=0.)
+        astro[f"spotlon{suffix}"] = get_param(f"spotlon{suffix}", default=0.)
+        astro[f"spotcon{suffix}"] = get_param(f"spotcon{suffix}", default=1.)
+
+    # Global star-spot geometry (with defaults)
+    astro["spotstari"] = get_param("spotstari", default=90.)
+    astro["spotstarobl"] = get_param("spotstarobl", default=0.)
+    astro["spotrot"] = get_param("spotrot", default=1e12)
+    astro["spotnpts"] = get_param("spotnpts")
 
     # Additional pixel map and Ylm harmonics if defined
     for k in param_dict:
@@ -146,6 +169,12 @@ def compute_astroparams(
         w_rad = astro["w"] * jnp.pi / 180.
         astro["ecosw"] = ecc * jnp.cos(w_rad)
         astro["esinw"] = ecc * jnp.sin(w_rad)
+    elif astro.get("ecc") is None:
+        # Default to circular orbit
+        astro["ecc"] = 0.
+        astro["w"] = 90.
+        astro["ecosw"] = 0.
+        astro["esinw"] = 0.
 
     # Impact parameter / inclination conversion
     if (
@@ -162,12 +191,23 @@ def compute_astroparams(
         astro["inc"] = (
             jnp.arccos(astro["b"] / astro["a"]) * 180. / jnp.pi
         )
+    elif (
+        astro.get("inc") is None and
+        (astro.get("b") is None or astro.get("a") is None)
+    ):
+        raise AssertionError(
+            'Either "inc" or "b" and "a" must be defined in parameters.'
+        )
 
     # Harmonize radius and a/Rs variants
     if astro.get("rprs") is None and astro.get("rp") is not None:
         astro["rprs"] = astro["rp"]
-    if astro.get("rp") is None and astro.get("rprs") is not None:
+    elif astro.get("rp") is None and astro.get("rprs") is not None:
         astro["rp"] = astro["rprs"]
+    elif astro.get("rp") is None and astro.get("rprs") is None:
+        raise AssertionError(
+            'At least one of "rp" or "rprs" must be defined in parameters.'
+        )
 
     if astro.get("rprs2") is None and astro.get("rp2") is not None:
         astro["rprs2"] = astro["rp2"]
@@ -176,38 +216,43 @@ def compute_astroparams(
 
     if astro.get("ars") is None and astro.get("a") is not None:
         astro["ars"] = astro["a"]
-    if astro.get("a") is None and astro.get("ars") is not None:
+    elif astro.get("a") is None and astro.get("ars") is not None:
         astro["a"] = astro["ars"]
+    elif astro.get("a") is None and astro.get("ars") is None:
+        raise AssertionError(
+            'At least one of "a" or "ars" must be defined in parameters.'
+        )
 
     if astro.get("fpfs") is None and astro.get("fp") is not None:
         astro["fpfs"] = astro["fp"]
-    if astro.get("fp") is None and astro.get("fpfs") is not None:
+    elif astro.get("fp") is None and astro.get("fpfs") is not None:
         astro["fp"] = astro["fpfs"]
+    elif astro.get("fp") is None and astro.get("fpfs") is None:
+        # Default to zero planet flux
+        astro["fp"] = astro["fpfs"] = 0.
 
     # Stellar radius
     astro["Rs"] = get_param("Rs")
 
     # spotrot fallback
-    if astro.get("spotrot") is None:
-        astro["spotrot"] = 3650000.
+    if astro.get("spotrot") == 1e12:
         astro["fleck_fast"] = True
     else:
         astro["fleck_fast"] = False
 
     # Derived angle versions
-    if astro.get("inc") is not None:
-        astro["inc_rad"] = astro["inc"] * jnp.pi / 180.
-    if astro.get("w") is not None:
-        astro["w_rad"] = astro["w"] * jnp.pi / 180.
+    astro["inc_rad"] = astro["inc"] * jnp.pi / 180.
+    astro["w_rad"] = astro["w"] * jnp.pi / 180.
 
-    # Handle Kipping2013 transformation if flag present
     if param_dict.get("limb_dark") == "kipping2013":
+        # Handle Kipping2013 transformation if needed
         q1 = astro["u1"]
         q2 = astro["u2"]
         astro["u1"] = 2. * jnp.sqrt(q1) * q2
         astro["u2"] = jnp.sqrt(q1) * (1. - 2. * q2)
         astro["u"] = jnp.array([astro["u1"], astro["u2"]])
     else:
+        # Remove None limb-darkening coefficients and pack into array
         u_coeffs = [
             astro.get(f"u{i}")
             for i in range(1, 5)
@@ -392,9 +437,9 @@ class AstroModel(JaxModel):
 
         Parameters
         ----------
-        param_dict : dict, optional
+        param_dict : dict; optional
             If None, uses values from ``self.parameters`` (i.e., fitted mode).
-        channel : int, optional
+        channel : int; optional
             If provided, evaluate only for the given channel.
         **kwargs : dict
             May contain the time array if not already set and any keyword

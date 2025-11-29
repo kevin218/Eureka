@@ -11,7 +11,6 @@ except ModuleNotFoundError:
 import corner
 from scipy import stats
 import fleck
-import astropy.units as unit
 import arviz as az
 from arviz.rcparams import rcParams as az_rcParams
 try:
@@ -911,14 +910,18 @@ def plot_fleck_star(lc, model, meta, fitter):
         fig.set_size_inches(8, 6, forward=True)
         fig.clf()
         ax = fig.gca()
-        star = fleck.Star(spot_contrast=pl_params.spotcon,
-                          u_ld=pl_params.u,
-                          rotation_period=pl_params.spotrot)
-        ax = star.plot(spotlon[:, None]*unit.deg,
-                       spotlat[:, None]*unit.deg,
-                       spotrad[:, None],
-                       pl_params.spotstari*unit.deg,
-                       planet=pl_params, time=pl_params.t0, ax=ax)
+        star = fleck.jax.ActiveStar(
+            times=np.array([pl_params.t0,]),
+            lon=spotlon * np.pi / 180.,
+            lat=spotlat * np.pi / 180.,
+            rad=spotrad,
+            contrast=pl_params.spotcon,
+            inclination=pl_params.spotstari * np.pi / 180.,
+            P_rot=pl_params.spotrot
+        )
+        ax = star.plot_star(pl_params.t0, pl_params.rp, pl_params.a,
+                            pl_params.inc_rad, pl_params.ecc, pl_params.w_rad,
+                            ax=ax)
 
         if lc.white:
             fname_tag = 'white'

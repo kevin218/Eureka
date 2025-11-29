@@ -131,7 +131,7 @@ def build_stellar_surface(
 
     inc_deg = astro_star.get('spotstari', astro_star.get('inc', 90.))
     obl_deg = astro_star.get('spotstarobl', 0.)
-    period = astro_star.get('spotrot', 3650000.)
+    period = astro_star.get('spotrot', 1e12)
 
     star_surface = Surface(
         inc=inc_deg * jnp.pi / 180.,
@@ -159,8 +159,22 @@ def build_planet_body(
         The starry surface + Keplerian orbit for this planet.
     '''
     # Build the planet surface if fp is defined; otherwise treat it as dark.
-    planet_surface = None
-    if astro.get('fp') is not None:
+    if astro.get('fp', 0.) == 0.:
+        planet_surface = None
+    else:
+        per = astro["per"]
+        t0 = astro["t0"]
+        # Prefer an explicit secondary eclipse time if available, otherwise
+        # assume circular orbit with eclipse half an orbit after transit.
+        t_ecl = astro.get("t_secondary")
+        if t_ecl is None:
+            t_ecl = t0 + 0.5*per
+
+        # Choose map phase so that the rotational phase at mid-eclipse is 0:
+        #   phi(t) = 2*pi*t / P + phase0
+        #   phi(t_ecl) = 0  -> phase0 = -2*pi*t_ecl/P
+        phase0 = -2.0 * jnp.pi * (t_ecl / per)
+
         # Gather any Y_lm coefficients stored in astro as Y{ell}{m}[_ch#]
         planet_Ylm_dict: Dict[tuple[int, int], jnp.ndarray] = {
             (0, 0): jnp.array(1.)}
@@ -177,12 +191,15 @@ def build_planet_body(
 
         # Normalize Y_00 so that the phase-curve amplitude matches fp
         planet_Ylm_temp_obj = Ylm(planet_Ylm_temp)
-        planet_surface_temp = Surface(y=planet_Ylm_temp_obj)
-        amp = astro['fp'] / surface_light_curve(planet_surface_temp, theta=0.)
+        planet_surface_temp = Surface(y=planet_Ylm_temp_obj,
+                                      period=per, phase=phase0)
+        scale = astro['fp'] / surface_light_curve(planet_surface_temp,
+                                                  theta=0.)
 
-        planet_Ylm_dict[(0, 0)] = amp
+        for key in planet_Ylm_dict.keys():
+            planet_Ylm_dict[key] *= scale
         planet_Ylm_obj = Ylm(planet_Ylm_dict)
-        planet_surface = Surface(y=planet_Ylm_obj)
+        planet_surface = Surface(y=planet_Ylm_obj, period=per, phase=phase0)
 
     # Solve Keplerian equation for the system mass, as in the transit model
     a_m = astro['a'] * astro['Rs'] * jnp_Rsun
@@ -246,7 +263,7 @@ def evaluate_starry_model_jax(
         Default quadrature points for spots if not specified.
     default_spotfac : int
         Default spot_fac factor if not specified.
-    piecewise : bool, optional
+    piecewise : bool; optional
         If True, return per-body light curves per channel; otherwise return
         a single concatenated system light curve.
 
@@ -304,24 +321,7 @@ def evaluate_starry_model_jax(
         # Compute the light curves: first row is star, rest are planets
         result = light_curve(system)(time).T
         fstar = result[0]
-        fplanets_raw = result[1:]
-
-        # Normalize planet light curves by their surface amplitudes, but only
-        # for planets that actually have a surface entry. This is important
-        # when some planets have no fp / map (surface=None) or when no
-        # luminous planets are present at all.
-        fplanets: List[jnp.ndarray] = []
-        n_planet_curves = len(fplanets_raw)
-
-        for i in range(n_planet_curves):
-            surface_i = None
-            if (hasattr(system, 'body_surfaces')
-                    and i < len(system.body_surfaces)):
-                surface_i = system.body_surfaces[i]
-
-            # If surface_i is None (e.g., dark planet, no map), default amp=1.
-            amp = getattr(surface_i, 'amplitude', 1.)
-            fplanets.append(fplanets_raw[i] * amp)
+        fplanets = result[1:]
 
         if piecewise:
             components: List[jnp.ndarray] = [fstar, *fplanets]
@@ -503,11 +503,11 @@ class JaxoplanetStarryModel(JaxModel):
 
         Parameters
         ----------
-        param_dict : dict, optional
+        param_dict : dict; optional
             If None, uses values from ``self.parameters`` (fitted mode).
-        channel : int, optional
+        channel : int; optional
             If provided, only evaluate for the specified channel.
-        piecewise : bool, optional
+        piecewise : bool; optional
             If True, return each body's light curve separately (star first,
             then each planet) for each channel. If False, return the total
             system flux concatenated across channels.
