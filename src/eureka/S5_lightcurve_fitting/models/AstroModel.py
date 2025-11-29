@@ -29,7 +29,7 @@ class PlanetParams():
             and their current values.
         pid : int; optional
             Planet ID, default is 0.
-        channel : int, optional
+        channel : int; optional
             The channel number for multi-wavelength fits or mutli-white fits.
             Defaults to 0.
         eval : bool; optional
