@@ -176,11 +176,11 @@ def evaluate_composite_model(
         The composite model instance.
     params : dict or jnp.ndarray
         Either a parameter dict, or a flat array if param_names is given.
-    param_names : list[str], optional
+    param_names : list[str]; optional
         If not None, names corresponding to entries in `params`.
-    channel : int, optional
+    channel : int; optional
         If provided, evaluate only the given channel. Defaults to None.
-    incl_GP : bool, optional
+    incl_GP : bool; optional
         Whether to include GP contributions. Defaults to False.
     **kwargs : dict
         Extra keyword arguments forwarded to component .eval().
@@ -231,7 +231,7 @@ def evaluate_composite_scatter(
         already configured.
     params : dict or jnp.ndarray
         Either a parameter dict, or a flat array if param_names is given.
-    param_names : list[str], optional
+    param_names : list[str]; optional
         If not None, names corresponding to entries in `params`.
 
     Returns
@@ -267,11 +267,11 @@ def evaluate_composite_systematics(
         The composite model instance.
     params : dict or jnp.ndarray
         Either a parameter dict, or a flat array if param_names is given.
-    param_names : list[str], optional
+    param_names : list[str]; optional
         If not None, names corresponding to entries in `params`.
-    channel : int, optional
+    channel : int; optional
         If provided, evaluate only the given channel. Defaults to None.
-    incl_GP : bool, optional
+    incl_GP : bool; optional
         Whether to include GP contributions. Defaults to False.
     **kwargs : dict
         Extra keyword arguments forwarded to component .eval().
@@ -323,11 +323,11 @@ def evaluate_composite_physical(
         The composite model instance.
     params : dict or jnp.ndarray
         Either a parameter dict, or a flat array if param_names is given.
-    param_names : list[str], optional
+    param_names : list[str]; optional
         If not None, names corresponding to entries in `params`.
-    channel : int, optional
+    channel : int; optional
         If provided, evaluate only the given channel. Defaults to None.
-    interp : bool, optional
+    interp : bool; optional
         Whether to interpolate onto a uniform time grid. Defaults to False.
     **kwargs : dict
         Extra keyword arguments forwarded to component .eval()/.interp().
@@ -426,11 +426,11 @@ def evaluate_composite_gp(
         The composite model instance.
     params : dict or jnp.ndarray
         Either a parameter dict, or a flat array if param_names is given.
-    param_names : list[str], optional
+    param_names : list[str]; optional
         If not None, names corresponding to entries in `params`.
-    fit : jnp.ndarray, optional
+    fit : jnp.ndarray; optional
         Model predictions excluding GP contributions, passed to GP .eval().
-    channel : int, optional
+    channel : int; optional
         If provided, evaluate only the given channel. Defaults to None.
     **kwargs : dict
         Extra keyword arguments forwarded to GP component .eval().
@@ -864,7 +864,7 @@ class CompositeJaxModel(JaxModel, CompositeModel):
         incl_GP : bool; optional
             Whether or not to include the GP's predictions in the
             evaluated model predictions.
-        param_dict : dict, optional
+        param_dict : dict; optional
             If None, uses values from self.parameters (i.e., fitted mode).
         **kwargs : dict
             Must pass in the time array here if not already set.
@@ -895,7 +895,7 @@ class CompositeJaxModel(JaxModel, CompositeModel):
         incl_GP : bool; optional
             Whether or not to include the GP's predictions in the
             evaluated model predictions.
-        param_dict : dict, optional
+        param_dict : dict; optional
             If None, uses values from self.parameters (i.e., fitted mode).
         **kwargs : dict
             Must pass in the time array here if not already set.
@@ -926,7 +926,7 @@ class CompositeJaxModel(JaxModel, CompositeModel):
             GP evaluation.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
-        param_dict : dict, optional
+        param_dict : dict; optional
             If None, uses values from self.parameters (i.e., fitted mode).
         **kwargs : dict
             Must pass in the time array here if not already set.
@@ -957,7 +957,7 @@ class CompositeJaxModel(JaxModel, CompositeModel):
         interp : bool; optional
             Whether to uniformly sample in time or just use
             the self.time time points. Defaults to False.
-        param_dict : dict, optional
+        param_dict : dict; optional
             If None, uses values from self.parameters (i.e., fitted mode).
         **kwargs : dict
             Must pass in the time array here if not already set.

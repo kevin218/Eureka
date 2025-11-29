@@ -201,9 +201,9 @@ class PolynomialModel(JaxModel):
 
         Parameters
         ----------
-        param_dict : dict, optional
+        param_dict : dict; optional
             If None, uses values from self.parameters (i.e., fitted mode).
-        channel : int, optional
+        channel : int; optional
             If specified, evaluates only for a given channel.
         **kwargs : dict
             Optional extra keyword arguments (unused).

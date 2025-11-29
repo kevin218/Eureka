@@ -190,9 +190,9 @@ class JaxoplanetModel(JaxModel):
 
         Parameters
         ----------
-        param_dict : dict, optional
+        param_dict : dict; optional
             If None, uses values from ``self.parameters`` (i.e., fitted mode).
-        channel : int, optional
+        channel : int; optional
             If provided, only evaluate for the specified channel.
         **kwargs : dict
             Reserved for future keyword arguments (unused).
