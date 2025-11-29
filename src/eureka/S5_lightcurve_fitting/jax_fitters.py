@@ -33,7 +33,7 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
         The metadata object.
     log: logedit.Logedit
         The open log in which notes from this step can be added.
-    calling_function: str, optional
+    calling_function: str; optional
         The fitter that is being run (e.g., may be 'emcee' if running lsqfitter
         to initialize emcee walkers). Defaults to 'jaxopt'.
     **kwargs:
@@ -46,7 +46,7 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
     """
     # Group the different variable types
     freenames = lc.freenames
-    freepars, prior1, prior2, priortype, _ = group_variables(model)
+    freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
     if meta.old_fitparams is not None:
         freepars = load_old_fitparams(lc, meta, log, freenames, 'jaxopt')
 
@@ -216,8 +216,9 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
     if (
         meta.isplots_S5 >= 1
         and (
-            'Y10' in freenames
-            or 'Y11' in freenames
+            'Y10' in freenames or 'Y10' in indep_vars
+            or 'Y11' in freenames or 'Y11' in indep_vars
+            or 'Y1-1' in freenames or 'Y1-1' in indep_vars
             or 'sinusoid_pc' in meta.run_myfuncs
             or 'quasilambert_pc' in meta.run_myfuncs
         )
@@ -271,9 +272,9 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     """
     # Group the different variable types
     freenames = lc.freenames
-    freepars = group_variables(model)[0]
+    freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
     if meta.old_fitparams is not None:
-        freepars = load_old_fitparams(lc, meta, log, freenames, 'nuts')
+        freepars = load_old_fitparams(lc, meta, log, freenames, 'jaxopt')
     ndim = len(freenames)
 
     # Set the model parameters to their starting values
@@ -293,6 +294,14 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         model.update(freepars)
 
     start = {name: val for name, val in zip(freenames, freepars)}
+
+    start_lnprob = lnprob(
+        freepars, lc, model, prior1, prior2, priortype, freenames,
+    )
+    log.writelog(
+        f'Starting lnprob: {start_lnprob}',
+        mute=(not meta.verbose),
+    )
 
     # Plot starting point
     if meta.isplots_S5 >= 1:
@@ -412,6 +421,14 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'nuts', t_results, freenames, samples)
 
+    end_lnprob = lnprob(
+        fit_params, lc, model, prior1, prior2, priortype, freenames,
+    )
+    log.writelog(
+        f'Ending lnprob: {end_lnprob}',
+        mute=(not meta.verbose),
+    )
+
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
@@ -496,8 +513,9 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     if (
         meta.isplots_S5 >= 1
         and (
-            'Y10' in freenames
-            or 'Y11' in freenames
+            'Y10' in freenames or 'Y10' in indep_vars
+            or 'Y11' in freenames or 'Y11' in indep_vars
+            or 'Y1-1' in freenames or 'Y1-1' in indep_vars
             or 'sinusoid_pc' in meta.run_myfuncs
             or 'quasilambert_pc' in meta.run_myfuncs
         )
