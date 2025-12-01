@@ -162,6 +162,7 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     # Extract bounds for parameter(s) to optimize
     if "bounds_" + p in meta.__dict__.keys():
         bounds = meta.__dict__["bounds_" + p]
+        log.writelog(f"Optimizing parameter {p} over bounds: {bounds}")
     else:
         log.writelog(f"Parameter {p} not recognized. Skipping...")
         return s3opt_meta, log, history, best
