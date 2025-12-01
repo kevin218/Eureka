@@ -15,7 +15,9 @@ params_to_optimize_s3   ['spec_hw__bg_hw', 'dqmask', 'bg_thresh', 'bg_method', '
 
 # List of single parameter options to optimize in Stage 4:
 #   mad_sigma, mad_box_width, sigma, box_width
-params_to_optimize_s4   ['mad_sigma', 'mad_box_width', 'sigma', 'box_width']
+# Suggested double parameter options:
+#   mad_sigma__mad_box_width, sigma__box_width
+params_to_optimize_s4   ['mad_sigma__mad_box_width', 'sigma__box_width']
 
 # Range for parameter values to optimize
 # Only specify if overriding the default ranges in S3opt_meta.py
