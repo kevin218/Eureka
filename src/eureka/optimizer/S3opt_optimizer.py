@@ -202,7 +202,6 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
             best[param] = best_param_value[i]
 
         # Print results of parametric sweep
-        log.writelog(f"Optimized parameter: {p}")
         log.writelog(f"Best parameter value(s): {best_param_value}")
         log.writelog(f"Best fitness value: {best_fitness_value}\n")
 
