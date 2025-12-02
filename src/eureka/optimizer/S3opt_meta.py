@@ -90,12 +90,12 @@ class S3optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for generic spectroscopic data.
         '''
-        full_list_s3 = ['spec_hw__bg_hw ', 'dqmask', 'bg_thresh', 'bg_method',
-                        'bg_deg', 'p3thresh', 'median_thresh', 'window_len',
+        full_list_s3 = ['spec_hw__bg_hw ', 'dqmask', 'bg_deg', 'bg_thresh',
+                        'bg_method', 'p3thresh', 'median_thresh', 'window_len',
                         'p7thresh']
         self.params_to_optimize_s3 = getattr(self, 'params_to_optimize_s3',
                                              full_list_s3)
-        full_list_s4 = ['mad_sigma', 'mad_box_width', 'sigma', 'box_width']
+        full_list_s4 = ['mad_sigma__mad_box_width', 'sigma__box_width']
         self.params_to_optimize_s4 = getattr(self, 'params_to_optimize_s4',
                                              full_list_s4)
 
@@ -119,6 +119,12 @@ class S3optMetaClass(MetaClass):
 
         for key, default in defaults.items():
             setattr(self, key, getattr(self, key, default))
+        # self.bounds_spec_hw__bg_hw = getattr(self, 'bounds_spec_hw__bg_hw',
+        #                                      [self.bounds_spec_hw,
+        #                                       self.bounds_bg_hw])
+        # self.bounds_mad_sigma__mad_box_width = getattr(self,
+        #         'bounds_mad_sigma__bg_hw',[self.bounds_mad_sigma,
+        #         self.bounds_mad_box_width])
 
     def set_photometric_defaults(self):
         '''
@@ -137,9 +143,6 @@ class S3optMetaClass(MetaClass):
 
         for key, default in defaults.items():
             setattr(self, key, getattr(self, key, default))
-        self.bounds_spec_hw__bg_hw = getattr(self, 'bounds_spec_hw__bg_hw',
-                                             [self.bounds_bg_hw,
-                                              self.bounds_spec_hw])
 
         self.set_spectral_defaults()
 
@@ -154,9 +157,6 @@ class S3optMetaClass(MetaClass):
 
         for key, default in defaults.items():
             setattr(self, key, getattr(self, key, default))
-        self.bounds_spec_hw__bg_hw = getattr(self, 'bounds_spec_hw__bg_hw',
-                                             [self.bounds_bg_hw,
-                                              self.bounds_spec_hw])
 
         self.set_spectral_defaults()
 
@@ -175,9 +175,6 @@ class S3optMetaClass(MetaClass):
 
         for key, default in defaults.items():
             setattr(self, key, getattr(self, key, default))
-        self.bounds_spec_hw__bg_hw = getattr(self, 'bounds_spec_hw__bg_hw',
-                                             [self.bounds_bg_hw,
-                                              self.bounds_spec_hw])
 
         self.set_spectral_defaults()
 

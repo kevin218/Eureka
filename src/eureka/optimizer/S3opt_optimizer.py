@@ -163,8 +163,22 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     if "bounds_" + p in meta.__dict__.keys():
         bounds = meta.__dict__["bounds_" + p]
         log.writelog(f"Optimizing parameter {p} over bounds: {bounds}")
+    elif "__" in p:
+        # Extract default bounds for two parameters
+        param_names = p.split("__")
+        bounds = []
+        for param in param_names:
+            if "bounds_" + param in meta.__dict__.keys():
+                bounds.append(meta.__dict__["bounds_" + param])
+            else:
+                log.writelog(f"Could not create bounds for parameter {p}. " +
+                             "Please manually specify bounds in ECF. " +
+                             "Skipping...")
+                return s3opt_meta, log, history, best
+        log.writelog(f"Optimizing parameters {p} over bounds: {bounds}")
     else:
-        log.writelog(f"Parameter {p} not recognized. Skipping...")
+        log.writelog(f"No default bounds exist for parameter {p}. " +
+                     "Please manually specify bounds in ECF. Skipping...")
         return s3opt_meta, log, history, best
 
     # Update Meta parameters with best values from previous iterations
