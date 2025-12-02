@@ -241,6 +241,8 @@ def initialize_meta(meta, eventlabel, ecf_path=None, stage=3):
         s3_meta = S3MetaClass(folder=ecf_path, eventlabel=eventlabel)
         s3_meta.inputdir = meta.s2_inputdir
         s3_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage3')
+        s3_meta.isopt_S1 = meta.isopt_S1
+        s3_meta.isopt_S3 = meta.isopt_S3
         s3_meta.isplots_S3 = meta.isplots_S3opt
         s3_meta.verbose = meta.verbose
         s3_meta.record_ypos = False
