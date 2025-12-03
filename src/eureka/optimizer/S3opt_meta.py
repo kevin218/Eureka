@@ -46,6 +46,10 @@ class S3optMetaClass(MetaClass):
         self.isopt_S1 = getattr(self, 'isopt_S1', False)
         self.isopt_S3 = getattr(self, 'isopt_S3', True)
 
+        # Set deletion flags
+        self.delete_intermediate = getattr(self, 'delete_intermediate', False)
+        self.delete_final = getattr(self, 'delete_final', True)
+
         # Locate the old MetaClass savefile, and load new ECF into
         # that old MetaClass
         _, self.inputdir, self.inputdir_raw = \
