@@ -3,6 +3,7 @@ import os
 import numpy as np
 from copy import deepcopy
 import pickle
+import shutil
 
 import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4
@@ -14,7 +15,7 @@ from . import optimizers
 from ..lib import logedit
 
 
-def wrapper(eventlabel, ecf_path=None, initial_run=False):
+def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     """
     Eureka! optimization wrapper for Stages 3 and 4.
 
@@ -27,7 +28,10 @@ def wrapper(eventlabel, ecf_path=None, initial_run=False):
         None which resolves to './'.
     initial_run : boolean; optional
         Set to True to perform an initial run with default ECF parameters
-        before starting the optimization. Defaults to False.
+        before starting the optimization. Defaults to True.
+    final_run : boolean; optional
+        Set to True to perform a final run with optimized ECF parameters.
+        Defaults to True.
 
     Returns
     -------
@@ -71,8 +75,9 @@ def wrapper(eventlabel, ecf_path=None, initial_run=False):
         history["initial_run"] = (
             meta.scaling_MAD_spec * s4_meta.mad_s4 +
             meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
-        log.writelog("Initial fitness value: " +
-                     f"{history["initial_run"]}\n")
+        log.writelog(f"Initial fitness value: {history["initial_run"]}")
+        log.writelog(f"Initial white MAD: {s4_meta.mad_s4_binned[0]}")
+        log.writelog(f"Initial spec MAD: {s4_meta.mad_s4}\n")
 
     # Run optimization loop for Stage 3 parameters
     for p in s3opt_meta.params_to_optimize_s3:
@@ -82,15 +87,9 @@ def wrapper(eventlabel, ecf_path=None, initial_run=False):
 
     # Run optimization loop for Stage 4 parameters
     for i, p in enumerate(s3opt_meta.params_to_optimize_s4):
-        # Need to rerun Stage 3 first time around
-        # Otherwise, save time by not rerunning Stage 3 again
-        stage = 3 if i == 0 else 4
         s3opt_meta, log, history, best = optimize(s3opt_meta, log, history,
                                                   best, p, eventlabel,
-                                                  ecf_path, stage)
-
-    if s3opt_meta.isplots_S3opt >= 1:
-        plots_s3.fitness_scores(s3opt_meta, history)
+                                                  ecf_path, 4)
 
     # Save the best dictionary to a pickle file
     with open(os.path.join(s3opt_meta.outputdir, "best_params.pkl"), "wb") as f:
@@ -103,18 +102,42 @@ def wrapper(eventlabel, ecf_path=None, initial_run=False):
 
     # Update S3 and S4 ECF files with optimized parameters
     s3_meta, s4_meta = initialize_meta(s3opt_meta, eventlabel,
-                                       ecf_path=ecf_path, stage=3)
+                                       ecf_path=ecf_path)
     for key, value in best.items():
         if key in s3_meta.__dict__.keys():
             s3_meta.params[key] = value
+            s3_meta.__dict__[key] = value
         if key in s4_meta.__dict__.keys():
             s4_meta.params[key] = value
+            s4_meta.__dict__[key] = value
 
     # Write optimized ECF files
     s3_meta.write(opt_path)
     s4_meta.write(opt_path)
 
+    if final_run:
+        s3_spec, s3_meta = s3.reduce(eventlabel, input_meta=s3_meta)
+        s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, input_meta=s4_meta,
+                                           s3_meta=s3_meta)
+        # Record initial fitness score
+        history["final_run"] = (
+            s3opt_meta.scaling_MAD_spec * s4_meta.mad_s4 +
+            s3opt_meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
+        log.writelog(f"Final fitness value: {history["final_run"]}")
+        log.writelog(f"Final white MAD: {s4_meta.mad_s4_binned[0]}")
+        log.writelog(f"Final spec MAD: {s4_meta.mad_s4}\n")
+
+    if s3opt_meta.isplots_S3opt >= 1:
+        plots_s3.fitness_scores(s3opt_meta, history)
+
     log.closelog()
+
+    # Delete intermediate files if requested
+    if s3opt_meta.delete_final:
+        if os.path.exists(s3_meta.outputdir_raw):
+            shutil.rmtree(s3_meta.outputdir_raw)
+        if os.path.exists(s4_meta.outputdir_raw):
+            shutil.rmtree(s4_meta.outputdir_raw)
 
     return s3opt_meta, history, best
 
@@ -139,7 +162,7 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     ecf_path : str; optional
         The absolute or relative path to where ecfs are stored.
     stage : int
-        The stage number (3 or 4) indicating which stage's parameters to
+        The stage number indicating which stage's parameters to
         optimize.
 
     Returns
@@ -156,26 +179,31 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     # Setup Meta objects
     meta = deepcopy(s3opt_meta)
     meta.opt_param_name = p
-    s3_meta, s4_meta = initialize_meta(meta, eventlabel, ecf_path=ecf_path,
-                                       stage=stage)
+    s3_meta, s4_meta = initialize_meta(meta, eventlabel, ecf_path=ecf_path)
 
     # Extract bounds for parameter(s) to optimize
     if "bounds_" + p in meta.__dict__.keys():
         bounds = meta.__dict__["bounds_" + p]
         log.writelog(f"Optimizing parameter {p} over bounds: {bounds}")
+        log.writelog("Initial parameter value: " +
+                     f"{getattr(s3_meta, p, getattr(s4_meta, p, None))}")
     elif "__" in p:
         # Extract default bounds for two parameters
         param_names = p.split("__")
         bounds = []
+        init_vals = []
         for param in param_names:
             if "bounds_" + param in meta.__dict__.keys():
                 bounds.append(meta.__dict__["bounds_" + param])
+                init_vals.append(getattr(s3_meta, param,
+                                         getattr(s4_meta, param, None)))
             else:
                 log.writelog(f"Could not create bounds for parameter {p}. " +
                              "Please manually specify bounds in ECF. " +
                              "Skipping...")
                 return s3opt_meta, log, history, best
         log.writelog(f"Optimizing parameters {p} over bounds: {bounds}")
+        log.writelog(f"Initial parameter values: {init_vals}")
     else:
         log.writelog(f"No default bounds exist for parameter {p}. " +
                      "Please manually specify bounds in ECF. Skipping...")
@@ -199,11 +227,11 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     elif "__" in p:
         # Optimize two independent parameters simultaneously
         best_param_value, best_fitness_value = optimizers.sweep_list_double(
-            bounds, meta, log, s3_meta=s3_meta, s4_meta=s4_meta)
+            bounds, meta, log, s3_meta=s3_meta, s4_meta=s4_meta, stage=stage)
     else:
         # Optimize single parameter
         best_param_value, best_fitness_value = optimizers.sweep_list_single(
-            bounds, meta, log, s3_meta=s3_meta, s4_meta=s4_meta)
+            bounds, meta, log, s3_meta=s3_meta, s4_meta=s4_meta, stage=stage)
 
     # Check that optimization was successful
     if best_param_value is not None:
@@ -224,7 +252,7 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     return s3opt_meta, log, history, best
 
 
-def initialize_meta(meta, eventlabel, ecf_path=None, stage=3):
+def initialize_meta(meta, eventlabel, ecf_path=None):
     """Initialize MetaClass objects for the optimization run.
 
     Parameters
@@ -236,9 +264,6 @@ def initialize_meta(meta, eventlabel, ecf_path=None, stage=3):
     ecf_path : str; optional
         The absolute or relative path to where ecfs are stored. Defaults to
         None which resolves to './'.
-    stage : int; optional
-        The stage number (3 or 4) indicating which stage's parameters to
-        optimize. Defaults to 3.
 
     Returns
     -------
@@ -247,21 +272,17 @@ def initialize_meta(meta, eventlabel, ecf_path=None, stage=3):
     s4_meta : eureka.lib.readECF.MetaClass
         The Stage 4 metadata object.
     """
-    if stage == 4:
-        # Set meta to None to skip Stage 3 processing
-        s3_meta = None
-    else:
-        # Setup Meta objects and overwrite certain Meta values
-        s3_meta = S3MetaClass(folder=ecf_path, eventlabel=eventlabel)
-        s3_meta.inputdir = meta.s2_inputdir
-        s3_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage3')
-        s3_meta.isopt_S1 = meta.isopt_S1
-        s3_meta.isopt_S3 = meta.isopt_S3
-        s3_meta.isplots_S3 = meta.isplots_S3opt
-        s3_meta.verbose = meta.verbose
-        s3_meta.record_ypos = False
+    # Setup Stage 3 Meta object and overwrite certain Meta values
+    s3_meta = S3MetaClass(folder=ecf_path, eventlabel=eventlabel)
+    s3_meta.inputdir = meta.s2_inputdir
+    s3_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage3')
+    s3_meta.isopt_S1 = meta.isopt_S1
+    s3_meta.isopt_S3 = meta.isopt_S3
+    s3_meta.isplots_S3 = meta.isplots_S3opt
+    s3_meta.verbose = meta.verbose
+    s3_meta.record_ypos = False
 
-    # Setup Meta objects and overwrite certain Meta values
+    # Setup Stage 4 Meta object and overwrite certain Meta values
     s4_meta = S4MetaClass(folder=ecf_path, eventlabel=eventlabel)
     s4_meta.inputdir = os.path.join(meta.outputdir, 'Stage3')
     s4_meta.inputdir_raw = s4_meta.inputdir[len(meta.topdir):]

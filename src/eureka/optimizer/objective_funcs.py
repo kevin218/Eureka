@@ -5,7 +5,7 @@ import eureka.S4_generate_lightcurves.s4_genLC as s4
 import shutil
 
 
-def single(val, meta, **kwargs):
+def single(val, meta, run_S3=True, **kwargs):
     """Single variable objective function.
 
     Parameters
@@ -14,6 +14,8 @@ def single(val, meta, **kwargs):
         The variable value to be evaluated.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    run_S3 : boolean; optional
+        If True, run Stage 3.
     **kwargs : dict
         Additional keyword arguments. Can include s1_meta, s2_meta, s3_meta,
         and s4_meta to pass in existing metadata objects for each stage.
@@ -36,7 +38,7 @@ def single(val, meta, **kwargs):
     if 's2_meta' in kwargs and kwargs['s2_meta'] is not None:
         s2_meta = kwargs['s2_meta']
         run_stage[2] = True
-    if 's3_meta' in kwargs and kwargs['s3_meta'] is not None:
+    if 's3_meta' in kwargs and kwargs['s3_meta'] is not None and run_S3:
         s3_meta = kwargs['s3_meta']
         run_stage[3] = True
     if 's4_meta' in kwargs and kwargs['s4_meta'] is not None:
@@ -82,7 +84,7 @@ def single(val, meta, **kwargs):
     return fitness_value
 
 
-def double(val, meta, **kwargs):
+def double(val, meta, run_S3=True, **kwargs):
     """Double variable objective function. Also works for more than two
     variables.
 
@@ -92,6 +94,8 @@ def double(val, meta, **kwargs):
         The variable value to be evaluated.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    run_S3 : boolean; optional
+        If True, run Stage 3.
     **kwargs : dict
         Additional keyword arguments. Can include s1_meta, s2_meta, s3_meta,
         and s4_meta to pass in existing metadata objects for each stage.
@@ -114,7 +118,7 @@ def double(val, meta, **kwargs):
     if 's2_meta' in kwargs and kwargs['s2_meta'] is not None:
         s2_meta = kwargs['s2_meta']
         run_stage[2] = True
-    if 's3_meta' in kwargs and kwargs['s3_meta'] is not None:
+    if 's3_meta' in kwargs and kwargs['s3_meta'] is not None and run_S3:
         s3_meta = kwargs['s3_meta']
         run_stage[3] = True
     if 's4_meta' in kwargs and kwargs['s4_meta'] is not None:

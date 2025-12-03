@@ -91,9 +91,12 @@ def sweep_list_single(bounds_var, meta, log, **kwargs):
     best_param_value = None
 
     # Iterate over each value in the provided bounds
-    for val in bounds_var:
+    for i, val in enumerate(bounds_var):
+        # Need to rerun Stage 3 first time around on Stage 4 optimization
+        # Otherwise, save time by not rerunning Stage 3 again
+        run_s3 = False if (i > 0 and stage == 4) else True
         try:
-            fitness_value = of.single(val, meta, **kwargs)
+            fitness_value = of.single(val, meta, run_s3, **kwargs)
             if fitness_value < best_fitness_value:
                 # Update best fitness and parameters if current is better
                 best_fitness_value = fitness_value
@@ -108,7 +111,7 @@ def sweep_list_single(bounds_var, meta, log, **kwargs):
     return best_param_value, best_fitness_value
 
 
-def sweep_list_double(bounds_var, meta, log, **kwargs):
+def sweep_list_double(bounds_var, meta, log, stage, **kwargs):
     """
     Optimize two independent variables using parametric sweep.  This function
     returns the best parameter and resulting fitness score after sweeping
@@ -123,6 +126,9 @@ def sweep_list_double(bounds_var, meta, log, **kwargs):
         The metadata object.
     log : logedit.Logedit
         The current log.
+    stage : int
+        The stage number indicating which stage's parameters to
+        optimize.
     **kwargs : dict
         Additional keyword arguments. Can include s1_meta, s2_meta, s3_meta,
         and s4_meta to pass in existing metadata objects for each stage.
@@ -144,11 +150,14 @@ def sweep_list_double(bounds_var, meta, log, **kwargs):
     best_param_value = None
 
     # Iterate over each value in the provided bounds
-    for var1 in bounds_var[0]:
-        for var2 in bounds_var[1]:
+    for i, var1 in enumerate(bounds_var[0]):
+        for j, var2 in enumerate(bounds_var[1]):
+            # Need to rerun Stage 3 first time around on Stage 4 optimization
+            # Otherwise, save time by not rerunning Stage 3 again
+            run_s3 = False if (stage == 4 and (i > 0 or j > 0)) else True
             try:
                 val = np.array([var1, var2])
-                fitness_value = of.double(val, meta, **kwargs)
+                fitness_value = of.double(val, meta, run_s3, **kwargs)
                 if fitness_value < best_fitness_value:
                     # Update best fitness and parameters if current is better
                     best_fitness_value = fitness_value
@@ -182,6 +191,9 @@ def sweep_list_lt(bounds_var, meta, log, **kwargs):
         The metadata object.
     log : logedit.Logedit
         The current log.
+    **kwargs : dict
+        Additional keyword arguments. Can include s1_meta, s2_meta, s3_meta,
+        and s4_meta to pass in existing metadata objects for each stage.
 
     Returns:
     -------

@@ -27,7 +27,8 @@ bounds_bg_thresh    np.arange(3,5.5,0.5)  # Example: optimize BG threshold betwe
 
 # Diagnostics
 isplots_S3opt       1               # Generate none (0), few (1), some (3), or many (5) figures (Options: 1 - 5)
-delete_intermediate True           # If True, intermediate directories will be deleted upon completion
+delete_intermediate False           # If True, intermediate directories will be deleted after each optimization step
+delete_final        True           # If True, intermediate directories will be deleted upon completion of optimization run
 verbose             True           # If True, more details will be printed about steps in the optimization process
 hide_plots          True            # If True, plots will automatically be closed rather than popping up
 
