@@ -223,15 +223,15 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
         # Optimize both spec_hw and bg_hw simultaneously
         # Require that spec_hw < bg_hw
         best_param_value, best_fitness_value = optimizers.sweep_list_lt(
-            bounds, meta, log, s3_meta=s3_meta, s4_meta=s4_meta)
+            bounds, meta, log, stage, s3_meta=s3_meta, s4_meta=s4_meta)
     elif "__" in p:
         # Optimize two independent parameters simultaneously
         best_param_value, best_fitness_value = optimizers.sweep_list_double(
-            bounds, meta, log, s3_meta=s3_meta, s4_meta=s4_meta, stage=stage)
+            bounds, meta, log, stage, s3_meta=s3_meta, s4_meta=s4_meta)
     else:
         # Optimize single parameter
         best_param_value, best_fitness_value = optimizers.sweep_list_single(
-            bounds, meta, log, s3_meta=s3_meta, s4_meta=s4_meta, stage=stage)
+            bounds, meta, log, stage, s3_meta=s3_meta, s4_meta=s4_meta)
 
     # Check that optimization was successful
     if best_param_value is not None:
