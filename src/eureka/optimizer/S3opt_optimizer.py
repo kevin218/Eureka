@@ -12,7 +12,7 @@ from eureka.S3_data_reduction import plots_s3
 from eureka.S4_generate_lightcurves.s4_meta import S4MetaClass
 from .S3opt_meta import S3optMetaClass
 from . import optimizers
-from ..lib import logedit
+from ..lib import logedit, util
 
 
 def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
@@ -211,10 +211,10 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
 
     # Update Meta parameters with best values from previous iterations
     for key, value in best.items():
-        if s3_meta is not None and key in s3_meta.__dict__.keys():
+        if s3_meta is not None and hasattr(s3_meta, key):
             s3_meta.params[key] = value
             s3_meta.__dict__[key] = value
-        if key in s4_meta.__dict__.keys():
+        if hasattr(s4_meta, key):
             s4_meta.params[key] = value
             s4_meta.__dict__[key] = value
 
@@ -281,9 +281,30 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     s3_meta.isplots_S3 = meta.isplots_S3opt
     s3_meta.verbose = meta.verbose
     s3_meta.record_ypos = False
+    # Create list of file segments
+    s3_meta = util.readfiles(s3_meta)
+    # First apply any instrument-specific defaults
+    if meta.photometry:
+        if meta.inst == 'miri':
+            meta.set_MIRI_Photometry_defaults()
+        elif meta.inst == 'nircam':
+            meta.set_NIRCam_Photometry_defaults()
+    else:
+        if meta.inst == 'miri':
+            meta.set_MIRI_defaults()
+        elif meta.inst == 'nircam':
+            meta.set_NIRCam_defaults()
+        elif meta.inst == 'nirspec':
+            meta.set_NIRSpec_defaults()
+        elif meta.inst == 'niriss':
+            meta.set_NIRISS_defaults()
+        elif meta.inst == 'wfc3':
+            meta.set_WFC3_defaults()
+    # Then apply instrument-agnostic defaults
+    s3_meta.set_defaults()
 
     # Setup Stage 4 Meta object and overwrite certain Meta values
-    s4_meta = S4MetaClass(folder=ecf_path, eventlabel=eventlabel)
+    s4_meta = S4MetaClass(**s3_meta.__dict__)
     s4_meta.inputdir = os.path.join(meta.outputdir, 'Stage3')
     s4_meta.inputdir_raw = s4_meta.inputdir[len(meta.topdir):]
     s4_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage4')
@@ -291,5 +312,7 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     s4_meta.verbose = meta.verbose
     s4_meta.nspecchan = 1
     s4_meta.compute_ld = False
+    # Apply defaults
+    s4_meta.set_defaults()
 
     return s3_meta, s4_meta
