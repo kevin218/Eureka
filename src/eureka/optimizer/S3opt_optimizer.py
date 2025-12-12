@@ -2,6 +2,7 @@
 import os
 import numpy as np
 from copy import deepcopy
+import time as time_pkg
 import pickle
 import shutil
 
@@ -46,13 +47,15 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     s3opt_meta = S3optMetaClass(folder=ecf_path, eventlabel=eventlabel)
 
     # Setup directories and log file
-    s3opt_meta.s2_inputdir = os.path.join(s3opt_meta.topdir, s3opt_meta.inputdir)
+    s3opt_meta.datetime = time_pkg.strftime('%Y-%m-%d')
+    run = util.makedirectory(s3opt_meta, 'S3opt')
+    s3opt_meta.outputdir = util.pathdirectory(s3opt_meta, 'S3opt', run)
+    s3opt_meta.s2_inputdir = os.path.join(s3opt_meta.topdir,
+                                          s3opt_meta.inputdir)
     s3opt_meta.s3_logname = s3opt_meta.outputdir + f'S3opt_{eventlabel}.log'
-    if not os.path.exists(s3opt_meta.outputdir):
-        os.mkdir(s3opt_meta.outputdir)
-    if not os.path.exists(os.path.join(s3opt_meta.outputdir, "figs")):
-        os.makedirs(os.path.join(s3opt_meta.outputdir, "figs"))
     log = logedit.Logedit(s3opt_meta.s3_logname)
+    # Update raw dir by removing topdir from ouputdir
+    s3opt_meta.outputdir_raw = s3opt_meta.outputdir[len(s3opt_meta.topdir):]
 
     # Copy ECF to output directory
     log.writelog('Copying S3opt control file', mute=(not s3opt_meta.verbose))

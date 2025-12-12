@@ -90,7 +90,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     meta.set_defaults()
     meta = me.filter_allapers_inputdir(meta)
 
-    # Create directories for Stage 5 outputs
+    # Create directories for Stage 4 outputs
     meta.run_s4 = None
     for spec_hw_val, bg_hw_val in me.get_allapers_pairs(meta):
         # Directory structure should not use expanded HW values
