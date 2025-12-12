@@ -485,7 +485,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                         (spec.wave_1d.values < lc.wave_hi.values[i]))[0]
                     if index.size > 0:
                         log.writelog(f"    indices {index[0]} - {index[-1]}, "
-                                     f"{len(index)} in total")
+                                     f"{len(index)} in total",
+                                     mute=(not meta.verbose))
                     else:
                         log.writelog(
                             "    No indices found in this wavelength range.")

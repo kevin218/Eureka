@@ -247,7 +247,7 @@ def manual_clip(lc, meta, log, channel=0):
     return meta, lc, log
 
 
-def check_nans(data, mask, log, name=''):
+def check_nans(data, mask, log, name='', mute=True):
     """Checks where a data-like array is invalid (contains NaNs or infs).
 
     Parameters
@@ -261,6 +261,8 @@ def check_nans(data, mask, log, name=''):
     name : str; optional
         The name of the data array passed in (e.g. SUBDATA, SUBERR, SUBV0).
         Defaults to ''.
+    mute : bool; optional
+        If True, suppress output to screen. Defaults to True.
 
     Returns
     -------
@@ -282,7 +284,7 @@ def check_nans(data, mask, log, name=''):
                      f"may be poor.")
     elif num_nans > 0:
         log.writelog(f"    {name} has {num_nans} NaNs/infs, which is "
-                     f"{perc_nans:.2f}% of all pixels.")
+                     f"{perc_nans:.2f}% of all pixels.", mute=mute)
         mask[inan] = True
     if perc_nans > 10:
         log.writelog("  WARNING: Your region of interest may be off the edge "
