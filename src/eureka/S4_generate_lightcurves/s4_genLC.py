@@ -89,7 +89,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     meta = S4MetaClass(**me.mergeevents(meta, s3_meta).__dict__)
     meta.set_defaults()
 
-    # Create directories for Stage 5 outputs
+    # Create directories for Stage 4 outputs
     meta.run_s4 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
