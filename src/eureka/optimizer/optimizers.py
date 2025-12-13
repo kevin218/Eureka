@@ -46,7 +46,7 @@ def sweep_range_single(bounds_var, meta, log, stage, **kwargs):
         # Otherwise, save time by not rerunning Stage 3 again
         run_s3 = False if (i > 0 and stage == 4) else True
         try:
-            fitness_value = of.single(val, meta, run_s3, **kwargs)
+            fitness_value = of.single(val, meta, stage, run_s3, **kwargs)
             if fitness_value < best_fitness_value:
                 # Update best fitness and parameters if current is better
                 best_fitness_value = fitness_value
@@ -105,7 +105,7 @@ def sweep_list_single(bounds_var, meta, log, stage, **kwargs):
         # Otherwise, save time by not rerunning Stage 3 again
         run_s3 = False if (i > 0 and stage == 4) else True
         try:
-            fitness_value = of.single(val, meta, run_s3, **kwargs)
+            fitness_value = of.single(val, meta, stage, run_s3, **kwargs)
             if fitness_value < best_fitness_value:
                 # Update best fitness and parameters if current is better
                 best_fitness_value = fitness_value
@@ -166,7 +166,7 @@ def sweep_list_double(bounds_var, meta, log, stage, **kwargs):
             run_s3 = False if (stage == 4 and (i > 0 or j > 0)) else True
             try:
                 val = np.array([var1, var2])
-                fitness_value = of.double(val, meta, run_s3, **kwargs)
+                fitness_value = of.double(val, meta, stage, run_s3, **kwargs)
                 if fitness_value < best_fitness_value:
                     # Update best fitness and parameters if current is better
                     best_fitness_value = fitness_value
@@ -232,7 +232,8 @@ def sweep_list_lt(bounds_var, meta, log, stage, **kwargs):
             try:
                 if var1 < var2:
                     val = np.array([var1, var2])
-                    fitness_value = of.double(val, meta, run_s3, **kwargs)
+                    fitness_value = of.double(val, meta, stage, run_s3,
+                                              **kwargs)
                     if fitness_value < best_fitness_value:
                         # Update best fitness and parameters if current is
                         # better

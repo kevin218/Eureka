@@ -5,7 +5,7 @@ import eureka.S4_generate_lightcurves.s4_genLC as s4
 import shutil
 
 
-def single(val, meta, run_S3=True, **kwargs):
+def single(val, meta, stage, run_S3=True, **kwargs):
     """Single variable objective function.
 
     Parameters
@@ -14,6 +14,9 @@ def single(val, meta, run_S3=True, **kwargs):
         The variable value to be evaluated.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    stage : int
+        The stage number indicating which stage's parameters to
+        optimize.
     run_S3 : boolean; optional
         If True, run Stage 3.
     **kwargs : dict
@@ -46,14 +49,10 @@ def single(val, meta, run_S3=True, **kwargs):
         run_stage[4] = True
 
     # Set value of the variable to be optimized
-    if hasattr(s1_meta, meta.opt_param_name):
-        setattr(s1_meta, meta.opt_param_name, val)
-    if hasattr(s2_meta, meta.opt_param_name):
-        setattr(s2_meta, meta.opt_param_name, val)
-    if hasattr(s3_meta, meta.opt_param_name):
-        setattr(s3_meta, meta.opt_param_name, val)
-    if hasattr(s4_meta, meta.opt_param_name):
-        setattr(s4_meta, meta.opt_param_name, val)
+    setattr(s1_meta, meta.opt_param_name, val) if stage == 1 else None
+    setattr(s2_meta, meta.opt_param_name, val) if stage == 2 else None
+    setattr(s3_meta, meta.opt_param_name, val) if stage == 3 else None
+    setattr(s4_meta, meta.opt_param_name, val) if stage == 4 else None
 
     if run_stage[1]:
         s1_meta = s1.rampfitJWST(meta.eventlabel, input_meta=s1_meta)
@@ -84,7 +83,7 @@ def single(val, meta, run_S3=True, **kwargs):
     return fitness_value
 
 
-def double(val, meta, run_S3=True, **kwargs):
+def double(val, meta, stage, run_S3=True, **kwargs):
     """Double variable objective function. Also works for more than two
     variables.
 
@@ -94,6 +93,9 @@ def double(val, meta, run_S3=True, **kwargs):
         The variable value to be evaluated.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    stage : int
+        The stage number indicating which stage's parameters to
+        optimize.
     run_S3 : boolean; optional
         If True, run Stage 3.
     **kwargs : dict
@@ -131,14 +133,10 @@ def double(val, meta, run_S3=True, **kwargs):
         f"Expected {len(param_names)} parameters for optimization, " + \
         f"got {len(val)}."
     for p, v in zip(param_names, val):
-        if hasattr(s1_meta, p):
-            setattr(s1_meta, p, v)
-        if hasattr(s2_meta, p):
-            setattr(s2_meta, p, v)
-        if hasattr(s3_meta, p):
-            setattr(s3_meta, p, v)
-        if hasattr(s4_meta, p):
-            setattr(s4_meta, p, v)
+        setattr(s1_meta, p, v) if stage == 1 else None
+        setattr(s2_meta, p, v) if stage == 2 else None
+        setattr(s3_meta, p, v) if stage == 3 else None
+        setattr(s4_meta, p, v) if stage == 4 else None
 
     if run_stage[1]:
         s1_meta = s1.rampfitJWST(meta.eventlabel, input_meta=s1_meta)

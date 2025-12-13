@@ -62,7 +62,6 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     s3opt_meta.copy_ecf()
 
     # Create dictionaries to keep track of optimization metrics
-    best = {}
     history = {}
 
     if initial_run:
@@ -83,17 +82,21 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
         log.writelog(f"Initial spec MAD: {s4_meta.mad_s4}\n")
 
     # Run optimization loop for Stage 3 parameters
+    best_s3 = {}
     for p in s3opt_meta.params_to_optimize_s3:
-        s3opt_meta, log, history, best = optimize(s3opt_meta, log, history,
-                                                  best, p, eventlabel,
-                                                  ecf_path, 3)
+        s3opt_meta, log, history, best_s3 = optimize(s3opt_meta, log, history,
+                                                     best_s3, p, eventlabel,
+                                                     ecf_path, 3)
 
     # Run optimization loop for Stage 4 parameters
+    best_s4 = {}
     for i, p in enumerate(s3opt_meta.params_to_optimize_s4):
-        s3opt_meta, log, history, best = optimize(s3opt_meta, log, history,
-                                                  best, p, eventlabel,
-                                                  ecf_path, 4)
+        s3opt_meta, log, history, best_s4 = optimize(s3opt_meta, log, history,
+                                                     best_s4, p, eventlabel,
+                                                     ecf_path, 4)
 
+    # Combine best parameters from both stages
+    best = {**best_s3, **best_s4}
     # Save the best dictionary to a pickle file
     with open(os.path.join(s3opt_meta.outputdir, "best_params.pkl"), "wb") as f:
         pickle.dump(best, f)
@@ -106,13 +109,12 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     # Update S3 and S4 ECF files with optimized parameters
     s3_meta, s4_meta = initialize_meta(s3opt_meta, eventlabel,
                                        ecf_path=ecf_path)
-    for key, value in best.items():
-        if key in s3_meta.__dict__.keys():
-            s3_meta.params[key] = value
-            s3_meta.__dict__[key] = value
-        if key in s4_meta.__dict__.keys():
-            s4_meta.params[key] = value
-            s4_meta.__dict__[key] = value
+    for key, value in best_s3.items():
+        s3_meta.params[key] = value
+        setattr(s3_meta, key, value)
+    for key, value in best_s4.items():
+        s4_meta.params[key] = value
+        setattr(s4_meta, key, value)
 
     # Write optimized ECF files
     s3_meta.write(opt_path)
@@ -185,21 +187,21 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     s3_meta, s4_meta = initialize_meta(meta, eventlabel, ecf_path=ecf_path)
 
     # Extract bounds for parameter(s) to optimize
-    if "bounds_" + p in meta.__dict__.keys():
-        bounds = meta.__dict__["bounds_" + p]
+    if hasattr(meta, "bounds_" + p):
+        bounds = getattr(meta, "bounds_" + p)
         log.writelog(f"Optimizing parameter {p} over bounds: {bounds}")
         log.writelog("Initial parameter value: " +
-                     f"{getattr(s3_meta, p, getattr(s4_meta, p, None))}")
+                     f"{getattr(s3_meta, p, getattr(s4_meta, p, 'default'))}")
     elif "__" in p:
         # Extract default bounds for two parameters
         param_names = p.split("__")
         bounds = []
         init_vals = []
         for param in param_names:
-            if "bounds_" + param in meta.__dict__.keys():
-                bounds.append(meta.__dict__["bounds_" + param])
+            if hasattr(meta, "bounds_" + param):
+                bounds.append(getattr(meta, "bounds_" + param))
                 init_vals.append(getattr(s3_meta, param,
-                                         getattr(s4_meta, param, None)))
+                                         getattr(s4_meta, param, 'default')))
             else:
                 log.writelog(f"Could not create bounds for parameter {p}. " +
                              "Please manually specify bounds in ECF. " +
@@ -214,12 +216,12 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
 
     # Update Meta parameters with best values from previous iterations
     for key, value in best.items():
-        if s3_meta is not None and hasattr(s3_meta, key):
+        if stage == 3:
             s3_meta.params[key] = value
-            s3_meta.__dict__[key] = value
-        if hasattr(s4_meta, key):
+            setattr(s3_meta, key, value)
+        if stage == 4:
             s4_meta.params[key] = value
-            s4_meta.__dict__[key] = value
+            setattr(s4_meta, key, value)
 
     # Perform parametric sweep
     if p == "spec_hw__bg_hw":
@@ -284,27 +286,6 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     s3_meta.isplots_S3 = meta.isplots_S3opt
     s3_meta.verbose = meta.verbose
     s3_meta.record_ypos = False
-    # Create list of file segments
-    s3_meta = util.readfiles(s3_meta)
-    # First apply any instrument-specific defaults
-    if meta.photometry:
-        if meta.inst == 'miri':
-            meta.set_MIRI_Photometry_defaults()
-        elif meta.inst == 'nircam':
-            meta.set_NIRCam_Photometry_defaults()
-    else:
-        if meta.inst == 'miri':
-            meta.set_MIRI_defaults()
-        elif meta.inst == 'nircam':
-            meta.set_NIRCam_defaults()
-        elif meta.inst == 'nirspec':
-            meta.set_NIRSpec_defaults()
-        elif meta.inst == 'niriss':
-            meta.set_NIRISS_defaults()
-        elif meta.inst == 'wfc3':
-            meta.set_WFC3_defaults()
-    # Then apply instrument-agnostic defaults
-    s3_meta.set_defaults()
 
     # Setup Stage 4 Meta object and overwrite certain Meta values
     s4_meta = S4MetaClass(**s3_meta.__dict__)
@@ -315,7 +296,5 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     s4_meta.verbose = meta.verbose
     s4_meta.nspecchan = 1
     s4_meta.compute_ld = False
-    # Apply defaults
-    s4_meta.set_defaults()
 
     return s3_meta, s4_meta
