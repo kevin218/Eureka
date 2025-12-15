@@ -303,7 +303,7 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     s3_meta.record_ypos = False
 
     # Setup Stage 4 Meta object and overwrite certain Meta values
-    s4_meta = S4MetaClass(**s3_meta.__dict__)
+    s4_meta = S4MetaClass(folder=ecf_path, eventlabel=eventlabel)
     s4_meta.inputdir = os.path.join(meta.outputdir, 'Stage3')
     s4_meta.inputdir_raw = s4_meta.inputdir[len(meta.topdir):]
     s4_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage4')

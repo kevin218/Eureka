@@ -101,6 +101,10 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     with open(os.path.join(s3opt_meta.outputdir, "best_params.pkl"), "wb") as f:
         pickle.dump(best, f)
 
+    # Plot fitness history
+    if s3opt_meta.isplots_S3opt >= 1:
+        plots_s3.fitness_scores(s3opt_meta, history)
+
     # Define and create optimized ECF file path
     opt_path = os.path.join(s3opt_meta.outputdir, "opt_ECFs")
     if not os.path.exists(opt_path):
@@ -131,9 +135,6 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
         log.writelog(f"Final fitness value: {history["final_run"]}")
         log.writelog(f"Final white MAD: {s4_meta.mad_s4_binned[0]}")
         log.writelog(f"Final spec MAD: {s4_meta.mad_s4}\n")
-
-    if s3opt_meta.isplots_S3opt >= 1:
-        plots_s3.fitness_scores(s3opt_meta, history)
 
     log.closelog()
 
@@ -288,7 +289,7 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     s3_meta.record_ypos = False
 
     # Setup Stage 4 Meta object and overwrite certain Meta values
-    s4_meta = S4MetaClass(**s3_meta.__dict__)
+    s4_meta = S4MetaClass(folder=ecf_path, eventlabel=eventlabel)
     s4_meta.inputdir = os.path.join(meta.outputdir, 'Stage3')
     s4_meta.inputdir_raw = s4_meta.inputdir[len(meta.topdir):]
     s4_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage4')
