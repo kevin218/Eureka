@@ -29,9 +29,9 @@ def test_S3opt(capsys):
                                               final_run=True)
 
     # run assertions for S3opt
-    opt_path = os.path.join(s3opt_meta.outputdir, "opt_ECFs")
-    assert os.path.exists(opt_path + 'S3_NIRSpec.ecf')
-    assert os.path.exists(opt_path + 'S4_NIRSpec.ecf')
+    opt_path = os.path.join(s3opt_meta.outputdir, "opt_ECFs" + os.sep)
+    assert os.path.isfile(opt_path + 'S3_NIRSpec.ecf')
+    assert os.path.isfile(opt_path + 'S4_NIRSpec.ecf')
     assert history["final_run"] <= history["initial_run"]
 
     # remove temporary files

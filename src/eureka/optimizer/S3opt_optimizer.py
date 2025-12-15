@@ -93,7 +93,8 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     for i, p in enumerate(s3opt_meta.params_to_optimize_s4):
         s3opt_meta, log, history, best_s4 = optimize(s3opt_meta, log, history,
                                                      best_s4, p, eventlabel,
-                                                     ecf_path, 4)
+                                                     ecf_path, 4,
+                                                     best_s3=best_s3)
 
     # Combine best parameters from both stages
     best = {**best_s3, **best_s4}
@@ -148,7 +149,8 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     return s3opt_meta, history, best
 
 
-def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
+def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage,
+             best_s3=None):
     """Optimize a single parameter via parametric sweep.
 
     Parameters
@@ -160,7 +162,7 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     history : dict
         The fitness score after optimizing each parameter.
     best : dict
-        The best parameter values found so far.
+        The best parameter values found so far for this stage.
     p : str
         The parameter to optimize.
     eventlabel : str
@@ -170,6 +172,9 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     stage : int
         The stage number indicating which stage's parameters to
         optimize.
+    best_s3 : dict; optional
+        The best Stage 3 parameter values. Only needed when
+        optimizing Stage 4 parameters.
 
     Returns
     -------
@@ -223,6 +228,10 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
         if stage == 4:
             s4_meta.params[key] = value
             setattr(s4_meta, key, value)
+    if stage == 4 and best_s3 is not None:
+        for key, value in best_s3.items():
+            s3_meta.params[key] = value
+            setattr(s3_meta, key, value)
 
     # Perform parametric sweep
     if p == "spec_hw__bg_hw":
