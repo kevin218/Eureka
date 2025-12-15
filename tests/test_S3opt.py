@@ -25,13 +25,14 @@ def test_S3opt(capsys):
     # Stages 3 and 4 optimization
     s3opt_meta, history, best = s3opt.wrapper(eventlabel,
                                               ecf_path=ecf_path,
-                                              initial_run=True)
+                                              initial_run=True,
+                                              final_run=True)
 
     # run assertions for S3opt
-    dirname = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
-               f'Stage3opt{os.sep}opt_ECFs{os.sep}')
-    assert os.path.exists(dirname + 'S3_NIRSpec.ecf')
-    assert os.path.exists(dirname + 'S4_NIRSpec.ecf')
+    opt_path = os.path.join(s3opt_meta.outputdir, "opt_ECFs")
+    assert os.path.exists(opt_path + 'S3_NIRSpec.ecf')
+    assert os.path.exists(opt_path + 'S4_NIRSpec.ecf')
+    assert history["final_run"] <= history["initial_run"]
 
     # remove temporary files
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3opt")
