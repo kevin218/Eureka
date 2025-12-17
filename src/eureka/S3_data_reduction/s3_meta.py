@@ -42,29 +42,6 @@ class S3MetaClass(MetaClass):
         self.isopt_S1 = getattr(self, 'isopt_S1', False)
         self.isopt_S3 = getattr(self, 'isopt_S3', False)
 
-        # # Create list of file segments
-        # self = util.readfiles(self)
-
-        # # First apply any instrument-specific defaults
-        # if self.photometry:
-        #     if self.inst == 'miri':
-        #         self.set_MIRI_Photometry_defaults()
-        #     elif self.inst == 'nircam':
-        #         self.set_NIRCam_Photometry_defaults()
-        # else:
-        #     if self.inst == 'miri':
-        #         self.set_MIRI_defaults()
-        #     elif self.inst == 'nircam':
-        #         self.set_NIRCam_defaults()
-        #     elif self.inst == 'nirspec':
-        #         self.set_NIRSpec_defaults()
-        #     elif self.inst == 'niriss':
-        #         self.set_NIRISS_defaults()
-        #     elif self.inst == 'wfc3':
-        #         self.set_WFC3_defaults()
-        # # Then apply instrument-agnostic defaults
-        # self.set_defaults()
-
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.
         '''
