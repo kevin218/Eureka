@@ -173,7 +173,7 @@ def build_planet_body(
         # Choose map phase so that the rotational phase at mid-eclipse is 0:
         #   phi(t) = 2*pi*t / P + phase0
         #   phi(t_ecl) = 0  -> phase0 = -2*pi*t_ecl/P
-        phase0 = -2.0 * jnp.pi * (t_ecl / per)
+        phase0 = -2. * jnp.pi * (t_ecl / per)
 
         # Gather any Y_lm coefficients stored in astro as Y{ell}{m}[_ch#]
         planet_Ylm_dict: Dict[tuple[int, int], jnp.ndarray] = {

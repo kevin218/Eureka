@@ -76,7 +76,7 @@ class LightCurve(lightcurve.LightCurve, JaxModel):
 
         if isinstance(unc_array, np.ma.core.MaskedArray):
             # Convert to a numpy array with NaN masking
-            unc_array = unc_array.filled(np.nan)
+            unc_array = np.ma.filled(unc_array, np.nan)
 
         # Set the array
         self._unc = unc_array
@@ -103,7 +103,7 @@ class LightCurve(lightcurve.LightCurve, JaxModel):
 
         if isinstance(unc_fit_array, np.ma.core.MaskedArray):
             # Convert to a numpy array with NaN masking
-            unc_fit_array = unc_fit_array.filled(np.nan)
+            unc_fit_array = np.ma.filled(unc_fit_array, np.nan)
 
         # Set the array
         self._unc_fit = unc_fit_array

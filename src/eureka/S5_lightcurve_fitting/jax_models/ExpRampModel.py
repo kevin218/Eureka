@@ -54,8 +54,8 @@ def evaluate_exp_ramp_model_jax(
         ramp_params = param_array[ramp_indices]
         r0 = ramp_params[0]
         r1 = ramp_params[1]
-        r2 = ramp_params[2] if n_ramp > 2 else 0.0
-        r3 = ramp_params[3] if n_ramp > 3 else 0.0
+        r2 = ramp_params[2] if n_ramp > 2 else 0.
+        r3 = ramp_params[3] if n_ramp > 3 else 0.
 
         # Evaluate the ramp
         lcpiece = 1 + r0 * jnp.exp(-r1 * time) + r2 * jnp.exp(-r3 * time)

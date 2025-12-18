@@ -610,7 +610,7 @@ class JaxModel(Model):
         if not isinstance(flux_array, (np.ndarray, tuple, list, type(None))):
             raise TypeError('flux axis must be a tuple, list, or numpy array.')
 
-        if isinstance(flux_array, np.ma.core.MaskedArray):
+        if hasattr(flux_array, "filled"):
             # Convert masked arrays to regular arrays with NaNs
             flux_array = flux_array.filled(np.nan)
 
@@ -627,7 +627,7 @@ class JaxModel(Model):
         if not isinstance(time_array, (np.ndarray, tuple, list, type(None))):
             raise TypeError('Time axis must be a tuple, list, or numpy array.')
 
-        if isinstance(time_array, np.ma.core.MaskedArray):
+        if hasattr(time_array, "filled"):
             # Convert masked arrays to regular arrays with NaNs
             time_array = time_array.filled(np.nan)
 
@@ -700,7 +700,7 @@ class JaxModel(Model):
                 return numpyro.sample(
                     parname,
                     TruncatedNormal(
-                        param.priorpar1, param.priorpar2, low=0., high=1.0
+                        param.priorpar1, param.priorpar2, low=0., high=1.
                     ),
                 )
             elif any(sub in parname for sub in ['per', 'scatter_mult',
