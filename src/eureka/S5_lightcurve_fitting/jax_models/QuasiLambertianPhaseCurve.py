@@ -1,100 +1,152 @@
-import numpy as np
+# src/eureka/S5_lightcurve_fitting/jax_models/QuasiLambertianPhaseCurve.py
+
+from typing import Any, Dict, List, Optional
+
 import jax.numpy as jnp
+from jax.typing import ArrayLike
 
 from . import JaxModel
-from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
+from .AstroModel import compute_astroparams
 from ...lib.split_channels import split
+
+
+def evaluate_quasi_lambertian_phase_curve_jax(
+    time_global: ArrayLike,
+    nints: List[int],
+    multwhite: bool,
+    fitted_channels: List[int],
+    num_planets: int,
+    param_dict: Dict[str, float],
+) -> jnp.ndarray:
+    """Evaluate the quasi-Lambertian phase curve model in a JAX-pure way.
+
+    This mirrors :class:`QuasiLambertianPhaseCurve` but takes all inputs
+    explicitly (no access to ``self``), so it can be used inside composite
+    JAX/NumPyro models.
+
+    Parameters
+    ----------
+    time_global : array-like
+        Full time array for the observation.
+    nints : list[int]
+        Number of integrations per channel.
+    multwhite : bool
+        Whether this is a multwhite fit.
+    fitted_channels : list[int]
+        Channel indices to evaluate.
+    num_planets : int
+        Number of planets in the system.
+    param_dict : dict
+        Flat parameter dictionary containing quasi-Lambert parameters
+        and orbit parameters.
+
+    Returns
+    -------
+    jnp.ndarray
+        Multiplicative phase curve factor evaluated over all channels
+        (concatenated).
+    """
+    time_global = jnp.asarray(time_global)
+    nchan = len(fitted_channels)
+
+    if multwhite:
+        total_len = sum(nints[chan] for chan in fitted_channels)
+    else:
+        total_len = time_global.size * nchan
+
+    lcfinal = jnp.ones(total_len)
+    offset = 0
+
+    for chan in fitted_channels:
+        if multwhite:
+            time = split([time_global], nints, chan)[0]
+        else:
+            time = time_global
+
+        lcpiece = jnp.ones_like(time)
+
+        for pid in range(num_planets):
+            astro = compute_astroparams(param_dict, channel=chan, pid=pid)
+
+            gamma = jnp.asarray(astro.get('quasi_gamma', 0.))
+            offset_deg = jnp.asarray(astro.get('quasi_offset', 0.))
+
+            # If gamma == 0, this planet contributes no phase curve signal.
+            if bool(gamma == 0.):  # type: ignore[arg-type]
+                continue
+
+            t_secondary = astro.get('t_secondary')
+            if t_secondary is None:
+                # Approximate secondary eclipse as half an orbit after transit.
+                t_secondary = astro['t0'] + 0.5 * astro['per']
+
+            per = jnp.asarray(astro['per'])
+            phi = 2. * jnp.pi * (time - t_secondary) / per
+
+            phase = 0.5 * (phi + offset_deg * jnp.pi / 180.)
+            phase_vars = jnp.abs(jnp.cos(phase)) ** gamma
+
+            lcpiece = lcpiece * phase_vars
+
+        lcfinal = lcfinal.at[offset:offset + len(lcpiece)].set(lcpiece)
+        offset += len(lcpiece)
+
+    return lcfinal
 
 
 class QuasiLambertianPhaseCurve(JaxModel):
     """Quasi-Lambertian phase curve based on Agol+2007 for airless planets."""
-    def __init__(self, **kwargs):
+
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize the model.
 
         Parameters
         ----------
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.jax_models.JaxModel.__init__().
-        """  # NOQA: E501
-        # Inherit from JaxModel class
-        super().__init__(**kwargs,
-                         name='quasi-lambertian phase curve',
-                         modeltype='physical')
+            :class:`eureka.S5_lightcurve_fitting.jax_models.JaxModel`.
+        """
+        super().__init__(
+            **kwargs,
+            name='quasi-lambertian phase curve',
+            modeltype='physical',
+        )
 
-    def eval(self, pid, eval=True, channel=None, **kwargs):
-        """Evaluate the function with the given values.
+    def eval(
+        self,
+        param_dict: Optional[Dict[str, float]] = None,
+        channel: Optional[int] = None,
+        **kwargs: Any,
+    ) -> jnp.ndarray:
+        """Evaluate the quasi-Lambertian phase curve model.
 
         Parameters
         ----------
-        pid : int
-            Planet ID - must only work on one planet at a time to avoid mixing
-            the signals from different planets.
-        eval : bool; optional
-            If true evaluate the model, otherwise simply compile the model.
-            Defaults to True.
-        channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
+        param_dict : dict, optional
+            If None, uses values from ``self.parameters`` (fitted mode).
+        channel : int, optional
+            If provided, only evaluate for the specified channel.
         **kwargs : dict
-            Must pass in the time array here if not already set.
+            Reserved for future keyword arguments (unused).
 
         Returns
         -------
-        ndarray
-            The value of the model at the times self.time.
+        jnp.ndarray
+            Multiplicative phase curve evaluated at observation times.
         """
+        if param_dict is None:
+            param_dict = self._get_param_dict()
+
         if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
+            fitted_channels = self.fitted_channels
         else:
-            nchan = 1
-            channels = [channel, ]
+            fitted_channels = [channel]
 
-        if eval:
-            lib = np
-        else:
-            lib = jnp
-
-        lcfinal = lib.array([])
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-            else:
-                chan = 0
-
-            time = self.time
-            if self.multwhite:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
-
-            # Initialize model
-            pl_params = PlanetParams(self, pid, chan, eval=eval)
-
-            if (eval and pl_params.quasi_gamma == 0):
-                # Don't waste time running the following code
-                phaseVars = lib.ones(time.shape)
-            else:
-                if pl_params.t_secondary is None:
-                    # If not explicitly fitting for the time of eclipse, get
-                    # the time of eclipse from the time of transit, period,
-                    # eccentricity, and argument of periastron
-                    pl_params.t_secondary = get_ecl_midpt(pl_params, lib)
-
-                # Compute orbital phase
-                if pl_params.ecc == 0:
-                    # the planet is on a circular orbit
-                    t = time - pl_params.t_secondary
-                    phi = 2*np.pi/pl_params.per*t
-                else:
-                    # the planet is on an eccentric orbit
-                    anom = true_anomaly(pl_params, time, lib)
-                    phi = anom + pl_params.w*np.pi/180 + np.pi/2
-
-                # calculate the phase variations
-                phaseVars = lib.abs(lib.cos(
-                    (phi+pl_params.quasi_offset*np.pi/180)/2)
-                )**pl_params.quasi_gamma
-
-            lcfinal = lib.concatenate([lcfinal, phaseVars])
-
-        return lcfinal
+        return evaluate_quasi_lambertian_phase_curve_jax(
+            time_global=self.time,
+            nints=self.nints,
+            multwhite=self.multwhite,
+            fitted_channels=fitted_channels,
+            num_planets=self.num_planets,
+            param_dict=param_dict,
+        )
