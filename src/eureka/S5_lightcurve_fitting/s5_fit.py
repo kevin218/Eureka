@@ -7,7 +7,7 @@ import astraeus.xarrayIO as xrio
 
 from .s5_meta import S5MetaClass
 from . import models as m
-from . import lightcurve
+# from . import lightcurve
 try:
     from . import jax_models as jm
     from . import jax_lightcurve
@@ -550,49 +550,51 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         StarryModel = jm.JaxoplanetStarryModel
         StepModel = jm.StepModel
         CompositeModel = jm.CompositeJaxModel
-
-        # Need to replace masked arrays with regular arrays for jax
-        # Will replace masked elements with NaN
-        time = time.filled(np.nan)
-        flux = flux.filled(np.nan)
-        flux_err = flux_err.filled(np.nan)
     else:
-        # LightCurve = jax_lightcurve.LightCurve
-        LightCurve = lightcurve.LightCurve
-        # AstroModel = jm.AstroModel
+        # LightCurve = lightcurve.LightCurve
+        LightCurve = jax_lightcurve.LightCurve
         AstroModel = m.AstroModel
+        # AstroModel = jm.AstroModel
         BatmanEclipseModel = m.BatmanEclipseModel
         BatmanTransitModel = m.BatmanTransitModel
         CatwomanTransitModel = m.CatwomanTransitModel
-        # CentroidModel = jm.CentroidModel
-        CentroidModel = m.CentroidModel
+        # CentroidModel = m.CentroidModel
+        CentroidModel = jm.CentroidModel
         CommonModeModel = m.CommonModeModel
-        DampedOscillatorModel = m.DampedOscillatorModel
-        # ExpRampModel = jm.ExpRampModel
-        ExpRampModel = m.ExpRampModel
-        FleckTransitModel = m.FleckTransitModel
+        # DampedOscillatorModel = m.DampedOscillatorModel
+        DampedOscillatorModel = jm.DampedOscillatorModel
+        # ExpRampModel = m.ExpRampModel
+        ExpRampModel = jm.ExpRampModel
+        # FleckTransitModel = m.FleckTransitModel
+        FleckTransitModel = jm.FleckTransitModel
         GPModel = m.GPModel
-        # HarmonicaTransitModel = jm.HarmonicaTransitModel
-        HarmonicaTransitModel = m.HarmonicaTransitModel
-        HSTRampModel = m.HSTRampModel
+        # GPModel = jm.GPModel
+        # HarmonicaTransitModel = m.HarmonicaTransitModel
+        HarmonicaTransitModel = jm.HarmonicaTransitModel
+        # HSTRampModel = m.HSTRampModel
+        HSTRampModel = jm.HSTRampModel
         JaxoplanetModel = jm.JaxoplanetModel
-        LorentzianModel = m.LorentzianModel
+        # LorentzianModel = m.LorentzianModel
+        LorentzianModel = jm.LorentzianModel
         PoetEclipseModel = m.PoetEclipseModel
         PoetPCModel = m.PoetPCModel
         PoetTransitModel = m.PoetTransitModel
-        # PolynomialModel = jm.PolynomialModel
-        PolynomialModel = m.PolynomialModel
-        QuasiLambertianPhaseCurve = m.QuasiLambertianPhaseCurve
-        SinusoidModel = m.SinusoidPhaseCurveModel
-        StepModel = m.StepModel
-        # CompositeModel = jm.CompositeJaxModel
+        # PolynomialModel = m.PolynomialModel
+        PolynomialModel = jm.PolynomialModel
+        # QuasiLambertianPhaseCurve = m.QuasiLambertianPhaseCurve
+        QuasiLambertianPhaseCurve = jm.QuasiLambertianPhaseCurve
+        # SinusoidModel = m.SinusoidPhaseCurveModel
+        SinusoidModel = jm.SinusoidPhaseCurveModel
+        StarryModel = jm.JaxoplanetStarryModel
+        # StepModel = m.StepModel
+        StepModel = jm.StepModel
         CompositeModel = m.CompositeModel
 
-        # Need to replace masked arrays with regular arrays for jax
-        # Will replace masked elements with NaN
-        time = time.filled(np.nan)
-        flux = flux.filled(np.nan)
-        flux_err = flux_err.filled(np.nan)
+    # Need to replace masked arrays with regular arrays for jax
+    # Will replace masked elements with NaN
+    time = np.ma.filled(time, np.nan)
+    flux = np.ma.filled(flux, np.nan)
+    flux_err = np.ma.filled(flux_err, np.nan)
 
     # Load the relevant values into the LightCurve model object
     lc_model = LightCurve(time, flux, chan, chanrng, log,
