@@ -105,15 +105,15 @@ def compute_astroparams(
 
     # POET phase curve parameters
     for k in ["cos1_amp", "cos1_off", "cos2_amp", "cos2_off"]:
-        astro[k] = get_param(k)
+        astro[k] = get_param(k, default=0.)
 
     # Sinusoidal phase curve parameters
     for k in ["AmpCos1", "AmpSin1", "AmpCos2", "AmpSin2"]:
-        astro[k] = get_param(k)
+        astro[k] = get_param(k, default=0.)
 
     # Quasi-Lambertian parameters
-    for k in ["quasi_gamma", "quasi_offset"]:
-        astro[k] = get_param(k)
+    astro["quasi_gamma"] = get_param("quasi_gamma")  # No safe default
+    astro["quasi_offset"] = get_param("quasi_offset", default=0.)
 
     # Identify which spot indices exist in param_dict for this planet/channel.
     # We let `get_param` handle _ch# suffixes, so here we only look at the
