@@ -874,13 +874,7 @@ def plot_fleck_star(lc, model, meta, fitter):
     fitter : str
         The name of the fitter (for plot filename).
     """
-    for c in range(lc.nchannel_fitted):
-        channel = lc.fitted_channels[c]
-        if lc.nchannel_fitted > 1:
-            chan = channel
-        else:
-            chan = 0
-
+    for chan in lc.fitted_channels:
         # Initialize PlanetParams object
         pl_params = PlanetParams(model, 0, chan)
 
@@ -926,7 +920,7 @@ def plot_fleck_star(lc, model, meta, fitter):
         if lc.white:
             fname_tag = 'white'
         else:
-            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            ch_number = str(chan).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5307_{fname_tag}_fleck_star_{fitter}'
                  + plots.get_filetype())
@@ -1029,13 +1023,7 @@ def plot_harmonica_string(lc, model, meta, fitter, isTitle=True):
     isTitle : bool; optional
         Should figure have a title. Defaults to True.
     """
-    for c in range(lc.nchannel_fitted):
-        channel = lc.fitted_channels[c]
-        if lc.nchannel_fitted > 1:
-            chan = channel
-        else:
-            chan = 0
-
+    for chan in lc.fitted_channels:
         # Initialize PlanetParams object
         pl_params = PlanetParams(model, 0, chan)
 
@@ -1053,7 +1041,7 @@ def plot_harmonica_string(lc, model, meta, fitter, isTitle=True):
         ax = fig.gca()
         ax.set_aspect("equal", "datalim")
         if isTitle:
-            ax.set_title(f'{meta.eventlabel} - Channel {channel} - '
+            ax.set_title(f'{meta.eventlabel} - Channel {chan} - '
                          f'{fitter}')
         plt.plot(string*np.cos(theta), string*np.sin(theta),
                  c='C0', lw=2.5, label="Transmission string")
@@ -1066,7 +1054,7 @@ def plot_harmonica_string(lc, model, meta, fitter, isTitle=True):
         if lc.white:
             fname_tag = 'white'
         else:
-            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            ch_number = str(chan).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5309_{fname_tag}_harmonica_string_{fitter}'
                  + plots.get_filetype())

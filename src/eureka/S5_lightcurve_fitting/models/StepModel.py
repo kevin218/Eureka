@@ -1,7 +1,6 @@
 import numpy as np
 
 from .Model import Model
-from ...lib.readEPF import Parameters
 from ...lib.split_channels import split, get_trim
 
 
@@ -15,8 +14,6 @@ class StepModel(Model):
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
-            Can pass in the parameters, longparamlist, nchan, and
-            paramtitles arguments here.
         """
         # Inherit from Model class
         super().__init__(**kwargs)
@@ -24,26 +21,6 @@ class StepModel(Model):
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
-
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            steps_dict = kwargs.get('steps_dict')
-            steptimes_dict = kwargs.get('steptimes_dict')
-            params = {key: coeff for key, coeff in steps_dict.items()
-                      if key.startswith('step') and key[4:].isdigit()}
-            params.update({key: coeff for key, coeff in steptimes_dict.items()
-                           if (key.startswith('steptime') and
-                               key[9:].isdigit())})
-            self.parameters = Parameters(**params)
-
-        # Update coefficients
-        self.steps = np.zeros((self.nchannel_fitted, 10))
-        self.steptimes = np.zeros((self.nchannel_fitted, 10))
-        self.keys = list(self.parameters.dict.keys())
-        self.keys = [key for key in self.keys if key.startswith('step')]
-        self._parse_coeffs()
 
     @property
     def time(self):
@@ -53,88 +30,150 @@ class StepModel(Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        if time_array is not None:
-            self._time = np.ma.masked_invalid(time_array)
-            # Convert to local time
-            if self.multwhite:
-                self.time_local = np.ma.zeros(self.time.shape)
-                for chan in self.fitted_channels:
-                    # Split the arrays that have lengths
-                    # of the original time axis
-                    trim1, trim2 = get_trim(self.nints, chan)
-                    time = self.time[trim1:trim2]
-                    self.time_local[trim1:trim2] = time-time.data[0]
-            else:
-                self.time_local = self.time - self.time.data[0]
+        if time_array is None:
+            self._time = None
+            self.time_local = None
+            return
 
-    def _parse_coeffs(self):
-        """Convert dictionary of parameters into an array.
+        self._time = np.ma.masked_invalid(time_array)
+        # Convert to local time
+        if self.multwhite:
+            self.time_local = np.ma.zeros(self._time.shape)
+            for chan in self.fitted_channels:
+                # Split the arrays that have lengths
+                # of the original time axis
+                trim1, trim2 = get_trim(self.nints, chan)
+                piece = self._time[trim1:trim2]
+                self.time_local[trim1:trim2] = piece - piece.data[0]
+        else:
+            self.time_local = self._time - self._time.data[0]
 
-        Converts dict of 'step#' coefficients into an array
-        of coefficients in increasing order, i.e. ['step0', 'step1'].
-        Also converts dict of 'steptime#' coefficients into an array
-        of times in increasing order, i.e. ['steptime0', 'steptime1'].
+    def _index_set_for_chan(self, chan):
+        """Discover usable step indices for a given channel.
+
+        Enumerate integer indices ``N`` present in any ``step{N}*`` or
+        ``steptime{N}*`` key. For each candidate ``N``, use
+        ``_get_param_value(..., default=None, chan=chan)`` to apply the
+        standard precedence (``wl > ch > base``) and keep those where *both*
+        a step and a steptime resolve to defined values.
+
+        Parameters
+        ----------
+        chan : int
+            Real channel id.
 
         Returns
         -------
-        np.ndarray
-            The sequence of coefficient values.
+        list of int
+            Sorted indices where both step and steptime are defined after
+            resolution for this (chan, wl).
         """
-        for key in self.keys:
-            split_key = key.split('_')
-            if len(split_key) == 1:
-                chan = 0
+        if getattr(self, "parameters", None) is None:
+            return []
+
+        keys = list(self.parameters.dict.keys())
+
+        # Collect every integer N appearing after 'step' or 'steptime'
+        # and before any suffix (first non-digit).
+        cand = set()
+        for k in keys:
+            if k.startswith('step'):
+                rest = k[4:]
+            elif k.startswith('steptime'):
+                rest = k[8:]
             else:
-                chan = int(split_key[1])
-            if len(split_key[0]) < 9:
-                # Get the step number and update self.steps
-                self.steps[chan, int(split_key[0][4:])] = \
-                    self.parameters.dict[key][0]
-            else:
-                # Get the steptime number and update self.steptimes
-                self.steptimes[chan, int(split_key[0][8:])] = \
-                    self.parameters.dict[key][0]
+                continue
+            digits = []
+            for ch_ in rest:
+                if ch_.isdigit():
+                    digits.append(ch_)
+                else:
+                    break
+            if digits:
+                cand.add(int(''.join(digits)))
+
+        out = []
+        for n in sorted(cand):
+            has_step = self._get_param_value(f'step{n}', default=None,
+                                             chan=chan) is not None
+            has_time = self._get_param_value(f'steptime{n}', default=None,
+                                             chan=chan) is not None
+            if has_step and has_time:
+                out.append(n)
+        return out
+
+    def _read_steps_for_chan(self, chan):
+        """Read and sort step pairs for a given channel.
+
+        For each index ``N`` discovered by ``_index_set_for_chan``,
+        read values via ``_get_param_value`` using the same key rules
+        as in ``_match_and_index``. Pairs with zero amplitude are
+        skipped. The result is sorted by step time.
+
+        Parameters
+        ----------
+        chan : int
+            Real channel id.
+
+        Returns
+        -------
+        list of tuple
+            A list of ``(t_step, step)`` pairs sorted by ``t_step``.
+        """
+        idxs = self._index_set_for_chan(chan)
+        pairs = []
+
+        for n in idxs:
+            # Resolve values for this channel (None if missing)
+            step = self._get_param_value(f'step{n}', default=None,
+                                         chan=chan)
+            tstep = self._get_param_value(f'steptime{n}', default=None,
+                                          chan=chan)
+            if step is None or tstep is None or step == 0.0:
+                continue
+            pairs.append((tstep, step))
+
+        # Ensure deterministic application order.
+        pairs.sort(key=lambda x: x[0])
+        return pairs
 
     def eval(self, channel=None, **kwargs):
-        """Evaluate the function with the given values.
+        """Evaluate the step model.
 
         Parameters
         ----------
         channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
+            If not None, only consider one channel. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
         Returns
         -------
-        lcfinal : ndarray
-            The value of the model at the times self.time.
+        lcfinal : np.ma.MaskedArray
+            The model values at self.time.
         """
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
+        nchan, channels = self._channels(channel)
 
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
-        lcfinal = np.ma.array([])
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-            else:
-                chan = 0
-
-            time = self.time
+        pieces = []
+        for chan in channels:
+            t = self.time_local
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
+                t = split([t], self.nints, chan)[0]
 
-            lcpiece = np.ma.ones(len(time))
-            for s in np.flatnonzero(self.steps[c] != 0):
-                lcpiece[time >= self.steptimes[c, s]] += self.steps[c, s]
-            lcfinal = np.ma.append(lcfinal, lcpiece)
-        return lcfinal
+            lcpiece = np.ma.ones(t.shape)
+            for tstep, step in self._read_steps_for_chan(chan):
+                mask = t >= tstep
+                lcpiece[mask] += step
+
+            lcpiece = np.ma.masked_where(np.ma.getmaskarray(t), lcpiece)
+            pieces.append(lcpiece)
+
+        if len(pieces) == 1:
+            return pieces[0]
+        else:
+            return np.ma.concatenate(pieces)

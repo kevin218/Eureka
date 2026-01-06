@@ -1,16 +1,5 @@
-#! /usr/bin/env python
-
-# Eureka! Stage 2 calibration pipeline
-
-# Proposed Steps
-# --------------
-# 1.  Read in Stage 1 data products
-# 2.  Change default trimming if needed
-# 3.  Run the JWST pipeline with any requested modifications
-# 4.  Save Stage 2 data products
-# 5.  Produce plots
-
 import os
+import inspect
 import time as time_pkg
 from copy import deepcopy
 import numpy as np
@@ -20,12 +9,14 @@ from functools import partial
 from jwst import datamodels
 from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
 from jwst.pipeline.calwebb_image2 import Image2Pipeline
-import jwst.assign_wcs.nirspec
+from jwst.assign_wcs import nirspec as nrs
 
 from .s2_meta import S2MetaClass
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import plots
+
+_orig_nrs_wcs_set_input = nrs.nrs_wcs_set_input
 
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
@@ -133,44 +124,50 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
         # (or someone is putting weird files into Eureka!)
         pipeline = EurekaSpec2Pipeline()
 
-        if (meta.inst == 'nirspec' and
-            (meta.waverange_start is not None or
-             meta.waverange_end is not None)):
-            # By default pipeline can trim the dispersion axis,
-            # override the function that does this with specific
-            # wavelength range that you want to trim to.
-            jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
-                partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input,
-                        wavelength_range=[meta.waverange_start,
-                                          meta.waverange_end])
+        # By default pipeline can trim the dispersion axis,
+        # override the function that does this with specific
+        # wavelength range that you want to trim to.
+        patched_nrs = False
+        if (meta.inst == 'nirspec' and meta.waverange_start is not None
+                and meta.waverange_end is not None):
+            nrs.nrs_wcs_set_input = partial(
+                _nrs_set_input_override,
+                wavelength_range=(meta.waverange_start, meta.waverange_end),
+                slit_y_low=meta.slit_y_low, slit_y_high=meta.slit_y_high)
+            patched_nrs = True
 
-    # Run the pipeline on each file sequentially
-    for m in range(istart, meta.num_data_files):
-        # Report progress
-        meta.m = m
-        filename = meta.segment_list[m]
-        log.writelog(f'Starting file {m + 1} of {meta.num_data_files}')
+    try:
+        # Run the pipeline on each file sequentially
+        for m in range(istart, meta.num_data_files):
+            # Report progress
+            meta.m = m
+            filename = meta.segment_list[m]
+            log.writelog(f'Starting file {m + 1} of {meta.num_data_files}')
 
-        need_update = False
-        with fits.open(filename) as hdulist:
-            if (hdulist[0].header['INSTRUME'] == 'NIRCam'
-                    and isinstance(hdulist[0].header['NDITHPTS'], str)):
-                need_update = True
+            need_update = False
+            with fits.open(filename) as hdulist:
+                if (hdulist[0].header['INSTRUME'] == 'NIRCam'
+                        and isinstance(hdulist[0].header['NDITHPTS'], str)):
+                    need_update = True
 
-            meta.intstart = hdulist[0].header['INTSTART']-1
-            meta.intend = hdulist[0].header['INTEND']
-            meta.n_int = meta.intend-meta.intstart
+                meta.intstart = hdulist[0].header['INTSTART']-1
+                meta.intend = hdulist[0].header['INTEND']
+                meta.n_int = meta.intend-meta.intstart
 
-        if need_update:
-            with fits.open(filename, mode='update') as hdulist:
-                # If the NDITHPTS header is a string, then it is an old
-                # simulated file and we need to change it to an integer
-                hdulist[0].header['NDITHPTS'] = int(
-                    hdulist[0].header['NDITHPTS'])
-                hdulist[0].header['NRIMDTPT'] = int(
-                    hdulist[0].header['NRIMDTPT'])
+            if need_update:
+                with fits.open(filename, mode='update') as hdulist:
+                    # If the NDITHPTS header is a string, then it is an old
+                    # simulated file and we need to change it to an integer
+                    hdulist[0].header['NDITHPTS'] = int(
+                        hdulist[0].header['NDITHPTS'])
+                    hdulist[0].header['NRIMDTPT'] = int(
+                        hdulist[0].header['NRIMDTPT'])
 
-        pipeline.run_eurekaS2(filename, meta, log)
+            pipeline.run_eurekaS2(filename, meta, log)
+    finally:
+        # Restore original nrs_wcs_set_input after processing all files
+        if 'patched_nrs' in locals() and patched_nrs:
+            nrs.nrs_wcs_set_input = _orig_nrs_wcs_set_input
 
     # make citations for current stage
     util.make_citations(meta, 2)
@@ -188,6 +185,68 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     log.closelog()
 
     return meta
+
+
+def _nrs_set_input_override(input_model, slit_name, wavelength_range=None,
+                            slit_y_low=None, slit_y_high=None):
+    """Return a WCS object for a specific slit, slice or shutter.
+
+    Overrides the original jwst.assign_wcs.nirspec.nrs_wcs_set_input to
+    accept wavelength range and slit y-limits to avoid the newly forced
+    cropping behavior in jwst>=1.20.1.
+
+    Parameters
+    ----------
+    input_model : JwstDataModel
+        A datamodel that contains a WCS object for the all open slitlets in
+        an observation.
+    slit_name : int or str
+        Slit.name of an open slit.
+    wavelength_range : tuple of float
+        Wavelength range for the combination of filter and grating.
+    slit_y_low, slit_y_high : float
+        The lower and upper bounds of the slit. Optional.
+
+    Returns
+    -------
+    wcsobj : `~gwcs.wcs.WCS`
+        WCS object for this slit.
+    """
+    slit_wcs = _orig_nrs_wcs_set_input(input_model, slit_name)
+    # Build bbox over requested wavelength range, using cross-disp limits
+    # if provided; otherwise from slit geometry.
+    transform = slit_wcs.get_transform("detector", "slit_frame")
+    # Try to get slit geometry from WCS (fixed-slit TSO path)
+    slit = None
+    if "gwa" in input_model.meta.wcs.available_frames:
+        g2s = input_model.meta.wcs.get_transform("gwa", "slit_frame")
+        slits = getattr(g2s, "slits", [])
+        slit = next((s for s in slits if s.name == slit_name), None)
+    if slit_y_low is not None:
+        ylo = slit_y_low
+    elif slit is not None:
+        ylo = slit.ymin
+    else:
+        ylo = -0.55
+    if slit_y_high is not None:
+        yhi = slit_y_high
+    elif slit is not None:
+        yhi = slit.ymax
+    else:
+        yhi = 0.55
+
+    sig = inspect.signature(nrs.compute_bounding_box)
+    if 'slit_name' in sig.parameters:
+        bb = nrs.compute_bounding_box(
+            transform, slit_name=None, wavelength_range=wavelength_range,
+            slit_ymin=ylo, slit_ymax=yhi)
+    else:
+        # Minimal fallback for older signature in 1.18.0 without slit_name arg
+        bb = nrs.compute_bounding_box(
+            transform, wavelength_range=wavelength_range,
+            slit_ymin=ylo, slit_ymax=yhi)
+    slit_wcs.bounding_box = bb
+    return slit_wcs
 
 
 class EurekaSpec2Pipeline(Spec2Pipeline):

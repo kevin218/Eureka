@@ -379,7 +379,6 @@ class GPModel(JaxModel):
             # set up GP with current parameters
             gp = self.setup_GP(chan, unc_fit, good=good, eval=True)
             cond = gp.condition(residuals, time_fit)
-            logL_temp = cond.log_probability
-            logL += logL_temp
+            logL += cond.log_probability
 
         return logL

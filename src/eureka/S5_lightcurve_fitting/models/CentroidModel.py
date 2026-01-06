@@ -7,31 +7,32 @@ from ...lib.split_channels import split, get_trim
 class CentroidModel(Model):
     """Centroid Model
 
-    This can be used to do a linear decorrelation against the x position
-    (axis='xpos'), y position (axis='ypos'), x width (axis='xwidth'),
-    or y width (axis='ywidth').
-
+    Linear decorrelation against x position (axis='xpos'), y position
+    (axis='ypos'), x width (axis='xwidth'), or y width (axis='ywidth').
     """
-    def __init__(self, **kwargs):
+    def __init__(self, axis, **kwargs):
         """Initialize the centroid model.
 
         Parameters
         ----------
+        axis : str
+            The axis to use for the centroid model. Must be one of
+            'xpos', 'ypos', 'xwidth', or 'ywidth'.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
             Can pass in the parameters, longparamlist, nchan,
             paramtitles, axis, and centroid arguments here.
         """
-        # Inherit from Model class
-        super().__init__(**kwargs)
+        # Validate axis kwarg early
+        if axis is None or axis not in ['xpos', 'ypos', 'xwidth', 'ywidth']:
+            raise ValueError("CentroidModel requires an 'axis' argument set "
+                             "to 'xpos', 'ypos', 'xwidth', or 'ywidth'.")
+        super().__init__(axis=axis, **kwargs)
         self.name = self.axis
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
-
-        self.coeff_keys = [f'{self.axis}_ch{c}' if c > 0 else self.axis
-                           for c in range(self.nchannel_fitted)]
 
     @property
     def centroid(self):
@@ -41,19 +42,25 @@ class CentroidModel(Model):
     @centroid.setter
     def centroid(self, centroid_array):
         """A setter for the centroid."""
+        if centroid_array is None:
+            self._centroid = None
+            self.centroid_local = None
+            return
+
         self._centroid = np.ma.masked_invalid(centroid_array)
-        if self.centroid is not None:
-            # Convert to local centroid
-            if self.multwhite:
-                self.centroid_local = np.ma.zeros(self.centroid.shape)
-                for chan in self.fitted_channels:
-                    # Split the arrays that have lengths
-                    # of the original time axis
-                    trim1, trim2 = get_trim(self.nints, chan)
-                    centroid = self.centroid[trim1:trim2]
-                    self.centroid_local[trim1:trim2] = centroid-centroid.mean()
-            else:
-                self.centroid_local = self.centroid - self.centroid.mean()
+        # Convert to local (mean-centered) centroid
+        if self.multwhite:
+            self.centroid_local = np.ma.zeros(self._centroid.shape)
+            for chan in self.fitted_channels:
+                # Split the arrays that have lengths
+                # of the original time axis
+                trim1, trim2 = get_trim(self.nints, chan)
+                piece = self._centroid[trim1:trim2]
+                # Use .mean() to be robust to masks
+                self.centroid_local[trim1:trim2] = piece - piece.mean()
+        else:
+            # Use .mean() to be robust to masks
+            self.centroid_local = self._centroid - self._centroid.mean()
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -67,36 +74,29 @@ class CentroidModel(Model):
 
         Returns
         -------
-        lcfinal : ndarray
-            The value of the model at the centroid self.centroid.
+        np.ma.MaskedArray
+            The value of the model at self.centroid.
         """
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
+        nchan, channels = self._channels(channel)
 
         # Get the centroids
         if self.centroid is None:
             self.centroid = kwargs.get('centroid')
 
         # Create the centroid model for each wavelength
-        lcfinal = np.ma.array([])
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-            else:
-                chan = 0
-
-            centroid = np.ma.copy(self.centroid_local)
+        pieces = []
+        for chan in channels:
+            centroid = self.centroid_local
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
                 centroid = split([centroid, ], self.nints, chan)[0]
 
-            coeff = getattr(self.parameters, self.coeff_keys[chan], 0)
-            if not str(coeff).isnumeric():
-                coeff = coeff.value
-            lcpiece = 1 + centroid*coeff
-            lcfinal = np.ma.append(lcfinal, lcpiece)
-        return lcfinal
+            # Get the coefficient for this channel
+            coeff = self._get_param_value(self.axis, 0.0, chan=chan)
+            lcpiece = 1. + centroid*coeff
+            pieces.append(lcpiece)
+
+        if len(pieces) == 1:
+            return pieces[0]
+        else:
+            return np.ma.concatenate(pieces)

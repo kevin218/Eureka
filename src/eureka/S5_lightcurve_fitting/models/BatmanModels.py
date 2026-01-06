@@ -89,12 +89,7 @@ class BatmanTransitModel(Model):
         lcfinal : ndarray
             The value of the model at the times self.time.
         """
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
+        nchan, channels = self._channels(channel)
 
         if pid is None:
             pid_iter = range(self.num_planets)
@@ -107,12 +102,7 @@ class BatmanTransitModel(Model):
 
         # Set all parameters
         lcfinal = np.array([])
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-            else:
-                chan = 0
-
+        for chan in channels:
             time = self.time
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
@@ -233,12 +223,7 @@ class BatmanEclipseModel(Model):
         lcfinal : ndarray
             The value of the model at the times self.time.
         """
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
+        nchan, channels = self._channels(channel)
 
         if pid is None:
             pid_iter = range(self.num_planets)
@@ -251,12 +236,7 @@ class BatmanEclipseModel(Model):
 
         # Set all parameters
         lcfinal = np.ma.array([])
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-            else:
-                chan = 0
-
+        for chan in channels:
             time = self.time
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
