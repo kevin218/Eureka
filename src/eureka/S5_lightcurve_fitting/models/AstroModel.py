@@ -3,6 +3,11 @@ import astropy.constants as const
 from copy import copy
 import inspect
 
+try:
+    import jax.numpy as jnp
+except ImportError:
+    pass
+
 from .Model import Model
 from .KeplerOrbit import KeplerOrbit
 from ..limb_darkening_fit import ld_profile
@@ -35,10 +40,8 @@ class PlanetParams():
         if eval:
             lib = np
         else:
-            # No other option is currently supported until jax is added
-            raise NotImplementedError(
-                'JAX support is not yet implemented. '
-                'Please use eval=True to evaluate the model in numpy mode.')
+            # Jax/PyMC3 model that is being compiled
+            lib = jnp
 
         # Planet/Channel/Wavelength identifiers (ids remain for external uses)
         self.pid = pid
@@ -310,6 +313,9 @@ class PlanetParams():
 
         if self.spotnpts is not None:
             self.spotnpts = int(self.spotnpts)
+
+        self.inc_rad = self.inc * np.pi / 180
+        self.w_rad = self.w * np.pi / 180
 
         self.inc_rad = self.inc * np.pi / 180
         self.w_rad = self.w * np.pi / 180

@@ -21,6 +21,12 @@ from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
 
+try:
+    import starry  # FINDME: later replace with jaxoplanet.starry
+    starry_installed = True
+except ModuleNotFoundError:
+    starry_installed = False
+
 
 def test_MIRI(capsys):
     s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
@@ -74,6 +80,27 @@ def test_MIRI(capsys):
                                        s3_meta=s3_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
+    # Test differentiable models if pymc3 related dependencies are installed
+    if starry_installed:
+        # Copy the S5 meta and manually edit some settings
+        s5_meta2 = deepcopy(s5_meta)
+        s5_meta2.fit_method = '[jaxopt,nuts]'
+        s5_meta2.run_myfuncs = s5_meta2.run_myfuncs.replace(
+            'fleck_tr,batman_ecl,sinusoid_pc', 'starry')
+        s5_meta2.fit_par = './s5_fit_par_starry.epf'
+        s5_meta2.tune = 10
+        s5_meta2.draws = 100
+        s5_meta2.chains = 1
+        s5_meta2.target_accept = 0.5
+        s5_meta2.isplots_S5 = 3
+        # Reset the citations list
+        s5_meta2.citations = s4_meta.citations
+        s5_meta2.bibliography = [CITATIONS[entry] for entry
+                                 in s5_meta2.citations]
+        # Run S5 with the new parameters
+        s5_meta2 = s5.fitlc(meta.eventlabel, s4_meta=s4_meta,
+                            input_meta=s5_meta2)
+
     s6_meta, s6_lc = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
                                      s5_meta=s5_meta)
 
@@ -124,6 +151,11 @@ def test_MIRI(capsys):
     s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] +
                           ["dynesty", "batman", "fleck"])
     assert np.array_equal(s5_meta.citations, s5_cites)
+
+    if starry_installed:
+        s5_cites2 = np.union1d(s4_cites, COMMON_IMPORTS[4] +
+                               ["jax", "numpyro", "jaxoplanet", "starry"])
+        assert np.array_equal(s5_meta2.citations, s5_cites2)
 
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'

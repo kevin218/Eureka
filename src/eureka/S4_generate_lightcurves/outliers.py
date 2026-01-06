@@ -30,8 +30,8 @@ def get_outliers(meta, spec):
     optmask = spec.optmask.values[:, iwmin:iwmax]
     norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, optspec, opterr,
                                                       optmask=optmask)
-    norm_lcdata = norm_lcdata.filled(np.nan)
-    norm_lcerr = norm_lcerr.filled(np.nan)
+    norm_lcdata = np.ma.filled(norm_lcdata, np.nan)
+    norm_lcerr = np.ma.filled(norm_lcerr, np.nan)
 
     # Compute unbinned LC MAD values, then scale
     numx = norm_lcdata.shape[1]

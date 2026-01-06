@@ -200,7 +200,9 @@ class Model:
 
         # Combine the model parameters too
         parameters = self.parameters + other.parameters
-        if self.paramtitles is None:
+        if self.paramtitles is None and other.paramtitles is None:
+            paramtitles = None
+        elif self.paramtitles is None:
             if isinstance(other.paramtitles, list):
                 paramtitles = other.paramtitles[:]
             else:

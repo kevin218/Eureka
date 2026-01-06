@@ -27,7 +27,7 @@ dependencies:
     - pandas
     - photutils
     - pip # required for the pip installs below
-    - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest, an asdf package, and something in the pymc3 set of installs. Needed for testing
+    - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest and asdf. Needed for testing
     - pytest-cov # Needed for testing
     - pytest-doctestplus # Needed for testing
     - requests
@@ -35,15 +35,23 @@ dependencies:
     - shapely
     - sphinx # Needed for documentation
     - sphinx-automodapi # Needed for documentation
+    - tinygp
     - tqdm
     - pip:
+        - arviz>=0.21  # Needed for jaxoplanet
+        - jax[cpu]>=0.5  # Needed for jaxoplanet
+        - jaxoplanet>=0.1.0  # Needed for jaxoplanet
+        - jaxopt>=0.8  # Needed for jaxoplanet
+        - numpyro>=0.19  # Needed for jaxoplanet
+        - numpyro_ext>=0.0.4  # Needed for jaxoplanet
+        - specutils>=1.20  # Needed for jaxoplanet
         - astraeus-io
         - batman-package
         - catwoman>=1.0.16 # Lower limit needed to avoid installation bug
         - celerite2 # Needed for GP
         - crds
         - exotic-ld==3.2.0 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
-        - fleck
+        - fleck@git+https://github.com/bmorris3/fleck.git@main
         - george # Needed for GP
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
         - jwst==1.20.2

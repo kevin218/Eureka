@@ -140,8 +140,28 @@ def exotic_ld(meta, spec, log, white=False):
                                     throughput_wavelengths < 30000)
             poly = np.polyfit(throughput_wavelengths[ind_use],
                               throughput[ind_use], deg=7)
-            wav_poly = np.linspace(2.733*1e4, throughput_wavelengths[0], 10000)
+            wav_poly = np.linspace(2.733e4, throughput_wavelengths[0], 10000)
             throughput_poly = np.polyval(poly, wav_poly) - 0.015
+            # Make sure the throughput is always > 0
+            throughput_poly[throughput_poly < 0] = 0
+            # Prepend extrapolated throughput and then switch to custom
+            # throughput mode
+            custom_wavelengths = np.append(wav_poly, throughput_wavelengths)
+            custom_throughput = np.append(throughput_poly, throughput)
+            old_mode = mode
+            mode = 'custom'
+        elif (mode == 'JWST_MIRI_LRS' and
+                wavelength_range[0][0] > throughput_edges[0]/1e4):
+            # Extrapolate throughput to the blue edge of the filter if needed
+            log.writelog("WARNING: Extrapolating ExoTiC-LD throughput file to "
+                         "get closer to the blue edge of the filter.")
+
+            # The following polynomial was estimated by TJB on Dec 19, 2025
+            ind_use = throughput_wavelengths < 100000
+            poly = np.polyfit(throughput_wavelengths[ind_use],
+                              throughput[ind_use], deg=3)
+            wav_poly = np.linspace(4e4, throughput_wavelengths[0], 1000)
+            throughput_poly = np.polyval(poly, wav_poly)
             # Make sure the throughput is always > 0
             throughput_poly[throughput_poly < 0] = 0
             # Prepend extrapolated throughput and then switch to custom

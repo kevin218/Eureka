@@ -65,6 +65,15 @@ class MetaClass:
         # If the data format hasn't been specified, must be eureka output
         self.data_format = getattr(self, 'data_format', 'eureka')
 
+        self.version = version
+        if stage is not None:
+            self.stage = stage
+        self.eventlabel = eventlabel
+        self.datetime = time_pkg.strftime('%Y-%m-%d')
+
+        # If the data format hasn't been specified, must be eureka output
+        self.data_format = getattr(self, 'data_format', 'eureka')
+
         if kwargs is not None:
             # Add any kwargs to the parameter dict
             self.params.update(kwargs)
