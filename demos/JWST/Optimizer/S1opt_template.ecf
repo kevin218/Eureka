@@ -1,0 +1,33 @@
+# Eureka! Control File for Optimizer stage
+
+# Optimizer Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#optimizer-ecf
+
+# Fitness Scaling
+# Use these settings to override the default fitness scaling factors.
+scaling_MAD_spec    0.01            # Optimizer scaling for 2D MAD value
+scaling_MAD_white   1.0             # Optimizer scaling for WLC MAD value
+
+# List of parameters to optimize in Stage 1
+# Commenting out this line will use all single parameters listed below.
+# Single parameter options: jump_rejection_threshold, expand_mask, bg_deg, bg_method, p3thresh, window_len
+# Double parameter options: any combination of the above, joined by two underscores (e.g., expand_mask__p3thresh)
+params_to_optimize  ['jump_rejection_threshold', 'expand_mask', 'p3thresh']
+
+# Range for parameter values to optimize
+# Only specify if overriding the default ranges in S1opt_meta.py
+# For single parameters, use format: bounds_<parameter_name> = range(min, max+1) or np.arange(min, max+step, step) if step != 1
+# For double parameters, use format: bounds_<parameter1>__<parameter2> = [range(min1, max1+1), range(min2, max2+1)]
+bounds_expand_mask  range(5,10)         # Example: optimize BG inner edge between 5 and 9 pixels
+
+# Diagnostics
+isplots_S1opt       1               # Generate none (0), few (1), some (3), or many (5) figures (Options: 1 - 5)
+delete_intermediate True           # If True, intermediate directories will be deleted upon completion
+verbose             True           # If True, more details will be printed about steps in the optimization process
+hide_plots          True            # If True, plots will automatically be closed rather than popping up
+
+# Project directory
+topdir              /home/User/Data/JWST-Sim/optimizer/
+
+# Directories relative to topdir
+inputdir            Stage0
+outputdir           Stage1opt

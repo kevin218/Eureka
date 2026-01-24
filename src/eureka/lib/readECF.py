@@ -134,7 +134,7 @@ class MetaClass:
             stage = 0
 
         if (item == 'inst' and value == 'wfc3' and stage != '4cal'
-                and stage < 4):
+                and stage != '1opt' and stage != '3opt' and stage < 4):
             # Fix issues with CRDS server set for JWST
             if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for JWST and not HST.'
@@ -151,7 +151,7 @@ class MetaClass:
                                 crds.get_context_name('hst')[4:-5])
             os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
         elif (item == 'inst' and value is not None and stage != '4cal'
-              and stage < 4):
+              and stage != '1opt' and stage != '3opt' and stage < 4):
             # Fix issues with CRDS server set for HST
             if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for HST and not JWST.'
@@ -267,7 +267,7 @@ class MetaClass:
 
         for i in range(len(self.lines)):
             line = self.lines[i]
-            # Strip off comments:
+            # Strip off comments
             if "#" in line:
                 line = line[0:line.index('#')]
             line = line.strip()
@@ -276,10 +276,11 @@ class MetaClass:
                 name = line.split()[0]
                 val = ''.join(line.split()[1:])
                 new_val = self.params[name]
-                # check if values have been updated
-                if val != new_val:
-                    self.lines[i] = self.lines[i].replace(str(val),
-                                                          str(new_val))
+                # Comparing val to new_val doesn't work since
+                # val is a str and new_val can be anything, but that's ok.
+                # Just always update the line with the new value
+                self.lines[i] = self.lines[i].replace(str(val),
+                                                      str(new_val))
 
         with open(os.path.join(folder, self.filename), 'w') as file:
             file.writelines(self.lines)

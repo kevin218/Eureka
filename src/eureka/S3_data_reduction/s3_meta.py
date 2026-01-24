@@ -38,6 +38,10 @@ class S3MetaClass(MetaClass):
         # Set a default data file suffix
         self.suffix = getattr(self, 'suffix', 'calints')
 
+        # Set optimization flag
+        self.isopt_S1 = getattr(self, 'isopt_S1', False)
+        self.isopt_S3 = getattr(self, 'isopt_S3', False)
+
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.
         '''
@@ -97,6 +101,9 @@ class S3MetaClass(MetaClass):
         self.use_estsig = getattr(self, 'use_estsig', False)
         # Require this parameter to be set
         self.bg_thresh = getattr(self, 'bg_thresh')
+        # If bg_thresh is float, convert to list for easier handling later
+        if not isinstance(self.bg_thresh, list):
+            self.bg_thresh = [self.bg_thresh, self.bg_thresh]
 
         # Diagnostics
         self.isplots_S3 = getattr(self, 'isplots_S3', 3)
@@ -257,6 +264,8 @@ class S3MetaClass(MetaClass):
         self.isrotate = 2
         self.bg_dir = 'CxC'
         self.bg_row_by_row = False
+        self.ywindow = getattr(self, 'ywindow', [10, 72])
+        self.xwindow = getattr(self, 'xwindow', [70, 393])
 
     def set_NIRCam_defaults(self):
         '''Set Stage 3 specific defaults for NIRCam.
@@ -274,6 +283,14 @@ class S3MetaClass(MetaClass):
         # When calibrated_spectra is True, flux values above the cutoff
         # will be set to zero.
         self.cutoff = getattr(self, 'cutoff', 1e-4)
+        self.ywindow = getattr(self, 'ywindow', [0, 32])
+        # Set default xwindow based on detector and grating
+        if self.inst_detector == 'nrs1' and self.inst_grating == 'prism':
+            self.xwindow = getattr(self, 'xwindow', [60, 480])    # PRISM
+        elif self.inst_detector == 'nrs1' and self.inst_grating == 'g395h':
+            self.xwindow = getattr(self, 'xwindow', [500, 2042])  # G395H/NRS1
+        elif self.inst_detector == 'nrs2' and self.inst_grating == 'g395h':
+            self.xwindow = getattr(self, 'xwindow', [5, 2028])    # G395H/NRS2
 
         self.set_spectral_defaults()
 
@@ -286,6 +303,8 @@ class S3MetaClass(MetaClass):
         self.all_orders = getattr(self, 'all_orders', [1, 2])
         self.record_ypos = getattr(self, 'record_ypos', False)
         self.trace_offset = getattr(self, 'trace_offset', None)
+        self.xwindow = getattr(self, 'xwindow', [6, 2043])
+        self.ywindow = getattr(self, 'ywindow', [0, -1])
 
         self.set_spectral_defaults()
 

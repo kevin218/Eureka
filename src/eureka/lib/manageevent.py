@@ -147,7 +147,7 @@ def findevent(meta, stage, allowFail=False):
     meta : eureka.lib.readECF.MetaClass
         The new meta object for the current processing.
     stage : str
-        The previous stage (e.g. "S2" for Stage 3).
+        The previous stage (e.g. "S2" when running Stage 3).
     allowFail : bool; optional
         Whether to allow the code to find no previous stage metadata files
         (for S2, S3) or throw an error if no metadata files are found.
@@ -174,13 +174,13 @@ def findevent(meta, stage, allowFail=False):
     # Check for both old (Meta_Save) and new (SpecData) metadata save files
     fnames = []
     for file_suffix in ['*_Meta_Save.dat', '*SpecData.h5']:
-        newfnames = glob.glob(meta.inputdir+stage+'_'+meta.eventlabel +
+        newfnames = glob.glob(meta.inputdir+os.sep+stage+'_'+meta.eventlabel +
                               file_suffix)
 
         if len(newfnames) == 0:
             # There were no metadata files in that folder, so let's see if
             # there are in children folders
-            newfnames = glob.glob(meta.inputdir+'**'+os.sep+stage+'_' +
+            newfnames = glob.glob(meta.inputdir+os.sep+'**'+os.sep+stage+'_' +
                                   meta.eventlabel+file_suffix, recursive=True)
 
         fnames.extend(newfnames)

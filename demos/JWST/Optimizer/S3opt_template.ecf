@@ -1,0 +1,40 @@
+# Eureka! Control File for Optimizer stage
+
+# Optimizer Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#optimizer-ecf
+
+# Fitness Scaling
+# Use these settings to override the default fitness scaling factors.
+scaling_MAD_spec    0.01            # Optimizer scaling for 2D MAD value
+scaling_MAD_white   1.0             # Optimizer scaling for WLC MAD value
+
+# List of single parameter options to optimize in Stage 3:
+#   dqmask, bg_deg, bg_thresh, bg_hw, bg_method, p3thresh, spec_hw, median_thresh, window_len, p7thresh
+# Double parameter options: any combination of the above, joined by two underscores (e.g., bg_hw__p3thresh)
+# Special cases: spec_hw__bg_hw (requires spec_hw < bg_hw)
+params_to_optimize_s3   ['spec_hw__bg_hw', 'dqmask', 'bg_deg', 'bg_thresh', 'bg_method', 'p3thresh', 'median_thresh__window_len', 'p7thresh']
+
+# List of single parameter options to optimize in Stage 4:
+#   mad_sigma, mad_box_width, sigma, box_width
+# Suggested double parameter options:
+#   mad_sigma__mad_box_width, sigma__box_width
+params_to_optimize_s4   ['mad_sigma__mad_box_width', 'sigma__box_width']
+
+# Range for parameter values to optimize
+# Only specify if overriding the default ranges in S3opt_meta.py
+# For single parameters, use format: bounds_<parameter_name> = range(min, max+1) or np.arange(min, max+step, step) if step != 1
+# For double parameters, use format: bounds_<parameter1>__<parameter2> = [range(min1, max1+1), range(min2, max2+1)]
+bounds_bg_thresh    np.arange(3,5.5,0.5)  # Example: optimize BG threshold between 3 and 5 sigma, in steps of 0.5
+
+# Diagnostics
+isplots_S3opt       1               # Generate none (0), few (1), some (3), or many (5) figures (Options: 1 - 5)
+delete_intermediate False           # If True, intermediate directories will be deleted after each optimization step
+delete_final        True           # If True, intermediate directories will be deleted upon completion of optimization run
+verbose             True           # If True, more details will be printed about steps in the optimization process
+hide_plots          True            # If True, plots will automatically be closed rather than popping up
+
+# Project directory
+topdir              /home/User/Data/JWST-Sim/optimizer/
+
+# Directories relative to topdir
+inputdir            Stage2
+outputdir           Stage3opt

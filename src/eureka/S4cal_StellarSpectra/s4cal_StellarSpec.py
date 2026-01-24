@@ -92,6 +92,11 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     log.writelog(f"Loading S3 save file:\n{specData_savefile}",
                  mute=(not meta.verbose))
     spec = xrio.readXR(specData_savefile)
+
+    # Select specific spectral order
+    if meta.s4_order is not None:
+        spec = spec.sel(order=meta.s4_order)
+
     wave = spec.wave_1d.data
     log.writelog(f"Time range: {np.min(spec.time.values)} " +
                  f"- {np.max(spec.time.values)}")
@@ -183,7 +188,9 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
         if not meta.photometry:
             # Mask outliers along wavelength axis
-            tck = spi.splrep(wave, spec_baseline, w=1/std_baseline, k=3,
+            isort = np.argsort(wave)
+            tck = spi.splrep(wave[isort], spec_baseline[isort],
+                             w=1/std_baseline[isort], k=3,
                              s=meta.smoothing)
             spline = spi.splev(wave, tck)
             mask = sigrej(spec_baseline - spline, meta.sigma_thresh)
@@ -209,7 +216,8 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         std_t23 = np.ma.std(optspec[it2:it3+1], axis=0)
         if not meta.photometry:
             # Mask outliers along wavelength axis
-            tck = spi.splrep(wave, spec_t23, w=1/std_t23, k=3)
+            tck = spi.splrep(wave[isort], spec_t23[isort],
+                             w=1/std_t23[isort], k=3)
             spline = spi.splev(wave, tck)
             mask = sigrej(spec_t23 - spline, meta.sigma_thresh)
             igood = np.where(~mask)[0]

@@ -1,12 +1,15 @@
 # NIRISS specific rountines go here
 import numpy as np
 from astropy.io import fits
+from astropy.table import Table
 import astraeus.xarrayIO as xrio
+from jwst.photom.photom import find_row
 from . import nircam, sigrej, optspex, plots_s3
 from ..lib.util import read_time, supersample
 from pastasoss import get_soss_traces
 from .straighten import roll_columns
 from .background import fitbg
+from .bright2flux import retrieve_ancil
 
 __all__ = ['read', 'get_wave', 'straighten_trace', 'flag_ff', 'flag_bg',
            'clean_median_flux', 'fit_bg', 'cut_aperture', 'standard_spectrum',
@@ -552,3 +555,58 @@ def lc_nodriftcorr(spec, meta):
         mad = meta.mad_s3[k]
         plots_s3.lc_nodriftcorr(meta, wave_1d, optspec, optmask=optmask,
                                 mad=mad, order=order)
+
+
+def calibrated_spectra(data, meta, log):
+    """Modify data to compute calibrated spectra in units of mJy.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : ndarray
+        The flux values in mJy
+    """
+    # Load file, open table
+    if meta.photfile is None:
+        meta.photfile = retrieve_ancil(data.attrs['filename'], 'photom')
+    log.writelog(f"  Using photfile={meta.photfile} to convert from "
+                 " DN/s to mJy...", mute=(not meta.verbose))
+    phot_table = fits.open(meta.photfile)
+    tabdata = Table(phot_table['PHOTOM'].data)
+
+    filter = data.attrs['mhdr']['FILTER']
+    pupil = data.attrs['mhdr']['PUPIL']
+    for order in meta.orders:
+        # Find the appropriate row in the photom table
+        fields_to_match = {'filter': filter, 'pupil': pupil, 'order': order}
+        row = find_row(tabdata, fields_to_match)
+
+        # Get the wavelength-dependent conversion factors
+        nelem = tabdata['nelem'][row]
+        conversion = tabdata['photmj'][row]
+        wavelength = tabdata['wavelength'][row][:nelem]
+        relresps = tabdata['relresponse'][row][:nelem]
+
+        # Interpolate sensitivity to wavelength solution
+        sensitivity = np.interp(data.wave_1d.sel(order=order),
+                                wavelength, relresps)
+
+        # Apply conversion and sensitivity curve
+        data['flux'].sel(order=order).data *= 1e3*conversion*sensitivity
+        data['err'].sel(order=order).data *= 1e3*conversion*sensitivity
+        data['v0'].sel(order=order).data *= 1e3*conversion*sensitivity
+
+    # Update units
+    data['flux'].attrs["flux_units"] = 'mJy'
+    data['err'].attrs["flux_units"] = 'mJy'
+    data['v0'].attrs["flux_units"] = 'mJy'
+
+    return data

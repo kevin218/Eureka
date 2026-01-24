@@ -1,0 +1,167 @@
+import eureka.S1_detector_processing.s1_process as s1
+import eureka.S2_calibrations.s2_calibrate as s2
+import eureka.S3_data_reduction.s3_reduce as s3
+import eureka.S4_generate_lightcurves.s4_genLC as s4
+import shutil
+
+
+def single(val, meta, stage, run_S3=True, **kwargs):
+    """Single variable objective function.
+
+    Parameters
+    ----------
+    val : float
+        The variable value to be evaluated.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    stage : int
+        The stage number indicating which stage's parameters to
+        optimize.
+    run_S3 : boolean; optional
+        If True, run Stage 3.
+    **kwargs : dict
+        Additional keyword arguments. Can include s1_meta, s2_meta, s3_meta,
+        and s4_meta to pass in existing metadata objects for each stage.
+
+    Returns
+    -------
+    fitness_value : float
+        The computed objective value, which is a measure of the fitness of the
+        given variable value. Lower values are preferred, suggesting a better
+        configuration.
+    """
+    run_stage = [False, False, False, False, False]
+    s1_meta = None
+    s2_meta = None
+    s3_meta = None
+    s4_meta = None
+    if 's1_meta' in kwargs and kwargs['s1_meta'] is not None:
+        s1_meta = kwargs['s1_meta']
+        run_stage[1] = True
+    if 's2_meta' in kwargs and kwargs['s2_meta'] is not None:
+        s2_meta = kwargs['s2_meta']
+        run_stage[2] = True
+    if 's3_meta' in kwargs and kwargs['s3_meta'] is not None and run_S3:
+        s3_meta = kwargs['s3_meta']
+        run_stage[3] = True
+    if 's4_meta' in kwargs and kwargs['s4_meta'] is not None:
+        s4_meta = kwargs['s4_meta']
+        run_stage[4] = True
+
+    # Set value of the variable to be optimized
+    setattr(s1_meta, meta.opt_param_name, val) if stage == 1 else None
+    setattr(s2_meta, meta.opt_param_name, val) if stage == 2 else None
+    setattr(s3_meta, meta.opt_param_name, val) if stage == 3 else None
+    setattr(s4_meta, meta.opt_param_name, val) if stage == 4 else None
+
+    if run_stage[1]:
+        s1_meta = s1.rampfitJWST(meta.eventlabel, input_meta=s1_meta)
+    if run_stage[2]:
+        s2_meta = s2.calibrateJWST(meta.eventlabel, input_meta=s2_meta,
+                                   s1_meta=s1_meta)
+    if run_stage[3]:
+        s3_spec, s3_meta = s3.reduce(meta.eventlabel, input_meta=s3_meta,
+                                     s2_meta=s2_meta)
+    if run_stage[4]:
+        s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, input_meta=s4_meta,
+                                           s3_meta=s3_meta)
+
+    if meta.delete_intermediate:
+        if run_stage[1]:
+            shutil.rmtree(s1_meta.outputdir)
+        if run_stage[2]:
+            shutil.rmtree(s2_meta.outputdir)
+        if run_stage[3]:
+            shutil.rmtree(s3_meta.outputdir)
+        if run_stage[4]:
+            shutil.rmtree(s4_meta.outputdir)
+
+    fitness_value = (
+        meta.scaling_MAD_spec * s4_meta.mad_s4 +
+        meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
+
+    return fitness_value
+
+
+def double(val, meta, stage, run_S3=True, **kwargs):
+    """Double variable objective function. Also works for more than two
+    variables.
+
+    Parameters
+    ----------
+    val : float
+        The variable value to be evaluated.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    stage : int
+        The stage number indicating which stage's parameters to
+        optimize.
+    run_S3 : boolean; optional
+        If True, run Stage 3.
+    **kwargs : dict
+        Additional keyword arguments. Can include s1_meta, s2_meta, s3_meta,
+        and s4_meta to pass in existing metadata objects for each stage.
+
+    Returns
+    -------
+    fitness_value : float
+        The computed objective value, which is a measure of the fitness of the
+        given variable value. Lower values are preferred, suggesting a better
+        configuration.
+    """
+    run_stage = [False, False, False, False, False]
+    s1_meta = None
+    s2_meta = None
+    s3_meta = None
+    s4_meta = None
+    if 's1_meta' in kwargs and kwargs['s1_meta'] is not None:
+        s1_meta = kwargs['s1_meta']
+        run_stage[1] = True
+    if 's2_meta' in kwargs and kwargs['s2_meta'] is not None:
+        s2_meta = kwargs['s2_meta']
+        run_stage[2] = True
+    if 's3_meta' in kwargs and kwargs['s3_meta'] is not None and run_S3:
+        s3_meta = kwargs['s3_meta']
+        run_stage[3] = True
+    if 's4_meta' in kwargs and kwargs['s4_meta'] is not None:
+        s4_meta = kwargs['s4_meta']
+        run_stage[4] = True
+
+    # Set values of the two (or more) variables to be optimized
+    param_names = meta.opt_param_name.split('__')
+    assert len(param_names) == len(val), \
+        f"Expected {len(param_names)} parameters for optimization, " + \
+        f"got {len(val)}."
+    for p, v in zip(param_names, val):
+        setattr(s1_meta, p, v) if stage == 1 else None
+        setattr(s2_meta, p, v) if stage == 2 else None
+        setattr(s3_meta, p, v) if stage == 3 else None
+        setattr(s4_meta, p, v) if stage == 4 else None
+
+    if run_stage[1]:
+        s1_meta = s1.rampfitJWST(meta.eventlabel, input_meta=s1_meta)
+    if run_stage[2]:
+        s2_meta = s2.calibrateJWST(meta.eventlabel, input_meta=s2_meta,
+                                   s1_meta=s1_meta)
+    if run_stage[3]:
+        s3_spec, s3_meta = s3.reduce(meta.eventlabel, input_meta=s3_meta,
+                                     s2_meta=s2_meta)
+    if run_stage[4]:
+        s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, input_meta=s4_meta,
+                                           s3_meta=s3_meta)
+
+    if meta.delete_intermediate:
+        if run_stage[1]:
+            shutil.rmtree(s1_meta.outputdir)
+        if run_stage[2]:
+            shutil.rmtree(s2_meta.outputdir)
+        if run_stage[3]:
+            shutil.rmtree(s3_meta.outputdir)
+        if run_stage[4]:
+            shutil.rmtree(s4_meta.outputdir)
+
+    fitness_value = (
+        meta.scaling_MAD_spec * s4_meta.mad_s4 +
+        meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
+
+    return fitness_value
