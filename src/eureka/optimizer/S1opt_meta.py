@@ -44,6 +44,10 @@ class S1optMetaClass(MetaClass):
         self.isopt_S1 = getattr(self, 'isopt_S1', True)
         self.isopt_S3 = getattr(self, 'isopt_S3', False)
 
+        # Set deletion flags
+        self.delete_intermediate = getattr(self, 'delete_intermediate', False)
+        self.delete_final = getattr(self, 'delete_final', True)
+
         # Create list of file segments
         self = util.readfiles(self)
 
