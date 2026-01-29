@@ -44,6 +44,10 @@ def test_NIRSpec(capsys):
 
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path,
                                  s2_meta=s2_meta)
+    # Ensure that our custom code to avoid NIRSpec cropping has worked
+    assert s3_spec.wave_1d.shape == (511,)
+    assert s3_spec.medflux.shape == (31, 511)
+
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)

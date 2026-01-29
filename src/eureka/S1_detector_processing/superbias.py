@@ -1,5 +1,3 @@
-#! /usr/bin/env python
-
 # This is based on the superbias_step from the JWST pipeline v1.8.0
 # adapted by Kevin Stevenson, Feb 2023
 
