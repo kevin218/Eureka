@@ -11,7 +11,7 @@ def naninterp1d(y, replace_val=0):
     ----------
     y : 1D array
         Data array with possible NaNs
-    replace_val : float, optional
+    replace_val : float; optional
         Value to use when entire dataset is NaNs (default is 0).
 
     Returns

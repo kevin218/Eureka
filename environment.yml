@@ -1,9 +1,8 @@
 name: eureka
 channels:
     - conda-forge
-    - defaults
 dependencies:
-    - python==3.13.0
+    - python==3.12
     - astropy
     - astroquery
     - bokeh[version='<3.0']
@@ -17,10 +16,13 @@ dependencies:
     - ipympl # Needed for the interactive matplotlib backend
     - ipython
     - jupyter
+    - libopenblas=*=openmp*       # ensure conda-forge OpenBLAS ABI
+    - libblas=*=*openblas*        # BLAS/LAPACK consistency
+    - liblapack=*=*openblas*
     - lmfit
     - matplotlib[version='>=3.6'] # Lower limit needed for set_layout_engine()
     - nbsphinx # Needed for documentation
-    - numpy[version='>=1.20.0']
+    - numpy[version='>=1.20.0,<2'] # Lower limit needed for some packages, upper limit to avoid conflicts
     - numpydoc # Needed for documentation
     - pandas
     - photutils
@@ -37,23 +39,21 @@ dependencies:
     - pip:
         - astraeus-io
         - batman-package
-        - catwoman@git+https://github.com/taylorbell57/catwoman@master
+        - catwoman>=1.0.16 # Lower limit needed to avoid installation bug
         - celerite2 # Needed for GP
         - crds
         - exotic-ld==3.2.0 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
         - fleck
         - george # Needed for GP
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
-        - jwst==1.18.0
+        - jwst==1.20.2
         - mc3 # Needed for uncertainties in the RMS time-averaging plots in S5
         - myst-parser # Needed for documentation
-        - numpy>=1.20.0
         - pastasoss>=1.2.2
         # - planet-harmonica # Currently only supports for python 3.8 -- 3.10
         - planet-harmonica@git+https://github.com/DavoGrant/harmonica@main
-        - scipy>=1.8.0 # Lower limit needed for scipy.spatial.QhullError
         - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation
-        - stcal>=1.12.0 # Lower limit needed for stcal.ramp_fitting.likely_fit
+        - stcal>=1.15.2 # Lower limit needed for updated stcal.ramp_fitting.ramp_fit.ramp_fit arguments
         - stdatamodels
         - svo_filters

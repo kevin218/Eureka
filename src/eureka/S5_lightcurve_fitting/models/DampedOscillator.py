@@ -1,34 +1,7 @@
 import numpy as np
+
 from .Model import Model
 from ...lib.split_channels import split
-
-
-class Params():
-    """
-    Define damped oscillator parameters.
-    """
-    def __init__(self, model):
-        """
-        Set attributes to Params object.
-
-        Parameters
-        ----------
-        model : object
-            The model.eval object that contains a dictionary of parameter names
-            and their current values.
-        """
-        # Set parameters
-        self.osc_amp = None
-        self.osc_amp_decay = 0.
-        self.osc_per = None
-        self.osc_per_decay = 0.
-        self.osc_t0 = 0.
-        self.osc_t1 = None
-        for item in self.__dict__.keys():
-            try:
-                setattr(self, item, model.parameters.dict[item][0])
-            except KeyError:
-                pass
 
 
 class DampedOscillatorModel(Model):
@@ -41,10 +14,7 @@ class DampedOscillatorModel(Model):
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
-            Can pass in the parameters, longparamlist, nchan, and
-            paramtitles arguments here.
         """
-        # Inherit from Model class
         super().__init__(**kwargs)
         self.name = 'damped oscillator'
 
@@ -52,55 +22,48 @@ class DampedOscillatorModel(Model):
         self.modeltype = 'physical'
 
     def eval(self, channel=None, **kwargs):
-        """Evaluate the function with the given values.
+        """Evaluate the model at the current (or provided) times.
 
         Parameters
         ----------
         channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
+            If not None, evaluate only this channel. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
         Returns
         -------
-        lcfinal : ndarray
-            The value of the model at the times self.time.
+        lcfinal : np.ma.MaskedArray
+            The model value at self.time.
         """
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
+        nchan, channels = self._channels(channel)
 
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Set all parameters
-        lcfinal = np.ma.masked_array([])
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-            else:
-                chan = 0
-
-            time = self.time
+        pieces = []
+        for chan_id in channels:
+            t = self.time
             if self.multwhite:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
+                t = split([t], self.nints, chan_id)[0]
 
-            # Initialize model
-            params = Params(self)
+            # Get the coefficients for this channel
+            amp0 = self._get_param_value('osc_amp', chan=chan_id)
+            amp_decay = self._get_param_value('osc_amp_decay', chan=chan_id)
+            per0 = self._get_param_value('osc_per', chan=chan_id)
+            per_decay = self._get_param_value('osc_per_decay', chan=chan_id)
+            t0 = self._get_param_value('osc_t0', chan=chan_id)
+            t1 = self._get_param_value('osc_t1', chan=chan_id)
 
-            # Compute damped oscillator
-            amp = params.osc_amp * np.exp(-params.osc_amp_decay *
-                                          (time - params.osc_t0))
-            per = params.osc_per * np.exp(-params.osc_per_decay *
-                                          (time - params.osc_t0))
-            osc = 1 + amp * np.sin(2 * np.pi * (time - params.osc_t1) / per)
-            osc[time < params.osc_t0] = 1
+            amp = amp0 * np.exp(-amp_decay * (t - t0))
+            per = per0 * np.exp(-per_decay * (t - t0))
+            lcpiece = 1. + amp * np.sin(2 * np.pi * (t - t1) / per)
+            # Force pre-t0 region to unity.
+            lcpiece[t < t0] = 1.
+            pieces.append(lcpiece)
 
-            lcfinal = np.ma.append(lcfinal, osc)
-
-        return lcfinal
+        if len(pieces) == 1:
+            return pieces[0]
+        else:
+            return np.ma.concatenate(pieces)

@@ -101,11 +101,15 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
             t0 = time_pkg.time()
 
-            meta.spec_hw = spec_hw_val
-            meta.bg_hw = bg_hw_val
-
             # Load in the S5 metadata used for this particular aperture pair
-            meta = load_specific_s5_meta_info(meta)
+            if (meta.data_format == 'eureka' and
+                    (meta.spec_hw != spec_hw_val or meta.bg_hw != bg_hw_val)):
+                meta.spec_hw = spec_hw_val
+                meta.bg_hw = bg_hw_val
+                meta = load_specific_s5_meta_info(meta)
+            elif meta.data_format != 'eureka':
+                meta.spec_hw = spec_hw_val
+                meta.bg_hw = bg_hw_val
 
             # Directory structure should not use expanded HW values
             spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
@@ -431,7 +435,10 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
         y_param = meta.y_param
 
     if 'dynesty' in fit_methods:
-        fitter = 'dynesty'
+        if meta.run_dynamic:
+            fitter = 'dynamicdynesty'
+        else:
+            fitter = 'dynesty'
     elif 'emcee' in fit_methods:
         fitter = 'emcee'
     elif 'lsq' in fit_methods:
@@ -449,7 +456,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
     medians = []
     errs = []
 
-    if fitter in ['dynesty', 'emcee', 'nuts']:
+    if fitter in ['dynamicdynesty', 'dynesty', 'emcee', 'nuts']:
         fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
         fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
                                     skipinitialspace=True)
@@ -719,7 +726,10 @@ def load_s5_saves(meta, log, fit_methods, n_samples=1):
         A list of sample arrays, one for each channel.
     """
     if 'dynesty' in fit_methods:
-        fitter = 'dynesty'
+        if meta.run_dynamic:
+            fitter = 'dynamicdynesty'
+        else:
+            fitter = 'dynesty'
     elif 'emcee' in fit_methods:
         fitter = 'emcee'
     elif 'lsq' in fit_methods:
@@ -734,7 +744,7 @@ def load_s5_saves(meta, log, fit_methods, n_samples=1):
                          f'{fit_methods}')
     meta.fitter = fitter
 
-    if fitter in ['nuts', 'dynesty', 'emcee']:
+    if fitter in ['dynamicdynesty', 'dynesty', 'emcee', 'nuts']:
         if meta.sharedp:
             niter = 1
         else:

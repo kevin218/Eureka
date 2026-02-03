@@ -1,7 +1,8 @@
-#! /usr/bin/env python
-
-# This is based on the RampFitStep from the JWST pipeline, accessed Oct 2021
-# adapted by Eva-Maria Ahrer & Aarynn Carter, Oct 2021
+# This file incorporates code from the stcal project.
+# Source: stcal/ramp_fitting/ols_fit.py and stcal/ramp_fitting/ramp_fit.py
+# URL: https://github.com/spacetelescope/stcal
+# Copyright (c) Association of Universities for Research in Astronomy (AURA)
+# SPDX-License-Identifier: BSD-3-Clause
 
 import numpy as np
 from functools import partial
@@ -10,8 +11,7 @@ import warnings
 from stcal.ramp_fitting import ramp_fit, utils
 import stcal.ramp_fitting.ols_fit
 from stcal.ramp_fitting.ramp_fit import suppress_one_good_group_ramps
-from stcal.ramp_fitting.ols_fit import discard_miri_groups, \
-    find_0th_one_good_group
+from stcal.ramp_fitting.ols_fit import discard_miri_groups
 
 from stcal.ramp_fitting.likely_fit import LIKELY_MIN_NGROUPS
 
@@ -35,6 +35,66 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 __all__ = ["Eureka_RampFitStep"]
+
+# -----------------------------
+# Compatibility helper(s)
+# -----------------------------
+try:
+    # Older stcal versions had this; if present we'll keep using it.
+    from stcal.ramp_fitting.ols_fit import find_0th_one_good_group
+except Exception:
+    def find_0th_one_good_group(ramp_data):
+        """
+        Finds the location of ramps with the 0th group as the only good group.
+
+        Parameters
+        ----------
+        ramp_data : RampData
+            Input data necessary for computing ramp fitting.
+        """
+        nints, ngroups, nrows, ncols = ramp_data.groupdq.shape
+        # One good group list of pixels per integration
+        one_group = [None] * nints
+        for integ in range(nints):
+            # Current integration DQ array
+            cintegdq = ramp_data.groupdq[integ, :, :, :]
+
+            # Find pixels with good group 0
+            good_0 = np.zeros((nrows, ncols), dtype=int)
+            cintegdq_0 = cintegdq[0, :, :]
+            good_0[cintegdq_0 == 0] = 1  # Pixels with good 0 group
+
+            # Find pixels with only one good group
+            cinteg_sm = np.zeros((ngroups - 1, nrows, ncols), dtype=int)
+            # Current integration DQ array excluding 0th group
+            cintegdq_1 = cintegdq[1:, :, :]
+            # Mark flagged groups to use in sum
+            cinteg_sm[cintegdq_1 != 0] = 1
+            # Find the number of flagged groups excluding 0th group
+            gp_sum = cinteg_sm.sum(axis=0)
+            bad_1_ = np.zeros((nrows, ncols), dtype=int)
+            # Pixels with all groups flagged after the 0th group
+            bad_1_[gp_sum == ngroups - 1] = 1
+
+            # Get the locations of pixels that have good zeroeth group, with
+            # all other groups bad.
+            one_group_int = np.logical_and(good_0, bad_1_)
+            one_group[integ] = np.where(one_group_int)
+
+            del one_group_int
+            del good_0
+            del bad_1_
+
+        ramp_data.one_groups_locs = one_group
+
+        # Refer to JP-3242 for derivation.
+        # Updated: One Group Time =
+        #   [(TFrame * NFrames * (NFrames + 1)] / [2 * NFrames]
+        # There is an NFrames term in the numerator and denominator, so when
+        # cancelled we get:
+        # One Group Time = (NFrames + 1) * TFrame / 2
+        ramp_data.one_groups_time = ((ramp_data.nframes + 1)
+                                     * ramp_data.frame_time / 2)
 
 
 class Eureka_RampFitStep(Step):
@@ -162,10 +222,6 @@ class Eureka_RampFitStep(Step):
             log.info(f"Using algorithm = {self.algorithm}")
             log.info(f"Using weighting = {self.weighting}")
 
-            buffsize = ramp_fit.BUFSIZE
-            if self.algorithm == "GLS":
-                buffsize //= 10
-
             int_times = input_model.int_times
 
             # Set the DO_NOT_USE bit in the groupdq values for groups before
@@ -196,7 +252,6 @@ class Eureka_RampFitStep(Step):
                                          '"default_fixed" weighting')
 
                     # Overwrite the exponent calculation function from ols_fit
-                    # Pipeline version 1.3.3
                     stcal.ramp_fitting.ols_fit.calc_power = \
                         partial(fixed_power,
                                 weighting_exponent=self.fixed_exponent)
@@ -204,20 +259,17 @@ class Eureka_RampFitStep(Step):
                     # Want to use an interpolated version of default weighting.
 
                     # Overwrite the exponent calculation function from ols_fit
-                    # Pipeline version 1.3.3
                     stcal.ramp_fitting.ols_fit.calc_power = interpolate_power
                 elif self.weighting == 'uniform':
                     # Want each frame and pixel weighted equally
 
                     # Overwrite the entire optimal calculation function
-                    # Pipeline version 1.13.4
                     stcal.ramp_fitting.ols_fit.calc_opt_sums = \
                         calc_opt_sums_uniform_weight
                 elif self.weighting == 'custom':
                     # Want to manually assign snr bounds for exponent changes
 
                     # Overwrite the exponent calculation function from ols_fit
-                    # Pipeline version 1.3.3
                     stcal.ramp_fitting.ols_fit.calc_power = \
                         partial(custom_power,
                                 snr_bounds=self.custom_snr_bounds,
@@ -231,15 +283,15 @@ class Eureka_RampFitStep(Step):
                 # it's underlying functionality.
                 self.weighting = 'optimal'
 
-                image_info, integ_info, _, _ = ramp_fit.ramp_fit(
-                    input_model, buffsize, self.save_opt, readnoise_2d,
+                image_info, integ_info, _ = ramp_fit.ramp_fit(
+                    input_model, self.save_opt, readnoise_2d,
                     gain_2d, self.algorithm, self.weighting, max_cores,
                     dqflags.pixel, self.suppress_one_group)
             elif self.algorithm.lower() == 'likely':
                 # Want to use the newer likelihood-based ramp fitting algorithm
                 self.algorithm = 'LIKELY'
-                image_info, integ_info, _, _ = ramp_fit.ramp_fit(
-                    input_model, buffsize, self.save_opt, readnoise_2d,
+                image_info, integ_info, _ = ramp_fit.ramp_fit(
+                    input_model, self.save_opt, readnoise_2d,
                     gain_2d, self.algorithm, self.weighting, max_cores,
                     dqflags.pixel, self.suppress_one_group)
             # FUTURE IMPROVEMENT, WFC3-like differenced frames.
@@ -248,7 +300,7 @@ class Eureka_RampFitStep(Step):
             # PRIMARILY FOR TESTING, MEAN OF RAMP
             elif self.algorithm == 'mean':
                 image_info, integ_info, _ = \
-                    mean_ramp_fit(input_model, buffsize, self.save_opt,
+                    mean_ramp_fit(input_model, self.save_opt,
                                   readnoise_2d, gain_2d, self.algorithm,
                                   self.weighting, max_cores, dqflags.pixel,
                                   suppress_one_group=self.suppress_one_group)
@@ -530,7 +582,7 @@ def calc_opt_sums_uniform_weight(ramp_data, rn_sect, gain_sect, data_masked,
     return sumx, sumxx, sumxy, sumy, nreads_wtd, xvalues
 
 
-def mean_ramp_fit(model, buffsize, save_opt, readnoise_2d, gain_2d,
+def mean_ramp_fit(model, save_opt, readnoise_2d, gain_2d,
                   algorithm, weighting, max_cores, dqflags,
                   suppress_one_group):
     """Fit a ramp using average.
@@ -543,8 +595,6 @@ def mean_ramp_fit(model, buffsize, save_opt, readnoise_2d, gain_2d,
     ----------
     model : data model
         Input data model, assumed to be of type RampModel
-    buffsize : int
-        Unused. Size of data section (buffer) in bytes
     save_opt : bool
        Calculate optional fitting results
     readnoise_2d : ndarray

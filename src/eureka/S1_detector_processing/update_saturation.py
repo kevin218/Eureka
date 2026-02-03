@@ -1,8 +1,3 @@
-#! /usr/bin/env python
-
-# File with functions to modify the saturation
-# flagging routines
-# PA Roy, July 27th 2022
 import numpy as np
 from jwst.datamodels import dqflags
 
