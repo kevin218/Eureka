@@ -133,6 +133,11 @@ def get_wave(data, meta, log):
     log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
                  mute=(not meta.verbose))
 
+    pixscale = 0.0653 # arcsec / pixel, x direction
+    xoffset = data.attrs['mhdr']['XOFFSET'] / pixscale
+    log.writelog(f"  There is an X offset of {xoffset:.3f} pixels",
+                 mute=(not meta.verbose))
+
     norders = len(meta.all_orders)
     data['trace'] = (['x', 'order'],
                      np.zeros((data.x.shape[0], norders)) +
@@ -155,6 +160,21 @@ def get_wave(data, meta, log):
             log.writelog(f"  Shifting trace by {meta.trace_offset} pixels "
                          f"for {subarray} and Order {order}.",
                          mute=(not meta.verbose))
+        if xoffset > 0:
+            # If using a custom X-direction offset, shift X dimension by xoffset pixels
+            shift_x = trace.x - xoffset
+
+            # extrapolate trace to longer wavelengths by fitting an 8th order polynomial
+            poly_trace = np.polynomial.polynomial.Polynomial.fit(trace.x, trace.y, 8, domain=[np.min(shift_x), np.max(shift_x)])
+            poly_wavs = np.polynomial.polynomial.Polynomial.fit(trace.x, trace.wavelength, 8, domain=[np.min(shift_x), np.max(shift_x)])
+
+            trace.y = poly_trace(shift_x)
+            trace.wavelength = poly_wavs(shift_x)
+            subarray = subarray = data.attrs['mhdr']['SUBARRAY']
+            log.writelog(f"  Shifting trace by {xoffset} pixels "
+                         f"in X direction for {subarray} and Order {order}.",
+                         mute=(not meta.verbose))
+
         # Assign trace and wavelength for given order
         ind1 = np.nonzero(np.in1d(trace.x, data.x.values))[0]
         ind2 = np.nonzero(np.in1d(data.x.values, trace.x))[0]
