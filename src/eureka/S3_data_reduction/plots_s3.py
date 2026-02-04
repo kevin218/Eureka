@@ -707,9 +707,37 @@ def median_frame(data, meta, m, medflux, order=None):
     plt.imshow(medflux, origin='lower', aspect='equal',
                vmin=vmin, vmax=vmax, interpolation='nearest',
                extent=[xmin, xmax, ymin, ymax], cmap=cmap)
-    plt.colorbar()
+
+    # Overplot nominal spectral trace for NIRISS SOSS
+    # (TODO: Probably also useful for NIRSpec, etc.)
+    if meta.inst == "niriss":
+        if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96':
+            order = 1
+            trace = data["trace"].sel(order=order)
+
+            # The trace isn't defined to the edges of the detector
+            # so mask out the edges (are these always the same?)
+            mask = data.flux.x.values[4:-3]
+            plt.plot(data.flux.x.values[mask], trace[mask], 
+                     c="white", lw=2)
+            plt.plot(data.flux.x.values[mask], trace[mask], 
+                     "--k", lw=1, label=f"Trace Order {order}")
+        else:
+            for order in meta.all_orders:
+                trace = data["trace"].sel(order=order)
+                
+                # The trace isn't defined to the edges of the detector
+                # so mask out the edges (are these always the same?)
+                mask = data.flux.x.values[4:-3]
+                plt.plot(data.flux.x.values[mask], trace[mask], 
+                         c="white", lw=2)
+                plt.plot(data.flux.x.values[mask], trace[mask], 
+                         "--k", lw=1, label=f"Trace Order {order}")
+
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
+
+    plt.legend()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     if order is None:
