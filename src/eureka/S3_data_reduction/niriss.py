@@ -4,7 +4,7 @@ from astropy.io import fits
 import astraeus.xarrayIO as xrio
 from . import nircam, sigrej, optspex, plots_s3
 from ..lib.util import read_time, supersample
-from pastasoss import get_soss_traces
+from pastasoss import get_soss_traces, rotate
 from .straighten import roll_columns
 from .background import fitbg
 
@@ -128,8 +128,18 @@ def get_wave(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with...
     '''
-    # Report pupil position
+    # Report actual pupil position
     pwcpos = data.attrs['mhdr']['PWCPOS']
+
+    # Keep track of base pupil position for custom offset correction
+    base_pwcpos = 245.76 
+
+    # Keep track of PASTASOSS trace rotation pivots
+    pivots = [
+        [1887, 54],
+        [1667, 200]
+    ]
+
     log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
                  mute=(not meta.verbose))
 
@@ -150,34 +160,65 @@ def get_wave(data, meta, log):
 
     for order in meta.all_orders:
         # Get trace for the given order and pupil position
-        trace = get_soss_traces(pwcpos=pwcpos, order=str(order), interp=True)
+        if xoffset > 0:
+            # Need to translate trace position before rotating
+            trace = get_soss_traces(pwcpos=base_pwcpos, 
+                                    order=str(order), interp=True)
+        else:
+            trace = get_soss_traces(pwcpos=pwcpos, 
+                                    order=str(order), interp=True)
         if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96' and \
                 meta.trace_offset is None:
             # PASTASOSS doesn't account for different substrip starting rows;
             # therefore, set trace offset to best guess (-12 pixels).
             meta.trace_offset = -12
         if meta.trace_offset is not None:
+            # Shift trace
             trace.y += meta.trace_offset
+
+            # Shift pivot for potential x offset operations
+            pivots[order-1][1] += meta.trace_offset
+
             subarray = data.attrs['mhdr']['SUBARRAY']
             log.writelog(f"  Shifting trace by {meta.trace_offset} pixels "
                          f"for {subarray} and Order {order}.",
                          mute=(not meta.verbose))
         if xoffset > 0:
+            # Shift trace before pupil wheel rotation correction
+            # starting from nominal pupil wheel position
+            base_x = trace.x
+            base_y = trace.y
+            base_wav = trace.wavelength
+
+            # Get pivot in wavelength space
+            pivot = pivots[order-1]
+            pivot_wav = np.copy(pivot).astype(float)
+            ind = np.argmin(np.abs(base_x - pivot[0]))
+            pivot_wav[0] = base_wav[ind]
+            
             # If using a custom X-direction offset, 
             # shift X dimension by xoffset pixels
-            shift_x = trace.x - xoffset
+            shift_x = base_x - xoffset
 
             # Extrapolate trace to longer wavelengths 
             # by fitting an 8th order polynomial
-            poly_trace = np.polynomial.polynomial.Polynomial.fit(
-                trace.x, trace.y, 8, domain=[np.min(shift_x), 
-                                             np.max(shift_x)])
-            poly_wavs = np.polynomial.polynomial.Polynomial.fit(
-                trace.x, trace.wavelength, 8, domain=[np.min(shift_x), 
-                                                      np.max(shift_x)])
+            fitdeg = 8
 
-            trace.y = poly_trace(shift_x)
-            trace.wavelength = poly_wavs(shift_x)
+            y_interp = np.polynomial.polynomial.Polynomial.fit(
+                base_x, base_y, fitdeg, 
+                domain=[shift_x[0], shift_x[-1]])(shift_x)
+            
+            wav_interp = np.polynomial.polynomial.Polynomial.fit(
+                base_x, base_wav, 8, 
+                domain=[shift_x[0], shift_x[-1]])(shift_x)
+
+            # Rotate trace only after translating to new offset wavelengths
+            rotate_wav, rotate_y = rotate(wav_interp, y_interp, 
+                                          pwcpos - base_pwcpos, pivot_wav)
+
+            trace.y = rotate_y
+            trace.wavelength = rotate_wav
+
             subarray = data.attrs['mhdr']['SUBARRAY']
             log.writelog(f"  Shifting trace by {xoffset} pixels "
                          f"in X direction for {subarray} and Order {order}.",
