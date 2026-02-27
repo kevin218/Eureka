@@ -409,7 +409,7 @@ def plot_rms(lc, model, meta, fitter):
 
 @plots.apply_style
 def plot_corner(samples, lc, meta, freenames, fitter):
-    """Plot a corner plot. (Figs 5501)
+    """Plot a corner plot. (Figs 5302)
 
     Parameters
     ----------
@@ -436,7 +436,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     rcParams['ytick.labelsize'] = 10
     rcParams['figure.constrained_layout.use'] = False
 
-    fig = plt.figure(5501)
+    fig = plt.figure(5302)
     fig.set_size_inches(ndim*1.4, ndim*1.4, forward=True)
     fig.clf()
     fig = corner.corner(samples, fig=fig, quantiles=[0.16, 0.5, 0.84],
@@ -450,7 +450,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     else:
         ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
         fname_tag = f'ch{ch_number}'
-    fname = (f'figs{os.sep}fig5501_{fname_tag}_corner_{fitter}'
+    fname = (f'figs{os.sep}fig5302_{fname_tag}_corner_{fitter}'
              + plots.get_filetype())
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05,
                 dpi=300)
@@ -557,7 +557,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
 
 @plots.apply_style
 def plot_res_distr(lc, model, meta, fitter):
-    """Plot the normalized distribution of residuals + a Gaussian. (Fig 5302)
+    """Plot the normalized distribution of residuals + a Gaussian. (Fig 5501)
 
     Parameters
     ----------
@@ -577,7 +577,7 @@ def plot_res_distr(lc, model, meta, fitter):
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
-        fig = plt.figure(5302)
+        fig = plt.figure(5501)
         fig.set_size_inches(8, 6, forward=True)
         fig.clf()
 
@@ -606,7 +606,7 @@ def plot_res_distr(lc, model, meta, fitter):
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
-        fname = (f'figs{os.sep}fig5302_{fname_tag}_res_distri_{fitter}'
+        fname = (f'figs{os.sep}fig5501_{fname_tag}_res_distri_{fitter}'
                  + plots.get_filetype())
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:

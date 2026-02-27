@@ -187,7 +187,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_rms(lc, model, meta, fitter=calling_function)
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3 and calling_function == 'lsq':
+    if meta.isplots_S5 >= 5 and calling_function == 'lsq':
         plots.plot_res_distr(lc, model, meta, fitter=calling_function)
 
     # Make a new model instance
@@ -453,7 +453,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_rms(lc, model, meta, fitter='emcee')
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 5:
         plots.plot_res_distr(lc, model, meta, fitter='emcee')
 
     # Plot chain evolution
@@ -1014,7 +1014,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_rms(lc, model, meta, fitter=fittername)
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 5:
         plots.plot_res_distr(lc, model, meta, fitter=fittername)
 
     # plot using corner.py
@@ -1128,7 +1128,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_rms(lc, model, meta, fitter='lmfitter')
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 5:
         plots.plot_res_distr(lc, model, meta, fitter='lmfitter')
 
     # Create new model with best fit parameters
