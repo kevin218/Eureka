@@ -1,5 +1,6 @@
 import numpy as np
 import inspect
+from collections.abc import Mapping
 try:
     import batman
 except ImportError:
@@ -51,9 +52,31 @@ class BatmanTransitModel(Model):
             for c in range(self.nchannel_fitted):
                 chan = self.fitted_channels[c]
                 if self.ld_from_S4:
-                    ld_array = self.ld_array[len_params-2]
+                    if not isinstance(self.ld_array, Mapping):
+                        raise TypeError(
+                            "Expected ld_coeffs to be a dict-like mapping "
+                            "when ld_from_S4=True."
+                        )
+
+                    ld = str(self.parameters.limb_dark.value).strip().lower()
+                    n_ld = len(self.coeffs)
+                    if ld == "linear":
+                        key = "lin"
+                    elif ld == "quadratic":
+                        key = "quad"
+                    elif ld == "kipping2013":
+                        key = "kipping2013"
+                    elif ld in ("squareroot", "square-root"):
+                        key = "sqrt"
+                    elif ld in ("nonlinear", "claret", "claret4"):
+                        key = f"nonlin_{int(n_ld)}para"
+                    else:
+                        key = ld
+
+                    ld_array = self.ld_array[key]
                 else:
                     ld_array = self.ld_array
+
                 for u in self.coeffs:
                     if u in self.paramtitles:
                         index = self.paramtitles.index(u)
