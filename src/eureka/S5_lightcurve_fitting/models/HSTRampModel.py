@@ -43,9 +43,9 @@ class HSTRampModel(Model):
             for chan in self.fitted_channels:
                 trim1, trim2 = get_trim(self.nints, chan)
                 piece = self._time[trim1:trim2]
-                self.time_local[trim1:trim2] = piece - piece.data[0]
+                self.time_local[trim1:trim2] = piece - np.ma.min(piece.data)
         else:
-            self.time_local = self._time - self._time.data[0]
+            self.time_local = self._time - np.ma.min(self._time.data)
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -80,8 +80,8 @@ class HSTRampModel(Model):
             h1 = self._get_param_value('h1', 0.0, chan=chan)
             h2 = self._get_param_value('h2', 0.0, chan=chan)
             h3 = self._get_param_value('h3', 0.0, chan=chan)
-            h4 = self._get_param_value('h4', 0.0, chan=chan)
-            h5 = self._get_param_value('h5', 0.0, chan=chan)
+            h4 = self._get_param_value('h4', 0.066422, chan=chan)
+            h5 = self._get_param_value('h5', -0.02, chan=chan)
 
             # Batch time is relative to the start of each HST orbit
             # h4 = orbital period (~96 min), h5 = phase offset.
