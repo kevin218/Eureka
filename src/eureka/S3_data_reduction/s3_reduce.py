@@ -284,6 +284,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 else:
                     meta.int_end = meta.int_start+meta.nplots
 
+                # Manually mask regions [colstart, colend, rowstart, rowend]
+                if meta.manmask is not None:
+                    data = util.manmask(data, meta, log)
+
                 # Perform BG subtraction along dispersion direction
                 # for untrimmed NIRCam spectroscopic data
                 if meta.bg_row_by_row:
@@ -319,10 +323,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Odd numbers in DQ array are bad pixels. Do not use.
                 if meta.dqmask:
                     data.mask.values[data.dq.values % 2 == 1] = True
-
-                # Manually mask regions [colstart, colend, rowstart, rowend]
-                if meta.manmask is not None:
-                    data = util.manmask(data, meta, log)
 
                 if not meta.photometry:
                     # Locate source postion for the first integration of
