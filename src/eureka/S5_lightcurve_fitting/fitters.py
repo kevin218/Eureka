@@ -881,6 +881,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
             queue_size=queue_size, bound=bound, sample=sample,
             logl_args=l_args, ptform_args=[prior1, prior2, priortype])
 
+        # Log what sample='auto' resolves to since the default depends on the
+        # number of dimensions
+        if sample == 'auto':
+            log.writelog(f'  run_sample=auto was resolved to '
+                         f'"{type(sampler.sampling).__name__}"',
+                         mute=(not meta.verbose))
+
         # Handle 'auto' for meta.run_nlive_batch
         nlive_batch = meta.run_nlive_batch
         if nlive_batch == 'auto':
@@ -903,6 +910,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
             ln_like, ptform, ndims, nlive=nlive, pool=pool,
             queue_size=queue_size, bound=bound, sample=sample,
             logl_args=l_args, ptform_args=[prior1, prior2, priortype])
+
+        # Log what sample='auto' resolves to since the default depends on the
+        # number of dimensions
+        if sample == 'auto':
+            log.writelog(f'  run_sample=auto was resolved to '
+                         f'"{type(sampler.sampling).__name__}"',
+                         mute=(not meta.verbose))
 
         # Run the sampler
         sampler.run_nested(dlogz=meta.run_tol, print_progress=True)
