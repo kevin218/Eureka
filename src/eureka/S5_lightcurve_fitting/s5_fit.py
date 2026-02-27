@@ -244,7 +244,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                         raise Exception("The limb-darkening file "
                                         f"{ld_fix_file} could not be found.")
                     if len(ld_coeffs.shape) == 1:
-                        ld_coeffs = ld_coeffs[np.newaxis, :]
+                        ld_coeffs = ld_coeffs[:, np.newaxis]
                 else:
                     ld_coeffs = None
 
@@ -319,7 +319,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     raise Exception("The limb-darkening file " + ld_fix_file +
                                     " could not be found.")
                 if len(ld_coeffs.shape) == 1:
-                    ld_coeffs = ld_coeffs[np.newaxis, :]
+                    ld_coeffs = ld_coeffs[:, np.newaxis]
             else:
                 ld_coeffs = None
 
