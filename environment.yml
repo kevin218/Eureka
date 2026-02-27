@@ -42,18 +42,18 @@ dependencies:
         - catwoman>=1.0.16 # Lower limit needed to avoid installation bug
         - celerite2 # Needed for GP
         - crds
-        - exotic-ld==3.2.0 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
+        - exotic-ld@git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8 # Pin needed for pkg_resources deprecation
         - fleck
         - george # Needed for GP
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
         - jwst==1.20.2
         - mc3 # Needed for uncertainties in the RMS time-averaging plots in S5
         - myst-parser # Needed for documentation
-        - pastasoss>=1.2.2
+        - pastasoss>=1.2.3 # Lower limit needed for pkg_resources deprecation
         # - planet-harmonica # Currently only supports for python 3.8 -- 3.10
         - planet-harmonica@git+https://github.com/DavoGrant/harmonica@main
         - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation
         - stcal>=1.15.2 # Lower limit needed for updated stcal.ramp_fitting.ramp_fit.ramp_fit arguments
         - stdatamodels
-        - svo_filters
+        - svo_filters@git+https://github.com/taylorbell57/svo_filters.git@055c930 # Pin needed for pkg_resources deprecation
