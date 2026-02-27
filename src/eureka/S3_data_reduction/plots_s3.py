@@ -92,9 +92,9 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
         im1 = ax1.pcolormesh(wave_1d, np.arange(meta.n_int)+0.5,
                              normspec, vmin=meta.vmin, vmax=meta.vmax,
                              cmap=cmap)
-        im2 = ax2.imshow(normspec, origin='lower', aspect='auto',
-                         extent=[pmin, pmax, 0, meta.n_int], vmin=meta.vmin,
-                         vmax=meta.vmax, cmap=cmap)
+        im2 = ax2.pcolormesh(optspec.x.values, np.arange(meta.n_int)+0.5,
+                             normspec, vmin=meta.vmin, vmax=meta.vmax,
+                             cmap=cmap)
         ax1.set_xlim(wmin, wmax)
         ax2.set_xlim(pmin, pmax)
         ax1.set_ylim(0, meta.n_int)
@@ -107,9 +107,9 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
         im1 = ax1.pcolormesh(np.arange(meta.n_int), wave_1d,
                              normspec.swapaxes(0, 1), vmin=meta.vmin,
                              vmax=meta.vmax, cmap=cmap)
-        im2 = ax2.imshow(normspec.swapaxes(0, 1), origin='lower',
-                         aspect='auto', extent=[0, meta.n_int, pmin, pmax],
-                         vmin=meta.vmin, vmax=meta.vmax, cmap=cmap)
+        im2 = ax1.pcolormesh(np.arange(meta.n_int), optspec.x.values,
+                             normspec.swapaxes(0, 1), vmin=meta.vmin,
+                             vmax=meta.vmax, cmap=cmap)
         ax1.set_ylim(wmin, wmax)
         ax2.set_ylim(pmin, pmax)
         ax1.set_xlim(0, meta.n_int)
@@ -704,7 +704,7 @@ def median_frame(data, meta, m, medflux, order=None):
     fig.set_size_inches(8, 4, forward=True)
     fig.clf()
     plt.title("Cleaned Median Frame")
-    plt.imshow(medflux, origin='lower', aspect='auto',
+    plt.imshow(medflux, origin='lower', aspect='equal',
                vmin=vmin, vmax=vmax, interpolation='nearest',
                extent=[xmin, xmax, ymin, ymax], cmap=cmap)
     plt.colorbar()
@@ -910,7 +910,8 @@ def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
     plt.suptitle('Centroid gaussian fit')
 
     # Image of source
-    ax[1, 0].imshow(img, origin='lower', aspect='auto')
+    ax[1, 0].imshow(img, origin='lower', aspect='equal',
+                    interpolation='nearest')
 
     # X gaussian plot
     norm_x_factor = np.ma.sum(np.ma.sum(img, axis=0))
@@ -1290,7 +1291,7 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
     fig.clf()
     cmap = plt.cm.viridis.copy()
     plt.title(f'Std. Dev. from Optimal Profile - Integration {n}')
-    plt.imshow(stdevs, origin='lower', aspect='auto',
+    plt.imshow(stdevs, origin='lower', aspect='equal',
                vmax=p7thresh, vmin=0, cmap=cmap,
                interpolation='nearest')
     plt.ylabel('Relative Pixel Position')
