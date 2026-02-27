@@ -29,7 +29,7 @@ class S4cal_MetaClass(MetaClass):
         # Remove the stage from kwargs if present
         if 'stage' in kwargs:
             kwargs.pop('stage')
-            
+
         super().__init__(folder, file, eventlabel, stage='4cal', **kwargs)
 
     def set_defaults(self):
@@ -54,7 +54,7 @@ class S4cal_MetaClass(MetaClass):
 
         # Outlier detection
         self.smoothing = getattr(self, 'smoothing', 0)
-        self.sigma_thresh = getattr(self, 'sigma_thresh', [4, 4, 4])
+        self.sigma_thresh = list(getattr(self, 'sigma_thresh', [4, 4, 4]))
 
         # Diagnostics
         self.isplots_S4cal = getattr(self, 'isplots_S4cal', 3)
