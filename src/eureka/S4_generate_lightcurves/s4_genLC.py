@@ -597,8 +597,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                                      axis=1)) /
                                    np.ma.MaskedArray.count(opterr_ma,
                                                            axis=1)).data
-                lc.mask_white[:] = np.ma.getmaskarray(np.ma.mean(optspec_ma,
-                                                                 axis=1))
+                lc.mask_white[:] = np.ma.getmaskarray(np.all(optspec_ma,
+                                                             axis=1))
 
                 if 'skylev' in list(spec.keys()):
                     # if bg level/error was saved in S3, make bg lcs
