@@ -96,7 +96,7 @@ class S3MetaClass(MetaClass):
         self.ff_outlier = getattr(self, 'ff_outlier', False)
         self.use_estsig = getattr(self, 'use_estsig', False)
         # Require this parameter to be set
-        self.bg_thresh = getattr(self, 'bg_thresh')
+        self.bg_thresh = list(getattr(self, 'bg_thresh'))
 
         # Diagnostics
         self.isplots_S3 = getattr(self, 'isplots_S3', 3)
