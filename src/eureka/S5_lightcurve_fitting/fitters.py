@@ -463,7 +463,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta,
                          freenames, fitter='emcee', burnin=False)
 
-    if meta.isplots_S5 >= 5:
+    if meta.isplots_S5 >= 3:
         plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
 
     # Make a new model instance
@@ -1032,7 +1032,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_res_distr(lc, model, meta, fitter=fittername)
 
     # plot using corner.py
-    if meta.isplots_S5 >= 5:
+    if meta.isplots_S5 >= 3:
         plots.plot_corner(samples, lc, meta, freenames, fitter=fittername)
 
     # Make a new model instance
