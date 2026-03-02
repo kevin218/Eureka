@@ -19,7 +19,7 @@ class DampedOscillatorModel(Model):
         self.name = 'damped oscillator'
 
         # Define model type (physical, systematic, other)
-        self.modeltype = 'physical'
+        self.modeltype = 'systematic'
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the model at the current (or provided) times.
