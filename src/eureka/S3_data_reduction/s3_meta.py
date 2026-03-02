@@ -288,7 +288,11 @@ class S3MetaClass(MetaClass):
 
         # check for legacy trace offset name
         if hasattr(self, "trace_offset"):
-            self.trace_yoffset = getattr(self, 'trace_offset', None)
+            print("WARNING: s3_meta's trace_offset parameter has been"
+                  " renamed to trace_yoffset.\n  Please switch to "
+                  " using trace_yoffset instead, as support for"
+                  " trace_offset will soon be deprecated.")
+            self.trace_yoffset = self.trace_offset
         else:
             self.trace_yoffset = getattr(self, 'trace_yoffset', None)
 
