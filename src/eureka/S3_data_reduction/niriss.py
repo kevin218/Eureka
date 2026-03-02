@@ -146,8 +146,8 @@ def get_wave(data, meta, log):
     # Calculate offset amount from header (given in arcsec) and
     # NIRISS pixel scale (0.0653 arcsec/px in X direction)
     pixscale = 0.0653 
-    xoffset = data.attrs['mhdr']['XOFFSET'] / pixscale
-    log.writelog(f"  There is an X offset of {xoffset:.3f} pixels",
+    trace_xoffset = data.attrs['mhdr']['XOFFSET'] / pixscale
+    log.writelog(f"  There is an X offset of {trace_xoffset:.3f} pixels",
                  mute=(not meta.verbose))
 
     norders = len(meta.all_orders)
@@ -160,7 +160,7 @@ def get_wave(data, meta, log):
 
     for order in meta.all_orders:
         # Get trace for the given order and pupil position
-        if xoffset > 0:
+        if trace_xoffset > 0:
             # Need to translate trace position before rotating
             trace = get_soss_traces(pwcpos=base_pwcpos, 
                                     order=str(order), interp=True)
@@ -168,22 +168,22 @@ def get_wave(data, meta, log):
             trace = get_soss_traces(pwcpos=pwcpos, 
                                     order=str(order), interp=True)
         if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96' and \
-                meta.trace_offset is None:
+                meta.trace_yoffset is None:
             # PASTASOSS doesn't account for different substrip starting rows;
             # therefore, set trace offset to best guess (-12 pixels).
-            meta.trace_offset = -12
-        if meta.trace_offset is not None:
+            meta.trace_yoffset = -12
+        if meta.trace_yoffset is not None:
             # Shift trace
-            trace.y += meta.trace_offset
+            trace.y += meta.trace_yoffset
 
             # Shift pivot for potential x offset operations
-            pivots[order-1][1] += meta.trace_offset
+            pivots[order-1][1] += meta.trace_yoffset
 
             subarray = data.attrs['mhdr']['SUBARRAY']
-            log.writelog(f"  Shifting trace by {meta.trace_offset} pixels "
+            log.writelog(f"  Shifting trace by {meta.trace_yoffset} pixels "
                          f"for {subarray} and Order {order}.",
                          mute=(not meta.verbose))
-        if xoffset > 0:
+        if trace_xoffset > 0:
             # Shift trace before pupil wheel rotation correction
             # starting from nominal pupil wheel position
             base_x = trace.x
@@ -198,7 +198,7 @@ def get_wave(data, meta, log):
             
             # If using a custom X-direction offset, 
             # shift X dimension by xoffset pixels
-            shift_x = base_x - xoffset
+            shift_x = base_x - trace_xoffset
 
             # Extrapolate trace to longer wavelengths 
             # by fitting an 8th order polynomial
@@ -209,7 +209,7 @@ def get_wave(data, meta, log):
                 domain=[shift_x[0], shift_x[-1]])(shift_x)
             
             wav_interp = np.polynomial.polynomial.Polynomial.fit(
-                base_x, base_wav, 8, 
+                base_x, base_wav, fitdeg, 
                 domain=[shift_x[0], shift_x[-1]])(shift_x)
 
             # Rotate trace only after translating to new offset wavelengths
@@ -220,7 +220,7 @@ def get_wave(data, meta, log):
             trace.wavelength = rotate_wav
 
             subarray = data.attrs['mhdr']['SUBARRAY']
-            log.writelog(f"  Shifting trace by {xoffset} pixels "
+            log.writelog(f"  Shifting trace by {trace_xoffset} pixels "
                          f"in X direction for {subarray} and Order {order}.",
                          mute=(not meta.verbose))
 

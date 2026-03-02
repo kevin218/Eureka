@@ -285,7 +285,12 @@ class S3MetaClass(MetaClass):
         self.orders = getattr(self, 'orders', [1, 2])
         self.all_orders = getattr(self, 'all_orders', [1, 2])
         self.record_ypos = getattr(self, 'record_ypos', False)
-        self.trace_offset = getattr(self, 'trace_offset', None)
+
+        # check for legacy trace offset name
+        if hasattr(self, "trace_offset"):
+            self.trace_yoffset = getattr(self, 'trace_offset', None)
+        else:
+            self.trace_yoffset = getattr(self, 'trace_yoffset', None)
 
         self.set_spectral_defaults()
 
