@@ -166,22 +166,22 @@ def exotic_ld(meta, spec, log, white=False):
         # generate limb-darkening coefficients for each bin
         lin[i] = sld.compute_linear_ld_coeffs(
             wavelength_range[i], mode, custom_wavelengths,
-            custom_throughput)[0]
+            custom_throughput, mu_min=meta.minmu)[0]
         quad[i] = sld.compute_quadratic_ld_coeffs(
             wavelength_range[i], mode, custom_wavelengths,
-            custom_throughput)
+            custom_throughput, mu_min=meta.minmu)
         kipping2013[i] = sld.compute_kipping_ld_coeffs(
             wavelength_range[i], mode, custom_wavelengths,
-            custom_throughput)
+            custom_throughput, mu_min=meta.minmu)
         sqrt[i] = sld.compute_squareroot_ld_coeffs(
             wavelength_range[i], mode, custom_wavelengths,
-            custom_throughput)
+            custom_throughput, mu_min=meta.minmu)
         nonlin_3[i] = sld.compute_3_parameter_non_linear_ld_coeffs(
             wavelength_range[i], mode, custom_wavelengths,
-            custom_throughput)
+            custom_throughput, mu_min=meta.minmu)
         nonlin_4[i] = sld.compute_4_parameter_non_linear_ld_coeffs(
             wavelength_range[i], mode, custom_wavelengths,
-            custom_throughput)
+            custom_throughput, mu_min=meta.minmu)
 
     return lin, quad, kipping2013, sqrt, nonlin_3, nonlin_4
 
