@@ -35,6 +35,7 @@ compute_ld      False   # Options: exotic-ld, spam, False
 metallicity     0.1     # Metallicity of the star
 teff            6000    # Effective temperature of the star in K
 logg            4.0     # Surface gravity in log g
+minmu			0.2		# minimum mu to use when calculating LD in ExoTiC-LD
 exotic_ld_direc /home/User/exotic-ld_data/ # Directory for ancillary files for exotic-ld, download from: https://zenodo.org/doi/10.5281/zenodo.6047317
 exotic_ld_grid  stagger # You can choose from kurucz (or 1D), stagger (or 3D), mps1, or mps2 model grids, or custom (to use custom_si_grid below)
 # custom_si_grid  /home/User/path/to/custom/stellar/intensity/profile  #Custom Stellar Intensity profile. For examples see Eureka/demos/JWST/Custom_Stellar_Intensity_Files
