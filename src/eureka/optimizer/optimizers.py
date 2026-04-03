@@ -188,7 +188,7 @@ def sweep_list_lt(bounds_var, meta, log, stage, **kwargs):
     Parametric sweep for two interdependent variables where var1 < var2.
 
     Optimize two interdependent variables (where var1 < var2) using parametric
-    sweep.  This function returns the best parameter and resulting fitness score
+    sweep. This function returns the best parameter and resulting fitness score
     after sweeping through every value within the specified bounds .
 
     Parameters:
