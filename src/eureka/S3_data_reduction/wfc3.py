@@ -126,7 +126,9 @@ def get_reference_frames(meta, log):
                 meta.iref[i] -= 1
 
     # Make sure that the scan directions are in the right order
-    if len(meta.iref) > 1 and meta.iref[0] % 2 != 0:
+    if len(meta.iref) > 1 and meta.iref[0] % 2 != 0 and meta.scandir[0] == 0:
+        meta.iref = meta.iref[::-1]
+    elif len(meta.iref) > 1 and meta.iref[0] % 2 == 0 and meta.scandir[0] != 0:
         meta.iref = meta.iref[::-1]
 
     # Save the reference frame for each scan direction
