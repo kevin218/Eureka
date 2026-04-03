@@ -130,6 +130,9 @@ class S6MetaClass(MetaClass):
         self.isplots_S6 = getattr(self, 'isplots_S6', 5)
         self.hide_plots = getattr(self, 'hide_plots', True)
 
+        # Redefining if not done so in earlier stages
+        self.run_dynamic = getattr(self, 'run_dynamic', False)
+
         # Project directory
         self.topdir = getattr(self, 'topdir')  # Must be provided in the ECF
 

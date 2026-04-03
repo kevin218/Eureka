@@ -105,12 +105,16 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
             t0 = time_pkg.time()
 
-            meta.spec_hw = spec_hw_val
-            meta.bg_hw = bg_hw_val
-
             # Load in the S3 metadata used for this particular aperture pair
-            if meta.data_format == 'eureka':
+            if (meta.data_format == 'eureka' and
+                    (meta.spec_hw != spec_hw_val or meta.bg_hw != bg_hw_val)):
+                meta.spec_hw = spec_hw_val
+                meta.bg_hw = bg_hw_val
                 meta = load_specific_s3_meta_info(meta)
+            elif meta.data_format != 'eureka':
+                meta.spec_hw = spec_hw_val
+                meta.bg_hw = bg_hw_val
+
             # Directory structure should not use expanded HW values
             spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
                 meta.expand, spec_hw_val, bg_hw_val)

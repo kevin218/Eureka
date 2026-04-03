@@ -306,6 +306,16 @@ class S3MetaClass(MetaClass):
         self.xwindow = getattr(self, 'xwindow', [6, 2043])
         self.ywindow = getattr(self, 'ywindow', [0, -1])
 
+        # check for legacy trace offset name
+        if hasattr(self, "trace_offset"):
+            print("WARNING: s3_meta's trace_offset parameter has been"
+                  " renamed to trace_yoffset.\n  Please switch to "
+                  " using trace_yoffset instead, as support for"
+                  " trace_offset will soon be deprecated.")
+            self.trace_yoffset = self.trace_offset
+        else:
+            self.trace_yoffset = getattr(self, 'trace_yoffset', None)
+
         self.set_spectral_defaults()
 
     def set_WFC3_defaults(self):

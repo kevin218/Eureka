@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from . import drift
 from . import generate_LD
 from . import plots_s4

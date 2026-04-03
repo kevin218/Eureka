@@ -707,9 +707,30 @@ def median_frame(data, meta, m, medflux, order=None):
     plt.imshow(medflux, origin='lower', aspect='auto',
                vmin=vmin, vmax=vmax, interpolation='nearest',
                extent=[xmin, xmax, ymin, ymax], cmap=cmap)
-    plt.colorbar()
+
+    # Overplot nominal spectral trace for NIRISS SOSS
+    # (TODO: Probably also useful for NIRSpec, etc.)
+    if meta.inst == "niriss":
+        if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96':
+            order = 1
+            trace = data["trace"].sel(order=order)
+            
+            plt.plot(data.flux.x.values, trace, 
+                     c="white", lw=2)
+            plt.plot(data.flux.x.values, trace, 
+                     "--k", lw=1, label=f"Trace Order {order}")
+        else:
+            for order in meta.all_orders:
+                trace = data["trace"].sel(order=order)
+                plt.plot(data.flux.x.values, trace, 
+                         c="white", lw=2)
+                plt.plot(data.flux.x.values, trace, 
+                         "--k", lw=1, label=f"Trace Order {order}")
+
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
+
+    plt.legend()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     if order is None:
@@ -1455,7 +1476,7 @@ def get_bounds(x, y=None):
     ----------
     x : 1D array
         Pixel indices along x axis.
-    y : 1D array, optional
+    y : 1D array; optional
         Pixel indices along y axis.
 
     Returns
@@ -1464,9 +1485,9 @@ def get_bounds(x, y=None):
         Minimum x bound
     xmax
         Maximum x bound
-    ymin, optional
+    ymin; optional
         Minimum y bound
-    ymax, optional
+    ymax; optional
         Maximum y bound
 
     """

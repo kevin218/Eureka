@@ -7,13 +7,12 @@ from .Model import Model
 from ..likelihood import update_uncertainty
 from ...lib.split_channels import split
 
-# tinygp is not supported yet
 try:
     import tinygp
 except ModuleNotFoundError:
-    # tinygp isn't supported yet, so don't throw an exception if it
-    # isn't installed
-    pass
+    # tinygp is optional and isn't supported yet, so don't throw an exception
+    # if it isn't installed
+    tinygp = None
 
 
 class GPModel(Model):
@@ -25,28 +24,25 @@ class GPModel(Model):
 
         Parameters
         ----------
-        kernel_types : list
-            The types of GP kernels to use.
-        kernel_input_names : list
-            The names of the GP kernel inputs.
+        kernel_types : list[str]
+            The types of GP kernels to use (e.g., ['Matern32']).
+        kernel_input_names : list[str]
+            Names of GP inputs (currently only 'time' is supported).
         lc : eureka.S5_lightcurve_fitting.lightcurve
             The current lightcurve object.
-        gp_code : str; optional
-            Type GP package to use from ('george', 'celerite'),
-            by default 'celerite'.
+        gp_code_name : {'george','celerite','tinygp'}; optional
+            GP backend. Default is 'celerite'.
         normalize : bool; optional
-            If True, normalize the covariate by mean subtracting it and
-            dividing by the standard deviation. By default, False.
+            If True, standardize inputs (mean 0, std 1). Default False.
+            For details on the benefits of normalization, see e.g.
+            Evans et al. 2017.
         useHODLR : bool; optional
-            If True, use george's HODLRSolver instead of the default solver.
-            Only relevant if gp_code is 'george'. By default, False.
+            If True and gp_code_name == 'george', use george's HODLRSolver.
+            Default is False.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
-            Can pass in the parameters, longparamlist, nchan, and
-            paramtitles arguments here.
         """
-        # Inherit from Model class
         super().__init__(kernel_types=kernel_types,
                          nkernels=len(kernel_types),
                          kernel_input_names=kernel_input_names,
@@ -63,87 +59,52 @@ class GPModel(Model):
         # Do some initial sanity checks and raise errors if needed
         if self.gp_code_name == 'celerite':
             if self.nkernels > 1:
-                raise AssertionError('Celerite2 cannot compute multi-'
-                                     'dimensional GPs. Please choose a '
-                                     'different GP code')
-            elif self.kernel_types[0] != 'Matern32':
-                raise AssertionError('Our celerite2 implementation currently '
-                                     'only supports a Matern32 kernel.')
-
-        # Setup coefficients
-        self.coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2))
-        self._parse_coeffs()
-
-    def _parse_coeffs(self):
-        """Convert dict of coefficients into an array."""
-        # Parse parameters as coefficients
-        for c in range(self.nchannel_fitted):
-            if self.nchannel_fitted > 1:
-                chan = self.fitted_channels[c]
-            else:
-                chan = 0
-
-            if chan == 0:
-                chankey = ''
-            else:
-                chankey = f'_ch{chan}'
-
-            for i, par in enumerate(['A', 'm']):
-                for k in range(self.nkernels):
-                    if k == 0:
-                        kernelkey = ''
-                    else:
-                        kernelkey = str(k)
-
-                    try:
-                        index = f'{par}{kernelkey}{chankey}'
-                        self.coeffs[c, k, i] = self.parameters.dict[index][0]
-                    except KeyError:
-                        pass
+                raise AssertionError(
+                    'celerite2 cannot compute multi-dimensional GPs. '
+                    'Use a single kernel or a different GP backend.'
+                )
+            if self.kernel_types[0] != 'Matern32':
+                raise AssertionError(
+                    'Our celerite2 implementation currently supports only '
+                    'a Matern32 kernel.'
+                )
 
     def update(self, newparams, **kwargs):
+        """Update parameters and refresh uncertainty fit array."""
         # Inherit from Model class
         super().update(newparams, **kwargs)
-
         self.unc_fit = update_uncertainty(newparams, self.nints, self.unc,
                                           self.freenames, self.nchannel_fitted)
 
     def eval(self, fit_lc, channel=None, gp=None, **kwargs):
-        """Compute GP with the given parameters
+        """Compute the GP predictive mean of residuals.
 
         Parameters
         ----------
         fit_lc : ndarray
-            The rest of the current model evaluated.
+            The current (non-GP) model evaluation.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
         gp : celerite2.GP, george.GP, or tinygp.GaussianProcess; optional
-            The current GP object.
+            Pre-built GP object to reuse; if None, a new one is created.
         **kwargs : dict
-            Must pass in the time array here if not already set.
+            Must include 'time' if self.time is None.
 
         Returns
         -------
-        lcfinal : ndarray
-            Predicted systematics model
+        lcfinal : np.ma.MaskedArray
+            Predicted GP systematics (same shape as time).
         """
         input_gp = gp
-
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
+        nchan, channels = self._channels(channel)
 
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
         lcfinal = np.ma.array([])
-        for c in range(nchan):
+        for chan in channels:
             if self.nchannel_fitted > 1:
-                chan = channels[c]
                 # get flux and uncertainties for current channel
                 flux, unc_fit = split([self.flux, self.unc_fit],
                                       self.nints, chan)
@@ -154,7 +115,6 @@ class GPModel(Model):
                     # that channel's fitted model will be passed in
                     fit_temp = fit_lc
             else:
-                chan = 0
                 # get flux and uncertainties for current channel
                 flux = self.flux
                 fit_temp = fit_lc
@@ -168,26 +128,34 @@ class GPModel(Model):
 
             # Remove poorly handled masked values
             good = ~np.ma.getmaskarray(residuals)
-            unc_fit = unc_fit[good]
-            residuals = residuals[good]
+            unc_good = unc_fit[good]
+            res_good = residuals[good]
 
-            # Create the GP object with current parameters
+            # Build or reuse the GP object
             if input_gp is None:
                 gp = self.setup_GP(chan)
             else:
                 gp = input_gp
+                # If caller passed a pre-built GP, we may still need
+                # to the compute the inputs.
+                if self.kernel_inputs is None:
+                    self.setup_inputs()
 
             if self.gp_code_name == 'george':
-                gp.compute(self.kernel_inputs[chan][:, good].T, unc_fit)
-                mu = gp.predict(residuals, self.kernel_inputs[chan][:, good].T,
-                                return_cov=False)
+                kin = self.kernel_inputs[chan][:, good].T
+                gp.compute(kin, unc_good)
+                mu = gp.predict(res_good, kin, return_cov=False)
             elif self.gp_code_name == 'celerite':
-                kernel_inputs = self.kernel_inputs[chan][0][good]
-                gp.compute(kernel_inputs, yerr=unc_fit)
-                mu = gp.predict(residuals)
+                kin = self.kernel_inputs[chan][0][good]
+                gp.compute(kin, yerr=unc_good)
+                mu = gp.predict(res_good)
             elif self.gp_code_name == 'tinygp':
-                cond_gp = gp.condition(residuals, noise=unc_fit).gp
+                if tinygp is None:
+                    raise RuntimeError('tinygp is not available.')
+                cond_gp = gp.condition(res_good, noise=unc_good).gp
                 mu = cond_gp.loc
+            else:
+                raise ValueError(f'Unknown gp_code_name: {self.gp_code_name}')
 
             # Re-insert and mask bad values
             mu_full = np.ma.zeros(len(time))
@@ -200,33 +168,29 @@ class GPModel(Model):
         return lcfinal
 
     def setup_inputs(self):
-        """Setting up kernel inputs as array and standardizing them if asked.
+        """Build kernel input arrays; standardize if requested.
 
-        For details on the benefits of normalization, see e.g.
-        Evans et al. 2017.
+        Currently supports only 'time' as an input dimension. When
+        normalize=True, inputs are standardized to zero mean and unit std.
         """
-        self.kernel_inputs = []
-        for c in range(self.nchannel_fitted):
-            if self.nchannel_fitted > 1:
-                chan = self.fitted_channels[c]
-            else:
-                chan = 0
-
+        # Store by real channel id to avoid index mismatches.
+        self.kernel_inputs = {}
+        for chan in self.fitted_channels:
+            time = self.time
             if self.multwhite:
-                time = split([self.time, ], self.nints, chan)[0]
-            else:
-                time = self.time
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
 
-            kernel_inputs_channel = np.ma.zeros((0, time.size))
+            kin_chan = np.ma.zeros((0, time.size))
             for name in self.kernel_input_names:
                 if name == 'time':
                     x = np.ma.copy(self.time)
                 else:
                     # add more input options here
-                    raise ValueError('Currently, only GPs as a function of '
-                                     'time are supported, but you have '
-                                     'specified a GP as a function of '
-                                     f'{name}.')
+                    raise ValueError(
+                        'Only time-based GPs are currently supported; '
+                        f"received '{name}'."
+                    )
 
                 if self.multwhite:
                     x = split([x, ], self.nints, chan)[0]
@@ -234,34 +198,30 @@ class GPModel(Model):
                 if self.normalize:
                     x = (x-np.ma.mean(x))/np.ma.std(x)
 
-                kernel_inputs_channel = np.ma.append(kernel_inputs_channel,
-                                                     x[np.newaxis], axis=0)
+                kin_chan = np.ma.append(kin_chan, x[np.newaxis], axis=0)
 
-            self.kernel_inputs.append(kernel_inputs_channel)
+            self.kernel_inputs[chan] = kin_chan
 
-    def setup_GP(self, c=0):
-        """Set up GP kernels and GP object.
+    def setup_GP(self, chan=0):
+        """Construct the GP object for channel index c.
 
         Parameters
         ----------
-        c : int; optional
+        chan : int; optional
             The current channel index. Defaults to 0.
 
         Returns
         -------
-        celerite2.GP, george.GP, or tinygp.GaussianProcess
-            The GP object to use for this fit.
+        celerite2.GaussianProcess, george.GP, or tinygp.GaussianProcess
+            The GP instance for the requested backend.
         """
-        # Parse parameters as coefficients
-        self._parse_coeffs()
-
         if self.kernel_inputs is None:
             self.setup_inputs()
 
-        # get the kernel which is the sum of the individual kernel functions
-        kernel = self.get_kernel(self.kernel_types[0], 0, c)
+        # Build kernel as a sum over per-kernel components
+        kernel = self.get_kernel(self.kernel_types[0], 0, chan)
         for k in range(1, self.nkernels):
-            kernel += self.get_kernel(self.kernel_types[k], k, c)
+            kernel += self.get_kernel(self.kernel_types[k], k, chan)
 
         # Make the gp object
         if self.gp_code_name == 'george':
@@ -273,26 +233,27 @@ class GPModel(Model):
         elif self.gp_code_name == 'celerite':
             gp = celerite2.GaussianProcess(kernel, mean=0, fit_mean=False)
         elif self.gp_code_name == 'tinygp':
-            if self.nchannel_fitted > 1:
-                chan = self.fitted_channels[c]
-            else:
-                chan = 0
+            if tinygp is None:
+                raise RuntimeError('tinygp is not available.')
             gp = tinygp.GaussianProcess(kernel, self.kernel_inputs[chan].T,
                                         mean=0)
+        else:
+            raise ValueError(f'Unknown gp_code_name: {self.gp_code_name}')
 
         return gp
 
-    def get_kernel(self, kernel_name, k, c=0):
-        """Get individual kernels.
+    def get_kernel(self, kernel_name, k, chan=0):
+        """Return a backend-specific kernel instance.
 
         Parameters
         ----------
         kernel_name : str
-            The name of the kernel to get.
+            Kernel type ('Matern32', 'ExpSquared', 'RationalQuadratic',
+            'Exp').
         k : int
-            The kernel number.
-        c : int; optional
-            The channel index, by default 0.
+            Kernel index (0-based).
+        chan : int; optional
+            The current channel index. Defaults to 0.
 
         Returns
         -------
@@ -302,13 +263,17 @@ class GPModel(Model):
         Raises
         ------
         AssertionError
-            george and tinygp currently only support the Matern32, ExpSquared,
-            RationalQuadratic, and Exp kernels.
+            When an unsupported kernel/backend combination is requested.
         """
+        # Read per-kernel, per-channel params on demand using suffix rules.
+        # A{ki}, m{ki} where ki = '' for k==0 else '1','2',...
+        ki = '' if k == 0 else str(k)
+        amp_log = self._get_param_value(f'A{ki}', chan=chan)
+        metric_log = self._get_param_value(f'm{ki}', chan=chan)
+
         if self.gp_code_name == 'george':
-            # get metric and amplitude for the current kernel and channel
-            amp = np.exp(self.coeffs[c, k, 0])
-            metric = np.exp(self.coeffs[c, k, 1]*2)
+            amp = np.exp(amp_log)
+            metric = np.exp(metric_log*2)
 
             if kernel_name == 'Matern32':
                 kernel = amp*kernels.Matern32Kernel(
@@ -323,20 +288,23 @@ class GPModel(Model):
                 kernel = amp*kernels.ExpKernel(
                     metric, ndim=self.nkernels, axes=k)
             else:
-                raise AssertionError(f'The kernel {kernel_name} is not in the '
-                                     'currently supported list of kernels for '
-                                     'george which includes:\nMatern32, '
-                                     'ExpSquared, RationalQuadratic, Exp.')
+                raise AssertionError(
+                    f'Unsupported kernel for george: {kernel_name}. '
+                    'Supported: Matern32, ExpSquared, RationalQuadratic, Exp.'
+                )
         elif self.gp_code_name == 'celerite':
-            # get metric and amplitude for the current kernel and channel
-            sigma = np.sqrt(np.exp(self.coeffs[c, k, 0]))
-            metric = np.exp(self.coeffs[c, k, 1])
-
-            kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=metric)
+            # celerite2: Matern32 term with sigma, rho
+            sigma = np.sqrt(np.exp(amp_log))
+            rho = np.exp(metric_log)
+            if kernel_name != 'Matern32':
+                raise AssertionError('celerite2 path only supports Matern32,'
+                                     f' got {kernel_name}.')
+            kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=rho)
         elif self.gp_code_name == 'tinygp':
-            # get metric and amplitude for the current kernel and channel
-            amp = np.exp(self.coeffs[c, k, 0])
-            metric = np.exp(self.coeffs[c, k, 1]*2)
+            if tinygp is None:
+                raise RuntimeError('tinygp is not available.')
+            amp = np.exp(amp_log)
+            metric = np.exp(metric_log*2)
 
             if kernel_name == 'Matern32':
                 kernel = amp*tinygp.kernels.Matern32(metric)
@@ -348,39 +316,35 @@ class GPModel(Model):
             elif kernel_name == 'Exp':
                 kernel = amp*tinygp.kernels.Exp(metric)
             else:
-                raise AssertionError(f'The kernel {kernel_name} is not in the '
-                                     'currently supported list of kernels for '
-                                     'tinygp which includes:\nMatern32, '
-                                     'ExpSquared, RationalQuadratic, Exp.')
+                raise AssertionError(
+                    f'Unsupported kernel for tinygp: {kernel_name}. '
+                    'Supported: Matern32, ExpSquared, '
+                    'RationalQuadratic, Exp.')
+        else:
+            raise ValueError(f'Unknown gp_code_name: {self.gp_code_name}')
 
         return kernel
 
     def loglikelihood(self, fit_lc, channel=None):
-        """Compute log likelihood of GP
+        """Compute the GP log-likelihood.
 
         Parameters
         ----------
         fit_lc : ndarray
-            The fitted model.
+            The fitted (non-GP) model.
         channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
+            If provided, evaluate only that channel. Defaults to None.
 
         Returns
         -------
         float
-            log likelihood of the GP evaluated by george/tinygp/celerite2
+            Log-likelihood from the selected GP backend.
         """
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
+        nchan, channels = self._channels(channel)
 
-        logL = 0
-        for c in np.arange(nchan):
+        logL = 0.
+        for chan in channels:
             if self.nchannel_fitted > 1:
-                chan = channels[c]
                 # get flux and uncertainties for current channel
                 flux, unc_fit = split([self.flux, self.unc_fit],
                                       self.nints, chan)
@@ -391,7 +355,6 @@ class GPModel(Model):
                     # that channel's fitted model will be passed in
                     fit_temp = fit_lc
             else:
-                chan = 0
                 # get flux and uncertainties for current channel
                 flux = self.flux
                 fit_temp = fit_lc
@@ -405,22 +368,26 @@ class GPModel(Model):
 
             # Remove poorly handled masked values
             good = ~np.ma.getmaskarray(residuals)
-            unc_fit = unc_fit[good]
-            residuals = residuals[good]
+            unc_good = unc_fit[good]
+            res_good = residuals[good]
 
             # set up GP with current parameters
             gp = self.setup_GP(chan)
 
             if self.gp_code_name == 'george':
-                gp.compute(self.kernel_inputs[chan][:, good].T, unc_fit)
-                logL_temp = gp.lnlikelihood(residuals, quiet=True)
+                kin = self.kernel_inputs[chan][:, good].T
+                gp.compute(kin, unc_good)
+                logL += gp.lnlikelihood(res_good, quiet=True)
             elif self.gp_code_name == 'celerite':
-                kernel_inputs = self.kernel_inputs[chan][0][good]
-                gp.compute(kernel_inputs, yerr=unc_fit)
-                logL_temp = gp.log_likelihood(residuals)
+                kin = self.kernel_inputs[chan][0][good]
+                gp.compute(kin, yerr=unc_good)
+                logL += gp.log_likelihood(res_good)
             elif self.gp_code_name == 'tinygp':
-                cond = gp.condition(residuals, diag=unc_fit)
-                logL_temp = cond.log_probability
-            logL += logL_temp
+                if tinygp is None:
+                    raise RuntimeError('tinygp is not available.')
+                cond = gp.condition(res_good, diag=unc_good)
+                logL += cond.log_probability
+            else:
+                raise ValueError(f'Unknown gp_code_name: {self.gp_code_name}')
 
         return logL

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from . import bias_sub
 from . import group_level
 from . import ramp_fitting
