@@ -290,8 +290,9 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     """
     # Setup Stage 3 Meta object and overwrite certain Meta values
     s3_meta = S3MetaClass(folder=ecf_path, eventlabel=eventlabel)
+    s3_meta.topdir = meta.outputdir
     s3_meta.inputdir = meta.s2_inputdir
-    s3_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage3')
+    s3_meta.outputdir = 'Stage3'
     s3_meta.isopt_S1 = meta.isopt_S1
     s3_meta.isopt_S3 = meta.isopt_S3
     s3_meta.isplots_S3 = meta.isplots_S3opt
@@ -300,9 +301,9 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
 
     # Setup Stage 4 Meta object and overwrite certain Meta values
     s4_meta = S4MetaClass(folder=ecf_path, eventlabel=eventlabel)
-    s4_meta.inputdir = os.path.join(meta.outputdir, 'Stage3')
-    s4_meta.inputdir_raw = s4_meta.inputdir[len(meta.topdir):]
-    s4_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage4')
+    s4_meta.topdir = meta.outputdir
+    s4_meta.inputdir = s3_meta.outputdir
+    s4_meta.outputdir = 'Stage4'
     s4_meta.isplots_S4 = meta.isplots_S3opt
     s4_meta.verbose = meta.verbose
     s4_meta.nspecchan = 1
