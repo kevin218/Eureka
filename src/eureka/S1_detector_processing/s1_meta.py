@@ -49,6 +49,8 @@ class S1MetaClass(MetaClass):
 
         # Control ramp fitting method
         self.ramp_fit_algorithm = getattr(self, 'ramp_fit_algorithm', 'OLS_C')
+        if self.ramp_fit_algorithm == 'default':
+            self.ramp_fit_algorithm = 'OLS_C'
         self.ramp_fit_firstgroup = getattr(self, 'ramp_fit_firstgroup', None)
         self.ramp_fit_lastgroup = getattr(self, 'ramp_fit_lastgroup', None)
         self.ramp_fit_suppress_one_group = getattr(
