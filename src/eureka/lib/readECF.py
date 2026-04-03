@@ -185,6 +185,29 @@ class MetaClass:
                   f'previous stage but is now {value} in this stage. This may '
                   'cause unexpected or undesireable behaviors.')
 
+        if item == 'topdir':
+            if value[-1] != os.sep:
+                # Make sure topdir ends with a separator
+                value += os.sep
+        elif item == 'inputdir' and hasattr(self, 'topdir'):
+            if self.topdir in value:
+                # Strip off the topdir if it's included in the inputdir
+                value = value.replace(self.topdir, '')
+            if value[-1] != os.sep:
+                # Make sure inputdir ends with a separator
+                value += os.sep
+            self.inputdir_raw = value
+            value = os.path.join(self.topdir, *value.split(os.sep))
+        elif item == 'outputdir' and hasattr(self, 'topdir'):
+            if self.topdir in value:
+                # Strip off the topdir if it's included in the outputdir
+                value = value.replace(self.topdir, '')
+            if value[-1] != os.sep:
+                # Make sure outputdir ends with a separator
+                value += os.sep
+            self.outputdir_raw = value
+            value = os.path.join(self.topdir, *value.split(os.sep))
+
         # Set the attribute
         self.__dict__[item] = value
 
@@ -232,25 +255,14 @@ class MetaClass:
                 pass
             self.params[name] = val
 
+        # Need to define these now otherwise the following loop will complain
+        # about changing dictionary size
+        self.params['inputdir_raw'] = self.params['inputdir']
+        self.params['outputdir_raw'] = self.params['outputdir']
+
         # Store each as an attribute
         for param, value in self.params.items():
             setattr(self, param, value)
-
-        self.inputdir_raw = self.inputdir
-        self.outputdir_raw = self.outputdir
-
-        # Join inputdir_raw and outputdir_raw to topdir for convenience
-        # Use split to avoid issues from beginning
-        self.inputdir = os.path.join(self.topdir,
-                                     *self.inputdir.split(os.sep))
-        self.outputdir = os.path.join(self.topdir,
-                                      *self.outputdir.split(os.sep))
-
-        # Make sure there's a trailing slash at the end of the paths
-        if self.inputdir[-1] != os.sep:
-            self.inputdir += os.sep
-        if self.outputdir[-1] != os.sep:
-            self.outputdir += os.sep
 
     def write(self, folder):
         """Write an ECF file based on the current MetaClass settings.

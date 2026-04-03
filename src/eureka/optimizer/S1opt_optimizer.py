@@ -276,27 +276,25 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     """
     # Setup Stage 1 Meta object and overwrite certain Meta values
     s1_meta = S1MetaClass(folder=ecf_path, eventlabel=eventlabel)
-    s1_meta.inputdir = meta.s0_inputdir
-    s1_meta.inputdir_raw = s1_meta.inputdir[len(meta.topdir):]
-    s1_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage1')
+    s1_meta.topdir = meta.topdir
+    s1_meta.inputdir = meta.inputdir
+    s1_meta.outputdir = os.path.join(meta.outputdir, 'Stage1')
     s1_meta.isplots_S1 = meta.isplots_S1opt
     s1_meta.verbose = meta.verbose
 
     # Setup Stage 2 Meta object and overwrite certain Meta values
     s2_meta = S2MetaClass(folder=ecf_path, eventlabel=eventlabel)
-    # s2_meta.suffix = 'rateints'
-    s2_meta.inputdir = os.path.join(meta.outputdir, 'Stage1')
-    s2_meta.inputdir_raw = s2_meta.inputdir[len(meta.topdir):]
-    s2_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage2')
+    s2_meta.topdir = meta.outputdir
+    s2_meta.inputdir = s1_meta.outputdir
+    s2_meta.outputdir = 'Stage2'
     s2_meta.isplots_S2 = meta.isplots_S1opt
     s2_meta.verbose = meta.verbose
 
     # Setup Stage 3 Meta object and overwrite certain Meta values
     s3_meta = S3MetaClass(folder=ecf_path, eventlabel=eventlabel)
-    # s3_meta.suffix = 'calints'
-    s3_meta.inputdir = os.path.join(meta.outputdir, 'Stage2')
-    s3_meta.inputdir_raw = s3_meta.inputdir[len(meta.topdir):]
-    s3_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage3')
+    s3_meta.topdir = meta.outputdir
+    s3_meta.inputdir = s2_meta.outputdir
+    s3_meta.outputdir = 'Stage3'
     s3_meta.isopt_S1 = meta.isopt_S1
     s3_meta.isopt_S3 = meta.isopt_S3
     s3_meta.isplots_S3 = meta.isplots_S1opt
@@ -305,13 +303,18 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
 
     # Setup Stage 4 Meta object and overwrite certain Meta values
     s4_meta = S4MetaClass(folder=ecf_path, eventlabel=eventlabel)
-    s4_meta.inputdir = os.path.join(meta.outputdir, 'Stage3')
-    s4_meta.inputdir_raw = s4_meta.inputdir[len(meta.topdir):]
-    s4_meta.outputdir_raw = os.path.join(meta.outputdir_raw, 'Stage4')
+    s4_meta.topdir = meta.outputdir
+    s4_meta.inputdir = s3_meta.outputdir
+    s4_meta.outputdir = 'Stage4'
     s4_meta.isplots_S4 = meta.isplots_S1opt
     s4_meta.verbose = meta.verbose
     s4_meta.nspecchan = 1
     s4_meta.compute_ld = False
+
+    for meta in [s1_meta, s2_meta, s3_meta, s4_meta]:
+        print(meta)
+        print()
+    abcd()
 
     return s1_meta, s2_meta, s3_meta, s4_meta
 
