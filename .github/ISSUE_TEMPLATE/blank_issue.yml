@@ -31,6 +31,7 @@ body:
     attributes:
       label: Error traceback output
       description: If relevant, please copy and paste the full traceback of any errors you encountered.
+      render: shell
   - type: input
     id: OS
     attributes:
@@ -41,12 +42,13 @@ body:
     attributes:
       label: What version of Python are you running?
       description: If you're not sure, open a terminal with the environment you're running Eureka! in and type "python --version"
-      placeholder: E.g., Python 3.7
+      placeholder: E.g., Python 3.11
   - type: textarea
     id: package_list
     attributes:
       label: What Python packages do you have installed?
       description: To get a full list, open a terminal with the environment you're running Eureka! in and type "conda list". Paste the full output here.
+      render: shell
   - type: checkboxes
     id: terms
     attributes:

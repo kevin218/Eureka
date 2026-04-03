@@ -7,6 +7,7 @@ from ..utils import COLORS
 from ...lib.readEPF import Parameters
 from ...lib.split_channels import split
 from ...lib import plots
+from ...lib.util import resolve_param_key
 
 
 class Model:
@@ -29,7 +30,8 @@ class Model:
         self.nchannel = kwargs.get('nchannel', 1)
         self.nchannel_fitted = kwargs.get('nchannel_fitted', 1)
         self.fitted_channels = kwargs.get('fitted_channels', [0, ])
-        self.multwhite = kwargs.get('multwhite')
+        self.wl_groups = kwargs.get('wl_groups', None)
+        self.multwhite = kwargs.get('multwhite', False)
         self.nints = kwargs.get('nints')
         self.fitter = kwargs.get('fitter', None)
         self.time = kwargs.get('time', None)
@@ -46,6 +48,137 @@ class Model:
         for arg, val in kwargs.items():
             if arg != 'log':
                 setattr(self, arg, val)
+
+        if self.wl_groups is None:
+            self.wl_groups = [0, ]*self.nchannel_fitted
+
+        # --- normalize/validate metadata (cast to numpy arrays) ---
+        try:
+            fc = np.asarray(self.fitted_channels, dtype=int).reshape(-1)
+            wg = np.asarray(self.wl_groups, dtype=int).reshape(-1)
+        except Exception as e:
+            raise ValueError(f"Could not parse fitted_channels/wl_groups: {e}")
+
+        if fc.size != int(self.nchannel_fitted):
+            raise ValueError(
+                f"fitted_channels must have length nchannel_fitted "
+                f"(got {fc.size}, expected {self.nchannel_fitted})."
+            )
+        if wg.size != fc.size:
+            raise ValueError(
+                f"wl_groups must be the same length as fitted_channels "
+                f"(got {wg.size} vs {fc.size})."
+            )
+        # Store normalized arrays
+        self.fitted_channels = fc
+        self.wl_groups = wg
+        # Build quick lookup table from real channel id -> position
+        self._chan_to_pos = {int(ch): i for i, ch in enumerate(fc.tolist())}
+
+    def _channels(self, channel=None):
+        """Return the list of channel IDs to evaluate.
+
+        Parameters
+        ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+
+        Returns
+        -------
+        nchan : int
+            The number of channels to evaluate.
+        channels : ndarray
+            The array of channel IDs to evaluate.
+        """
+        if channel is None:
+            channels = self.fitted_channels
+        else:
+            channels = np.array([channel, ])
+        nchan = len(channels)
+        return nchan, channels
+
+    def _wl_for_chan(self, chan):
+        """Return wavelength-group id for a real channel id.
+
+        Parameters
+        ----------
+        chan : int
+            Real channel id present in ``self.fitted_channels``.
+
+        Returns
+        -------
+        int
+            Wavelength-group id for this channel.
+        """
+        try:
+            pos = self._chan_to_pos[chan]
+        except (KeyError, ValueError, TypeError):
+            raise ValueError(
+                f"Channel {chan!r} not found in fitted_channels "
+                f"{self.fitted_channels!r}"
+            )
+        return self.wl_groups[pos]
+
+    def _get_param_value(self, base, default=0.0, *, chan=0, wl=None, pid=0):
+        """Resolve a parameter key (wl > ch > base) and return its value.
+
+        Parameters
+        ----------
+        base : str
+            Base parameter name (e.g., 'c0', 'r0', 'A').
+        default : float or None; optional
+            Fallback value if the parameter is missing. If ``None``,
+            return ``None`` when unresolved or uncastable. Default 0.0.
+        chan : int; optional
+            Channel id to resolve against. Default 0.
+        wl : int or None; optional
+            Wavelength-group id. If None, it will be inferred from ``chan``.
+            Pass ``wl=0`` to target the base (unsuffixed) key without
+            consulting the channel-to-wavelength map.
+        pid : int; optional
+            Planet id for astrophysical parameters (0 for none). Default 0.
+
+        Returns
+        -------
+        float or None
+            Scalar numeric value, or ``None`` if ``default is None`` and the
+            key is missing or cannot be cast to float.
+        """
+        params = getattr(self, "parameters", None)
+
+        if params is None:
+            # No parameters object at all
+            return None if default is None else float(default)
+
+        if wl is None:
+            # Infer wl from chan; raise with guidance if chan isn't present.
+            try:
+                wl = self._wl_for_chan(chan)
+            except ValueError as e:
+                raise ValueError(
+                    f"_get_param_value({base}): cannot infer wl for "
+                    f"chan={chan}; pass wl explicitly (e.g., wl=0 for base)."
+                ) from e
+
+        key = resolve_param_key(base, params, pid=pid, channel=chan, wl=wl)
+        val = getattr(self.parameters, key, default)
+
+        # If unresolved and caller asked for None, propagate None.
+        if val is default and default is None:
+            return None
+
+        # Parameters objects have a .value attribute
+        if hasattr(val, "value"):
+            val = val.value
+
+        # Attempt robust float cast (handles numpy scalars/arrays)
+        try:
+            arr = np.asanyarray(val)
+            if arr.shape == () or arr.size == 1:
+                return float(arr.reshape(-1)[0])
+            return float(arr.flat[0])
+        except (TypeError, ValueError):
+            return None if default is None else float(default)
 
     def __mul__(self, other):
         """Multiply model components to make a combined model.
@@ -68,11 +201,18 @@ class Model:
         # Combine the model parameters too
         parameters = self.parameters + other.parameters
         if self.paramtitles is None:
-            paramtitles = other.paramtitles
-        elif other.paramtitles is not None:
-            paramtitles = self.paramtitles.append(other.paramtitles)
+            if isinstance(other.paramtitles, list):
+                paramtitles = other.paramtitles[:]
+            else:
+                paramtitles = other.paramtitles
+        elif other.paramtitles is None:
+            if isinstance(self.paramtitles, list):
+                paramtitles = self.paramtitles[:]
+            else:
+                paramtitles = self.paramtitles
         else:
-            paramtitles = self.paramtitles
+            # both are present: concatenate
+            paramtitles = self.paramtitles + other.paramtitles
 
         return CompositeModel([copy.copy(self), other], parameters=parameters,
                               paramtitles=paramtitles)
@@ -215,16 +355,9 @@ class Model:
             # For now, the dict and Parameter are separate
             self.parameters.dict[arg][0] = val
             getattr(self.parameters, arg).value = val
-        self._parse_coeffs()
 
         for component in self.components:
             component.update(newparams, **kwargs)
-
-    def _parse_coeffs(self):
-        """A placeholder function to do any additional processing when
-        calling update.
-        """
-        return
 
     @plots.apply_style
     def plot(self, components=False, ax=None, draw=False, color='blue',
@@ -246,7 +379,8 @@ class Model:
         share : bool; optional
             Whether or not this model is a shared model. Defaults to False.
         chan : int; optional
-            The current channel number. Detaults to 0.
+            The real channel id to render. `LightCurve.plot()` passes the
++            correct value; this function now always respects it.
         **kwargs : dict
             Additional parameters to pass to plot and self.eval().
         """
@@ -255,16 +389,23 @@ class Model:
             fig = plt.figure(5103, figsize=(8, 6))
             ax = fig.gca()
 
+        # Validate channel choice (helps catch accidental chan=0 when fitting
+        # a nonzero channel)
+        try:
+            fc = np.asarray(self.fitted_channels).reshape(-1)
+            if fc.size and (chan not in fc):
+                raise ValueError(
+                    f"Model.plot: chan={chan} not in fitted_channels {fc!r}")
+        except Exception:
+            # If fitted_channels is not set/array-like, skip this guard.
+            pass
+
         # Plot the model
         label = self.fitter
         if self.name != self.default_name:
             label += ': '+self.name
 
-        if not share and not self.multwhite:
-            channel = 0
-        else:
-            channel = chan
-        model = self.eval(channel=channel, incl_GP=True, **kwargs)
+        model = self.eval(channel=chan, incl_GP=True, **kwargs)
 
         time = self.time
         if self.multwhite:
