@@ -326,6 +326,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     args=(lc, model, prior1, prior2,
                                           priortype, freenames),
+                                    a=meta.stretch_scale,
                                     pool=pool)
     log.writelog('Running emcee burn-in and production steps...')
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
@@ -336,7 +337,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # log.writelog(f"Mean acceptance fraction: {acceptance_fraction:.3f}",
     #              mute=(not meta.verbose))
     # try:
-    # autocorr = sampler.get_autocorr_time()
+    #     autocorr = sampler.get_autocorr_time()
     #     log.writelog(f"Mean autocorrelation time: {autocorr:.3f} steps",
     #                  mute=(not meta.verbose))
     # except:
@@ -463,7 +464,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta,
                          freenames, fitter='emcee', burnin=False)
 
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
 
     # Make a new model instance
@@ -1032,7 +1033,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_res_distr(lc, model, meta, fitter=fittername)
 
     # plot using corner.py
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter=fittername)
 
     # Make a new model instance
