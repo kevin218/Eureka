@@ -311,10 +311,5 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     s4_meta.nspecchan = 1
     s4_meta.compute_ld = False
 
-    for meta in [s1_meta, s2_meta, s3_meta, s4_meta]:
-        print(meta)
-        print()
-    abcd()
-
     return s1_meta, s2_meta, s3_meta, s4_meta
 
