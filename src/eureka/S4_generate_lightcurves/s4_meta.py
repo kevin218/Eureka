@@ -139,6 +139,7 @@ class S4MetaClass(MetaClass):
                 self.metallicity = getattr(self, 'metallicity')
                 self.teff = getattr(self, 'teff')
                 self.logg = getattr(self, 'logg')
+                self.minmu = getattr(self, 'minmu', 0.1)
 
         # Diagnostics
         self.isplots_S4 = getattr(self, 'isplots_S4', 3)
