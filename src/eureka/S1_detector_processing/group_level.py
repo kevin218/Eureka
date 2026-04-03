@@ -1,9 +1,3 @@
-#! /usr/bin/env python
-
-# File with functions to perform GLBS
-# trace masking,
-# custom ref pixel correction for PRISM
-# EMMay, Nov 2022
 import numpy as np
 
 import scipy.signal as sgn
