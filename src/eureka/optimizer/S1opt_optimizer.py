@@ -96,7 +96,8 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
                                                   ecf_path, 1)
 
     # Save the best dictionary to a pickle file
-    with open(os.path.join(s1opt_meta.outputdir, "best_params.pkl"), "wb") as f:
+    with open(os.path.join(s1opt_meta.outputdir, "best_params.pkl"),
+              "wb") as f:
         pickle.dump(best, f)
 
     # Define and create optimized ECF file path
@@ -105,8 +106,8 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
         os.mkdir(opt_path)
 
     # Update S1 ECF file with optimized parameters
-    s1_meta, s2_meta, s3_meta, s4_meta = initialize_meta(s1opt_meta, eventlabel,
-                                                         ecf_path=None)
+    s1_meta, s2_meta, s3_meta, s4_meta = initialize_meta(
+        s1opt_meta, eventlabel, ecf_path=None)
     for key, value in best.items():
         s1_meta.params[key] = value
         setattr(s1_meta, key, value)
@@ -234,9 +235,9 @@ def optimize(s1opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     if best_param_value is not None:
         # Save results in "best" dictionary
         param_names = p.split("__")
-        if (type(best_param_value) is not list) and \
-            (type(best_param_value) is not np.ndarray):
-                best_param_value = [best_param_value]
+        if (type(best_param_value) is not list and
+                type(best_param_value) is not np.ndarray):
+            best_param_value = [best_param_value]
         for i, param in enumerate(param_names):
             best[param] = best_param_value[i]
 

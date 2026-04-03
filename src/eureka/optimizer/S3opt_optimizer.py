@@ -99,7 +99,8 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     # Combine best parameters from both stages
     best = {**best_s3, **best_s4}
     # Save the best dictionary to a pickle file
-    with open(os.path.join(s3opt_meta.outputdir, "best_params.pkl"), "wb") as f:
+    with open(os.path.join(s3opt_meta.outputdir, "best_params.pkl"),
+              "wb") as f:
         pickle.dump(best, f)
 
     # Plot fitness history
@@ -252,9 +253,9 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage,
     if best_param_value is not None:
         # Save results in "best" dictionary
         param_names = p.split("__")
-        if (type(best_param_value) is not list) and \
-            (type(best_param_value) is not np.ndarray):
-                best_param_value = [best_param_value]
+        if (type(best_param_value) is not list and
+                type(best_param_value) is not np.ndarray):
+            best_param_value = [best_param_value]
         for i, param in enumerate(param_names):
             best[param] = best_param_value[i]
 
