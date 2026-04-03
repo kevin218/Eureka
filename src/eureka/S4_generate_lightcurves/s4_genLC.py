@@ -346,7 +346,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     meta.mask_columns = np.union1d(meta.mask_columns,
                                                    outliers).astype(int)
                 else:
-                    log.writelog(f'No indentified outlier columns.',
+                    log.writelog('No indentified outlier columns.',
                                  mute=(not meta.verbose))
                 if meta.isplots_S4 >= 1:
                     plots_s4.mad_outliers(meta, pp)
