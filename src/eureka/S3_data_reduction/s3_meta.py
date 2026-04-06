@@ -264,8 +264,8 @@ class S3MetaClass(MetaClass):
         self.isrotate = 2
         self.bg_dir = 'CxC'
         self.bg_row_by_row = False
-        self.ywindow = getattr(self, 'ywindow', [10, 72])
-        self.xwindow = getattr(self, 'xwindow', [70, 393])
+        self.ywindow = getattr(self, 'ywindow', [10, 393])
+        self.xwindow = getattr(self, 'xwindow', [11, 61])
 
     def set_NIRCam_defaults(self):
         '''Set Stage 3 specific defaults for NIRCam.
