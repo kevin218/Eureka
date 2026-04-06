@@ -127,8 +127,17 @@ class BatmanTransitModel(Model):
                     continue
 
                 # Make the transit model
-                m_transit = self.transit_model(pl_params, time,
-                                               transittype='primary')
+                try:
+                    m_transit = self.transit_model(pl_params, time,
+                                                   transittype='primary')
+                except RuntimeError:
+                    # Expected batman failure: Kepler solver non-convergence
+                    if "Eccentric anomaly" in str(err):
+                        light_curve = 1e6 * np.ma.ones(time.shape)
+                        break
+                    else:
+                        # Unexpected runtime error — re-raise
+                        raise
                 light_curve *= m_transit.light_curve(pl_params)
 
             lcfinal = np.ma.append(lcfinal, light_curve)
@@ -272,9 +281,19 @@ class BatmanEclipseModel(Model):
                     pl_params.t_secondary = get_ecl_midpt(pl_params)
 
                 # Make the eclipse model
-                m_eclipse = self.transit_model(pl_params,
-                                               self.adjusted_time,
-                                               transittype='secondary')
+                try:
+                    m_eclipse = self.transit_model(pl_params,
+                                                   self.adjusted_time,
+                                                   transittype='secondary')
+                except RuntimeError:
+                    # Expected batman failure: Kepler solver non-convergence
+                    if "Eccentric anomaly" in str(err):
+                        light_curve = 1e6 * np.ma.ones(time.shape)
+                        break
+                    else:
+                        # Unexpected runtime error — re-raise
+                        raise
+
                 light_curve += m_eclipse.light_curve(pl_params)-1
 
             lcfinal = np.ma.append(lcfinal, light_curve)
