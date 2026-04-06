@@ -132,6 +132,19 @@ class TransitModel():
             # Have a default spotnpts for fleck
             pl_params.spotnpts = 300
 
+        # Enforce physicality to avoid crashes from batman by returning
+        # something that should be a horrible fit
+        if (not ((0 < pl_params.per) and (0 < pl_params.inc <= 90) and
+                 (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
+                 (-1 <= pl_params.esinw <= 1) and
+                 (0 <= pl_params.ecc < 1))
+            or (self.parameters.limb_dark.value == 'kipping2013' and
+                pl_params.u_original[0] <= 0)):
+            # Returning nans or infs breaks the fits, so this was the
+            # best I could think of
+            lc = 1e6*np.ma.ones(self.t.shape)
+            return lc
+
         inverse = False
         if pl_params.rp < 0:
             # The planet's radius is negative, so need to do some tricks to
