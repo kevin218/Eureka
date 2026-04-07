@@ -123,7 +123,7 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     util.make_citations(meta, 1)
 
     # Save results
-    if not meta.testing_S1:
+    if meta.save_results:
         log.writelog('Saving Metadata')
         me.saveevent(meta, meta.outputdir+'S1_'+meta.eventlabel+"_Meta_Save",
                      save=[])
@@ -158,7 +158,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
 
         # Reset suffix and assign whether to save the output directory
         self.suffix = None
-        self.save_results = (not meta.testing_S1)
+        self.save_results = meta.save_results
         self.output_dir = meta.outputdir
 
         # Instrument Non-Specific Steps

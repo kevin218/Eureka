@@ -192,6 +192,7 @@ class S1MetaClass(MetaClass):
         self.nplots = getattr(self, 'nplots', 5)
         self.hide_plots = getattr(self, 'hide_plots', True)
         self.testing_S1 = getattr(self, 'testing_S1', False)
+        self.save_results = getattr(self, 'save_results', not self.testing_S1)
         self.verbose = getattr(self, 'verbose', True)
 
         # Project directory
