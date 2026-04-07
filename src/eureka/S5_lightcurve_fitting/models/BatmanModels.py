@@ -130,7 +130,7 @@ class BatmanTransitModel(Model):
                 try:
                     m_transit = self.transit_model(pl_params, time,
                                                    transittype='primary')
-                except RuntimeError:
+                except RuntimeError as err:
                     # Expected batman failure: Kepler solver non-convergence
                     if "Eccentric anomaly" in str(err):
                         light_curve = 1e6 * np.ma.ones(time.shape)
@@ -285,7 +285,7 @@ class BatmanEclipseModel(Model):
                     m_eclipse = self.transit_model(pl_params,
                                                    self.adjusted_time,
                                                    transittype='secondary')
-                except RuntimeError:
+                except RuntimeError as err:
                     # Expected batman failure: Kepler solver non-convergence
                     if "Eccentric anomaly" in str(err):
                         light_curve = 1e6 * np.ma.ones(time.shape)
