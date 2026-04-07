@@ -187,8 +187,8 @@ class S3optMetaClass(MetaClass):
         Set Optimizer specific defaults for NIRISS.
         '''
         # Fitness scaling factors
-        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 1.0)
-        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 0.1)
+        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 10.)
+        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
 
         defaults = {
             "bounds_bg_hw": range(15, 20),
