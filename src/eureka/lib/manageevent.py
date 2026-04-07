@@ -374,7 +374,7 @@ def findevent(meta, stage, allowFail=False):
     elif len(fnames) == 0:
         # There were no metafiles in the inputdir or its children - raise an
         # error and give a helpful message
-        raise AssertionError(f'WARNING: Unable to find an output metadata file'
+        raise AssertionError(f'Unable to find an output metadata file'
                              f' of kind {file_suffix} from Eureka!\'s {stage}'
                              f' in the folder:\n"{meta.inputdir}"')
     elif len(fnames) > 1:
