@@ -23,6 +23,12 @@ class BatmanTransitModel(Model):
             eureka.S5_lightcurve_fitting.models.Model.__init__().
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
+
+            Optional extra kwargs:
+            u1_offset : float
+                Additive offset applied to u1 for every channel.
+            u2_offset : float
+                Additive offset applied to u2 for every channel.
         """
         # Inherit from Model class
         super().__init__(**kwargs)
@@ -35,10 +41,20 @@ class BatmanTransitModel(Model):
 
         log = kwargs.get('log')
 
+        # Per-coefficient offsets
+        self.u1_offset = kwargs.get('u1_offset', -0.1340)  # SOSS
+        self.u2_offset = kwargs.get('u2_offset',  0.1199)  # SOSS
+
+        # self.u1_offset = kwargs.get('u1_offset',  0.0813)  # NRS1
+        # self.u2_offset = kwargs.get('u2_offset', -0.1932)  # NRS1
+
+        # self.u1_offset = kwargs.get('u1_offset',  0.1218)  # NRS2
+        # self.u2_offset = kwargs.get('u2_offset', -0.2033)  # NRS2
+
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
         ld_func = ld_profile(self.parameters.limb_dark.value,
-                             use_gen_ld=self.ld_from_S4)
+                            use_gen_ld=self.ld_from_S4)
         len_params = len(inspect.signature(ld_func).parameters)
         self.coeffs = ['u{}'.format(n) for n in range(1, len_params)]
 
@@ -54,19 +70,31 @@ class BatmanTransitModel(Model):
                     ld_array = self.ld_array[len_params-2]
                 else:
                     ld_array = self.ld_array
+
                 for u in self.coeffs:
                     if u in self.paramtitles:
                         index = self.paramtitles.index(u)
                         item = self.longparamlist[c][index]
                         param = int(item.split('_')[0][-1])
+
                         ld_val = ld_array[chan][param-1]
+
+                        # Apply coefficient-specific offsets
+                        if u == 'u1':
+                            ld_val += self.u1_offset
+                        elif u == 'u2':
+                            ld_val += self.u2_offset
+
                         log.writelog(f"{item}: {ld_val}")
+
                         # Use the file value as the starting guess
                         self.parameters.dict[item][0] = ld_val
+
                         # In a normal prior, center at the file value
                         if (self.parameters.dict[item][-1] == 'N' and
                                 self.recenter_ld_prior):
                             self.parameters.dict[item][-3] = ld_val
+
                         # Update the non-dictionary form as well
                         setattr(self.parameters, item,
                                 self.parameters.dict[item])
