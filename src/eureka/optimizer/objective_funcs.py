@@ -48,6 +48,9 @@ def single(val, meta, stage, run_S3=True, **kwargs):
         s4_meta = kwargs['s4_meta']
         run_stage[4] = True
 
+    if meta.opt_param_name == 'bg_thresh':
+        val = [val, val]
+
     # Set value of the variable to be optimized
     setattr(s1_meta, meta.opt_param_name, val) if stage == 1 else None
     setattr(s2_meta, meta.opt_param_name, val) if stage == 2 else None
