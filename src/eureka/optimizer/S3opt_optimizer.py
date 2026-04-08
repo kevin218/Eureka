@@ -224,8 +224,12 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage,
     # Update Meta parameters with best values from previous iterations
     for key, value in best.items():
         if stage == 3:
-            s3_meta.params[key] = value
-            setattr(s3_meta, key, value)
+            if key == 'bg_thresh':
+                s3_meta.params[key] = [value, value]
+                setattr(s3_meta, key, [value, value])
+            else:
+                s3_meta.params[key] = value
+                setattr(s3_meta, key, value)
         if stage == 4:
             s4_meta.params[key] = value
             setattr(s4_meta, key, value)
