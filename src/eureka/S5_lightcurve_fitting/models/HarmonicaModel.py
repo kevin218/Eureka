@@ -76,7 +76,7 @@ class HarmonicaTransitModel(BatmanTransitModel):
                          (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
                          (-1 <= pl_params.esinw <= 1) and
                          (0 <= pl_params.ecc < 1))
-                    or (self.parameters.limb_dark.value == 'kipping2013' and
+                    or (pl_params.limb_dark == 'kipping2013' and
                         pl_params.u_original[0] <= 0)):
                     # Returning nans or infs breaks the fits, so this was the
                     # best I could think of
