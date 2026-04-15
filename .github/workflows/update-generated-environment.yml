@@ -1,0 +1,129 @@
+name: Update generated environment.yml
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - pyproject.toml
+      - .github/workflows/update-generated-environment.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unidep-env-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-environment:
+    name: Validate env on ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Check out exact PR head commit
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python for UniDep
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install UniDep
+        run: |
+          python -m pip install --upgrade \
+            "unidep @ git+https://github.com/taylorbell57/unidep.git@90c19d3"
+
+      - name: Generate environment.yml
+        run: |
+          unidep merge -n eureka -o environment.yml --all-optional-dependencies
+
+      - name: Create environment with micromamba
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: environment.yml
+          environment-name: eureka-ci
+          create-args: >-
+            python=${{ matrix.python-version }}
+
+      - name: Smoke test solved environment
+        shell: micromamba-shell {0}
+        run: |
+          python -m pip install -e . --no-deps
+          python -c "import eureka; print(eureka.__file__)"
+
+  publish-environment:
+    name: Publish validated environment.yml
+    needs: validate-environment
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out same-repo PR branch
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.head_ref }}
+
+      - name: Check out exact fork PR head commit
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python for UniDep
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install UniDep
+        run: |
+          python -m pip install --upgrade \
+            "unidep @ git+https://github.com/taylorbell57/unidep.git@90c19d3"
+
+      - name: Generate environment.yml
+        run: |
+          unidep merge -n eureka -o environment.yml --all-optional-dependencies
+
+      - name: Commit updated environment.yml on same-repo PRs
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          if ! git diff --quiet -- environment.yml; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add environment.yml
+            git commit -m "Regenerate environment.yml"
+            git push
+          fi
+
+      - name: Upload validated environment.yml for fork PRs
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: validated-environment-yml
+          path: environment.yml
+          retention-days: 7
+
+      - name: Add summary for fork PRs
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          {
+            echo "### Validated environment.yml available"
+            echo
+            echo "This PR comes from a fork, so the workflow cannot push"
+            echo "back to the branch."
+            echo
+            echo "Download the artifact named \`validated-environment-yml\`"
+            echo "from this workflow run if you want the regenerated file."
+          } >> "$GITHUB_STEP_SUMMARY"
