@@ -68,7 +68,7 @@ write_to = "src/eureka/version.py"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64"]
 dependencies = [
-    { conda = "python>=3.11,<3.14" },
+    { conda = "python>=3.11,<3.13" }, # Python 3.13 fails to build with conda for some dependencies on some platforms
     { conda = "pip" },
     { conda = "libopenblas=*=openmp*" },
     { conda = "libblas=*=*openblas*" },
