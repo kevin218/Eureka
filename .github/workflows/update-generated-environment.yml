@@ -46,6 +46,12 @@ jobs:
         run: |
           unidep merge -n eureka -o environment.yml --all-optional-dependencies
 
+      - name: Show generated environment.yml
+        run: |
+          echo "----- BEGIN environment.yml -----"
+          cat environment.yml
+          echo "----- END environment.yml -----"
+
       - name: Create environment with micromamba
         uses: mamba-org/setup-micromamba@v3
         with:
@@ -95,6 +101,12 @@ jobs:
       - name: Generate environment.yml
         run: |
           unidep merge -n eureka -o environment.yml --all-optional-dependencies
+
+      - name: Show generated environment.yml
+        run: |
+          echo "----- BEGIN environment.yml -----"
+          cat environment.yml
+          echo "----- END environment.yml -----"
 
       - name: Commit updated environment.yml on same-repo PRs
         if: github.event.pull_request.head.repo.full_name == github.repository

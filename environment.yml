@@ -9,7 +9,6 @@ dependencies:
   - astropy
   - astroquery
   - bokeh
-  - build
   - ccdproc
   - corner
   - dynesty >1.0
@@ -35,6 +34,7 @@ dependencies:
   - pytest-cov
   - pytest-doctestplus
   - python >=3.11,<3.14
+  - python-build
   - requests
   - scipy >=1.12.0
   - shapely
