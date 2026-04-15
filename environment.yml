@@ -33,7 +33,7 @@ dependencies:
   - pytest <8.0
   - pytest-cov
   - pytest-doctestplus
-  - python >=3.11,<3.14
+  - python >=3.11,<3.13
   - python-build
   - requests
   - scipy >=1.12.0

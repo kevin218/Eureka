@@ -88,7 +88,8 @@ Installing with the repository ``environment.yml``
 
 The repository also includes an ``environment.yml`` file for users who want the
 repository-managed conda environment. This file is generated from
-``pyproject.toml`` and should not be edited manually.
+``pyproject.toml`` and should not be edited manually. It currently constrains
+the repository-managed conda environment to Python 3.11-3.12.
 
 This route is especially useful for contributors and for users who want the
 repository-managed environment. To install this way:
