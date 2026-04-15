@@ -7,6 +7,9 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
+permissions:
+  contents: read
+
 jobs:
   smoke:
     name: Build Check - ${{ matrix.os }} / Python ${{ matrix.python-version }}
@@ -15,11 +18,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ['3.11', '3.12', '3.13']
+        python-version: ["3.11", "3.12", "3.13"]
+
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0  # Fetch full history, including tags
+          fetch-depth: 0
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -42,7 +46,8 @@ jobs:
         run: |
           WHL=$(ls dist/eureka_bang-*.whl)
           if [ -z "$WHL" ]; then
-            echo "No wheel file found"; exit 1
+            echo "No wheel file found"
+            exit 1
           fi
           pip install --timeout 60 --retries 5 "$WHL[jwst,hst,test,docs,jupyter]"
 
