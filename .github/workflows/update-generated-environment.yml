@@ -111,10 +111,11 @@ jobs:
       - name: Commit updated environment.yml on same-repo PRs
         if: github.event.pull_request.head.repo.full_name == github.repository
         run: |
-          if ! git diff --quiet -- environment.yml; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add environment.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add environment.yml
+          git status --short -- environment.yml
+          if ! git diff --cached --quiet -- environment.yml; then
             git commit -m "Regenerate environment.yml"
             git push
           fi
