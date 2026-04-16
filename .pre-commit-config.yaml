@@ -1,0 +1,24 @@
+ci:
+  autofix_prs: true
+  autoupdate_schedule: monthly
+  autoupdate_commit_msg: "[pre-commit.ci] pre-commit autoupdate"
+  skip: [flake8]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+        exclude: ^tests/data/WFC3/cal/2014_02\.vec$
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: debug-statements
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.2
+    hooks:
+      - id: flake8
