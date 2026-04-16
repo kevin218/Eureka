@@ -253,7 +253,7 @@ Note that HST operations start at Stage 3, unlike JWST operations. HST systemati
 can also be slightly more complicated to fit, so it may be worthwhile to read some
 papers discussing these, such as `Knutson et al. (2014) <knutson2014_>`_ or
 `Brande et al. (2022) <brande2022_>`_. Exponential ramps are available as systematics
-models in ``Eureka!`` Stage 5, and Eureka automatically corrects for the 
+models in ``Eureka!`` Stage 5, and Eureka automatically corrects for the
 spatial scan flux offset.
 
 

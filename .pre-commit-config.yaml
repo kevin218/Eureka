@@ -12,8 +12,9 @@ repos:
       - id: check-toml
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
-        exclude: ^tests/data/WFC3/cal/2014_02\.vec$
+        exclude: (^tests/data/WFC3/cal/2014_02\.vec$|^docs/media/.*\.key$)
       - id: end-of-file-fixer
+        exclude: ^docs/media/.*\.key$
       - id: check-merge-conflict
       - id: check-added-large-files
       - id: debug-statements
