@@ -6,7 +6,7 @@ ci:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: check-yaml
       - id: check-toml
@@ -20,6 +20,6 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/pycqa/flake8
-    rev: 7.1.2
+    rev: 7.3.0
     hooks:
       - id: flake8
