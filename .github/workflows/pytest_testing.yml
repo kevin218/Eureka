@@ -1,8 +1,6 @@
 name: Pytest Testing
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
   push:
     branches:
       - main
@@ -12,46 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: pytest
-    runs-on: ubuntu-latest
-
-    env:
-      OS: ubuntu-latest
-      PYTHON: "3.13"
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13.0"
-
-      - name: Setup environment
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libnetcdf-dev libhdf5-dev
-          python -m pip install --timeout 60 --retries 5 --upgrade pip
-          pip install --timeout 60 --retries 5 ".[jwst,hst,test]"
-          mkdir -p "$HOME/crds_cache"
-          echo "CRDS_PATH=$HOME/crds_cache" >> "$GITHUB_ENV"
-          echo "CRDS_SERVER_URL=https://jwst-crds.stsci.edu" >> "$GITHUB_ENV"
-
-      - name: Log the current Eureka version
-        run: pip show eureka-bang
-
-      - name: Run tests and generate coverage report
-        run: pytest tests --cov=./src/eureka --cov-report=xml
-
-      - name: Upload coverage reports to Codecov
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: codecov/codecov-action@v6
-        with:
-          env_vars: OS,PYTHON
-          files: ./coverage.xml
-          fail_ci_if_error: true
-          verbose: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  pytest:
+    uses: ./.github/workflows/reusable-pytest.yml
+    with:
+      upload-codecov: true
+    secrets: inherit
