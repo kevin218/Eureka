@@ -5,28 +5,28 @@ set -euo pipefail
 usage() {
     cat <<'EOF'
 Usage:
-  run-phase0-candidate.sh <conda-env> [constraints-file] [--with-hst] [--full-pytest] [--fresh]
+  check-oldest-practical-py311.sh <conda-env> [constraints-file] [--with-hst] [--full-pytest] [--fresh]
 
 Examples:
-  ci/constraints/experiments/run-phase0-candidate.sh eureka_temp
-  ci/constraints/experiments/run-phase0-candidate.sh eureka_temp --fresh
-  ci/constraints/experiments/run-phase0-candidate.sh eureka_temp ci/constraints/experiments/py311-practical-spec0-window.txt --fresh
-  ci/constraints/experiments/run-phase0-candidate.sh eureka_temp ci/constraints/experiments/py311-practical-spec0-window.txt --with-hst --full-pytest --fresh
+  ci/constraints/check-oldest-practical-py311.sh eureka_temp
+  ci/constraints/check-oldest-practical-py311.sh eureka_temp --fresh
+  ci/constraints/check-oldest-practical-py311.sh eureka_temp ci/constraints/oldest-practical-py311.txt --with-hst --full-pytest --fresh
 
 What it does:
   1. Optionally recreates the named conda environment with Python 3.11
   2. Upgrades pip inside the named conda environment
-  3. Installs Eureka in editable mode with Phase 0 extras
+  3. Installs Eureka in editable mode with the selected extras
   4. Runs key import smoke checks
-  5. Runs the focused Phase 0 pytest subset
+  5. Runs the focused pytest subset
   6. Optionally runs tests/test_WFC3.py when --with-hst is used
   7. Optionally runs full pytest when --full-pytest is used
 
 Notes:
-  - The default Phase 0 extras are "jwst,test".
+  - The default constraints file is ci/constraints/oldest-practical-py311.txt.
+  - The default extras are "jwst,test".
   - With --with-hst, the extras become "jwst,hst,test".
-  - Pass a constraints file to test the retained Phase 0 recipe or a future candidate.
-  - Use --fresh for candidate runs so installs do not layer on top of each other.
+  - Pass a different constraints file to probe an alternate candidate.
+  - Use --fresh for clean comparison runs.
 EOF
 }
 
@@ -83,10 +83,15 @@ if ! command -v conda >/dev/null 2>&1; then
 fi
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../../.." && pwd)"
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 cd "${REPO_ROOT}"
 
-if [[ -n "${CONSTRAINTS_FILE}" && ! -f "${CONSTRAINTS_FILE}" ]]; then
+DEFAULT_CONSTRAINTS_FILE="${REPO_ROOT}/ci/constraints/oldest-practical-py311.txt"
+if [[ -z "${CONSTRAINTS_FILE}" ]]; then
+    CONSTRAINTS_FILE="${DEFAULT_CONSTRAINTS_FILE}"
+fi
+
+if [[ ! -f "${CONSTRAINTS_FILE}" ]]; then
     echo "Constraints file not found: ${CONSTRAINTS_FILE}" >&2
     exit 1
 fi
@@ -104,11 +109,8 @@ PIP_INSTALL_ARGS=(
     --timeout 60
     --retries 5
     --upgrade
+    -c "${CONSTRAINTS_FILE}"
 )
-
-if [[ -n "${CONSTRAINTS_FILE}" ]]; then
-    PIP_INSTALL_ARGS+=(-c "${CONSTRAINTS_FILE}")
-fi
 
 PACKAGE_SPEC="${REPO_ROOT}[${EXTRAS}]"
 PIP_INSTALL_ARGS+=(-e "${PACKAGE_SPEC}")
@@ -120,11 +122,7 @@ echo "==> Using repo root: ${REPO_ROOT}"
 echo "==> Using conda env: ${ENV_NAME}"
 echo "==> Using extras: ${EXTRAS}"
 echo "==> Recreate env first: ${FRESH_ENV}"
-if [[ -n "${CONSTRAINTS_FILE}" ]]; then
-    echo "==> Using constraints: ${CONSTRAINTS_FILE}"
-else
-    echo "==> Using constraints: none"
-fi
+echo "==> Using constraints: ${CONSTRAINTS_FILE}"
 
 if [[ "${FRESH_ENV}" == true ]]; then
     echo
@@ -161,7 +159,7 @@ conda run -n "${ENV_NAME}" python -m pytest tests/test_lightcurve_fitting.py -k 
 
 if [[ "${WITH_HST}" == true ]]; then
     echo
-    echo "==> Running HST finalist smoke"
+    echo "==> Running HST smoke"
     conda run -n "${ENV_NAME}" python -m pytest tests/test_WFC3.py
 fi
 
@@ -172,4 +170,4 @@ if [[ "${FULL_PYTEST}" == true ]]; then
 fi
 
 echo
-echo "==> Phase 0 candidate run completed"
+echo "==> Oldest-practical check completed"

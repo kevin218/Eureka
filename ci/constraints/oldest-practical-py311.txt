@@ -1,16 +1,17 @@
-# Retained Phase 0 "oldest practical" py311 exploratory recipe for Eureka!.
+# Current tested "oldest practical" py311 recipe for Eureka!.
 #
-# This broader constraints file survived install/import checks and full pytest
-# with `.[jwst,hst,test,docs,jupyter,dev]`. It is retained as the single
-# Phase 0 recipe because many Eureka users also use contributor-facing extras.
+# This file records the current evidence-backed compatibility recipe exercised
+# in CI for Eureka's tested oldest-practical Python 3.11 floor.
+#
+# It is not proof that every lower bound in `pyproject.toml` is literal, and it
+# should not be read as claiming that every resolver-valid in-range combination
+# is supported.
 #
 # Notes:
-# - This is a tested exploratory recipe, not proof of literal lower bounds.
-# - It is also not, by itself, the eventual permanent CI contract.
+# - The current tested py311 floor includes NumPy >=1.25 and currently resolves
+#   below NumPy 2.
 # - image_registration stays pinned via the hst extra's current Git commit in
 #   pyproject.toml rather than being constrained to a published release here.
-# - Where the retained list included prereleases before a stable release, this
-#   file uses the earliest stable release.
 
 astropy==6.1.0
 dynesty==2.1.4

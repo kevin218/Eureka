@@ -85,6 +85,7 @@ and `juliet <https://github.com/nespinoza/juliet>`_ packages offer some similar 
    :caption: Contents:
 
    installation
+   dependency_policy
    quickstart
    stages
    ecf
