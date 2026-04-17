@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "03:17"
+      timezone: America/New_York
+    open-pull-requests-limit: 1
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pre-commit
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "03:19"
+      timezone: America/New_York
+    open-pull-requests-limit: 1
+    groups:
+      pre-commit:
+        patterns:
+          - "*"

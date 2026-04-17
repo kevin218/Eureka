@@ -20,12 +20,20 @@ jobs:
 
     steps:
       - name: Check out same-repo PR branch
-        if: github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
         uses: actions/checkout@v6
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.head_ref }}
           token: ${{ secrets.ENV_SYNC_PAT }}
+          fetch-depth: 0
+
+      - name: Check out Dependabot PR branch
+        if: github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'dependabot[bot]'
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
 
       - name: Check out exact fork PR head commit
@@ -138,13 +146,31 @@ jobs:
         run: |
           echo "proceed=true" >> "$GITHUB_OUTPUT"
 
+      - name: Determine whether this PR can auto-sync environment.yml
+        if: needs.env_prepare.outputs.changed == 'true'
+        id: autosync_state
+        run: |
+          if [[ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" && "${{ github.actor }}" != "dependabot[bot]" ]]; then
+            echo "can_autosync=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "can_autosync=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Check out same-repo PR branch
-        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        if: needs.env_prepare.outputs.changed == 'true' && steps.autosync_state.outputs.can_autosync == 'true'
         uses: actions/checkout@v6
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.head_ref }}
           token: ${{ secrets.ENV_SYNC_PAT }}
+          fetch-depth: 0
+
+      - name: Check out Dependabot PR branch
+        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'dependabot[bot]'
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
 
       - name: Check out exact fork PR head commit
@@ -184,7 +210,7 @@ jobs:
         run: git add environment.yml
 
       - name: Commit and push updated environment.yml
-        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        if: needs.env_prepare.outputs.changed == 'true' && steps.autosync_state.outputs.can_autosync == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -193,22 +219,22 @@ jobs:
             git push origin "HEAD:${{ github.head_ref }}"
           fi
 
-      - name: Upload generated environment.yml for fork PRs
-        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+      - name: Upload generated environment.yml for non-autosync PRs
+        if: needs.env_prepare.outputs.changed == 'true' && steps.autosync_state.outputs.can_autosync != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: validated-environment-yml
           path: environment.yml
           retention-days: 7
 
-      - name: Add summary for stale fork PRs
-        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+      - name: Add summary for stale non-autosync PRs
+        if: needs.env_prepare.outputs.changed == 'true' && steps.autosync_state.outputs.can_autosync != 'true'
         run: |
           {
             echo "### environment.yml is out of date"
             echo
-            echo "This PR comes from a fork, so the workflow cannot push"
-            echo "the regenerated file back to the branch."
+            echo "This PR cannot be auto-synced by CI, so the workflow cannot"
+            echo "push the regenerated file back to the branch."
             echo
             echo "Download the artifact named \`validated-environment-yml\`,"
             echo "commit the regenerated \`environment.yml\`, and push it to"
@@ -216,17 +242,18 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Mark PR workflow as waiting for bot-pushed commit
-        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        if: needs.env_prepare.outputs.changed == 'true' && steps.autosync_state.outputs.can_autosync == 'true'
         id: set_wait
         run: |
           echo "proceed=false" >> "$GITHUB_OUTPUT"
 
-      - name: Fail for stale fork PRs
-        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+      - name: Fail for stale non-autosync PRs
+        if: needs.env_prepare.outputs.changed == 'true' && steps.autosync_state.outputs.can_autosync != 'true'
         id: set_fail
         run: |
           echo "proceed=false" >> "$GITHUB_OUTPUT"
-          echo "environment.yml is out of date for this fork PR."
+          echo "environment.yml is out of date for this PR."
+          echo "This PR cannot be auto-synced by CI."
           echo "Download the validated-environment-yml artifact, commit it,"
           echo "and push the regenerated file to your branch."
           exit 1
@@ -236,7 +263,7 @@ jobs:
     if: needs.env_sync.outputs.proceed == 'true'
     uses: ./.github/workflows/reusable-pytest.yml
     with:
-      upload-codecov: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+      upload-codecov: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' }}
     secrets: inherit
 
   build_matrix:

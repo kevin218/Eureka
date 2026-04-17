@@ -1,0 +1,57 @@
+name: Latest Allowed Canary
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "29 5 * * 4"
+
+permissions:
+  contents: read
+
+jobs:
+  latest_allowed_py313:
+    name: latest-allowed py313
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13.0"
+
+      - name: Setup system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnetcdf-dev libhdf5-dev
+
+      - name: Install latest allowed dependency set
+        run: |
+          mkdir -p "$HOME/crds_cache"
+          echo "CRDS_PATH=$HOME/crds_cache" >> "$GITHUB_ENV"
+          echo "CRDS_SERVER_URL=https://jwst-crds.stsci.edu" >> "$GITHUB_ENV"
+          python -m pip install --timeout 60 --retries 5 --upgrade pip
+          python -m pip install --timeout 60 --retries 5 --upgrade --upgrade-strategy eager \
+            --report pip-install-report.json \
+            -e ".[jwst,hst,test,docs,jupyter,dev]"
+
+      - name: Capture pip environment details
+        run: |
+          python -m pip inspect > pip-inspect.json
+          python -m pip list --outdated --format=json > pip-outdated.json
+
+      - name: Run full test suite
+        run: |
+          pytest tests
+
+      - name: Upload pip diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: latest-allowed-pip-diagnostics
+          path: |
+            pip-install-report.json
+            pip-inspect.json
+            pip-outdated.json

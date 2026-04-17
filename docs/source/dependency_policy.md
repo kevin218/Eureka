@@ -117,8 +117,9 @@ floor is exercised in CI with:
 
 - Python 3.11.0
 - the oldest-practical constraints file
-- `.[jwst,hst,test]`
+- `.[jwst,hst,test,docs,jupyter,dev]`
 - the full `pytest tests` suite
 
-That narrow permanent lane is intentional. Broader install surfaces may still
-be useful for local validation, but they are not the required CI contract.
+That single permanent lane is intentional. It keeps the CI contract anchored to
+one tested oldest-practical solve rather than to every resolver-valid
+combination.

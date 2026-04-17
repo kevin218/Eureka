@@ -6,6 +6,9 @@ on:
     branches:
       - main
       - "releases/**"
+  workflow_dispatch:
+  schedule:
+    - cron: "23 5 * * 3"
 
 permissions:
   contents: read
@@ -29,12 +32,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libnetcdf-dev libhdf5-dev
 
-      - name: Install oldest-practical test environment
+      - name: Install oldest-practical compatibility environment
         run: |
           python -m pip install --timeout 60 --retries 5 --upgrade pip
           python -m pip install --timeout 60 --retries 5 \
             -c ci/constraints/oldest-practical-py311.txt \
-            -e ".[jwst,hst,test]"
+            -e ".[jwst,hst,test,docs,jupyter,dev]"
           mkdir -p "$HOME/crds_cache"
           echo "CRDS_PATH=$HOME/crds_cache" >> "$GITHUB_ENV"
           echo "CRDS_SERVER_URL=https://jwst-crds.stsci.edu" >> "$GITHUB_ENV"
@@ -45,6 +48,7 @@ jobs:
 
   docs_build:
     name: docs build
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
 
     steps:
