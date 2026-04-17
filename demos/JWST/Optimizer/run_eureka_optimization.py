@@ -2,6 +2,10 @@ import os
 import eureka.optimizer.S1opt_optimizer as s1opt
 import eureka.optimizer.S3opt_optimizer as s3opt
 
+# Set up some parameters to make plots look nicer.
+# You can set usetex=True if you have LaTeX installed
+eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
+
 """
 Eureka! Optimization
 --------------------
