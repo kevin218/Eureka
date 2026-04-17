@@ -2,7 +2,7 @@ import numpy as np
 import eureka.optimizer.objective_funcs as of
 
 
-def sweep_range_single(bounds_var, meta, log, stage, **kwargs):
+def sweep_range_single(sweep_var, meta, log, stage, **kwargs):
     """
     Optimize single parameter using parametric sweep.  This function returns
     the best parameter and resulting fitness score after sweeping through
@@ -10,7 +10,7 @@ def sweep_range_single(bounds_var, meta, log, stage, **kwargs):
 
     Parameters:
     ----------
-    bounds_var : tuple (min, max)
+    sweep_var : tuple (min, max)
         The bounds for the variable being optimized. The function will search
         every integer value within these bounds.
     meta : eureka.lib.readECF.MetaClass
@@ -41,7 +41,7 @@ def sweep_range_single(bounds_var, meta, log, stage, **kwargs):
     best_param_value = None
 
     # Iterate over each value in the provided bounds
-    for i, val in enumerate(range(bounds_var[0], bounds_var[1] + 1)):
+    for i, val in enumerate(range(sweep_var[0], sweep_var[1] + 1)):
         # Need to rerun Stage 3 first time around on Stage 4 optimization
         # Otherwise, save time by not rerunning Stage 3 again
         run_s3 = False if (i > 0 and stage == 4) else True
@@ -61,7 +61,7 @@ def sweep_range_single(bounds_var, meta, log, stage, **kwargs):
     return best_param_value, best_fitness_value
 
 
-def sweep_list_single(bounds_var, meta, log, stage, **kwargs):
+def sweep_list_single(sweep_var, meta, log, stage, **kwargs):
     """
     Optimize single parameter using parametric sweep.  This function returns
     the best parameter and resulting fitness score after sweeping through
@@ -69,7 +69,7 @@ def sweep_list_single(bounds_var, meta, log, stage, **kwargs):
 
     Parameters:
     ----------
-    bounds_var : range object
+    sweep_var : range object
         The sequence of numbers to be evaluated for the variable being
         optimized.
     meta : eureka.lib.readECF.MetaClass
@@ -100,7 +100,7 @@ def sweep_list_single(bounds_var, meta, log, stage, **kwargs):
     best_param_value = None
 
     # Iterate over each value in the provided bounds
-    for i, val in enumerate(bounds_var):
+    for i, val in enumerate(sweep_var):
         # Need to rerun Stage 3 first time around on Stage 4 optimization
         # Otherwise, save time by not rerunning Stage 3 again
         run_s3 = False if (i > 0 and stage == 4) else True
@@ -120,7 +120,7 @@ def sweep_list_single(bounds_var, meta, log, stage, **kwargs):
     return best_param_value, best_fitness_value
 
 
-def sweep_list_double(bounds_var, meta, log, stage, **kwargs):
+def sweep_list_double(sweep_var, meta, log, stage, **kwargs):
     """
     Optimize two independent variables using parametric sweep.  This function
     returns the best parameter and resulting fitness score after sweeping
@@ -128,7 +128,7 @@ def sweep_list_double(bounds_var, meta, log, stage, **kwargs):
 
     Parameters:
     ----------
-    bounds_var : list of range objects
+    sweep_var : list of range objects
         The sequence of numbers to be evaluated for the variable being
         optimized.
     meta : eureka.lib.readECF.MetaClass
@@ -159,8 +159,8 @@ def sweep_list_double(bounds_var, meta, log, stage, **kwargs):
     best_param_value = None
 
     # Iterate over each value in the provided bounds
-    for i, var1 in enumerate(bounds_var[0]):
-        for j, var2 in enumerate(bounds_var[1]):
+    for i, var1 in enumerate(sweep_var[0]):
+        for j, var2 in enumerate(sweep_var[1]):
             # Need to rerun Stage 3 first time around on Stage 4 optimization
             # Otherwise, save time by not rerunning Stage 3 again
             run_s3 = False if (stage == 4 and (i > 0 or j > 0)) else True
@@ -183,7 +183,7 @@ def sweep_list_double(bounds_var, meta, log, stage, **kwargs):
     return best_param_value, best_fitness_value
 
 
-def sweep_list_lt(bounds_var, meta, log, stage, **kwargs):
+def sweep_list_lt(sweep_var, meta, log, stage, **kwargs):
     """
     Parametric sweep for two interdependent variables where var1 < var2.
 
@@ -193,7 +193,7 @@ def sweep_list_lt(bounds_var, meta, log, stage, **kwargs):
 
     Parameters:
     ----------
-    bounds_var : list of range objects
+    sweep_var : list of range objects
         The sequence of numbers to be evaluated for the variable being
         optimized.
     meta : eureka.lib.readECF.MetaClass
@@ -224,8 +224,8 @@ def sweep_list_lt(bounds_var, meta, log, stage, **kwargs):
     best_param_value = None
 
     # Iterate over each value in the provided bounds
-    for i, var1 in enumerate(bounds_var[0]):
-        for j, var2 in enumerate(bounds_var[1]):
+    for i, var1 in enumerate(sweep_var[0]):
+        for j, var2 in enumerate(sweep_var[1]):
             # Need to rerun Stage 3 first time around on Stage 4 optimization
             # Otherwise, save time by not rerunning Stage 3 again
             run_s3 = False if (stage == 4 and (i > 0 or j > 0)) else True

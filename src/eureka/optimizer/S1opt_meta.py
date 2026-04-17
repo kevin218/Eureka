@@ -94,13 +94,13 @@ class S1optMetaClass(MetaClass):
         # Spectral extraction parameters
         defaults = {
             # Stage 1
-            "bounds_jump_rejection_threshold": range(4, 15),    # 4 → 14
-            "bounds_bg_method": ["std", "mean", "median"],
-            "bounds_bg_deg": range(0, 2),  # 0 → 1
-            "bounds_p3thresh": range(3, 8),  # 3 → 7
-            "bounds_window_len": range(1, 22, 2),  # 1 → 21, odd only
-            "bounds_p7thresh": range(5, 61, 5),  # 5 → 60, step 5
-            "bounds_expand_mask": range(5, 12),  # 5 → 11
+            "sweep_jump_rejection_threshold": range(4, 15),    # 4 → 14
+            "sweep_bg_method": ["std", "mean", "median"],
+            "sweep_bg_deg": range(0, 2),  # 0 → 1
+            "sweep_p3thresh": range(3, 8),  # 3 → 7
+            "sweep_window_len": range(1, 22, 2),  # 1 → 21, odd only
+            "sweep_p7thresh": range(5, 61, 5),  # 5 → 60, step 5
+            "sweep_expand_mask": range(5, 12),  # 5 → 11
         }
 
         for key, default in defaults.items():
@@ -115,7 +115,7 @@ class S1optMetaClass(MetaClass):
         self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
 
         defaults = {
-            "bounds_bg_hw": range(5, 16),
+            "sweep_bg_hw": range(5, 16),
         }
 
         for key, default in defaults.items():
