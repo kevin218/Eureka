@@ -7,6 +7,12 @@ testing as well as some GitHub basics.
 
 ## Testing Eureka!
 
+When dependency bounds, compatibility expectations, or CI-tested support
+surfaces change, consult the [dependency policy](dependency_policy.md) page
+alongside this contributor guide. That page explains how Eureka distinguishes
+between declared metadata ranges, the tested oldest-practical recipe, and the
+generated `environment.yml`.
+
 As of 5/10/2022, Eureka has working end-to-end tests for NIRCam (S3-S6), NIRSpec (S2-S5), MIRI (S2-S6), and HST/WFC3 (S3). Test data NIRISS has not yet been created, so this instrument will not have unit tests until further in the future. Future testing will test the functionality of different fitting methods and different systematics models. **It is required for all contributors of Eureka! to run these tests locally before opening a pull request with their new code**. By running the tests locally, the contributor will be able to see whether the functionality of the main code is still intact. This requirement is common in software development teams and is meant to encourage smooth collaboration by helping track small bugs or changes that affect the basic functionality of the code so that colleagues won't have to.
 
 For these tests, the `pytest` package (<a href="https://docs.pytest.org/en/6.2.x/getting-started.html" target="_blank"> link </a>) will be used. Once installed, the user submitting a pull request may navigate to the tests folder in Eureka! (`tests`) and run

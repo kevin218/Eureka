@@ -22,6 +22,10 @@ If you are using a macOS device with an Apple Silicon processor (for example,
 M1), you may need to use the ``environment.yml`` route below because some pip
 dependencies have been reported to fail to build on that platform.
 
+For the current testing/support expectations, including the tested
+``oldest-practical`` recipe and how it differs from declared metadata ranges,
+see the :doc:`dependency policy <dependency_policy>` page.
+
 
 Initial environment preparation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
