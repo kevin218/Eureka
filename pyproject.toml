@@ -84,7 +84,7 @@ dependencies = [
     "h5py>=3.7.0", # Lower limit needed to avoid issues with JWST I/O routines
     "lmfit",
     "matplotlib>=3.6", # Lower limit needed for set_layout_engine()
-    "numpy>=1.20.0,<2.0", # numpy 2.0 introduces breaking changes for some packages
+    "numpy>=1.25,<2.0", # Current direct deps effectively require NumPy >=1.25 on py311; NumPy 2 compatibility should be revisited when fleck and pastasoss add numpy 2 support
     "pandas",
     "photutils",
     "requests",
