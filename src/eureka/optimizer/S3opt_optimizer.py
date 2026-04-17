@@ -194,8 +194,8 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage,
     s3_meta, s4_meta = initialize_meta(meta, eventlabel, ecf_path=ecf_path)
 
     # Extract bounds for parameter(s) to optimize
-    if hasattr(meta, "bounds_" + p):
-        bounds = getattr(meta, "bounds_" + p)
+    if hasattr(meta, "sweep_" + p):
+        bounds = getattr(meta, "sweep_" + p)
         log.writelog(f"Optimizing parameter {p} over bounds: {bounds}")
         log.writelog("Initial parameter value: " +
                      f"{getattr(s3_meta, p, getattr(s4_meta, p, 'default'))}")
@@ -205,8 +205,8 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage,
         bounds = []
         init_vals = []
         for param in param_names:
-            if hasattr(meta, "bounds_" + param):
-                bounds.append(getattr(meta, "bounds_" + param))
+            if hasattr(meta, "sweep_" + param):
+                bounds.append(getattr(meta, "sweep_" + param))
                 init_vals.append(getattr(s3_meta, param,
                                          getattr(s4_meta, param, 'default')))
             else:

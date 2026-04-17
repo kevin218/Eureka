@@ -182,8 +182,8 @@ def optimize(s1opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
                                                          ecf_path=None)
 
     # Extract bounds for parameter(s) to optimize
-    if hasattr(meta, "bounds_" + p):
-        bounds = getattr(meta, "bounds_" + p)
+    if hasattr(meta, "sweep_" + p):
+        bounds = getattr(meta, "sweep_" + p)
         log.writelog(f"Optimizing parameter {p} over bounds: {bounds}")
         log.writelog("Initial parameter value: " +
                      f"{getattr(s1_meta, p, None)}")
@@ -193,8 +193,8 @@ def optimize(s1opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
         bounds = []
         init_vals = []
         for param in param_names:
-            if hasattr(meta, "bounds_" + param):
-                bounds.append(getattr(meta, "bounds_" + param))
+            if hasattr(meta, "sweep_" + param):
+                bounds.append(getattr(meta, "sweep_" + param))
                 init_vals.append(getattr(s1_meta, param, None))
             else:
                 log.writelog(f"Could not create bounds for parameter {p}. " +

@@ -106,29 +106,29 @@ class S3optMetaClass(MetaClass):
         # Spectral extraction parameters
         defaults = {
             # Stage 3
-            "bounds_dqmask": [True, False],  # not a range
-            "bounds_bg_thresh": np.arange(3, 5.5, 0.5),  # 3 → 5, step 0.5
-            "bounds_bg_method": ["std", "mean", "median"],
-            "bounds_bg_deg": range(0, 2),  # 0 → 1
-            "bounds_p3thresh": range(3, 8),  # 3 → 7
-            "bounds_median_thresh": range(3, 10),  # 3 → 9
-            "bounds_window_len": range(1, 22, 2),  # 1 → 21, odd only
-            "bounds_p7thresh": range(5, 61, 5),  # 5 → 60, step 5
+            "sweep_dqmask": [True, False],  # not a range
+            "sweep_bg_thresh": np.arange(3, 5.5, 0.5),  # 3 → 5, step 0.5
+            "sweep_bg_method": ["std", "mean", "median"],
+            "sweep_bg_deg": range(0, 2),  # 0 → 1
+            "sweep_p3thresh": range(3, 8),  # 3 → 7
+            "sweep_median_thresh": range(3, 10),  # 3 → 9
+            "sweep_window_len": range(1, 22, 2),  # 1 → 21, odd only
+            "sweep_p7thresh": range(5, 61, 5),  # 5 → 60, step 5
             # Stage 4
-            "bounds_sigma": range(3, 8),  # 3 → 7
-            "bounds_box_width": range(11, 52, 10),  # 11 → 51, step 10
-            "bounds_mad_sigma": range(4, 8),  # 4 → 7
-            "bounds_mad_box_width": range(11, 52, 10),  # 11 → 51, step 10
+            "sweep_sigma": range(3, 8),  # 3 → 7
+            "sweep_box_width": range(11, 52, 10),  # 11 → 51, step 10
+            "sweep_mad_sigma": range(4, 8),  # 4 → 7
+            "sweep_mad_box_width": range(11, 52, 10),  # 11 → 51, step 10
         }
 
         for key, default in defaults.items():
             setattr(self, key, getattr(self, key, default))
-        # self.bounds_spec_hw__bg_hw = getattr(self, 'bounds_spec_hw__bg_hw',
-        #                                      [self.bounds_spec_hw,
-        #                                       self.bounds_bg_hw])
-        # self.bounds_mad_sigma__mad_box_width = getattr(self,
-        #         'bounds_mad_sigma__bg_hw',[self.bounds_mad_sigma,
-        #         self.bounds_mad_box_width])
+        # self.sweep_spec_hw__bg_hw = getattr(self, 'sweep_spec_hw__bg_hw',
+        #                                      [self.sweep_spec_hw,
+        #                                       self.sweep_bg_hw])
+        # self.sweep_mad_sigma__mad_box_width = getattr(self,
+        #         'sweep_mad_sigma__bg_hw',[self.sweep_mad_sigma,
+        #         self.sweep_mad_box_width])
 
     def set_photometric_defaults(self):
         '''
@@ -141,8 +141,8 @@ class S3optMetaClass(MetaClass):
         Set Optimizer specific defaults for MIRI.
         '''
         defaults = {
-            "bounds_bg_hw": range(5, 16),
-            "bounds_spec_hw": range(1, 10),
+            "sweep_bg_hw": range(5, 16),
+            "sweep_spec_hw": range(1, 10),
         }
 
         for key, default in defaults.items():
@@ -155,8 +155,8 @@ class S3optMetaClass(MetaClass):
         Set Optimizer specific defaults for NIRCam.
         '''
         defaults = {
-            "bounds_bg_hw": range(5, 16),
-            "bounds_spec_hw": range(1, 10),
+            "sweep_bg_hw": range(5, 16),
+            "sweep_spec_hw": range(1, 10),
         }
 
         for key, default in defaults.items():
@@ -173,8 +173,8 @@ class S3optMetaClass(MetaClass):
         self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
 
         defaults = {
-            "bounds_bg_hw": range(5, 16),
-            "bounds_spec_hw": range(1, 10),
+            "sweep_bg_hw": range(5, 16),
+            "sweep_spec_hw": range(1, 10),
         }
 
         for key, default in defaults.items():
@@ -191,8 +191,8 @@ class S3optMetaClass(MetaClass):
         self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
 
         defaults = {
-            "bounds_bg_hw": range(15, 20),
-            "bounds_spec_hw": range(17, 25),
+            "sweep_bg_hw": range(15, 20),
+            "sweep_spec_hw": range(17, 25),
         }
 
         for key, default in defaults.items():

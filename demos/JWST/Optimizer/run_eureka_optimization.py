@@ -11,17 +11,18 @@ Eureka! Optimization
 --------------------
 
 Description:
-This script is designed to optimize the Stage 1,3, and 4 ECF parameters for
+This script is designed to optimize the Stage 1, 3, and 4 ECF parameters for
 JWST time-series observations.
 
 Inputs:
-- Loaded from an input text file, 'optimizer_inputs_nirspec_PRISM.txt'.
-- Parameters not specified for optimization in the optimizer input text file will assume ECF values by default.
+- Loaded from a Eureka! control file, see S1opt_template.ecf/S3opt_template.ecf.
+- Parameters not specified for optimization will adopt the values listed in the
+    corresponding ECF.
 
 Outputs:
-- Optimized parameter values saved in the "best_params" dictionary.
-- Optimized ECFs saved in the "opt_ECFs" folder.
-- Log file containing the results of each optimization step.
+- The metadata object
+- The fitness score after optimizing each parameter.
+- The best parameter values found during the optimization.
 """
 
 eventlabel = 'nirspec_fs_template'
