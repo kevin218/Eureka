@@ -44,7 +44,7 @@ jobs:
       - name: Install UniDep
         run: |
           python -m pip install --upgrade \
-            "unidep @ git+https://github.com/taylorbell57/unidep.git@90c19d3"
+            "unidep @ git+https://github.com/basnijholt/unidep.git@v3.2.0"
 
       - name: Generate environment.yml
         run: |
