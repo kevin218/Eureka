@@ -610,6 +610,14 @@ def photutils_apphot(data, meta, i):
         # Add the skyerr to the aperr in quadrature
         aperr = np.sqrt(aperr**2 + nappix*skyerr**2)
 
+
+    if meta.skip_apphot_bg:
+        # Make sure these are still computed/stored
+        skylev = np.zeros_like(aplev)
+        skyerr = np.zeros_like(aplev)
+        nskypix = np.zeros_like(aplev)
+        nskyideal = np.zeros_like(aplev)
+
     # Store the results in the data object
     data['aplev'][i] = aplev
     data['aperr'][i] = aperr
