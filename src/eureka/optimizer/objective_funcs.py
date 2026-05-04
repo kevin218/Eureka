@@ -18,7 +18,7 @@ def single(val, meta, stage, run_S3=True, **kwargs):
         The stage number indicating which stage's parameters to
         optimize.
     run_S3 : boolean; optional
-        If True, run Stage 3.
+        If True, run Stage 3. Skip Stage 3 if optimizing Stage 4.
     **kwargs : dict
         Additional keyword arguments. Can include s1_meta, s2_meta, s3_meta,
         and s4_meta to pass in existing metadata objects for each stage.
