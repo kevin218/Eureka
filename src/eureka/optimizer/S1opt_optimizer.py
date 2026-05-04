@@ -1,9 +1,9 @@
 
 import os
+import json
 import numpy as np
 from copy import deepcopy
 import time as time_pkg
-import pickle
 import shutil
 
 import eureka.S1_detector_processing.s1_process as s1
@@ -33,7 +33,7 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
         None which resolves to './'.
     initial_run : boolean; optional
         Set to True to perform an initial run with default ECF parameters
-        before starting the optimization. Defaults to False.
+        before starting the optimization. Defaults to True.
     final_run : boolean; optional
         Set to True to perform a final run with optimized ECF parameters.
         Defaults to True.
@@ -95,10 +95,10 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
                                                   best, p, eventlabel,
                                                   ecf_path, 1)
 
-    # Save the best dictionary to a pickle file
-    with open(os.path.join(s1opt_meta.outputdir, "best_params.pkl"),
-              "wb") as f:
-        pickle.dump(best, f)
+    # Save the best dictionary to a JSON file
+    with open(os.path.join(s1opt_meta.outputdir, "best_params.json"),
+              "w") as f:
+        json.dump(best, f)
 
     # Define and create optimized ECF file path
     opt_path = os.path.join(s1opt_meta.outputdir, "opt_ECFs")
@@ -181,31 +181,31 @@ def optimize(s1opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     s1_meta, s2_meta, s3_meta, s4_meta = initialize_meta(meta, eventlabel,
                                                          ecf_path=None)
 
-    # Extract bounds for parameter(s) to optimize
+    # Extract sweep for parameter(s) to optimize
     if hasattr(meta, "sweep_" + p):
-        bounds = getattr(meta, "sweep_" + p)
-        log.writelog(f"Optimizing parameter {p} over bounds: {bounds}")
+        sweep = getattr(meta, "sweep_" + p)
+        log.writelog(f"Optimizing parameter {p} over range: {sweep}")
         log.writelog("Initial parameter value: " +
                      f"{getattr(s1_meta, p, None)}")
     elif "__" in p:
-        # Extract default bounds for two parameters
+        # Extract default sweep for two parameters
         param_names = p.split("__")
-        bounds = []
+        sweep = []
         init_vals = []
         for param in param_names:
             if hasattr(meta, "sweep_" + param):
-                bounds.append(getattr(meta, "sweep_" + param))
+                sweep.append(getattr(meta, "sweep_" + param))
                 init_vals.append(getattr(s1_meta, param, None))
             else:
-                log.writelog(f"Could not create bounds for parameter {p}. " +
-                             "Please manually specify bounds in ECF. " +
+                log.writelog(f"Could not create sweep for parameter {p}. " +
+                             "Please manually specify sweep in ECF. " +
                              "Skipping...")
                 return s1opt_meta, log, history, best
-        log.writelog(f"Optimizing parameters {p} over bounds: {bounds}")
+        log.writelog(f"Optimizing parameters {p} over sweep: {sweep}")
         log.writelog(f"Initial parameter values: {init_vals}")
     else:
-        log.writelog(f"No default bounds exist for parameter {p}. " +
-                     "Please manually specify bounds in ECF. Skipping...")
+        log.writelog(f"No default sweep exist for parameter {p}. " +
+                     "Please manually specify sweep in ECF. Skipping...")
         return s1opt_meta, log, history, best
 
     # Update Meta parameters with best values from previous iterations
@@ -214,21 +214,15 @@ def optimize(s1opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
         setattr(s1_meta, key, value)
 
     # Perform parametric sweep
-    if p == "spec_hw__bg_hw":
-        # Optimize both spec_hw and bg_hw simultaneously
-        # Require that spec_hw < bg_hw
-        best_param_value, best_fitness_value = optimizers.sweep_list_lt(
-            bounds, meta, log, stage, s1_meta=s1_meta, s2_meta=s2_meta,
-            s3_meta=s3_meta, s4_meta=s4_meta)
-    elif "__" in p:
+    if "__" in p:
         # Optimize two independent parameters simultaneously
         best_param_value, best_fitness_value = optimizers.sweep_list_double(
-            bounds, meta, log, stage, s1_meta=s1_meta, s2_meta=s2_meta,
+            sweep, meta, log, stage, s1_meta=s1_meta, s2_meta=s2_meta,
             s3_meta=s3_meta, s4_meta=s4_meta)
     else:
         # Optimize single parameter
         best_param_value, best_fitness_value = optimizers.sweep_list_single(
-            bounds, meta, log, stage, s1_meta=s1_meta, s2_meta=s2_meta,
+            sweep, meta, log, stage, s1_meta=s1_meta, s2_meta=s2_meta,
             s3_meta=s3_meta, s4_meta=s4_meta)
 
     # Check that optimization was successful
