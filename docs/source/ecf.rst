@@ -260,7 +260,11 @@ In short this weights each pixel, :math:`i`, within a slope following :math:`w_i
 
 Stages 1/3/4 Optimizer
 ---------------------
-This tool allows users to optimize the parameter values of Stages 1, 3, and 4 by performing a parametric sweep over a specified range and evaluating the resulting spectra with a user-defined fitness function.
+This tool allows users to optimize the parameter values of Stages 1, 3, and 4 by performing a parametric sweep over a specified range and evaluating the resulting spectra with a user-defined fitness function.  The optimizer starts with an intial run of a stage using the default parameter values, performs a sweep over the specified parameter values, and then completes a final run with the best parameter values from the sweep.
+
+The fitness function is defined in the meta Python files and can be customized by the user.  The default fitness function is a weighted combination of the 2D MAD and the white light curve MAD.  The optimizer will generate a plot showing how the fitness function improves with each parameter sweep.  In the rare event that the final fitness value is worse than the initial value, users should consider trying smaller step sizes or a different range that include the default parameter values.
+
+In general, the optimizer should be used as a tool to explore the parameter space and understand how different parameters impact the resulting spectra.  Users may want to review the spectra generated from different parameter values in the sweep to get a better understanding of how each parameter impacts the results.  It is also important to keep in mind that the optimal parameter values may differ for different datasets, so it is recommended to use the optimizer for each new dataset to find the best parameter values.
 
 scaling_MAD_spec
 ''''''''''''''''
