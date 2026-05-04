@@ -122,3 +122,39 @@ class S1optMetaClass(MetaClass):
             setattr(self, key, getattr(self, key, default))
 
         self.set_spectral_defaults()
+
+    def set_MIRI_Photometry_defaults(self):
+        '''
+        Set Optimizer specific defaults for MIRI photometry.
+        '''
+        pass
+
+    def set_NIRCam_Photometry_defaults(self):
+        '''
+        Set Optimizer specific defaults for NIRCam photometry.
+        '''
+        pass
+
+    def set_MIRI_defaults(self):
+        '''
+        Set Optimizer specific defaults for MIRI.
+        '''
+        pass
+
+    def set_NIRCam_defaults(self):
+        '''
+        Set Optimizer specific defaults for NIRCam.
+        '''
+        pass
+
+    def set_NIRISS_defaults(self):
+        '''
+        Set Optimizer specific defaults for NIRISS.
+        '''
+        pass
+
+    def set_WFC3_defaults(self):
+        '''
+        Set Optimizer specific defaults for WFC3.
+        '''
+        pass

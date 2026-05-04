@@ -123,12 +123,6 @@ class S3optMetaClass(MetaClass):
 
         for key, default in defaults.items():
             setattr(self, key, getattr(self, key, default))
-        # self.sweep_spec_hw__bg_hw = getattr(self, 'sweep_spec_hw__bg_hw',
-        #                                      [self.sweep_spec_hw,
-        #                                       self.sweep_bg_hw])
-        # self.sweep_mad_sigma__mad_box_width = getattr(self,
-        #         'sweep_mad_sigma__bg_hw',[self.sweep_mad_sigma,
-        #         self.sweep_mad_box_width])
 
     def set_photometric_defaults(self):
         '''
