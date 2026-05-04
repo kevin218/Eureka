@@ -257,6 +257,75 @@ In short this weights each pixel, :math:`i`, within a slope following :math:`w_i
 ``custom``: As with default, except a custom SNR to :math:`P` lookup table can be defined through the ``default_ramp_fit_custom_snr_bounds`` and ``default_ramp_fit_custom_exponents`` (see example .ecf file).
 
 
+
+Stages 1/3/4 Optimizer
+---------------------
+This tool allows users to optimize the parameter values of Stages 1, 3, and 4 by performing a parametric sweep over a specified range and evaluating the resulting spectra with a user-defined fitness function.
+
+scaling_MAD_spec
+''''''''''''''''
+Scaling factor applied to the 2D Median Absolute Difference (MAD) value in the fitness function. Higher values prioritize spectral quality.
+
+scaling_MAD_white
+'''''''''''''''''
+Scaling factor applied to the white light curve MAD value in the fitness function. Higher values prioritize band-integrated quality.
+
+params_to_optimize
+''''''''''''''''''
+List of parameters to optimize in Stage 1. Commenting out this line will use all single parameters listed below.  Single parameter options: jump_rejection_threshold, expand_mask, bg_deg, bg_method, p3thresh, window_len. Double parameter options: any combination of the above, joined by two underscores (e.g., expand_mask__p3thresh). Example:
+.. code-block:: python
+   params_to_optimize = ['jump_rejection_threshold', 'expand_mask', 'p3thresh']
+
+params_to_optimize_s3
+''''''''''''''''''''''''''
+List of parameters to optimize in Stage 3. Commenting out this line will use all single parameters listed below. Single parameter options: dqmask, bg_deg, bg_thresh, bg_hw, bg_method, p3thresh, spec_hw, median_thresh, window_len, p7thresh. Double parameter options: any combination of the above, joined by two underscores (e.g., bg_hw__p3thresh). Special cases: spec_hw__bg_hw (requires spec_hw < bg_hw). Example:
+.. code-block:: python
+   params_to_optimize_s3 = ['spec_hw__bg_hw', 'dqmask', 'bg_deg', 'bg_thresh', 'bg_method', 'p3thresh', 'median_thresh__window_len', 'p7thresh']
+
+to optimize the background threshold between 3 and 5 sigma, in steps of 0.5
+
+params_to_optimize_s4
+'''''''''''''''''''''
+List of parameters to optimize in Stage 4. Single parameter options: mad_sigma, mad_box_width, sigma, box_width. Suggested double parameter options: mad_sigma__mad_box_width, sigma__box_width. Example:
+.. code-block:: python
+    params_to_optimize_s4 = ['mad_sigma__mad_box_width', 'sigma__box_width']
+
+sweep_<parameter_name>
+''''''''''''''''''''
+Range for parameter values to optimize. Only specify if overriding the default values in the meta Python files. For single parameters, use any of the following formats:
+.. code-block:: python
+   sweep_<parameter_name> = range(min, max+1)
+   sweep_<parameter_name> = np.arange(min, max+step, step)
+   sweep_<parameter_name> = [3, 5, 6, 7]
+
+sweep_<parameter1>__<parameter2>
+''''''''''''''''''''''''''''''''
+Range for parameter values to optimize. Only specify if overriding the default values in the meta Python files. For double parameters, use the following format:
+.. code-block:: python
+   sweep_<parameter1>__<parameter2> = [range(min1, max1+1), range(min2, max2+1)]
+
+isplots_S1opt and isplots_S3opt
+''''''''''''''''''''''''''''''''
+Sets how many plots should be saved during optimization. Can generate none (0), few (1), some (3), or many (5) figures (Options: 1 - 5).
+
+delete_intermediate
+'''''''''''''''''''
+If True, intermediate directories will be deleted after each optimization step.
+
+delete_final
+''''''''''''
+If True, intermediate directories will be deleted upon completion of optimization run.
+
+verbose
+'''''''
+If True, more details will be printed about steps in the optimization process.
+
+hide_plots
+''''''''''
+If True, plots will automatically be closed rather than popping up on the screen.
+
+
+
 Stage 2
 -------
 
@@ -727,7 +796,7 @@ Optional. The path to a file that contains the time array you want to use instea
 
 
 Stage 4
---------
+-------
 
 .. include:: ../media/S4_template.ecf
    :literal:
