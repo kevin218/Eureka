@@ -113,9 +113,9 @@ def dn2electrons(data, meta, log):
         # Get the gain subarray
         gain = gain[meta.ywindow[0]:meta.ywindow[1],
                     meta.xwindow[0]:meta.xwindow[1]]
+        gain = xr.DataArray(gain, dims=("y", "x"))
 
     # Convert to electrons
-    gain = xr.DataArray(gain, dims=("y", "x"))
     data['flux'] *= gain
     data['err'] *= gain
     data['v0'] *= (gain)**2  # FINDME: should this really be squared
