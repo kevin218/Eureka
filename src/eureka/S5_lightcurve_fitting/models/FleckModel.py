@@ -1,7 +1,6 @@
-import numpy as np
 import astropy.units as unit
-
 import fleck
+import numpy as np
 
 from .BatmanModels import BatmanTransitModel
 

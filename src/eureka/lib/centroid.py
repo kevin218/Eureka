@@ -1,6 +1,6 @@
 import numpy as np
-from . import gaussian as g
 
+from . import gaussian as g
 
 # Stellar Centroiding Routines
 # ----------------------------

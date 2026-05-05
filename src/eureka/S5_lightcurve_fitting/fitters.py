@@ -20,10 +20,8 @@ from scipy.optimize import minimize
 from ..lib import astropytable, util
 from ..lib.split_channels import get_trim
 from . import plots_s5 as plots
-from .likelihood import (
-    computeRedChiSq, ln_like, lnprob, ptform,
-    update_uncertainty
-)
+from .likelihood import (computeRedChiSq, ln_like, lnprob, ptform,
+                         update_uncertainty)
 
 
 def _get_dynesty_checkpoint_file(meta, lc, fittername):

@@ -1,10 +1,10 @@
-import sys
 import os
+import sys
 from importlib import reload
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
-from eureka.S2_calibrations import s2_calibrate as s2
 import eureka.optimizer.S3opt_optimizer as s3opt
+from eureka.S2_calibrations import s2_calibrate as s2
 
 
 def test_S3opt(capsys):

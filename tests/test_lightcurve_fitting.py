@@ -1,17 +1,17 @@
 #! /usr/bin/env python
-import pytest
-import numpy as np
 import os
 import sys
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+import numpy as np
+import pytest
+
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
-from eureka.S5_lightcurve_fitting import fitters, models, simulations
-from eureka.lib.readEPF import Parameters, Parameter
-from eureka.S5_lightcurve_fitting.s5_meta import S5MetaClass
 from eureka.lib import logedit
-from eureka.S5_lightcurve_fitting import s5_fit
+from eureka.lib.readEPF import Parameter, Parameters
+from eureka.S5_lightcurve_fitting import fitters, models, s5_fit, simulations
+from eureka.S5_lightcurve_fitting.s5_meta import S5MetaClass
 
 
 class testingMetaClass(S5MetaClass):

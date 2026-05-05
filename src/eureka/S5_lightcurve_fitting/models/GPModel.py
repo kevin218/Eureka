@@ -1,11 +1,11 @@
-import numpy as np
-import george
-from george import kernels
 import celerite2
+import george
+import numpy as np
+from george import kernels
 
-from .Model import Model
-from ..likelihood import update_uncertainty
 from ...lib.split_channels import split
+from ..likelihood import update_uncertainty
+from .Model import Model
 
 try:
     import tinygp

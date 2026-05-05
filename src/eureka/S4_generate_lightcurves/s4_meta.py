@@ -1,5 +1,7 @@
-import numpy as np
 from glob import glob
+
+import numpy as np
+
 from ..lib.readECF import MetaClass
 
 

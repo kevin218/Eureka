@@ -1,8 +1,8 @@
 import numpy as np
 
-from .Model import Model
-from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
 from ...lib.split_channels import split
+from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
+from .Model import Model
 
 
 class QuasiLambertianPhaseCurve(Model):

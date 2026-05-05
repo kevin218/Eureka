@@ -1,10 +1,10 @@
-import numpy as np
 import batman as bm
+import numpy as np
 
-from .Model import Model
-from .AstroModel import PlanetParams, get_ecl_midpt
-from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
 from ...lib.split_channels import split
+from .AstroModel import PlanetParams, get_ecl_midpt
+from .BatmanModels import BatmanEclipseModel, BatmanTransitModel
+from .Model import Model
 
 
 class PoetTransitModel(BatmanTransitModel):

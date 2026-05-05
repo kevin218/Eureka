@@ -1,23 +1,27 @@
 import os
 import sys
-import numpy as np
 from copy import deepcopy
+
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib import rcParams
+
 try:
     from mc3.stats import time_avg
 except ModuleNotFoundError:
     print("Could not import MC3. No RMS time-averaging plots will be made.")
-import corner
-from scipy import stats
-import fleck
 import astropy.units as unit
+import corner
+import fleck
+from scipy import stats
+
 try:
     from harmonica import HarmonicaTransit
 except ModuleNotFoundError:
     # Harmonica hasn't been installed
     pass
 import warnings
+
 warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
                                           'this call because figure with num')
 
