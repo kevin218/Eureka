@@ -122,7 +122,7 @@ def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
 
     # Define height if needed:
     if height is None:
-        height = np.product(1. / (width * r2pi))
+        height = np.prod(1. / (width * r2pi))
     ponent = 0.0
 
     for i in np.arange(ndim):
@@ -569,7 +569,7 @@ def gaussians(x, param):
         if not isinstance(width, np.ndarray):
             width += np.zeros(ndim)
         if height is None:
-            height = np.product(1.0 / (width * np.sqrt(2.0 * np.pi)))
+            height = np.prod(1.0 / (width * np.sqrt(2.0 * np.pi)))
         ponent = 0.0
         for i in np.arange(ndim):
             ponent += ((x[i] - center[i]) / width[i])**2.0
