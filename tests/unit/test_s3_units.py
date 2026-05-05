@@ -354,7 +354,7 @@ def test_bright2flux_scales_flux_error_and_variance_by_pixel_area():
 
     np.testing.assert_allclose(result.flux.values, factor)
     np.testing.assert_allclose(result.err.values, 2*factor)
-    np.testing.assert_allclose(result.v0.values, 3*factor)
+    np.testing.assert_allclose(result.v0.values, 3*factor**2)
 
 
 def test_dn2electrons_scales_flux_error_and_variance_with_scalar_gain():
@@ -455,4 +455,3 @@ def test_roll_columns_applies_per_column_shifts_without_mutating_shifts():
     ])
     np.testing.assert_array_equal(rolled, expected)
     np.testing.assert_array_equal(shifts, original_shifts)
-

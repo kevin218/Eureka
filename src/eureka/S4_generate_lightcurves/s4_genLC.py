@@ -638,13 +638,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
 def compute_wavelength_bins(meta, wave_1d, log):
     """Populate Stage 4 wavelength bin edges using the genlc conventions."""
+    mute = not getattr(meta, 'verbose', True)
     if meta.wave_input is not None:
         # bins defined by file input. 2 columns: low and high edges
         meta.wave_low, meta.wave_hi = np.genfromtxt(meta.wave_input).T
         meta.wave = (meta.wave_low + meta.wave_hi)/2
         meta.nspecchan = len(meta.wave)
         log.writelog(f'  Using input file to create {meta.nspecchan} '
-                     'channels.', mute=(not meta.verbose))
+                     'channels.', mute=mute)
     elif meta.nspecchan is None and meta.npixelbins is not None:
         # User wants bins defined by the given number of pixels
         mask = (wave_1d >= meta.wave_min)
@@ -669,8 +670,7 @@ def compute_wavelength_bins(meta, wave_1d, log):
         meta.wave = (meta.wave_low + meta.wave_hi)/2
         meta.nspecchan = len(meta.wave)
         log.writelog(f'  Creating {meta.nspecchan} channels of '
-                     f'width {meta.npixelbins} pixels each.',
-                     mute=(not meta.verbose))
+                     f'width {meta.npixelbins} pixels each.', mute=mute)
     elif meta.nspecchan is None:
         # User wants unbinned spectra
         dwav = np.ediff1d(wave_1d)/2
@@ -687,7 +687,7 @@ def compute_wavelength_bins(meta, wave_1d, log):
         meta.wave_hi = meta.wave+pos_dwav
         meta.nspecchan = len(meta.wave)
         log.writelog(f'  Creating {meta.nspecchan} channels at '
-                     f'native resolution.', mute=(not meta.verbose))
+                     f'native resolution.', mute=mute)
     elif meta.wave_hi is None or meta.wave_low is None:
         binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
         meta.wave_low = np.round(np.linspace(meta.wave_min,
@@ -698,7 +698,7 @@ def compute_wavelength_bins(meta, wave_1d, log):
                                             meta.nspecchan), 3)
         meta.wave = (meta.wave_low + meta.wave_hi)/2
         log.writelog('  Using defined wave_hi and wave_low arrays.',
-                     mute=(not meta.verbose))
+                     mute=mute)
     else:
         # wave_low and wave_hi were passed in - make them arrays
         meta.wave_low = np.array(meta.wave_low)
