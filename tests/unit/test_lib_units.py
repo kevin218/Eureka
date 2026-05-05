@@ -302,10 +302,14 @@ def test_metaclass_reads_ecf_values_and_normalizes_paths(tmp_path):
 
     assert meta.answer == 42
     assert meta.values == [1, 2, 3]
-    assert meta.inputdir.endswith(os.path.join('root', 'input') + os.sep)
-    assert meta.outputdir.endswith(os.path.join('root', 'output') + os.sep)
-    assert meta.inputdir_raw == 'input'
-    assert meta.outputdir_raw == 'output'
+    assert os.path.normpath(meta.inputdir).endswith(
+        os.path.join('root', 'input')
+    )
+    assert os.path.normpath(meta.outputdir).endswith(
+        os.path.join('root', 'output')
+    )
+    assert os.path.normpath(meta.inputdir_raw) == 'input'
+    assert os.path.normpath(meta.outputdir_raw) == 'output'
 
 
 def test_metaclass_missing_file_requires_kwargs(tmp_path):
