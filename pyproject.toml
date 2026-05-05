@@ -64,6 +64,11 @@ namespaces = false
 [tool.setuptools_scm]
 write_to = "src/eureka/version.py"
 
+[tool.isort]
+line_length = 79
+known_first_party = ["eureka"]
+src_paths = ["src"]
+
 [tool.unidep]
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64"]
@@ -138,6 +143,7 @@ jupyter = [
     "jupyter>=1.0.0", # Base metapackage
 ]
 dev = [
+    "isort",
     "pre-commit",
     { conda = "python-build", pip = "build" },
     "twine",
