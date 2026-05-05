@@ -77,6 +77,8 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
     # Default mask: only non-finite values are bad
     if mask is None:
         mask = ~np.isfinite(data)
+    else:
+        mask = np.copy(mask)
 
     # Apply the mask
     data = np.ma.masked_where(mask, data)
