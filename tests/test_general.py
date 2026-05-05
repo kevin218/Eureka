@@ -1,12 +1,14 @@
-import numpy as np
-import sys
 import os
+import sys
+
+import numpy as np
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
-from eureka.lib import util
-from eureka.lib.readECF import MetaClass
-from eureka.lib.medstddev import medstddev
 import astraeus.xarrayIO as xrio
+
+from eureka.lib import util
+from eureka.lib.medstddev import medstddev
+from eureka.lib.readECF import MetaClass
 
 
 def test_trim(capsys):

@@ -8,14 +8,14 @@ import glob
 import itertools
 import os
 import re
-import requests
 import shutil
 import urllib
 
-from astropy.io import fits
 import bokeh.palettes as bpal
-from scipy.interpolate import RegularGridInterpolator
 import numpy as np
+import requests
+from astropy.io import fits
+from scipy.interpolate import RegularGridInterpolator
 from svo_filters import svo
 
 # Supported profiles

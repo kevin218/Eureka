@@ -2,19 +2,21 @@
 
 # Generic Stage 4cal Calibrated Stellar Spectra pipeline
 
-import numpy as np
 import os
 import time as time_pkg
 from copy import deepcopy
+
 import astraeus.xarrayIO as xrio
+import numpy as np
 import scipy.interpolate as spi
 
-from ..version import version
+from ..lib import logedit
 from ..lib import manageevent as me
-from ..lib import util, logedit
+from ..lib import util
 from ..S3_data_reduction.sigrej import sigrej
+from ..version import version
+from .plots_s4cal import plot_stellarSpec, plot_whitelc
 from .s4cal_meta import S4cal_MetaClass
-from .plots_s4cal import plot_whitelc, plot_stellarSpec
 
 
 def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):

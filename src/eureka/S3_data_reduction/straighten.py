@@ -1,8 +1,9 @@
 import numpy as np
+from scipy.optimize import curve_fit
+
 from ..lib import smooth
 from . import plots_s3
 from .source_pos import gauss
-from scipy.optimize import curve_fit
 
 
 def find_column_median_shifts(data, meta, m):

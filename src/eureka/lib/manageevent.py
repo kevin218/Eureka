@@ -1,12 +1,12 @@
-import numpy as np
-import h5py as h5
-import pickle
-import os
 import glob
-import astraeus.xarrayIO as xrio
+import os
+import pickle
 
-from . import readECF
-from . import util
+import astraeus.xarrayIO as xrio
+import h5py as h5
+import numpy as np
+
+from . import readECF, util
 
 
 def saveevent(event, filename, save=[], delete=[], protocol=3):

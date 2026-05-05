@@ -1,12 +1,13 @@
 # NIRISS specific rountines go here
+import astraeus.xarrayIO as xrio
 import numpy as np
 from astropy.io import fits
-import astraeus.xarrayIO as xrio
-from . import nircam, sigrej, optspex, plots_s3
-from ..lib.util import read_time, supersample
 from pastasoss import get_soss_traces, rotate
-from .straighten import roll_columns
+
+from ..lib.util import read_time, supersample
+from . import nircam, optspex, plots_s3, sigrej
 from .background import fitbg
+from .straighten import roll_columns
 
 __all__ = ['read', 'get_wave', 'straighten_trace', 'flag_ff', 'flag_bg',
            'clean_median_flux', 'fit_bg', 'cut_aperture', 'standard_spectrum',

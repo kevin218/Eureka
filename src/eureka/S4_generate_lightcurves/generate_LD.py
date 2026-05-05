@@ -1,6 +1,6 @@
-from exotic_ld import StellarLimbDarkening
 import numpy as np
 import pandas as pd
+from exotic_ld import StellarLimbDarkening
 
 from . import plots_s4
 

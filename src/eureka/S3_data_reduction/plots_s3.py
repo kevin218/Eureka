@@ -1,21 +1,23 @@
-import numpy as np
 import os
-from tqdm import tqdm
+import warnings
+
+import imageio
+import matplotlib.patches as patches
 import matplotlib.pyplot as plt
+import numpy as np
 import scipy.interpolate as spi
 import scipy.stats as stats
-from scipy.interpolate import interp1d
 from matplotlib.colors import LogNorm
-import matplotlib.patches as patches
 from matplotlib.path import Path
 from mpl_toolkits import axes_grid1
-import imageio
-import warnings
+from scipy.interpolate import interp1d
+from tqdm import tqdm
+
 warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
                                           'this call because figure with num')
 
+from ..lib import plots, util
 from .source_pos import gauss
-from ..lib import util, plots
 
 
 @plots.apply_style

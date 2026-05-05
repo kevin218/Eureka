@@ -1,9 +1,9 @@
 import numpy as np
-from scipy.special import erf
-from astropy.modeling.models import Gaussian1D, custom_model
-from astropy.modeling.fitting import LevMarLSQFitter
 from astropy.convolution import Box1DKernel, convolve
+from astropy.modeling.fitting import LevMarLSQFitter
+from astropy.modeling.models import Gaussian1D, custom_model
 from astropy.stats import sigma_clip
+from scipy.special import erf
 
 __all__ = ['clip_outliers', 'gauss_removal']
 

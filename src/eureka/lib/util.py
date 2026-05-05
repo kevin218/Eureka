@@ -1,16 +1,17 @@
-import numpy as np
-import os
 import glob
+import multiprocessing as mp
+import os
+
+import numpy as np
 from astropy.io import fits
 from scipy.interpolate import griddata
 from scipy.ndimage import zoom
 from scipy.stats import binned_statistic
-import multiprocessing as mp
 from tqdm import tqdm
 
 from . import sort_nicely as sn
-from .naninterp1d import naninterp1d
 from .citations import CITATIONS
+from .naninterp1d import naninterp1d
 
 # populate common imports for current stage
 COMMON_IMPORTS = np.array([

@@ -1,15 +1,15 @@
-import numpy as np
-from copy import deepcopy
-import pandas as pd
-from astropy import units, constants
 import os
-import time as time_pkg
-from copy import copy
-from glob import glob
-from tqdm import tqdm
 import re
-from matplotlib.pyplot import rcParams
+import time as time_pkg
+from copy import copy, deepcopy
+from glob import glob
+
+import numpy as np
+import pandas as pd
 from astraeus import xarrayIO as xrio
+from astropy import constants, units
+from matplotlib.pyplot import rcParams
+from tqdm import tqdm
 
 try:
     from harmonica import HarmonicaTransit
@@ -17,11 +17,12 @@ except ModuleNotFoundError:
     # Harmonica hasn't been installed
     pass
 
-from .s6_meta import S6MetaClass
-from . import plots_s6 as plots
+from ..lib import astropytable, logedit
 from ..lib import manageevent as me
-from ..lib import util, logedit, astropytable
+from ..lib import util
 from ..version import version
+from . import plots_s6 as plots
+from .s6_meta import S6MetaClass
 
 
 def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):

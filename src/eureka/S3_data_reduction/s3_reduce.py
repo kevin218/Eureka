@@ -24,23 +24,21 @@
 
 import os
 import time as time_pkg
-import numpy as np
 from copy import deepcopy
+
 import astraeus.xarrayIO as xrio
-from tqdm import tqdm
+import numpy as np
 import psutil
 from stdatamodels.jwst.datamodels import CubeModel
+from tqdm import tqdm
 
-from . import optspex
-from . import plots_s3, source_pos
-from . import background as bg
-from . import bright2flux as b2f
-
-from .s3_meta import S3MetaClass
-from ..lib import logedit
+from ..lib import apphot, centerdriver, logedit
 from ..lib import manageevent as me
 from ..lib import util
-from ..lib import centerdriver, apphot
+from . import background as bg
+from . import bright2flux as b2f
+from . import optspex, plots_s3, source_pos
+from .s3_meta import S3MetaClass
 
 
 def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):

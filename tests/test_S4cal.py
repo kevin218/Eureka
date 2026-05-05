@@ -1,7 +1,7 @@
-import sys
 import os
-from importlib import reload
+import sys
 import time as time_pkg
+from importlib import reload
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass

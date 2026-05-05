@@ -1,8 +1,9 @@
 import numpy as np
-from . import imageedit as ie
+
+from ..S3_data_reduction import plots_s3
 from . import gaussian as g
 from . import gaussian_min as gmin
-from ..S3_data_reduction import plots_s3
+from . import imageedit as ie
 
 
 def centerdriver(method, data, meta, i=None, m=None):

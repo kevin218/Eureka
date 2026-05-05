@@ -1,9 +1,11 @@
-from copy import deepcopy
-import numpy as np
 import os
-import matplotlib.pyplot as plt
 import re
 import warnings
+from copy import deepcopy
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
                                           'this call because figure with num')
 

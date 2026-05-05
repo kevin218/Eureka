@@ -1,30 +1,27 @@
-import numpy as np
-import pandas as pd
 import copy
-from io import StringIO
 import os
 import sys
-import h5py
-import xarray as xr
-from astraeus import xarrayIO as xrio
 import time as time_pkg
-
-from scipy.optimize import minimize
-import lmfit
-import emcee
-
-from dynesty import NestedSampler, DynamicNestedSampler
-from dynesty.utils import resample_equal
-
-from .likelihood import (computeRedChiSq, lnprob, ln_like, ptform,
-                         update_uncertainty)
-from . import plots_s5 as plots
-from ..lib import astropytable, util
-from ..lib.split_channels import get_trim
-
+from io import StringIO
 from multiprocessing import Pool
 
+import emcee
+import h5py
+import lmfit
+import numpy as np
+import pandas as pd
+import xarray as xr
+from astraeus import xarrayIO as xrio
 from astropy import table
+from dynesty import DynamicNestedSampler, NestedSampler
+from dynesty.utils import resample_equal
+from scipy.optimize import minimize
+
+from ..lib import astropytable, util
+from ..lib.split_channels import get_trim
+from . import plots_s5 as plots
+from .likelihood import (computeRedChiSq, ln_like, lnprob, ptform,
+                         update_uncertainty)
 
 
 def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
