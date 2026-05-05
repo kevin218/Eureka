@@ -1110,10 +1110,18 @@ def make_longparamlist(meta, params, chanrng):
     order = {par: i for i, par in enumerate(params.dict.keys())}
 
     # Strip both _ch# and _wl# to get base names
+    def _base_order(base):
+        matches = [
+            idx for key, idx in order.items()
+            if key == base or key.startswith(f"{base}_ch")
+            or key.startswith(f"{base}_wl")
+        ]
+        return min(matches)
+
     paramtitles = sorted(
         np.unique([k.split("_ch")[0].split("_wl")[0]
                    for k in params.dict.keys()]),
-        key=order.get,
+        key=_base_order,
     )
 
     # Track whether the user defined any wavelength-specific variants
