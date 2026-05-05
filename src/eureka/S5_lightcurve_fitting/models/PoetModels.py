@@ -2,7 +2,7 @@ import numpy as np
 import batman as bm
 
 from .Model import Model
-from .AstroModel import PlanetParams, get_ecl_midpt
+from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
 from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
 from ...lib.split_channels import split
 
@@ -179,16 +179,26 @@ class TransitModel():
         else:
             tref = params.t_secondary
 
-        # Compute distance, z, of planet and star midpoints
-        self.z = self.ars \
-            * np.sqrt(np.sin(2*np.pi*(t-tref)/self.per)**2
-                      + (np.cos(self.inc*np.pi/180)
-                         * np.cos(2*np.pi*(t-tref)/self.per))**2)
+        if params.ecc == 0:
+            # Compute distance, z, of planet and star midpoints
+            self.z = self.ars \
+                * np.sqrt(np.sin(2*np.pi*(t-tref)/self.per)**2
+                          + (np.cos(self.inc*np.pi/180)
+                             * np.cos(2*np.pi*(t-tref)/self.per))**2)
 
-        # Ignore close approach on other side of the orbit
-        phase = (t - tref) % self.per
-        mask = (phase > self.per / 4) & (phase < self.per * 3 / 4)
-        self.z[mask] = self.ars
+            # Ignore close approach on other side of the orbit
+            phase = (t - tref) % self.per
+            mask = (phase > self.per / 4) & (phase < self.per * 3 / 4)
+            self.z[mask] = self.ars
+        else:
+            true_anom = true_anomaly(params, t)
+            radius = (self.ars*(1-params.ecc**2) /
+                      (1+params.ecc*np.cos(true_anom)))
+            omega = params.w*np.pi/180
+            inc = self.inc*np.pi/180
+            self.z = radius*np.sqrt(
+                1-(np.sin(inc)*np.sin(true_anom+omega))**2
+            )
 
     def light_curve(self, params):
         """
