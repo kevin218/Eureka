@@ -104,34 +104,39 @@ def exotic_ld(meta, spec, log, white=False):
         sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
                                    meta.exotic_ld_grid, meta.exotic_ld_direc)
      
-    #Now if Phoenix, rescale the mu grid                               
-    if  meta.exotic_ld_grid == 'phoenix':
+    # Now if Phoenix, rescale the mu grid                               
+    if meta.exotic_ld_grid == 'phoenix':
         print('Rescaling Phoenix')
-        #loop over wavelengths and rescale
+        # loop over wavelengths and rescale
         
-        interp_I_mu = np.empty([sld.stellar_intensities.shape[0],50])
+        interp_I_mu = np.empty([sld.stellar_intensities.shape[0], 50])
         
         for wi in range(sld.stellar_intensities.shape[0]):  
-            if sld.stellar_wavelengths[wi] < wavelength_range[0][0] or sld.stellar_wavelengths[wi] > wavelength_range[-1][-1]:
+            # Can fail at edges of phoenix grid, only rescaling where needed
+            if (sld.stellar_wavelengths[wi] < wavelength_range[0][0] or 
+                    sld.stellar_wavelengths[wi] > wavelength_range[-1][-1]):
                 continue
-            interp_mus, interp_I_mu[wi,:], _ = _phoenix_rescaled_mu_and_intensity(
-                sld.mus, sld.stellar_intensities[wi,:]
+            interp_mus, interp_I_mu[wi, :], _ = phoenix_rescaled(
+                sld.mus, sld.stellar_intensities[wi, :]
             ) 
-            
-                
+
+        wvs_new = sld.stellar_wavelengths
+        mus_new = np.flip(interp_mus)
+        sis_new = np.flip(interp_I_mu, axis=1)
         sld_new = StellarLimbDarkening(ld_data_path=meta.exotic_ld_direc,
-                                   ld_model="custom",
-                                   custom_wavelengths=sld.stellar_wavelengths,
-                                   custom_mus=np.flip(interp_mus),
-                                   custom_stellar_model=np.flip(interp_I_mu,axis=1))  
+                                       ld_model="custom",
+                                       custom_wavelengths=wvs_new,
+                                       custom_mus=mus_new,
+                                       custom_stellar_model=sis_new)  
         if meta.isplots_S4 >= 3: 
-            sld._integrate_I_mu([wavelength_range[0][0],wavelength_range[-1][-1]], mode, None, None)
-            sld_new._integrate_I_mu([wavelength_range[0][0],wavelength_range[-1][-1]], mode, None, None)
-            plots_s4.plot_rescaled_phoenix(meta,sld,sld_new)
+            sld._integrate_I_mu([meta.wave_min, meta.wave_max], 
+                                mode, None, None)
+            sld_new._integrate_I_mu([meta.wave_min, meta.wave_max], 
+                                    mode, None, None)
+            plots_s4.plot_rescaled_phoenix(meta, sld, sld_new)
         
         sld = sld_new
                    
-
     if mode != 'custom':
         # Figure out if we need to extrapolate the throughput, since the
         # ExoTiC-LD throughput files don't go close enought to the edges of
@@ -272,9 +277,8 @@ def spam_ld(meta, white=False):
     ld_list[num_ld_coef-1] = ld_coeffs
     return ld_list
 
-def _phoenix_rescaled_mu_and_intensity(mus, I_mu,
-                                       n_interp=50,
-                                       edge_buffer=4):
+
+def phoenix_rescaled(mus, I_mu, n_interp=50, edge_buffer=4):
     """Rescale the Phoenix spherical-model mu grid before fitting.
 
     Phoenix intensities include very sharp, low-mu limb points.  This follows
