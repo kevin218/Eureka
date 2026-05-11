@@ -186,26 +186,21 @@ class MetaClass:
                   'cause unexpected or undesireable behaviors.')
 
         if item == 'topdir':
-            if value[-1] != os.sep:
-                # Make sure topdir ends with a separator
-                value += os.sep
+            # Make sure topdir ends with a separator
+            value = os.path.join(value, '')
         elif item == 'inputdir' and hasattr(self, 'topdir'):
             if self.topdir in value:
                 # Strip off the topdir if it's included in the inputdir
                 value = value.replace(self.topdir, '')
-            if value[-1] != os.sep:
-                # Make sure inputdir ends with a separator
-                value += os.sep
-            self.inputdir_raw = value
+            # Make sure inputdir ends with a separator
+            self.inputdir_raw = os.path.join(value, '')
             value = os.path.join(self.topdir, *value.split(os.sep))
         elif item == 'outputdir' and hasattr(self, 'topdir'):
             if self.topdir in value:
                 # Strip off the topdir if it's included in the outputdir
                 value = value.replace(self.topdir, '')
-            if value[-1] != os.sep:
-                # Make sure outputdir ends with a separator
-                value += os.sep
-            self.outputdir_raw = value
+            # Make sure outputdir ends with a separator
+            self.outputdir_raw = os.path.join(value, '')
             value = os.path.join(self.topdir, *value.split(os.sep))
 
         # Set the attribute
