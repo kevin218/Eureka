@@ -90,7 +90,7 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
         log.writelog(f"Initial white MAD: {s4_meta.mad_s4_binned[0]}")
         log.writelog(f"Initial spec MAD: {s4_meta.mad_s4}\n")
 
-    for p in s1opt_meta.params_to_optimize:
+    for p in s1opt_meta.params_to_optimize_s1:
         s1opt_meta, log, history, best = optimize(s1opt_meta, log, history,
                                                   best, p, eventlabel,
                                                   ecf_path, 1)

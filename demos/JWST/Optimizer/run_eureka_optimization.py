@@ -1,4 +1,5 @@
 import os
+import eureka.lib.plots
 import eureka.optimizer.S1opt_optimizer as s1opt
 import eureka.optimizer.S3opt_optimizer as s3opt
 
@@ -17,7 +18,7 @@ JWST time-series observations.
 Inputs:
 - Loaded from a Eureka! control file, see S1opt_template.ecf/S3opt_template.ecf.
 - Parameters not specified for optimization will adopt the values listed in the
-    corresponding ECF.
+    standard ECF (e.g., S1_<eventlabel>.ecf or S3_<eventlabel>.ecf).
 
 Outputs:
 - The metadata object

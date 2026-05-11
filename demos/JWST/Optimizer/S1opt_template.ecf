@@ -13,7 +13,7 @@ scaling_MAD_white   1.0             # Optimizer scaling for WLC MAD value
 # Commenting out this line will use all single parameters listed below.
 # Single parameter options: jump_rejection_threshold, expand_mask, bg_deg, bg_method, p3thresh, window_len
 # Double parameter options: any combination of the above, joined by two underscores (e.g., expand_mask__p3thresh)
-params_to_optimize  ['jump_rejection_threshold', 'expand_mask', 'p3thresh']
+params_to_optimize_s1  ['jump_rejection_threshold', 'expand_mask', 'p3thresh']
 
 # Range for parameter values to optimize
 # Only specify if overriding the default values in S1opt_meta.py
