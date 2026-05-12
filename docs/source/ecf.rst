@@ -276,7 +276,7 @@ Scaling factor applied to the white light curve MAD value in the fitness functio
 
 params_to_optimize_s1
 ''''''''''''''''''''''
-List of parameters to optimize in Stage 1. Commenting out this line will use all single parameters listed below.  Single parameter options: jump_rejection_threshold, expand_mask, bg_deg, bg_method, p3thresh, window_len. Double parameter options: any combination of the above, joined by two underscores (e.g., expand_mask__p3thresh). Example:
+List of parameters to optimize in Stage 1. Commenting out this line will use all single parameters.  Single parameter options: jump_rejection_threshold, expand_mask, bg_deg, bg_method, p3thresh, window_len. Double parameter options: any combination of the above, joined by two underscores (e.g., expand_mask__p3thresh). Example:
 .. code-block:: python
    params_to_optimize = ['jump_rejection_threshold', 'expand_mask', 'p3thresh']
 
