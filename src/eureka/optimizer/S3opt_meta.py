@@ -136,7 +136,8 @@ class S3optMetaClass(MetaClass):
         '''
         defaults = {
             "sweep_bg_hw": range(5, 16),
-            "sweep_spec_hw": range(1, 10),
+            "sweep_spec_hw": range(2, 10),
+            "sweep_mad_box_width": range(11, 32, 5),
         }
 
         for key, default in defaults.items():

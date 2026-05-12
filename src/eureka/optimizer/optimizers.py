@@ -42,13 +42,14 @@ def sweep_range_single(sweep_var, meta, log, stage, **kwargs):
 
     # Iterate over each value in the provided bounds
     for i, val in enumerate(range(sweep_var[0], sweep_var[1] + 1)):
-        log.writelog(f"  Evaluating {meta.opt_param_name} = {val}...",
-                     mute=(not meta.verbose))
         # Need to rerun Stage 3 first time around on Stage 4 optimization
         # Otherwise, save time by not rerunning Stage 3 again
         run_s3 = False if (i > 0 and stage == 4) else True
         try:
             fitness_value = of.single(val, meta, stage, run_s3, **kwargs)
+            log.writelog(f"  Evaluating {meta.opt_param_name} = {val}..." +
+                         f" Fitness score: {fitness_value}",
+                         mute=(not meta.verbose))
             if fitness_value < best_fitness_value:
                 # Update best fitness and parameters if current is better
                 best_fitness_value = fitness_value
@@ -103,13 +104,14 @@ def sweep_list_single(sweep_var, meta, log, stage, **kwargs):
 
     # Iterate over each value in the provided bounds
     for i, val in enumerate(sweep_var):
-        log.writelog(f"  Evaluating {meta.opt_param_name} = {val}...",
-                     mute=(not meta.verbose))
         # Need to rerun Stage 3 first time around on Stage 4 optimization
         # Otherwise, save time by not rerunning Stage 3 again
         run_s3 = False if (i > 0 and stage == 4) else True
         try:
             fitness_value = of.single(val, meta, stage, run_s3, **kwargs)
+            log.writelog(f"  Evaluating {meta.opt_param_name} = {val}..." +
+                         f" Fitness score: {fitness_value}",
+                         mute=(not meta.verbose))
             if fitness_value < best_fitness_value:
                 # Update best fitness and parameters if current is better
                 best_fitness_value = fitness_value
@@ -165,14 +167,15 @@ def sweep_list_double(sweep_var, meta, log, stage, **kwargs):
     # Iterate over each value in the provided bounds
     for i, var1 in enumerate(sweep_var[0]):
         for j, var2 in enumerate(sweep_var[1]):
-            log.writelog(f"  Evaluating {meta.opt_param_name} = {var1}" +
-                         f" & {var2}...", mute=(not meta.verbose))
             # Need to rerun Stage 3 first time around on Stage 4 optimization
             # Otherwise, save time by not rerunning Stage 3 again
             run_s3 = False if (stage == 4 and (i > 0 or j > 0)) else True
             try:
                 val = np.array([var1, var2])
                 fitness_value = of.double(val, meta, stage, run_s3, **kwargs)
+                log.writelog(f"  Evaluating {meta.opt_param_name} = {var1}" +
+                             f" & {var2}... Fitness score: {fitness_value}",
+                            mute=(not meta.verbose))
                 if fitness_value < best_fitness_value:
                     # Update best fitness and parameters if current is better
                     best_fitness_value = fitness_value
@@ -232,8 +235,6 @@ def sweep_list_lt(sweep_var, meta, log, stage, **kwargs):
     # Iterate over each value in the provided bounds
     for i, var1 in enumerate(sweep_var[0]):
         for j, var2 in enumerate(sweep_var[1]):
-            log.writelog(f"  Evaluating {meta.opt_param_name} = {var1}" +
-                         f" & {var2}...", mute=(not meta.verbose))
             # Need to rerun Stage 3 first time around on Stage 4 optimization
             # Otherwise, save time by not rerunning Stage 3 again
             run_s3 = False if (stage == 4 and (i > 0 or j > 0)) else True
@@ -242,6 +243,9 @@ def sweep_list_lt(sweep_var, meta, log, stage, **kwargs):
                     val = np.array([var1, var2])
                     fitness_value = of.double(val, meta, stage, run_s3,
                                               **kwargs)
+                    log.writelog(f"  Evaluating {meta.opt_param_name} = {var1}"+
+                                 f" & {var2}... Fitness score: {fitness_value}",
+                                 mute=(not meta.verbose))
                     if fitness_value < best_fitness_value:
                         # Update best fitness and parameters if current is
                         # better
