@@ -37,5 +37,5 @@ hide_plots          True            # If True, plots will automatically be close
 topdir              ../tests
 
 # Directories relative to topdir
-inputdir            /data/JWST-Sim/NIRSpec/Stage2/ #S2_2025-11-10_NIRSpec_run1
+inputdir            /data/JWST-Sim/NIRSpec/Stage2/
 outputdir           /data/JWST-Sim/NIRSpec/Stage3opt/
