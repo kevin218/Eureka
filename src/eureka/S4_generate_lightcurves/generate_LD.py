@@ -104,8 +104,8 @@ def exotic_ld(meta, spec, log, white=False):
         sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
                                    meta.exotic_ld_grid, meta.exotic_ld_direc)
      
-    # Now if Phoenix, rescale the mu grid                               
-    if meta.exotic_ld_grid == 'phoenix':
+    # Now if Phoenix, rescale the mu grid                         
+    if meta.exotic_ld_grid == 'phoenix' and meta.rescale_phoenix:
         print('Rescaling Phoenix')
         # loop over wavelengths and rescale
         
@@ -129,9 +129,9 @@ def exotic_ld(meta, spec, log, white=False):
                                        custom_mus=mus_new,
                                        custom_stellar_model=sis_new)  
         if meta.isplots_S4 >= 3: 
-            sld._integrate_I_mu([meta.wave_min, meta.wave_max], 
+            sld._integrate_I_mu([meta.wave_min*1e4, meta.wave_max*1e4], 
                                 mode, None, None)
-            sld_new._integrate_I_mu([meta.wave_min, meta.wave_max], 
+            sld_new._integrate_I_mu([meta.wave_min*1e4, meta.wave_max*1e4], 
                                     mode, None, None)
             plots_s4.plot_rescaled_phoenix(meta, sld, sld_new)
         

@@ -38,6 +38,7 @@ logg            4.0     # Surface gravity in log g
 minmu			0.2		# minimum mu to use when calculating LD in ExoTiC-LD
 exotic_ld_direc /home/User/exotic-ld_data/ # Directory for ancillary files for exotic-ld, download from: https://zenodo.org/doi/10.5281/zenodo.6047317
 exotic_ld_grid  stagger # You can choose from kurucz (or 1D), stagger (or 3D), mps1, or mps2 model grids, or custom (to use custom_si_grid below)
+# rescale_phoenix  True. #Option to rescale the mu grid for phoenix models. See Section 2.2: https://academic.oup.com/mnras/article/450/2/1879/985166
 # custom_si_grid  /home/User/path/to/custom/stellar/intensity/profile  #Custom Stellar Intensity profile. For examples see Eureka/demos/JWST/Custom_Stellar_Intensity_Files
 # exotic_ld_file  /home/User/exotic-ld_data/Custom_throughput_file.csv # Custom throughput file, for examples see Eureka/demos/JWST/Custom_throughput_files
 # Options for SPAM
