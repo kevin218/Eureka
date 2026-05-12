@@ -65,7 +65,7 @@ def GLBS(input_model, log, meta):
         if meta.inst == 'miri':
             meta.isrotate = 0
 
-        if meta.isplots_S1 == 4:
+        if meta.isplots_S1 >= 4:
             # Plot all groups
             isplots_S1 = meta.isplots_S1
         # Otherwise, only show plots for the last good group
