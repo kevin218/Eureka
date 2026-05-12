@@ -47,7 +47,7 @@ def sweep_range_single(sweep_var, meta, log, stage, **kwargs):
         run_s3 = False if (i > 0 and stage == 4) else True
         try:
             fitness_value = of.single(val, meta, stage, run_s3, **kwargs)
-            log.writelog(f"  Evaluating {meta.opt_param_name} = {val}..." +
+            log.writelog(f"  Evaluated {meta.opt_param_name} = {val}." +
                          f" Fitness score: {fitness_value}",
                          mute=(not meta.verbose))
             if fitness_value < best_fitness_value:
@@ -109,7 +109,7 @@ def sweep_list_single(sweep_var, meta, log, stage, **kwargs):
         run_s3 = False if (i > 0 and stage == 4) else True
         try:
             fitness_value = of.single(val, meta, stage, run_s3, **kwargs)
-            log.writelog(f"  Evaluating {meta.opt_param_name} = {val}..." +
+            log.writelog(f"  Evaluated {meta.opt_param_name} = {val}." +
                          f" Fitness score: {fitness_value}",
                          mute=(not meta.verbose))
             if fitness_value < best_fitness_value:
@@ -173,8 +173,8 @@ def sweep_list_double(sweep_var, meta, log, stage, **kwargs):
             try:
                 val = np.array([var1, var2])
                 fitness_value = of.double(val, meta, stage, run_s3, **kwargs)
-                log.writelog(f"  Evaluating {meta.opt_param_name} = {var1}" +
-                             f" & {var2}... Fitness score: {fitness_value}",
+                log.writelog(f"  Evaluated {meta.opt_param_name} = {var1}" +
+                             f" & {var2}. Fitness score: {fitness_value}",
                              mute=(not meta.verbose))
                 if fitness_value < best_fitness_value:
                     # Update best fitness and parameters if current is better
@@ -243,8 +243,8 @@ def sweep_list_lt(sweep_var, meta, log, stage, **kwargs):
                     val = np.array([var1, var2])
                     fitness_value = of.double(val, meta, stage, run_s3,
                                               **kwargs)
-                    log.writelog(f" Evaluating {meta.opt_param_name} = {var1}" +
-                                 f" & {var2}... Fitness score: {fitness_value}",
+                    log.writelog(f" Evaluated {meta.opt_param_name} = {var1}" +
+                                 f" & {var2}. Fitness score: {fitness_value}",
                                  mute=(not meta.verbose))
                     if fitness_value < best_fitness_value:
                         # Update best fitness and parameters if current is
