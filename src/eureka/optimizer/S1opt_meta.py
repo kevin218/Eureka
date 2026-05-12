@@ -90,7 +90,7 @@ class S1optMetaClass(MetaClass):
         full_list = ['jump_rejection_threshold', 'expand_mask', 'bg_deg',
                      'bg_method', 'p3thresh', 'window_len']
         self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
-                                          full_list)
+                                             full_list)
         # Spectral extraction parameters
         defaults = {
             # Stage 1
