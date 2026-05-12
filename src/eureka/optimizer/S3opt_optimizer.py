@@ -195,10 +195,18 @@ def optimize(s3opt_meta, log, history, best, p, eventlabel, ecf_path, stage,
 
     # Extract sweep for parameter(s) to optimize
     if hasattr(meta, "sweep_" + p):
+        # Extract default sweep for single parameter
         sweep = getattr(meta, "sweep_" + p)
         log.writelog(f"Optimizing parameter {p} over sweep: {sweep}")
-        log.writelog("Initial parameter value: " +
-                     f"{getattr(s3_meta, p, getattr(s4_meta, p, 'default'))}")
+        if "__" in p:
+            param_names = p.split("__")
+            init_vals = []
+            for param in param_names:
+                init_vals.append(getattr(s3_meta, param,
+                                 getattr(s4_meta, param, 'default')))
+        else:
+            init_vals = getattr(s3_meta, p, getattr(s4_meta, p, 'default'))
+        log.writelog(f"Initial parameter values: {init_vals}")
     elif "__" in p:
         # Extract default sweep for two parameters
         param_names = p.split("__")
@@ -295,7 +303,7 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     # Setup Stage 3 Meta object and overwrite certain Meta values
     s3_meta = S3MetaClass(folder=ecf_path, eventlabel=eventlabel)
     s3_meta.topdir = meta.topdir
-    s3_meta.inputdir = meta.inputdir
+    s3_meta.inputdir = os.path.join(meta.inputdir, '')
     s3_meta.outputdir = os.path.join(meta.outputdir, 'Stage3')
     s3_meta.isopt_S1 = meta.isopt_S1
     s3_meta.isopt_S3 = meta.isopt_S3
@@ -306,7 +314,7 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     # Setup Stage 4 Meta object and overwrite certain Meta values
     s4_meta = S4MetaClass(folder=ecf_path, eventlabel=eventlabel)
     s4_meta.topdir = meta.outputdir
-    s4_meta.inputdir = s3_meta.outputdir
+    s4_meta.inputdir = os.path.join(s3_meta.outputdir, '')
     s4_meta.outputdir = 'Stage4'
     s4_meta.isplots_S4 = meta.isplots_S3opt
     s4_meta.verbose = meta.verbose
