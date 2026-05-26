@@ -27,6 +27,36 @@ from multiprocessing import Pool
 from astropy import table
 
 
+def _get_dynesty_checkpoint_file(meta, lc, fittername):
+    """Get the dynesty checkpoint file path."""
+    if lc.white:
+        channel_tag = '_white'
+    elif lc.share:
+        channel_tag = '_shared'
+    else:
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        channel_tag = f'_ch{ch_number}'
+
+    filename = f'S5_{fittername}_checkpoint{channel_tag}.save'
+    return os.path.join(meta.outputdir, filename)
+
+
+def _get_old_dynesty_checkpoint_file(meta, lc, fittername):
+    """Get the old dynesty checkpoint file path for resuming."""
+    old_checkpoint = getattr(meta, 'old_dynesty_checkpoint', None)
+    if old_checkpoint is None:
+        raise ValueError('old_dynesty_checkpoint must be set when '
+                         'dynesty_resume is True.')
+
+    old_checkpoint = os.path.join(meta.topdir,
+                                  *old_checkpoint.split(os.sep))
+    if os.path.isdir(old_checkpoint):
+        filename = os.path.basename(
+            _get_dynesty_checkpoint_file(meta, lc, fittername))
+        return os.path.join(old_checkpoint, filename)
+    return old_checkpoint
+
+
 def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
 
@@ -824,6 +854,36 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     bound = meta.run_bound
     sample = meta.run_sample
     l_args = [lc, model, freenames]
+    checkpoint_file = None
+    if meta.dynesty_checkpoint or meta.dynesty_resume:
+        checkpoint_file = _get_dynesty_checkpoint_file(meta, lc, fittername)
+        meta.checkpoint_file = checkpoint_file
+        log.writelog('  Dynesty checkpoint file: '
+                     f'{checkpoint_file}')
+        log.writelog('  Dynesty checkpoint cadence: '
+                     f'{meta.dynesty_checkpoint_every} seconds')
+    old_checkpoint_file = None
+    if meta.dynesty_resume:
+        old_checkpoint_file = _get_old_dynesty_checkpoint_file(
+            meta, lc, fittername)
+        if not os.path.exists(old_checkpoint_file):
+            raise FileNotFoundError(
+                'Old dynesty checkpoint file does not exist: '
+                f'{old_checkpoint_file}')
+        log.writelog('  Resuming dynesty run from existing checkpoint: '
+                     f'{old_checkpoint_file}')
+
+    run_kwargs = {'print_progress': True}
+    if meta.dynesty_checkpoint or meta.dynesty_resume:
+        run_kwargs['checkpoint_file'] = checkpoint_file
+        run_kwargs['checkpoint_every'] = meta.dynesty_checkpoint_every
+    if meta.dynesty_resume:
+        run_kwargs['resume'] = True
+
+    if meta.dynesty_maxiter is not None:
+        run_kwargs['maxiter'] = meta.dynesty_maxiter
+    if meta.dynesty_maxcall is not None:
+        run_kwargs['maxcall'] = meta.dynesty_maxcall
 
     # Handle 'min' for meta.run_nlive
     nlive = meta.run_nlive
@@ -876,10 +936,14 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         if nlive_log is not None:
             log.writelog(nlive_log, mute=(not meta.verbose))
 
-        sampler = DynamicNestedSampler(
-            ln_like, ptform, ndims, pool=pool,
-            queue_size=queue_size, bound=bound, sample=sample,
-            logl_args=l_args, ptform_args=[prior1, prior2, priortype])
+        if meta.dynesty_resume:
+            sampler = DynamicNestedSampler.restore(old_checkpoint_file,
+                                                   pool=pool)
+        else:
+            sampler = DynamicNestedSampler(
+                ln_like, ptform, ndims, pool=pool,
+                queue_size=queue_size, bound=bound, sample=sample,
+                logl_args=l_args, ptform_args=[prior1, prior2, priortype])
 
         # Handle 'auto' for meta.run_nlive_batch
         nlive_batch = meta.run_nlive_batch
@@ -893,19 +957,22 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         sampler.run_nested(nlive_init=nlive, nlive_batch=nlive_batch,
                            dlogz_init=meta.run_tol,
                            wt_kwargs={"pfrac": meta.run_pfrac},
-                           print_progress=True)
+                           **run_kwargs)
     else:
         log.writelog('  Using static nested sampling...')
         if nlive_log is not None:
             log.writelog(nlive_log, mute=(not meta.verbose))
 
-        sampler = NestedSampler(
-            ln_like, ptform, ndims, nlive=nlive, pool=pool,
-            queue_size=queue_size, bound=bound, sample=sample,
-            logl_args=l_args, ptform_args=[prior1, prior2, priortype])
+        if meta.dynesty_resume:
+            sampler = NestedSampler.restore(old_checkpoint_file, pool=pool)
+        else:
+            sampler = NestedSampler(
+                ln_like, ptform, ndims, nlive=nlive, pool=pool,
+                queue_size=queue_size, bound=bound, sample=sample,
+                logl_args=l_args, ptform_args=[prior1, prior2, priortype])
 
         # Run the sampler
-        sampler.run_nested(dlogz=meta.run_tol, print_progress=True)
+        sampler.run_nested(dlogz=meta.run_tol, **run_kwargs)
 
     # Get the results from the sampler
     res = sampler.results
