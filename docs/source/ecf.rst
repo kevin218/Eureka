@@ -754,6 +754,7 @@ Path to a user supplied txt file with pre-defined wavelength bins. Two columns (
 allapers
 ''''''''
 If True, run S4 on all of the apertures considered in S3. Otherwise the code will use the only or newest S3 outputs found in the inputdir. To specify a particular S3 save file, ensure that "inputdir" points to the procedurally generated folder containing that save file (e.g. set inputdir to /Data/JWST-Sim/NIRCam/Stage3/S3_2021-11-08_nircam_wfss_ap10_bg10_run1/).
+When ``allapers`` is ``True``, ``inputdir`` can include glob-style patterns to restrict which previous-stage aperture/background folders are processed. For example, setting ``inputdir`` to ``Stage3/S3_*_run*/ap5_bg*`` and ``allapers`` to ``True`` runs Stage 4 for aperture 5 over all matching background settings.
 
 
 mask_columns
@@ -1029,6 +1030,7 @@ Integer. Sets the number of CPUs to use for multiprocessing Stage 5 fitting.
 allapers
 ''''''''
 Boolean to determine whether Stage 5 is run on all the apertures considered in Stage 4. If False, will just use the most recent output in the input directory.
+When ``allapers`` is ``True``, ``inputdir`` can include glob-style patterns to restrict which previous-stage aperture/background folders are processed. For example, setting ``inputdir`` to ``Stage4/S4_*_run*/ap5_bg*`` and ``allapers`` to ``True`` runs Stage 5 for aperture 5 over all matching background settings.
 
 multwhite
 '''''''''
@@ -1503,6 +1505,7 @@ allapers
 ''''''''
 Boolean to determine whether Stage 6 is run on all the apertures considered in Stage 5. If
 False, will just use the most recent output in the input directory.
+When ``allapers`` is ``True``, ``inputdir`` can include glob-style patterns to restrict which previous-stage aperture/background folders are processed. For example, setting ``inputdir`` to ``Stage5/S5_*_run*/ap5_bg*`` and ``allapers`` to ``True`` runs Stage 6 for aperture 5 over all matching background settings.
 
 y_params
 ''''''''
