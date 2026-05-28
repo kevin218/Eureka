@@ -1231,6 +1231,30 @@ run_tol
 ^^^^^^^
 Float. The convergence tolerance for the dynesty run. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
 
+dynesty_checkpoint
+^^^^^^^^^^^^^^^^^^
+Boolean. If ``True``, dynesty will periodically write checkpoint files while running. These files are intended for resuming interrupted long runs and should generally be resumed with the same dynesty version.
+
+dynesty_resume
+^^^^^^^^^^^^^^
+Boolean. If ``True``, dynesty will resume from an existing checkpoint file instead of starting a fresh sampler. Set ``old_dynesty_checkpoint`` to the previous checkpoint file or to the parent folder that contains Eureka's standardized checkpoint file. The checkpoint should generally come from the same dynesty version.
+
+dynesty_checkpoint_every
+^^^^^^^^^^^^^^^^^^^^^^^^
+Float or integer. Number of seconds between dynesty checkpoint writes. Defaults to ``600``.
+
+old_dynesty_checkpoint
+^^^^^^^^^^^^^^^^^^^^^^
+String or ``None``. Previous dynesty checkpoint file or parent folder, relative to ``topdir``, used when ``dynesty_resume`` is ``True``. If this points to a folder, Eureka will look inside that folder for the standardized fitter/channel-specific checkpoint filename.
+
+dynesty_maxiter
+^^^^^^^^^^^^^^^
+Integer or ``None``. Optional maximum number of dynesty iterations to run.
+
+dynesty_maxcall
+^^^^^^^^^^^^^^^
+Integer or ``None``. Optional maximum number of likelihood calls for dynesty.
+
 
 Dynamic Nested Sampling Parameters
 ''''''''''''''''''''''''''''''''''
