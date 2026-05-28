@@ -314,7 +314,6 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         self.suffix = None
 
         # Call the main Spec2Pipeline function (defined in the parent class)
-        log.writelog('Running the Spec2Pipeline\n')
         # Must call the pipeline in this way to ensure the skip booleans are
         # respected
         self.run(filename)
@@ -383,7 +382,6 @@ class EurekaImage2Pipeline(Image2Pipeline):
         self.suffix = None
 
         # Call the main Image2Pipeline function (defined in the parent class)
-        log.writelog('Running the Image2Pipeline\n')
         # Must call the pipeline in this way to ensure the skip booleans are
         # respected
         self.run(filename)
