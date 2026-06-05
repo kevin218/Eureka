@@ -97,7 +97,7 @@ jobs:
       - name: Install UniDep
         run: |
           python -m pip install --upgrade \
-            "unidep @ git+https://github.com/taylorbell57/unidep.git@90c19d3"
+            "unidep @ git+https://github.com/taylorbell57/unidep.git@v3.2.0"
 
       - name: Generate environment.yml
         run: |
@@ -129,7 +129,7 @@ jobs:
     if: needs.env_validate.result == 'success'
     runs-on: ubuntu-latest
     outputs:
-      proceed: ${{ steps.set_proceed.outputs.proceed }}
+      proceed: ${{ steps.set_proceed.outputs.proceed || steps.sync_push.outputs.proceed || steps.set_fail.outputs.proceed }}
 
     steps:
       - name: Set proceed when environment.yml is already current
@@ -165,7 +165,7 @@ jobs:
         if: needs.env_prepare.outputs.changed == 'true'
         run: |
           python -m pip install --upgrade \
-            "unidep @ git+https://github.com/taylorbell57/unidep.git@90c19d3"
+            "unidep @ git+https://github.com/taylorbell57/unidep.git@v3.2.0"
 
       - name: Regenerate environment.yml
         if: needs.env_prepare.outputs.changed == 'true'
@@ -185,12 +185,17 @@ jobs:
 
       - name: Commit and push updated environment.yml
         if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        id: sync_push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if ! git diff --cached --quiet -- environment.yml; then
             git commit -m "Regenerate environment.yml"
             git push origin "HEAD:${{ github.head_ref }}"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment.yml is already current after regeneration."
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Upload generated environment.yml for fork PRs
@@ -214,12 +219,6 @@ jobs:
             echo "commit the regenerated \`environment.yml\`, and push it to"
             echo "your PR branch."
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Mark PR workflow as waiting for bot-pushed commit
-        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
-        id: set_wait
-        run: |
-          echo "proceed=false" >> "$GITHUB_OUTPUT"
 
       - name: Fail for stale fork PRs
         if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository

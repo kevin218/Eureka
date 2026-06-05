@@ -2,7 +2,7 @@
 requires = [
     "setuptools>=77,<81",
     "setuptools_scm[toml]>=6.2", # Needed to support pyproject.toml config
-    "unidep>=3",
+    "unidep>=3.2.0",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -158,5 +158,5 @@ dev = [
     "pre-commit",
     { conda = "python-build", pip = "build" },
     "twine",
-    "unidep>=3",
+    "unidep>=3.2.0",
 ]
