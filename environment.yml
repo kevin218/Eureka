@@ -1,5 +1,5 @@
-# This file is created and managed by `unidep` 3.0.0.
-# For details see https://github.com/basnijholt/unidep
+# This file is created and managed by `unidep` 3.3.2.
+# For details see https://github.com/conda-incubator/unidep
 # File generated with: `unidep merge -n eureka -o environment.yml --all-optional-dependencies`
 
 name: eureka
@@ -43,7 +43,7 @@ dependencies:
   - sphinx-automodapi >=0.13.0
   - tqdm
   - twine
-  - unidep >=3
+  - unidep >=3.2.0
   - pip:
     - astraeus-io
     - batman-package
