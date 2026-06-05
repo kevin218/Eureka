@@ -30,6 +30,7 @@ dependencies:
   - pandas
   - photutils
   - pip
+  - pre-commit
   - pytest <8.0
   - pytest-cov
   - pytest-doctestplus
