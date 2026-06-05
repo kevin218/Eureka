@@ -714,17 +714,17 @@ def median_frame(data, meta, m, medflux, order=None):
         if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96':
             order = 1
             trace = data["trace"].sel(order=order)
-            
-            plt.plot(data.flux.x.values, trace, 
+
+            plt.plot(data.flux.x.values, trace,
                      c="white", lw=2)
-            plt.plot(data.flux.x.values, trace, 
+            plt.plot(data.flux.x.values, trace,
                      "--k", lw=1, label=f"Trace Order {order}")
         else:
             for order in meta.all_orders:
                 trace = data["trace"].sel(order=order)
-                plt.plot(data.flux.x.values, trace, 
+                plt.plot(data.flux.x.values, trace,
                          c="white", lw=2)
-                plt.plot(data.flux.x.values, trace, 
+                plt.plot(data.flux.x.values, trace,
                          "--k", lw=1, label=f"Trace Order {order}")
 
     plt.ylabel('Detector Pixel Position')

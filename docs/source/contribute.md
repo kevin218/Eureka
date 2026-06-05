@@ -38,6 +38,30 @@ It is therefore the responsibility of the contributor to update the tests and th
 there will be times where this might be harder than expected, and in those cases we welcome contributors to speak thoroughly on the
 issues within their pull request so other team members may help them and be aware of the problem.
 
+## Local Hygiene Checks with pre-commit
+
+Eureka! also supports a small set of fast local hygiene checks through `pre-commit`. These hooks are intended for deterministic checks and safe autofixes such as whitespace cleanup, basic file validation, merge-conflict detection, and local `flake8` runs. Heavier validation such as the main test suite, build checks, and other project CI still runs in GitHub Actions.
+
+If you are setting up a local development environment with `pip`, install Eureka! with the `dev` optional dependencies so that `pre-commit` and the other developer tools are available:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+Then enable the hooks in your local clone:
+
+```bash
+pre-commit install
+```
+
+To run the configured hooks across the repository at any time, use:
+
+```bash
+pre-commit run --all-files
+```
+
+Some hooks may rewrite files automatically. If that happens, review the changes and restage the updated files before committing them.
+
 ## GitHub Basics
 
 This section will go over how to best contribute to the Eureka project utilizing GitHub tools such as forking, and will be dedicated to Eureka-specific examples. If you are a beginner to GitHub, a comprehensive introduction to GitHub can be found on <a href="https://christinahedges.github.io/astronomy_workflow/index.html" target="_blank"> the following page.</a>
