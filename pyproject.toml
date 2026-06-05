@@ -155,6 +155,7 @@ jupyter = [
     "jupyter>=1.0.0", # Base metapackage
 ]
 dev = [
+    "pre-commit",
     { conda = "python-build", pip = "build" },
     "twine",
     "unidep>=3",
