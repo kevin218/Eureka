@@ -59,7 +59,7 @@ jobs:
       - name: Install docs dependencies
         run: |
           python -m pip install --timeout 60 --retries 5 --upgrade pip
-          python -m pip install --timeout 60 --retries 5 -e ".[docs]"
+          python -m pip install --timeout 60 --retries 5 -e ".[jwst,docs]"
 
       - name: Build docs with warnings as errors
         run: |
