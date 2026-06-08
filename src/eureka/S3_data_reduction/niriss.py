@@ -132,7 +132,7 @@ def get_wave(data, meta, log):
     pwcpos = data.attrs['mhdr']['PWCPOS']
 
     # Keep track of base pupil position for custom offset correction
-    base_pwcpos = 245.76 
+    base_pwcpos = 245.76
 
     # Keep track of PASTASOSS trace rotation pivots
     pivots = [
@@ -145,7 +145,7 @@ def get_wave(data, meta, log):
 
     # Calculate offset amount from header (given in arcsec) and
     # NIRISS pixel scale (0.0653 arcsec/px in X direction)
-    pixscale = 0.0653 
+    pixscale = 0.0653
     trace_xoffset = data.attrs['mhdr']['XOFFSET'] / pixscale
     log.writelog(f"  There is an X offset of {trace_xoffset:.3f} pixels",
                  mute=(not meta.verbose))
@@ -162,10 +162,10 @@ def get_wave(data, meta, log):
         # Get trace for the given order and pupil position
         if trace_xoffset > 0:
             # Need to translate trace position before rotating
-            trace = get_soss_traces(pwcpos=base_pwcpos, 
+            trace = get_soss_traces(pwcpos=base_pwcpos,
                                     order=str(order), interp=True)
         else:
-            trace = get_soss_traces(pwcpos=pwcpos, 
+            trace = get_soss_traces(pwcpos=pwcpos,
                                     order=str(order), interp=True)
         if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96' and \
                 meta.trace_yoffset is None:
@@ -195,25 +195,25 @@ def get_wave(data, meta, log):
             pivot_wav = np.copy(pivot).astype(float)
             ind = np.argmin(np.abs(base_x - pivot[0]))
             pivot_wav[0] = base_wav[ind]
-            
-            # If using a custom X-direction offset, 
+
+            # If using a custom X-direction offset,
             # shift X dimension by xoffset pixels
             shift_x = base_x - trace_xoffset
 
-            # Extrapolate trace to longer wavelengths 
+            # Extrapolate trace to longer wavelengths
             # by fitting an 8th order polynomial
             fitdeg = 8
 
             y_interp = np.polynomial.polynomial.Polynomial.fit(
-                base_x, base_y, fitdeg, 
+                base_x, base_y, fitdeg,
                 domain=[shift_x[0], shift_x[-1]])(shift_x)
-            
+
             wav_interp = np.polynomial.polynomial.Polynomial.fit(
-                base_x, base_wav, fitdeg, 
+                base_x, base_wav, fitdeg,
                 domain=[shift_x[0], shift_x[-1]])(shift_x)
 
             # Rotate trace only after translating to new offset wavelengths
-            rotate_wav, rotate_y = rotate(wav_interp, y_interp, 
+            rotate_wav, rotate_y = rotate(wav_interp, y_interp,
                                           pwcpos - base_pwcpos, pivot_wav)
 
             trace.y = rotate_y

@@ -12,11 +12,15 @@ Missing packages during installation
 ''''''''''''''''''''''''''''''''''''
 
 If you are encountering errors when installing Eureka! like missing packages (e.g. extension_helpers), be sure
-that you are following the instructions on the on the :ref:`installation` page. If you are trying to directly
-call setup.py using the ``python setup.py install`` command, you should instead be using a pip or conda
-installation command which helps to make sure that all required dependencies are installed in the right order
-and checks for implicit dependencies. If you still encounter issues, you should be sure that you are using a
-new conda environment as other packages you've previously installed could have conflicting requirements with Eureka!.
+that you are following the instructions on the :ref:`installation` page. If
+you are trying to install from a stale command in an old issue or third-party
+example, switch back to the commands shown on the :ref:`installation` page.
+``Eureka!`` should currently be installed either directly from GitHub using
+pip, or by creating the repository-managed conda environment from
+``environment.yml`` and then installing into it. If you still encounter
+issues, you should be sure that you are using a new conda environment as other
+packages you've previously installed could have conflicting requirements with
+Eureka!.
 
 If you are following the installation instructions and still encounter an error, please open a new Issue on
 `GitHub Issues <https://github.com/kevin218/Eureka/issues>`__ and paste the full error message you are getting along
@@ -25,8 +29,8 @@ with details about which python version and operating system you are using.
 Installation issues with M1 processors
 ''''''''''''''''''''''''''''''''''''''
 
-Note that if you are using a macOS device with an M1 processor, you will need to use the ``conda`` environment.yml file
-installation instructions as we have had reports that the pip dependencies fail to build on the M1 processor.
+Note that if you are using a macOS device with an M1 processor, you may need to use the repository
+``environment.yml`` installation route, as some pip dependencies have been reported to fail to build on M1.
 
 
 Issues installing or importing batman
@@ -48,8 +52,10 @@ Issues installing or importing jwst
 '''''''''''''''''''''''''''''''''''
 
 As a first step, make sure that you were following the instructions on the :ref:`installation` page and were
-either using the conda environment.yml installation method or a pip installation command that included "[jwst]"
-like ``pip install eureka-bang[jwst]``. If you are getting error messages on linux that mention gcc, you likely need to
+either using the conda ``environment.yml`` installation method or a pip
+installation command that included ``[jwst]`` like
+``python -m pip install "eureka-bang[jwst] @ git+https://github.com/kevin218/Eureka.git@v1.4"``.
+If you are getting error messages on linux that mention gcc, you likely need to
 first install gcc using ``sudo apt install gcc``. If you are getting messages on macOS that mention clang,
 X-Code, and/or CommandLineTools, you need to make sure that CommandLineTools is first manually installed.
 CommandLineTools is installed whenever you first manually use a command that requires it like git, so one very
@@ -65,9 +71,11 @@ You should also consider opening an issue on the `jwst GitHub <https://github.co
 there may not be much we can do to help troubleshoot a package we have no control over.
 
 Finally, if you simply cannot get jwst to install and still want to use later stages of the Eureka! pipeline, then you can
-install Eureka! using ``pip install eureka-bang`` instead of ``pip install eureka-bang[jwst]`` which will not install the jwst package. Note,
-however, that this means that Stages 1 and 2 will not work at all as Eureka's Stages 1 and 2 simply offer ways of editing
-the behaviour of the jwst package's Stages 1 and 2.
+install Eureka! without the ``jwst`` dependency group, for example with
+``python -m pip install "eureka-bang @ git+https://github.com/kevin218/Eureka.git@v1.4"``.
+Note, however, that this means that Stages 1 and 2 will not work at all, as
+Eureka!'s Stages 1 and 2 simply offer ways of editing the behaviour of the
+jwst package's Stages 1 and 2.
 
 CRDS server connection error
 ''''''''''''''''''''''''''''
