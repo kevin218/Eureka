@@ -29,7 +29,7 @@ class S4cal_MetaClass(MetaClass):
         # Remove the stage from kwargs if present
         if 'stage' in kwargs:
             kwargs.pop('stage')
-            
+
         super().__init__(folder, file, eventlabel, stage='4cal', **kwargs)
 
     def set_defaults(self):
