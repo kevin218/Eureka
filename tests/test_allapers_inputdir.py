@@ -103,6 +103,38 @@ def test_allapers_glob_inputdir_no_matches_is_clear(tmp_path):
         me.findevent(meta, 'S3', allowFail=False)
 
 
+def test_allapers_glob_does_not_parse_ap_bg_run_suffix(tmp_path):
+    """Do not treat unsupported ap<ap>_bg<bg>_runN folders as ap/bg pairs."""
+    _save_previous_meta(
+        tmp_path / 'Stage3' / 'S3_2026-01-01_testevent_run1' /
+        'ap5_bg7_run1', 5, 7)
+
+    meta = _make_current_meta(
+        tmp_path, 'Stage3/S3_*_run*/ap5_bg7_run*', allapers=True)
+
+    meta = _load_and_filter_s4_meta(meta)
+
+    assert me.get_allapers_pairs(meta) == [
+        (4, 7), (4, 9), (4, 11),
+        (5, 7), (5, 9), (5, 11),
+        (6, 7), (6, 9), (6, 11),
+    ]
+
+
+def test_allapers_glob_folders_match_but_no_ap_bg_overlap(tmp_path):
+    """Raise clearly when glob-matched folders do not overlap ap/bg ranges."""
+    _save_previous_meta(
+        tmp_path / 'Stage3' / 'S3_2026-01-01_testevent_run1' / 'ap10_bg10',
+        10, 10)
+
+    meta = _make_current_meta(
+        tmp_path, 'Stage3/S3_*_run*/ap10_bg*', allapers=True)
+
+    with pytest.raises(AssertionError,
+                       match='none of their ap/bg values matched'):
+        _load_and_filter_s4_meta(meta)
+
+
 def test_glob_inputdir_without_allapers_uses_existing_findevent_behavior(
         tmp_path):
     _save_previous_meta(
