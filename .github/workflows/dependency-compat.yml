@@ -56,6 +56,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Setup docs system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+
       - name: Install docs dependencies
         run: |
           python -m pip install --timeout 60 --retries 5 --upgrade pip
