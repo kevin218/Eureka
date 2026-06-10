@@ -16,6 +16,10 @@ def filter_allapers_inputdir(meta):
     When allapers=True and inputdir contains a glob pattern, findevent records
     the matched candidate folders. This helper extracts ap/bg values from
     those folders and limits the standard allapers loop to matching pairs.
+    Eureka! allapers outputs are nested under a stage run folder as
+    ``S#_<date>_<eventlabel>_runN/ap<ap>_bg<bg>/``. This parser looks for
+    that ``ap<ap>_bg<bg>`` path component, such as ``ap5_bg7`` or
+    ``ap60_bg70_90``.
 
     Parameters
     ----------
@@ -44,8 +48,11 @@ def filter_allapers_inputdir(meta):
     pair_dirs = {}
     for folder in candidates:
         for part in reversed(folder.rstrip(os.sep).split(os.sep)):
+            # Parse Eureka allapers child folder names like ap5_bg7.
+            if re.search(r'_run\d+$', part):
+                continue
             match = re.search(r'(?:^|_)ap(?P<ap>[^_/]+)_bg'
-                              r'(?P<bg>.+?)(?:_run\d+)?$', part)
+                              r'(?P<bg>.+?)$', part)
             if match is None:
                 continue
 
@@ -353,14 +360,16 @@ def findevent(meta, stage, allowFail=False):
 
     fnames = []
     for file_suffix in ['*_Meta_Save.dat', '*SpecData.h5']:
-        newfnames = glob.glob(meta.inputdir+stage+'_'+meta.eventlabel +
-                              file_suffix)
+        for search_dir in search_dirs:
+            newfnames = glob.glob(search_dir+stage+'_'+meta.eventlabel +
+                                  file_suffix)
 
-        if len(newfnames) == 0:
-            # There were no metadata files in that folder, so let's see if
-            # there are in children folders
-            newfnames = glob.glob(meta.inputdir+'**'+os.sep+stage+'_' +
-                                  meta.eventlabel+file_suffix, recursive=True)
+            if len(newfnames) == 0:
+                # There were no metadata files in that folder, so let's see if
+                # there are in children folders
+                newfnames = glob.glob(search_dir+'**'+os.sep+stage+'_' +
+                                      meta.eventlabel+file_suffix,
+                                      recursive=True)
 
             fnames.extend(newfnames)
 
