@@ -9,11 +9,11 @@ testing as well as some GitHub basics.
 
 When dependency bounds, compatibility expectations, or CI-tested support
 surfaces change, consult the [dependency policy](dependency_policy.md) page
-alongside this contributor guide. That page explains how Eureka distinguishes
+alongside this contributor guide. That page explains how Eureka! distinguishes
 between declared metadata ranges, the tested oldest-practical recipe, and the
 generated `environment.yml`.
 
-As of 5/10/2022, Eureka has working end-to-end tests for NIRCam (S3-S6), NIRSpec (S2-S5), MIRI (S2-S6), and HST/WFC3 (S3). Test data NIRISS has not yet been created, so this instrument will not have unit tests until further in the future. Future testing will test the functionality of different fitting methods and different systematics models. **It is required for all contributors of Eureka! to run these tests locally before opening a pull request with their new code**. By running the tests locally, the contributor will be able to see whether the functionality of the main code is still intact. This requirement is common in software development teams and is meant to encourage smooth collaboration by helping track small bugs or changes that affect the basic functionality of the code so that colleagues won't have to.
+As of 5/10/2022, Eureka! has working end-to-end tests for NIRCam (S3-S6), NIRSpec (S2-S5), MIRI (S2-S6), and HST/WFC3 (S3). Test data NIRISS has not yet been created, so this instrument will not have unit tests until further in the future. Future testing will test the functionality of different fitting methods and different systematics models. **It is required for all contributors of Eureka! to run these tests locally before opening a pull request with their new code**. By running the tests locally, the contributor will be able to see whether the functionality of the main code is still intact. This requirement is common in software development teams and is meant to encourage smooth collaboration by helping track small bugs or changes that affect the basic functionality of the code so that colleagues won't have to.
 
 For these tests, the `pytest` package (<a href="https://docs.pytest.org/en/6.2.x/getting-started.html" target="_blank"> link </a>) will be used. Once installed, the user submitting a pull request may navigate to the tests folder in Eureka! (`tests`) and run
 the following command:
@@ -70,21 +70,21 @@ Some hooks may rewrite files automatically. If that happens, review the changes 
 
 ## GitHub Basics
 
-This section will go over how to best contribute to the Eureka project utilizing GitHub tools such as forking, and will be dedicated to Eureka-specific examples. If you are a beginner to GitHub, a comprehensive introduction to GitHub can be found on <a href="https://christinahedges.github.io/astronomy_workflow/index.html" target="_blank"> the following page.</a>
+This section will go over how to best contribute to the Eureka! project utilizing GitHub tools such as forking, and will be dedicated to Eureka!-specific examples. If you are a beginner to GitHub, a comprehensive introduction to GitHub can be found on <a href="https://christinahedges.github.io/astronomy_workflow/index.html" target="_blank"> the following page.</a>
 
-Because Eureka is a repository where contributions are by invitation, cloning <a href="https://github.com/kevin218/Eureka" target="_blank">the repository</a> locally and trying to push to it will not work due to lack of permissions. Yet, this does not mean people are excluded from contributing to Eureka! The way to contribute is by creating a GitHub "fork" of the original repository. A fork creates a copy of the repository on your own GitHub account that you can then push to freely without disrupting the original repository's workflow. Once you have finished the feature you are working on in your fork of Eureka you can then open a "pull request" in the original Eureka repository, where the changes you made can be reviewed and perhaps even integrated by the repository owners!
+Because Eureka! is a repository where contributions are by invitation, cloning <a href="https://github.com/kevin218/Eureka" target="_blank">the repository</a> locally and trying to push to it will not work due to lack of permissions. Yet, this does not mean people are excluded from contributing to Eureka! The way to contribute is by creating a GitHub "fork" of the original repository. A fork creates a copy of the repository on your own GitHub account that you can then push to freely without disrupting the original repository's workflow. Once you have finished the feature you are working on in your fork of Eureka! you can then open a "pull request" in the original Eureka! repository, where the changes you made can be reviewed and perhaps even integrated by the repository owners!
 
 The details of this process are described below.
 
-### **Creating a Fork of Eureka from Scratch**
+### **Creating a Fork of Eureka! from Scratch**
 
-To create a fork of the Eureka repository all you have to do is go on the repository website and
+To create a fork of the Eureka! repository all you have to do is go on the repository website and
 press the "fork" button that can be seen on the top right.
 
 ![fork button](../media/forkheaderbar.png)
 
-Once you have forked the repository you should be able to find the link of your own copy of Eureka by accessing the
-Eureka repository now found in your own personal GitHub page.
+Once you have forked the repository you should be able to find the link of your own copy of Eureka! by accessing the
+Eureka! repository now found in your own personal GitHub page.
 
 ![cloning link](../media/cloneexample.png)
 
@@ -99,12 +99,12 @@ local machine (what we'll call "local") that can push changes to your online cop
 git remote add origin [insert same link here]
 ```
 
-This sets up tracking to "origin" which is your remote copy of Eureka, so that you can push to it.
+This sets up tracking to "origin" which is your remote copy of Eureka!, so that you can push to it.
 
 ### **Branching in Order to Keep a Clean Workflow**
 
-It's not enough to just fork the repository and clone it, because Eureka is a project in which there are many contributions
-happening at the same time, you want to keep a clean copy of Eureka as your main branch! This will allow for you to easily download changes that have happened in the original Eureka repository and make sure that none of your work conflicts with them. The way to open a development branch within your own local copy of Eureka is:
+It's not enough to just fork the repository and clone it, because Eureka! is a project in which there are many contributions
+happening at the same time, you want to keep a clean copy of Eureka! as your main branch! This will allow for you to easily download changes that have happened in the original Eureka! repository and make sure that none of your work conflicts with them. The way to open a development branch within your own local copy of Eureka! is:
 ```bash
 git checkout -b name_of_branch
 ```
@@ -126,7 +126,7 @@ git checkout branch_name
 
 ### **Committing and Pushing to your Fork**
 
-Once you have worked on all your changes, the way to make them available on the remote (online) version of the Eureka repository is to commit your changes and then push to your fork. To check the changes you have made do:
+Once you have worked on all your changes, the way to make them available on the remote (online) version of the Eureka! repository is to commit your changes and then push to your fork. To check the changes you have made do:
 ```bash
 git status
 ```
@@ -176,13 +176,13 @@ Once the changes are committed you push them to your online repository by doing:
 git push
 ```
 
-Once you've done this your changes and branch should appear on your online version of the Eureka repository. You can go to your GitHub page and make sure this is correct.
+Once you've done this your changes and branch should appear on your online version of the Eureka! repository. You can go to your GitHub page and make sure this is correct.
 
-### **Updating your Local Fork with Any Updates from the Original Eureka Repository**
+### **Updating your Local Fork with Any Updates from the Original Eureka! Repository**
 
-Because Eureka is a collaborative project, there will be other people working on their own features at the same time as you. If any changes are implemented to the original Eureka repository, this can become a conflict on your future pull request. That is why it is imperative to update your local fork with any updates from the original Eureka repository before attempting to open a pull request.
+Because Eureka! is a collaborative project, there will be other people working on their own features at the same time as you. If any changes are implemented to the original Eureka! repository, this can become a conflict on your future pull request. That is why it is imperative to update your local fork with any updates from the original Eureka! repository before attempting to open a pull request.
 
-First, we need to set up a connection between your local copy of the Eureka repository and the remote **original** Eureka repository. To see the current remote repositories linked to your local repository you can do:
+First, we need to set up a connection between your local copy of the Eureka! repository and the remote **original** Eureka! repository. To see the current remote repositories linked to your local repository you can do:
 ```bash
 git remote -v
 ```
@@ -192,7 +192,7 @@ This should currently show you something like the following
     origin	https://github.com/your_username/Eureka.git (fetch)
     origin	https://github.com/your_username/Eureka.git (push)
 
-What this is showing us is that your local branch is only currently to connected to the remote copy of Eureka. Yet, in order to update your code with updates from the original Eureka repository, you need to establish a connection to it. Utilizing the standard nomenclature "upstream" (for the original repository):
+What this is showing us is that your local branch is only currently to connected to the remote copy of Eureka! Yet, in order to update your code with updates from the original Eureka! repository, you need to establish a connection to it. Utilizing the standard nomenclature "upstream" (for the original repository):
 
 ```bash
 git remote add upstream https://github.com/kevin218/Eureka.git
@@ -202,7 +202,7 @@ Now, if you run
 ```bash
 git remote -v
 ```
-again, you should see the new links to the original Eureka repository:
+again, you should see the new links to the original Eureka! repository:
 
     origin      https://github.com/your_username/Eureka.git (fetch)
     origin      https://github.com/your_username/Eureka.git (push)
@@ -210,7 +210,7 @@ again, you should see the new links to the original Eureka repository:
     upstream    https://github.com/kevin218/Eureka.git (push)
 
 You'll also want to setup your main branch to track from the remote repository automatically, since that branch will be
-dedicated to importing the updates done to the original Eureka repository. The way to do this is to first make sure you are in the main branch:
+dedicated to importing the updates done to the original Eureka! repository. The way to do this is to first make sure you are in the main branch:
 ```bash
 git checkout main
 ```
@@ -219,12 +219,12 @@ OR
 git checkout main_branch_name
 ```
 
-Then set the upstream as the original Eureka repository
+Then set the upstream as the original Eureka! repository
 ```bash
 git branch --set-upstream upstream/main
 ```
 
-**This has now set up your main local branch to track changes done in the original Eureka remote repository (upstream) as opposed to your own copy of Eureka (origin). It is imperative then that you make sure all changes you make are in your development branch.** An advice is to constantly double check what branch you're working on. If you have made changes in the main branch by mistake, see how to resolve this in the section *Common Mistakes* below.
+**This has now set up your main local branch to track changes done in the original Eureka! remote repository (upstream) as opposed to your own copy of Eureka! (origin). It is imperative then that you make sure all changes you make are in your development branch.** An advice is to constantly double check what branch you're working on. If you have made changes in the main branch by mistake, see how to resolve this in the section *Common Mistakes* below.
 
 It is also worth mentioning that the remotes can be called anything, "origin" and "upstream" are just the standard nomenclature. They can be called anything as long as you are able to keep track of which one is which, which is always possible to check by doing:
 ```bash
@@ -239,7 +239,7 @@ git checkout main  # (double check you're on your main branch)
 git pull
 ```
 
-This will give you any changes that have been done to Eureka on your main branch. This process should go smoothly as long as you have not made any changes to the main branch and done all your work in the development branch. Once you have pulled, you need to switch back to your development branch and merge the changes from main.
+This will give you any changes that have been done to Eureka! on your main branch. This process should go smoothly as long as you have not made any changes to the main branch and done all your work in the development branch. Once you have pulled, you need to switch back to your development branch and merge the changes from main.
 
 ```bash
 git checkout development_branch
@@ -261,7 +261,7 @@ This will merge all the changes done on the main branch into your feature branch
 git push  # **Don't forget this step!**
 ```
 
-If there is a merge conflict, git will tell you. Merge conflicts are not typically hard to fix although they might seem scary, usually what it means is that while you were working on your feature someone else did work on the same lines of code, and your version and the original Eureka version are in conflict. Depending on the editor you use these merge conflicts can be easy to track down and resolve. If your editor doesn't point you to the main conflicts automatically, git should tell you the files in which the merge conflicts occurred. You can then open the file and find lines that look like this:
+If there is a merge conflict, git will tell you. Merge conflicts are not typically hard to fix although they might seem scary, usually what it means is that while you were working on your feature someone else did work on the same lines of code, and your version and the original Eureka! version are in conflict. Depending on the editor you use these merge conflicts can be easy to track down and resolve. If your editor doesn't point you to the main conflicts automatically, git should tell you the files in which the merge conflicts occurred. You can then open the file and find lines that look like this:
 
     <<<<<<< HEAD
     current change
@@ -284,18 +284,18 @@ git commit -m "Commit message"
 git push
 ```
 
-### **Opening a Pull Request with Eureka**
+### **Opening a Pull Request with Eureka!**
 
 It is good practice that before opening any pull request you should have finished the following checklist:
 
-- [x] Made changes to the code
-- [x] Committed those changes
-- [x] Pushed the changes to your remote repository
-- [x] Checked for any updates to the original Eureka
+- [ ] Made changes to the code
+- [ ] Committed those changes
+- [ ] Pushed the changes to your remote repository
+- [ ] Checked for any updates to the original Eureka!
 - [ ] Open Pull Request
 
 Once you have taken care of these things, the next step is done through the GitHub web interface.
-Go to your remote copy of Eureka and you will see a button that says "Compare and Open Pull Request".
+Go to your remote copy of Eureka! and you will see a button that says "Compare and Open Pull Request".
 Press this button to open the pull request, you should then see a new page that shows all the changes
 done that are included in the pull request as well as a text box to include details and information about
 the changes done to the code in your pull request. It is always good to be as detailed as possible with anything
@@ -306,7 +306,7 @@ you can open the pull request. Congratulations!
 
 ### **Troubleshooting**
 
-#### Didn't fork and started working on a local version of the original Eureka
+#### Didn't fork and started working on a local version of the original Eureka!
 
 This is not an issue at all! Just make sure you have your origin and upstream setup correctly by doing
 
@@ -314,7 +314,7 @@ This is not an issue at all! Just make sure you have your origin and upstream se
 git remote -v
 ```
 
-If origin is pointing to the original Eureka repository (`https://github.com/kevin218/Eureka.git`) and you want to keep the standard nomenclature discussed above then you can rename origin to upstream the following way:
+If origin is pointing to the original Eureka! repository (`https://github.com/kevin218/Eureka.git`) and you want to keep the standard nomenclature discussed above then you can rename origin to upstream the following way:
 
 ```bash
 git remote rename origin upstream
@@ -383,8 +383,8 @@ If you have committed to the main branch more than once, then the number should 
 
     ---- 1 ---- 2 ---- 3 ---- 4 ---- 5 ---- 6
                 ^                           ^
-              original                   master
-            master commit
+              original                     main
+            main commit
 
 Would be:
 

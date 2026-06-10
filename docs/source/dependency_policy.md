@@ -10,7 +10,7 @@ pieces fit together and what the project currently means by "supported".
 Direct dependency declarations, optional dependency groups, and packaging
 configuration should be maintained there.
 
-Eureka currently defines optional dependency groups including:
+Eureka! currently defines optional dependency groups including:
 
 - `jwst`
 - `hst`
@@ -33,9 +33,9 @@ That file is useful for contributors and for users who want the maintained
 repository environment, but it serves a different purpose from package metadata
 and from the tested oldest-practical recipe described below.
 
-## How Eureka uses SPEC 0
+## How Eureka! uses SPEC 0
 
-Eureka is informed by [Scientific Python SPEC 0](https://scientific-python.org/specs/spec-0000/),
+Eureka! is informed by [Scientific Python SPEC 0](https://scientific-python.org/specs/spec-0000/),
 but it is not strictly bound to it.
 
 SPEC 0 provides a useful maintenance ethos: prefer realistic, recently
@@ -43,14 +43,14 @@ supportable dependency windows, test them explicitly, and avoid claiming broad
 compatibility that is not exercised in CI. That is especially helpful for a
 scientific Python package with a large ecosystem footprint.
 
-Eureka still needs project-specific exceptions. The astronomy stack includes
+Eureka! still needs project-specific exceptions. The astronomy stack includes
 dependencies, VCS pins, and ecosystem transitions that do not always line up
 cleanly with a strict generic support window. For that reason, the project uses
 SPEC 0 as guidance rather than as a rigid contract.
 
 ## What "supported" means
 
-For Eureka, "supported" means "tested in CI".
+For Eureka!, "supported" means "tested in CI".
 
 In practical terms, the repository distinguishes between three different kinds
 of statements:
@@ -96,18 +96,18 @@ At the same time, this file should not be over-read:
 `pyproject.toml`. It is meant to provide a maintained environment for users and
 contributors who prefer that route.
 
-Because pip and conda solve differently, Eureka does not require those two
+Because pip and conda solve differently, Eureka! does not require those two
 paths to be identical at every version edge. What matters is that both are
 maintained honestly and tested in the ways the project explicitly documents.
 
 ## Current NumPy story
 
-For Python 3.11, `numpy>=1.25` is the honest current floor in Eureka's package
+For Python 3.11, `numpy>=1.25` is the honest current floor in Eureka!'s package
 metadata.
 
 The current tested oldest-practical outcome still resolves below NumPy 2. That
 is the practical tested result today, not a permanent long-term truth about
-Eureka's policy. Upstream blockers are changing, so this should be revisited as
+Eureka!'s policy. Upstream blockers are changing, so this should be revisited as
 the surrounding ecosystem moves.
 
 ## CI expectations

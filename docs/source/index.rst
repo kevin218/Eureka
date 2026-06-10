@@ -1,9 +1,9 @@
-.. Eureka documentation master file.
+.. Eureka documentation main file.
 
 .. image:: ../media/Eureka_logo.png
   :width: 256
   :align: center
-  :alt: Eureka Logo
+  :alt: Eureka! Logo
 
 |
 
