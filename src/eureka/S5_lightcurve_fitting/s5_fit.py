@@ -64,6 +64,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
     meta = S5MetaClass(**me.mergeevents(meta, s4_meta).__dict__)
     meta.set_defaults()
+    meta = me.filter_allapers_inputdir(meta)
 
     if meta.testing_S5:
         # Only fit a single channel while testing unless doing a shared fit,
@@ -76,16 +77,18 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s5 = None
-    for spec_hw_val in meta.spec_hw_range:
-        for bg_hw_val in meta.bg_hw_range:
-            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
-                meta.expand, spec_hw_val, bg_hw_val)
-            meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
-                                             ap=spec_hw_val,
-                                             bg=bg_hw_val)
+    for spec_hw_val, bg_hw_val in me.get_allapers_pairs(meta):
+        spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+            meta.expand, spec_hw_val, bg_hw_val)
+        meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
+                                         ap=spec_hw_val,
+                                         bg=bg_hw_val)
 
+    allapers_pairs = me.get_allapers_pairs(meta)
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
+            if (spec_hw_val, bg_hw_val) not in allapers_pairs:
+                continue
 
             t0 = time_pkg.time()
 
@@ -159,6 +162,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
+            me.log_allapers_inputdir_glob(meta, log)
 
             # Copy ECF
             log.writelog('Copying S5 control file', mute=(not meta.verbose))
@@ -1229,11 +1233,14 @@ def load_specific_s4_meta_info(meta):
     eureka.lib.readECF.MetaClass
         The current metadata object with values from the old MetaClass.
     """
-    inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
     # Directory structure should not use expanded HW values
     spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
         meta.expand, meta.spec_hw, meta.bg_hw)
-    inputdir += f'ap{spec_hw_val}_bg{bg_hw_val}'+os.sep
+    inputdir = me.get_allapers_specific_inputdir(
+        meta, meta.spec_hw, meta.bg_hw)
+    if inputdir is None:
+        inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
+        inputdir += f'ap{spec_hw_val}_bg{bg_hw_val}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir
