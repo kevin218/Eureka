@@ -84,7 +84,7 @@ dependencies = [
     "h5py>=3.7.0", # Lower limit needed to avoid issues with JWST I/O routines
     "lmfit",
     "matplotlib>=3.6", # Lower limit needed for set_layout_engine()
-    "numpy>=1.20.0,<2.0", # numpy 2.0 introduces breaking changes for some packages
+    "numpy>=1.25,<2.0", # Current tested py311 floor is NumPy >=1.25; the practical tested outcome still resolves below NumPy 2 and should be revisited as upstream blockers move
     "pandas",
     "photutils",
     "requests",

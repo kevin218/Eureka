@@ -49,7 +49,7 @@ We're almost there, but before you can get things running you need to set up a d
 	mkdir /User/DataAnalysis/JWST/MyFirstEureka
 	cd /User/DataAnalysis/JWST/MyFirstEureka
 
-From here, the simplest way to set up all of the Eureka input files is to download them from the JWST demos directory on the Github repository (`direct download <https://downgit.github.io/#/home?url=https://github.com/kevin218/Eureka/tree/main/demos/JWST>`_). Then we can copy them over:
+From here, the simplest way to set up all of the Eureka! input files is to download them from the JWST demos directory on the Github repository (`direct download <https://downgit.github.io/#/home?url=https://github.com/kevin218/Eureka/tree/main/demos/JWST>`_). Then we can copy them over:
 
 .. code-block:: bash
 
@@ -253,7 +253,7 @@ Note that HST operations start at Stage 3, unlike JWST operations. HST systemati
 can also be slightly more complicated to fit, so it may be worthwhile to read some
 papers discussing these, such as `Knutson et al. (2014) <knutson2014_>`_ or
 `Brande et al. (2022) <brande2022_>`_. Exponential ramps are available as systematics
-models in ``Eureka!`` Stage 5, and Eureka automatically corrects for the
+models in ``Eureka!`` Stage 5, and Eureka! automatically corrects for the
 spatial scan flux offset.
 
 
