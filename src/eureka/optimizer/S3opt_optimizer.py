@@ -1,19 +1,21 @@
 
 import os
-import numpy as np
-from copy import deepcopy
-import time as time_pkg
 import pickle
 import shutil
+import time as time_pkg
+from copy import deepcopy
+
+import numpy as np
 
 import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4
-from eureka.S3_data_reduction.s3_meta import S3MetaClass
 from eureka.S3_data_reduction import plots_s3
+from eureka.S3_data_reduction.s3_meta import S3MetaClass
 from eureka.S4_generate_lightcurves.s4_meta import S4MetaClass
-from .S3opt_meta import S3optMetaClass
-from . import optimizers
+
 from ..lib import logedit, util
+from . import optimizers
+from .S3opt_meta import S3optMetaClass
 
 
 def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
@@ -77,7 +79,7 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
         history["initial_run"] = (
             meta.scaling_MAD_spec * s4_meta.mad_s4 +
             meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
-        log.writelog(f"Initial fitness value: {history["initial_run"]}")
+        log.writelog(f"Initial fitness value: {history['initial_run']}")
         log.writelog(f"Initial white MAD: {s4_meta.mad_s4_binned[0]}")
         log.writelog(f"Initial spec MAD: {s4_meta.mad_s4}\n")
 
@@ -134,7 +136,7 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
         history["final_run"] = (
             s3opt_meta.scaling_MAD_spec * s4_meta.mad_s4 +
             s3opt_meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
-        log.writelog(f"Final fitness value: {history["final_run"]}")
+        log.writelog(f"Final fitness value: {history['final_run']}")
         log.writelog(f"Final white MAD: {s4_meta.mad_s4_binned[0]}")
         log.writelog(f"Final spec MAD: {s4_meta.mad_s4}\n")
 

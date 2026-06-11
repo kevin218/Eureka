@@ -86,7 +86,7 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
         history["initial_run"] = (
             meta.scaling_MAD_spec * s4_meta.mad_s4 +
             meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
-        log.writelog(f"Initial fitness value: {history["initial_run"]}")
+        log.writelog(f"Initial fitness value: {history['initial_run']}")
         log.writelog(f"Initial white MAD: {s4_meta.mad_s4_binned[0]}")
         log.writelog(f"Initial spec MAD: {s4_meta.mad_s4}\n")
 
@@ -125,7 +125,7 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
         history["final_run"] = (
             s1opt_meta.scaling_MAD_spec * s4_meta.mad_s4 +
             s1opt_meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
-        log.writelog(f"Final fitness value: {history["final_run"]}")
+        log.writelog(f"Final fitness value: {history['final_run']}")
         log.writelog(f"Final white MAD: {s4_meta.mad_s4_binned[0]}")
         log.writelog(f"Final spec MAD: {s4_meta.mad_s4}\n")
 
@@ -306,4 +306,3 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     s4_meta.compute_ld = False
 
     return s1_meta, s2_meta, s3_meta, s4_meta
-
