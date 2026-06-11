@@ -45,7 +45,7 @@ def readfiles(meta):
     meta.segment_list = []
 
     # Look for files in the input directory
-    for fname in glob.glob(meta.inputdir+'*'+meta.suffix+'.fits'):
+    for fname in glob.glob(_fits_glob_pattern(meta.inputdir, meta.suffix)):
         if not ignore_nonscience(fname):
             meta.segment_list.append(fname)
 
@@ -54,15 +54,15 @@ def readfiles(meta):
         # Add files from the sci directory if present
         if not hasattr(meta, 'sci_dir') or meta.sci_dir is None:
             meta.sci_dir = 'sci'
-        sci_path = os.path.join(meta.inputdir, meta.sci_dir)+os.sep
-        for fname in glob.glob(sci_path+'*'+meta.suffix+'.fits'):
+        sci_path = os.path.join(meta.inputdir, meta.sci_dir)
+        for fname in glob.glob(_fits_glob_pattern(sci_path, meta.suffix)):
             if not ignore_nonscience(fname):
                 meta.segment_list.append(fname)
         # Add files from the cal directory if present
         if not hasattr(meta, 'cal_dir') or meta.cal_dir is None:
             meta.cal_dir = 'cal'
-        cal_path = os.path.join(meta.inputdir, meta.cal_dir)+os.sep
-        for fname in glob.glob(cal_path+'*'+meta.suffix+'.fits'):
+        cal_path = os.path.join(meta.inputdir, meta.cal_dir)
+        for fname in glob.glob(_fits_glob_pattern(cal_path, meta.suffix)):
             if not ignore_nonscience(fname):
                 meta.segment_list.append(fname)
 
@@ -83,6 +83,33 @@ def readfiles(meta):
     meta = get_inst(meta, meta.segment_list[-1])
 
     return meta
+
+
+def _fits_glob_pattern(inputdir, suffix, recursive=False):
+    """Build a glob pattern for FITS files with a given suffix.
+
+    Parameters
+    ----------
+    inputdir : str
+        The directory to search for FITS files. This path may be provided with
+        or without a trailing path separator.
+    suffix : str
+        The data product suffix to match before the ``.fits`` extension
+        (e.g. ``'uncal'``, ``'rateints'``, or ``'calints'``).
+    recursive : bool; optional
+        If True, build a pattern that searches all subdirectories of
+        ``inputdir``. Defaults to False.
+
+    Returns
+    -------
+    str
+        A glob-compatible search pattern matching files named
+        ``*<suffix>.fits`` in ``inputdir``. If ``recursive`` is True, the
+        pattern matches files in any child directory.
+    """
+    if recursive:
+        return os.path.join(inputdir, '**', f'*{suffix}.fits')
+    return os.path.join(inputdir, f'*{suffix}.fits')
 
 
 def ignore_nonscience(filename):
@@ -429,11 +456,12 @@ def find_fits(meta):
         The meta object with the updated inputdir pointing to the location of
         the input files to use.
     '''
-    fnames = glob.glob(meta.inputdir+'*'+meta.suffix + '.fits')
+    fnames = glob.glob(_fits_glob_pattern(meta.inputdir, meta.suffix))
     if len(fnames) == 0:
         # There were no rateints files in that folder, so let's see if
         # there are in children folders
-        fnames = glob.glob(meta.inputdir+'**'+os.sep+'*'+meta.suffix+'.fits',
+        fnames = glob.glob(_fits_glob_pattern(meta.inputdir, meta.suffix,
+                                              recursive=True),
                            recursive=True)
 
     if len(fnames) == 0:

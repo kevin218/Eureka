@@ -1,11 +1,13 @@
 import numpy as np
 import sys
 import os
+from types import SimpleNamespace
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib import util
 from eureka.lib.readECF import MetaClass
 from eureka.lib.medstddev import medstddev
+from astropy.io import fits
 import astraeus.xarrayIO as xrio
 
 
@@ -77,3 +79,28 @@ def test_medstddev(capsys):
     std, med = medstddev(a, mask, medi=True)
     assert np.isnan(std)
     assert np.isnan(med)
+
+
+def test_readfiles_accepts_inputdir_without_trailing_separator(tmp_path):
+    inputdir = tmp_path / 'Uncalibrated'
+    inputdir.mkdir()
+    filename = inputdir / (
+        'jw00000000001_00001_00001-seg001_mirimage_uncal.fits'
+    )
+
+    hdu = fits.PrimaryHDU()
+    hdu.header['INSTRUME'] = 'MIRI'
+    hdu.header['DETECTOR'] = 'MIRIMAGE'
+    hdu.header['FILTER'] = 'F1500W'
+    hdu.header['EXP_TYPE'] = 'MIR_IMAGE'
+    hdu.writeto(filename)
+
+    meta = SimpleNamespace(inputdir=str(inputdir), suffix='uncal',
+                           isopt_S1=True, isopt_S3=False,
+                           filename='S1opt_test.ecf')
+
+    meta = util.readfiles(meta)
+
+    assert meta.num_data_files == 1
+    assert meta.segment_list[0] == str(filename)
+    assert meta.inst == 'miri'
