@@ -277,25 +277,33 @@ Scaling factor applied to the white light curve MAD value in the fitness functio
 params_to_optimize_s1
 ''''''''''''''''''''''
 List of parameters to optimize in Stage 1. Commenting out this line will use all single parameters.  Single parameter options: jump_rejection_threshold, expand_mask, bg_deg, bg_method, p3thresh, window_len. Double parameter options: any combination of the above, joined by two underscores (e.g., expand_mask__p3thresh). Example:
+
 .. code-block:: python
+
    params_to_optimize = ['jump_rejection_threshold', 'expand_mask', 'p3thresh']
 
 params_to_optimize_s3
 '''''''''''''''''''''
 List of parameters to optimize in Stage 3. Commenting out this line will use all single parameters. Single parameter options: dqmask, bg_deg, bg_thresh, bg_hw, bg_method, p3thresh, spec_hw, median_thresh, window_len, p7thresh. Double parameter options: any combination of the above, joined by two underscores (e.g., bg_hw__p3thresh). Special cases: spec_hw__bg_hw (requires spec_hw < bg_hw). Recommended parameters:
+
 .. code-block:: python
+
    params_to_optimize_s3 = ['spec_hw__bg_hw', 'dqmask', 'bg_deg', 'bg_thresh', 'bg_method', 'p3thresh', 'median_thresh__window_len', 'p7thresh']
 
 params_to_optimize_s4
 '''''''''''''''''''''
 List of parameters to optimize in Stage 4. Single parameter options: mad_sigma, mad_box_width, sigma, box_width. Double parameter options: mad_sigma__mad_box_width, sigma__box_width. Recommended parameters:
+
 .. code-block:: python
+
     params_to_optimize_s4 = ['mad_sigma__mad_box_width', 'sigma__box_width']
 
 sweep_<parameter_name>
 ''''''''''''''''''''''
 Set of parameter values to optimize. Only specify if overriding the default values in the meta Python files. For single parameters, use any of the following formats:
+
 .. code-block:: python
+
    sweep_<parameter_name> = range(min, max+1)
    sweep_<parameter_name> = np.arange(min, max+step, step)
    sweep_<parameter_name> = [3, 5, 6, 7]
@@ -304,7 +312,9 @@ Set of parameter values to optimize. Only specify if overriding the default valu
 sweep_<parameter1>__<parameter2>
 ''''''''''''''''''''''''''''''''
 Set of parameter values to optimize. Only specify if overriding the default values in the meta Python files. For double parameters, use the following format:
+
 .. code-block:: python
+
    sweep_<parameter1>__<parameter2> = [range(min1, max1+1), range(min2, max2+1)]
 
 isplots_S1opt and isplots_S3opt

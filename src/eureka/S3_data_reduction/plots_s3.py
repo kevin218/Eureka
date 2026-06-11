@@ -1519,7 +1519,7 @@ def fitness_scores(meta, history_fitness_score):
     """
     Visualizes the progress of best fitness scores across parameter sweeps.
 
-    Parameters:
+    Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
@@ -1527,16 +1527,13 @@ def fitness_scores(meta, history_fitness_score):
         The fitness score after optimizing each parameter.  The lower the
         fitness score, the better the individual.
 
-    Outputs:
-    -------
-    A plot that illustrates the trend of best fitness scores across
-    generations.
-
-    Notes:
+    Notes
     -----
     - The function assumes that a lower fitness score is better.
     - The x-axis represents the generation number (starting from 1), and the
       y-axis represents the best fitness score.
+    - A plot illustrating the trend of best fitness scores across generations
+      is saved to the Stage 3 output directory.
     """
     # Extract values from the history fitness score dictionary
     best_fitness_values = [history_fitness_score[key]
