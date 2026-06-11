@@ -380,7 +380,7 @@ class Model:
             Whether or not this model is a shared model. Defaults to False.
         chan : int; optional
             The real channel id to render. `LightCurve.plot()` passes the
-+            correct value; this function now always respects it.
+            correct value; this function now always respects it.
         **kwargs : dict
             Additional parameters to pass to plot and self.eval().
         """

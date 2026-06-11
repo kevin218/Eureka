@@ -83,8 +83,8 @@ CRDS server connection error
 If you correctly set the CRDS environment variables during Eureka! installation, but still get an error that the CRDS server connection and cache load failed, try reloading your shell configuration file with ``source ~/.zshrc`` or ``source ~/.bashrc``.
 
 
-Matplotlib RuntimeError() whenever Eureka is imported and plt.show() is called
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Matplotlib RuntimeError() whenever Eureka! is imported and plt.show() is called
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The importing of Eureka! sometimes causes a runtime error with Matplotlib. The error is related to latex
 and reads as the following
