@@ -9,7 +9,7 @@ s4_order        None        # For NIRISS, specify spectral order
 wave_min        1.5         # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.
 wave_max        4.5         # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
 wave_input      None        # Full path to a txt file with pre-defined wavelength bins in two columns separated by whitespace.
-allapers        False       # Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
+allapers        False       # Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir. With allapers=True, inputdir can use a glob pattern such as Stage3/S3_*_run*/ap5_bg* to run one aperture over all matching backgrounds.
 
 # Manually mask pixel columns by index number
 # mask_columns  []
@@ -54,5 +54,5 @@ verbose         True    # If True, more details will be printed about steps
 topdir          /home/User/Data/JWST-Sim/NIRSpec/
 
 # Directories relative to topdir
-inputdir        Stage3    # The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
+inputdir        Stage3    # The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially). With allapers=True, glob patterns can restrict the previous-stage folders, e.g. Stage3/S3_*_run*/ap5_bg*.
 outputdir       Stage4

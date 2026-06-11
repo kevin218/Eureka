@@ -3,10 +3,172 @@ import h5py as h5
 import pickle
 import os
 import glob
+import re
 import astraeus.xarrayIO as xrio
 
 from . import readECF
 from . import util
+
+
+def filter_allapers_inputdir(meta):
+    """Restrict allapers aperture/background pairs using inputdir glob matches.
+
+    When allapers=True and inputdir contains a glob pattern, findevent records
+    the matched candidate folders. This helper extracts ap/bg values from
+    those folders and limits the standard allapers loop to matching pairs.
+    Eureka! allapers outputs are nested under a stage run folder as
+    ``S#_<date>_<eventlabel>_runN/ap<ap>_bg<bg>/``. This parser looks for
+    that ``ap<ap>_bg<bg>`` path component, such as ``ap5_bg7`` or
+    ``ap60_bg70_90``.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object for the current processing.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object, optionally updated with allapers_ap_bg_pairs,
+        allapers_inputdir_pair_dirs, spec_hw_range, and bg_hw_range.
+
+    Raises
+    ------
+    AssertionError
+        The inputdir glob matched folders, but none of their ap/bg values
+        matched the aperture/background ranges from the previous stage.
+    """
+    if not getattr(meta, 'allapers', False):
+        return meta
+
+    candidates = getattr(meta, 'allapers_inputdir_candidates', None)
+    if candidates is None:
+        return meta
+
+    pair_dirs = {}
+    for folder in candidates:
+        for part in reversed(folder.rstrip(os.sep).split(os.sep)):
+            # Parse Eureka allapers child folder names like ap5_bg7.
+            if re.search(r'_run\d+$', part):
+                continue
+            match = re.search(r'(?:^|_)ap(?P<ap>[^_/]+)_bg'
+                              r'(?P<bg>.+?)$', part)
+            if match is None:
+                continue
+
+            pair = []
+            for value in [match.group('ap'), match.group('bg')]:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pair.append(value)
+                else:
+                    if value.is_integer():
+                        pair.append(int(value))
+                    else:
+                        pair.append(value)
+            pair_dirs[tuple(pair)] = folder
+            break
+
+    if len(pair_dirs) == 0:
+        return meta
+
+    all_pairs = []
+    for spec_hw_val in meta.spec_hw_range:
+        for bg_hw_val in meta.bg_hw_range:
+            pair = util.get_unexpanded_hws(meta.expand, spec_hw_val,
+                                           bg_hw_val)
+            if tuple(pair) in pair_dirs:
+                all_pairs.append((spec_hw_val, bg_hw_val))
+
+    if len(all_pairs) == 0:
+        inputdir_raw = getattr(meta, 'inputdir_raw',
+                               getattr(meta, 'inputdir', ''))
+        pattern = getattr(meta, 'allapers_inputdir_glob_pattern',
+                          getattr(meta, 'inputdir', ''))
+        raise AssertionError(
+            'The allapers=True inputdir glob matched folders, but none of '
+            'their ap/bg values matched the aperture/background ranges from '
+            f'the previous stage.\ninputdir: "{inputdir_raw}"\n'
+            f'Expanded search pattern: "{pattern}"')
+
+    meta.allapers_ap_bg_pairs = all_pairs
+    meta.allapers_inputdir_pair_dirs = pair_dirs
+    meta.spec_hw_range = list(dict.fromkeys([pair[0] for pair in all_pairs]))
+    meta.bg_hw_range = list(dict.fromkeys([pair[1] for pair in all_pairs]))
+
+    return meta
+
+
+def get_allapers_pairs(meta):
+    """Return aperture/background pairs for allapers processing.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object for the current processing.
+
+    Returns
+    -------
+    pairs : list of tuple
+        The (spec_hw_val, bg_hw_val) pairs to process. If inputdir glob
+        filtering has been applied, only the matching pairs are returned.
+        Otherwise all combinations of spec_hw_range and bg_hw_range are
+        returned.
+    """
+    if hasattr(meta, 'allapers_ap_bg_pairs'):
+        return meta.allapers_ap_bg_pairs
+
+    return [(spec_hw_val, bg_hw_val)
+            for spec_hw_val in meta.spec_hw_range
+            for bg_hw_val in meta.bg_hw_range]
+
+
+def get_allapers_specific_inputdir(meta, spec_hw_val, bg_hw_val):
+    """Return the exact matched input folder for an allapers pair, if known.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object for the current processing.
+    spec_hw_val : int, float, or str
+        The spectrum aperture half-width value.
+    bg_hw_val : int, float, or str
+        The background half-width value.
+
+    Returns
+    -------
+    inputdir : str or None
+        The matched input folder for this aperture/background pair if inputdir
+        glob filtering has been applied. Otherwise returns None.
+    """
+    pair_dirs = getattr(meta, 'allapers_inputdir_pair_dirs', {})
+    pair = util.get_unexpanded_hws(meta.expand, spec_hw_val, bg_hw_val)
+
+    return pair_dirs.get(tuple(pair))
+
+
+def log_allapers_inputdir_glob(meta, log):
+    """Log allapers inputdir glob expansion details when relevant.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object for the current processing.
+    log : eureka.lib.logedit.Logedit
+        The log object for the current stage.
+
+    Returns
+    -------
+    None
+    """
+    if not hasattr(meta, 'allapers_inputdir_glob_pattern'):
+        return
+
+    log.writelog('allapers inputdir glob search pattern: '
+                 f'{meta.allapers_inputdir_glob_pattern}')
+    log.writelog('allapers inputdir candidate folders found: '
+                 f'{meta.allapers_inputdir_candidate_count}')
 
 
 def saveevent(event, filename, save=[], delete=[], protocol=3):
@@ -172,18 +334,44 @@ def findevent(meta, stage, allowFail=False):
     # Search for the output metadata in the inputdir provided
     # First just check the specific inputdir folder, then check children
     # Check for both old (Meta_Save) and new (SpecData) metadata save files
+    use_allapers_glob = (getattr(meta, 'allapers', False) and
+                         glob.has_magic(getattr(meta, 'inputdir', '')))
+    if use_allapers_glob:
+        pattern = meta.inputdir
+        matches = glob.glob(pattern, recursive=True)
+        search_dirs = sorted(np.unique([
+            match+os.sep if match[-1] != os.sep else match
+            for match in matches
+            if os.path.isdir(match)
+        ]))
+
+        meta.allapers_inputdir_glob_pattern = pattern
+        meta.allapers_inputdir_candidates = search_dirs
+        meta.allapers_inputdir_candidate_count = len(search_dirs)
+
+        if len(search_dirs) == 0:
+            inputdir_raw = getattr(meta, 'inputdir_raw', pattern)
+            raise AssertionError(
+                'No input folders matched the allapers=True inputdir glob '
+                f'pattern.\ninputdir: "{inputdir_raw}"\n'
+                f'Expanded search pattern: "{pattern}"')
+    else:
+        search_dirs = [meta.inputdir]
+
     fnames = []
     for file_suffix in ['*_Meta_Save.dat', '*SpecData.h5']:
-        newfnames = glob.glob(meta.inputdir+stage+'_'+meta.eventlabel +
-                              file_suffix)
+        for search_dir in search_dirs:
+            newfnames = glob.glob(search_dir+stage+'_'+meta.eventlabel +
+                                  file_suffix)
 
-        if len(newfnames) == 0:
-            # There were no metadata files in that folder, so let's see if
-            # there are in children folders
-            newfnames = glob.glob(meta.inputdir+'**'+os.sep+stage+'_' +
-                                  meta.eventlabel+file_suffix, recursive=True)
+            if len(newfnames) == 0:
+                # There were no metadata files in that folder, so let's see if
+                # there are in children folders
+                newfnames = glob.glob(search_dir+'**'+os.sep+stage+'_' +
+                                      meta.eventlabel+file_suffix,
+                                      recursive=True)
 
-        fnames.extend(newfnames)
+            fnames.extend(newfnames)
 
     if len(fnames) == 0 and allowFail:
         # We're running an early enough stage that we don't need to find a

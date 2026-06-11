@@ -253,4 +253,3 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         plot_stellarSpec(meta, ds)
 
     return meta, spec, ds
-

@@ -2,7 +2,7 @@
 
 # Stage 6 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-6
 
-allapers        False # Run S6 on all of the apertures considered in S5? Otherwise will use newest output in the inputdir
+allapers        False # Run S6 on all of the apertures considered in S5? Otherwise will use newest output in the inputdir. With allapers=True, inputdir can use a glob pattern such as Stage5/S5_*_run*/ap5_bg* to run one aperture over all matching backgrounds.
 
 # Plotting parameters
 y_params        ['rp^2', 'u1', 'u2', 'c0', 'c1', 'scatter_mult']  # The parameter name as entered in your EPF file in Stage 5. rp^2, 1/r1, 1/r4, fn (nightside flux), pc_amp (phase curve amplitude), and pc_offset (phase curve offset), amp_order2 (second order phase curve amplitude), and offset_order2 (second order phase curve offset) are also permitted. Use 'morning_limb' or 'evening_limb' to plot the corresponding limb when using Harmonica.
@@ -31,5 +31,5 @@ hide_plots      True   # If True, plots will automatically be closed rather than
 topdir          /home/User/Data/JWST-Sim/NIRSpec/
 
 # Directories relative to topdir
-inputdir        Stage5   # The folder containing the outputs from Eureka!'s S5 pipeline (will be overwritten if calling S5 and S6 sequentially)
+inputdir        Stage5   # The folder containing the outputs from Eureka!'s S5 pipeline (will be overwritten if calling S5 and S6 sequentially). With allapers=True, glob patterns can restrict the previous-stage folders, e.g. Stage5/S5_*_run*/ap5_bg*.
 outputdir       Stage6
