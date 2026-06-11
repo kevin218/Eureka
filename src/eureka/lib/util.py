@@ -1,16 +1,17 @@
-import numpy as np
-import os
 import glob
+import multiprocessing as mp
+import os
+
+import numpy as np
 from astropy.io import fits
 from scipy.interpolate import griddata
 from scipy.ndimage import zoom
 from scipy.stats import binned_statistic
-import multiprocessing as mp
 from tqdm import tqdm
 
 from . import sort_nicely as sn
-from .naninterp1d import naninterp1d
 from .citations import CITATIONS
+from .naninterp1d import naninterp1d
 
 # populate common imports for current stage
 COMMON_IMPORTS = np.array([
@@ -66,10 +67,6 @@ def readfiles(meta):
                 meta.segment_list.append(fname)
 
     meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
-    if meta.isopt_S1 or meta.isopt_S3:
-        # For optimization, only use the first file to speed things up
-        meta.segment_list = np.array([meta.segment_list[0]])
-
     meta.num_data_files = len(meta.segment_list)
     if meta.num_data_files == 0:
         raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files '
@@ -77,6 +74,11 @@ def readfiles(meta):
                              f'You likely need to change the inputdir in '
                              f'{meta.filename} to point to the folder '
                              f'containing the "{meta.suffix}.fits" files.')
+
+    if meta.isopt_S1 or meta.isopt_S3:
+        # For optimization, only use the first file to speed things up
+        meta.segment_list = np.array([meta.segment_list[0]])
+        meta.num_data_files = 1
 
     meta = get_inst(meta, meta.segment_list[-1])
 
