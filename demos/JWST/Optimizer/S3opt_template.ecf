@@ -2,7 +2,7 @@
 
 # Optimizer Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stages-1-3-4-optimizer
 # Rename this file to match the event label given in run_eureka_optimization.py
-# and run_eureka.py (e.g., S1opt_nirspec_fs_template.ecf).
+# and run_eureka.py (e.g., S3opt_nirspec_fs_template.ecf).
 
 # Fitness Scaling
 # Use these settings to override the default fitness scaling factors.
