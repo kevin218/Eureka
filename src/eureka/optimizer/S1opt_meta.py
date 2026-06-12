@@ -1,5 +1,5 @@
-from ..lib.readECF import MetaClass
 from ..lib import util
+from ..lib.readECF import MetaClass
 
 
 class S1optMetaClass(MetaClass):
@@ -83,6 +83,22 @@ class S1optMetaClass(MetaClass):
         for key, default in defaults.items():
             setattr(self, key, getattr(self, key, default))
 
+    def set_photometry_defaults(self):
+        '''
+        Set Optimizer specific defaults for generic photometric data.
+        '''
+        full_list = ['jump_rejection_threshold', ]
+        self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
+                                             full_list)
+        # Spectral extraction parameters
+        defaults = {
+            # Stage 1
+            "sweep_jump_rejection_threshold": range(4, 15),    # 4 → 14
+        }
+
+        for key, default in defaults.items():
+            setattr(self, key, getattr(self, key, default))
+
     def set_spectral_defaults(self):
         '''
         Set Optimizer specific defaults for generic spectroscopic data.
@@ -129,19 +145,47 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for MIRI photometry.
         '''
-        pass
+        full_list = ['jump_rejection_threshold', 'skip_firstframe',
+                     'skip_lastframe', 'skip_rscd']
+        self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
+                                             full_list)
+
+        defaults = {
+            "sweep_skip_firstframe": [True, False],
+            "sweep_skip_lastframe": [True, False],
+            "sweep_skip_rscd": [True, False],
+        }
+
+        for key, default in defaults.items():
+            setattr(self, key, getattr(self, key, default))
+
+        self.set_photometry_defaults()
 
     def set_NIRCam_Photometry_defaults(self):
         '''
         Set Optimizer specific defaults for NIRCam photometry.
         '''
-        pass
+        self.set_photometry_defaults()
 
     def set_MIRI_defaults(self):
         '''
         Set Optimizer specific defaults for MIRI.
         '''
-        pass
+        full_list = ['jump_rejection_threshold', 'skip_firstframe',
+                     'skip_lastframe', 'skip_rscd']
+        self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
+                                             full_list)
+
+        defaults = {
+            "sweep_skip_firstframe": [True, False],
+            "sweep_skip_lastframe": [True, False],
+            "sweep_skip_rscd": [True, False],
+        }
+
+        for key, default in defaults.items():
+            setattr(self, key, getattr(self, key, default))
+
+        self.set_spectral_defaults()
 
     def set_NIRCam_defaults(self):
         '''
@@ -171,10 +215,10 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for NIRISS.
         '''
-        pass
+        self.set_spectral_defaults()
 
     def set_WFC3_defaults(self):
         '''
         Set Optimizer specific defaults for WFC3.
         '''
-        pass
+        self.set_spectral_defaults()
