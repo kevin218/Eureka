@@ -1,0 +1,14 @@
+name: Build Matrix (Python x OS)
+
+on:
+  push:
+    branches:
+      - main
+      - "releases/**"
+
+permissions:
+  contents: read
+
+jobs:
+  build_matrix:
+    uses: ./.github/workflows/reusable-build-matrix.yml

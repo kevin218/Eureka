@@ -1,0 +1,245 @@
+name: PR CI
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  env_prepare:
+    name: Prepare environment.yml
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.diff_check.outputs.changed }}
+
+    steps:
+      - name: Check out same-repo PR branch
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.ENV_SYNC_PAT }}
+          fetch-depth: 0
+
+      - name: Check out exact fork PR head commit
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up Python for UniDep
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install UniDep
+        run: |
+          python -m pip install --upgrade \
+            "unidep==3.3.2"
+
+      - name: Generate environment.yml
+        run: |
+          unidep merge -n eureka -o environment.yml --all-optional-dependencies
+
+      - name: Show generated environment.yml
+        run: |
+          echo "----- BEGIN environment.yml -----"
+          cat environment.yml
+          echo "----- END environment.yml -----"
+
+      - name: Stage environment.yml
+        run: git add environment.yml
+
+      - name: Determine whether environment.yml changed
+        id: diff_check
+        run: |
+          if git diff --cached --quiet -- environment.yml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "environment.yml is already up to date."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "environment.yml needs to be updated."
+          fi
+
+  env_validate:
+    name: Validate env on ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    needs: env_prepare
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Check out exact PR head commit
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up Python for UniDep
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install UniDep
+        run: |
+          python -m pip install --upgrade \
+            "unidep==3.3.2"
+
+      - name: Generate environment.yml
+        run: |
+          unidep merge -n eureka -o environment.yml --all-optional-dependencies
+
+      - name: Show generated environment.yml
+        run: |
+          echo "----- BEGIN environment.yml -----"
+          cat environment.yml
+          echo "----- END environment.yml -----"
+
+      - name: Create environment with micromamba
+        uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-file: environment.yml
+          environment-name: eureka-ci
+          create-args: >-
+            python=${{ matrix.python-version }}
+
+      - name: Smoke test solved environment
+        shell: micromamba-shell {0}
+        run: |
+          python -m pip install -e . --no-deps
+          python -c "import eureka; print(eureka.__file__)"
+
+  env_sync:
+    name: Sync environment.yml
+    needs: [env_prepare, env_validate]
+    if: needs.env_validate.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.set_proceed.outputs.proceed || steps.sync_push.outputs.proceed || steps.set_fail.outputs.proceed }}
+
+    steps:
+      - name: Set proceed when environment.yml is already current
+        if: needs.env_prepare.outputs.changed == 'false'
+        id: set_proceed
+        run: |
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Check out same-repo PR branch
+        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.ENV_SYNC_PAT }}
+          fetch-depth: 0
+
+      - name: Check out exact fork PR head commit
+        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up Python for UniDep
+        if: needs.env_prepare.outputs.changed == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install UniDep
+        if: needs.env_prepare.outputs.changed == 'true'
+        run: |
+          python -m pip install --upgrade \
+            "unidep==3.3.2"
+
+      - name: Regenerate environment.yml
+        if: needs.env_prepare.outputs.changed == 'true'
+        run: |
+          unidep merge -n eureka -o environment.yml --all-optional-dependencies
+
+      - name: Show generated environment.yml
+        if: needs.env_prepare.outputs.changed == 'true'
+        run: |
+          echo "----- BEGIN environment.yml -----"
+          cat environment.yml
+          echo "----- END environment.yml -----"
+
+      - name: Stage environment.yml
+        if: needs.env_prepare.outputs.changed == 'true'
+        run: git add environment.yml
+
+      - name: Commit and push updated environment.yml
+        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        id: sync_push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --cached --quiet -- environment.yml; then
+            git commit -m "Regenerate environment.yml"
+            git push origin "HEAD:${{ github.head_ref }}"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment.yml is already current after regeneration."
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload generated environment.yml for fork PRs
+        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+        uses: actions/upload-artifact@v7
+        with:
+          name: validated-environment-yml
+          path: environment.yml
+          retention-days: 7
+
+      - name: Add summary for stale fork PRs
+        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          {
+            echo "### environment.yml is out of date"
+            echo
+            echo "This PR comes from a fork, so the workflow cannot push"
+            echo "the regenerated file back to the branch."
+            echo
+            echo "Download the artifact named \`validated-environment-yml\`,"
+            echo "commit the regenerated \`environment.yml\`, and push it to"
+            echo "your PR branch."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail for stale fork PRs
+        if: needs.env_prepare.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+        id: set_fail
+        run: |
+          echo "proceed=false" >> "$GITHUB_OUTPUT"
+          echo "environment.yml is out of date for this fork PR."
+          echo "Download the validated-environment-yml artifact, commit it,"
+          echo "and push the regenerated file to your branch."
+          exit 1
+
+  pytest:
+    needs: env_sync
+    if: needs.env_sync.outputs.proceed == 'true'
+    uses: ./.github/workflows/reusable-pytest.yml
+    with:
+      upload-codecov: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    secrets: inherit
+
+  build_matrix:
+    needs: env_sync
+    if: needs.env_sync.outputs.proceed == 'true'
+    uses: ./.github/workflows/reusable-build-matrix.yml
+    secrets: inherit

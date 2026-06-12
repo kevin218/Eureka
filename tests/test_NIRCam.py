@@ -1,5 +1,3 @@
-# Last Updated: 2024-02-15
-
 import sys
 import os
 from importlib import reload
@@ -10,22 +8,19 @@ import numpy as np
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
-import eureka.lib.plots
-# try:
-#     from eureka.S2_calibrations import s2_calibrate as s2
-# except ModuleNotFoundError:
-#     pass
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
 
+try:
+    import harmonica  # noqa: F401
+    harmonica_installed = True
+except ModuleNotFoundError:
+    harmonica_installed = False
+
 
 def test_NIRCam(capsys):
-    # Set up some parameters to make plots look nicer.
-    # You can set usetex=True if you have LaTeX installed
-    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
-
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
@@ -51,13 +46,14 @@ def test_NIRCam(capsys):
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
-    s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
-                              s5_meta=s5_meta)
+    s6_meta, s6_lc = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
+                                     s5_meta=s5_meta)
 
     # run assertions for S3
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage3{os.sep}')
-    name = pathdirectory(meta, 'S3', 1, ap=8, bg=12)
+    name = pathdirectory(meta, 'S3', s3_meta.run_s3, ap=8, bg=12,
+                         old_datetime=s3_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
@@ -67,7 +63,8 @@ def test_NIRCam(capsys):
     # run assertions for S4
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage4{os.sep}')
-    name = pathdirectory(meta, 'S4', 1, ap=8, bg=12)
+    name = pathdirectory(meta, 'S4', s4_meta.run_s4, ap=8, bg=12,
+                         old_datetime=s4_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
@@ -77,18 +74,20 @@ def test_NIRCam(capsys):
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage5{os.sep}')
-    name = pathdirectory(meta, 'S5', 1, ap=8, bg=12)
+    name = pathdirectory(meta, 'S5', s5_meta.run_s5, ap=8, bg=12,
+                         old_datetime=s5_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
     s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] +
-                          ["emcee", "dynesty", "batman"])
+                          ["emcee", "dynesty", "batman", "celerite"])
     assert np.array_equal(s5_meta.citations, s5_cites)
 
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage6{os.sep}')
-    name = pathdirectory(meta, 'S6', 1, ap=8, bg=12)
+    name = pathdirectory(meta, 'S6', s6_meta.run_s6, ap=8, bg=12,
+                         old_datetime=s6_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
@@ -102,22 +101,51 @@ def test_NIRCam(capsys):
 
     ecf_path = f'.{os.sep}NIRCam_ecfs{os.sep}POET{os.sep}'
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=None)
-    s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
-                              s5_meta=s5_meta)
+    s6_meta, s6_lc = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
+                                     s5_meta=s5_meta)
 
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage5{os.sep}')
-    name = pathdirectory(meta, 'S5', 1, ap=8, bg=12)
+    name = pathdirectory(meta, 'S5', s5_meta.run_s5, ap=8, bg=12,
+                         old_datetime=s5_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
                           f'Stage6{os.sep}')
-    name = pathdirectory(meta, 'S6', 1, ap=8, bg=12)
+    name = pathdirectory(meta, 'S6', s6_meta.run_s6, ap=8, bg=12,
+                         old_datetime=s6_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
+
+    # Rerun Stages 5 and 6 using Harmonica
+    if harmonica_installed:
+        # remove Stage 5 and 6 temporary files
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage5")
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage6")
+
+        ecf_path = f'.{os.sep}NIRCam_ecfs{os.sep}Harmonica{os.sep}'
+        s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=None)
+        s6_meta, s6_lc = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
+                                         s5_meta=s5_meta)
+
+        # run assertions for S5
+        meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
+                              f'Stage5{os.sep}')
+        name = pathdirectory(meta, 'S5', s5_meta.run_s5, ap=8, bg=12,
+                             old_datetime=s5_meta.datetime)
+        assert os.path.exists(name)
+        assert os.path.exists(name+os.sep+'figs')
+
+        # run assertions for S6
+        meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
+                              f'Stage6{os.sep}')
+        name = pathdirectory(meta, 'S6', s6_meta.run_s6, ap=8, bg=12,
+                             old_datetime=s6_meta.datetime)
+        assert os.path.exists(name)
+        assert os.path.exists(name+os.sep+'figs')
 
     # remove temporary files
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage3")

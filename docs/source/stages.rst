@@ -18,6 +18,7 @@ Overview
   this stage generates a single light curve of flux versus time.
 - **Stage 4:** Using Stage 3 outputs, generates spectroscopic light curves by binning the time series of 1D
   spectra along the wavelength axis. Optionally removes drift/jitter along the dispersion direction and/or sigma clips outliers.
+- **Stage 4cal:** Using Stage 3 calibrated-flux outputs, generates median calibrated stellar spectra using in-eclipse data and out-of-eclipse baseline.  The outputs also include the standard deviation in time, which can reasonably be used as uncertainties.
 - **Stage 5:** Fits the light curves with noise and astrophysical models using different optimization or sampling algorithms.
 - **Stage 6:** Displays the planet spectrum in figure and table form using results from the Stage 5 fits.
 

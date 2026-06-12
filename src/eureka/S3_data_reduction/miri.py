@@ -1,14 +1,17 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
-from . import background
+from . import background, nircam, straighten, plots_s3
 try:
     from jwst import datamodels
 except ImportError:
     print('WARNING: Unable to load the jwst package. As a result, the MIRI '
           'wavelength solution will not be able to be calculated in Stage 3.')
-from . import nircam
 from ..lib.util import read_time, supersample
+
+__all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg', 'flag_bg_phot',
+           'fit_bg', 'cut_aperture', 'standard_spectrum', 'clean_median_flux',
+           'calibrated_spectra', 'residualBackground', 'lc_nodriftcorr']
 
 
 def read(filename, data, meta, log):
@@ -33,23 +36,6 @@ def read(filename, data, meta, log):
         The metadata object.
     log : logedit.Logedit
         The current log.
-
-    Notes
-    -----
-    History:
-
-    - Nov 2012 Kevin Stevenson
-        Initial Version
-    - May 2021  Kevin Stevenson
-        Updated for NIRCam
-    - Jun 2021  Taylor Bell
-        Updated docs for MIRI
-    - Jun 2021  Sebastian Zieba
-        Updated for MIRI
-    - Apr 2022  Sebastian Zieba
-        Updated wavelength array
-    - Apr 21, 2022 Kevin Stevenson
-        Convert to using Xarray Dataset
     '''
     hdulist = fits.open(filename)
 
@@ -57,53 +43,55 @@ def read(filename, data, meta, log):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    try:
-        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
-    except:
-        data.attrs['intstart'] = 0
-    try:
-        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
-    except:
-        data.attrs['intend'] = (data.attrs['intstart'] +
-                                data.attrs['mhdr']['NINTS'])
 
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
 
-    if data.attrs['mhdr']['EXP_TYPE'] == 'MIR_IMAGE':
+    try:
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
+        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
+    except:
+        # FINDME: Need to only catch the particular exception we expect
+        log.writelog('  WARNING: Manually setting INTSTART to 0 and INTEND '
+                     'to NINTS')
+        data.attrs['intstart'] = 0
+        data.attrs['intend'] = sci.shape[0]
+
+    if meta.photometry:
         # Working on photometry data
-        meta.photometry = True
+        meta.filter = hdulist[0].header['FILTER']
+
         # The DISPAXIS argument does not exist in the header of the photometry
         # data. Added it here so that code in other sections doesn't have to
         # be changed
         data.attrs['shdr']['DISPAXIS'] = 1
 
         # FINDME: make this better for all filters
-        if hdulist[0].header['FILTER'] == 'F560W':
+        if meta.filter == 'F560W':
             meta.phot_wave = 5.60
-        elif hdulist[0].header['FILTER'] == 'F770W':
+        elif meta.filter == 'F770W':
             meta.phot_wave = 7.70
-        elif hdulist[0].header['FILTER'] == 'F1000W':
+        elif meta.filter == 'F1000W':
             meta.phot_wave = 10.00
-        elif hdulist[0].header['FILTER'] == 'F1130W':
+        elif meta.filter == 'F1130W':
             meta.phot_wave = 11.30
-        elif hdulist[0].header['FILTER'] == 'F1280W':
+        elif meta.filter == 'F1280W':
             meta.phot_wave = 12.80
-        elif hdulist[0].header['FILTER'] == 'F1500W':
+        elif meta.filter == 'F1500W':
             meta.phot_wave = 15.00
-        elif hdulist[0].header['FILTER'] == 'F1800W':
+        elif meta.filter == 'F1800W':
             meta.phot_wave = 18.00
-        elif hdulist[0].header['FILTER'] == 'F2100W':
+        elif meta.filter == 'F2100W':
             meta.phot_wave = 21.00
-        elif (hdulist[0].header['FILTER'] == 'F2550W' or
-              hdulist[0].header['FILTER'] == 'F2550WR'):
+        elif meta.filter in ['F2550W', 'F2550WR']:
             meta.phot_wave = 25.50
 
         wave_1d = np.ones_like(sci[0, 0]) * meta.phot_wave
     else:
-        meta.photometry = False
+        # Working on spectroscopic data
+        meta.filter = 'LRS'
 
         # If wavelengths are all zero or missing --> use jwst to get
         # wavelengths. Otherwise use the wavelength array from the header
@@ -122,7 +110,7 @@ def read(filename, data, meta, log):
             wave_2d = hdulist['WAVELENGTH', 1].data
 
         # Increase pixel resolution along cross-dispersion direction
-        if hasattr(meta, 'expand') and meta.expand > 1:
+        if meta.expand > 1:
             log.writelog(f'    Super-sampling x axis from {sci.shape[2]} ' +
                          f'to {sci.shape[2]*meta.expand} pixels...',
                          mute=(not meta.verbose))
@@ -134,74 +122,22 @@ def read(filename, data, meta, log):
 
     # Record integration mid-times in BMJD_TDB
     int_times = hdulist['INT_TIMES', 1].data
-    if (hasattr(meta, 'time_file') and meta.time_file is not None):
+    if meta.time_file is not None:
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
+        # There is no time information in the simulated MIRI data
         if meta.firstFile:
-            log.writelog('  WARNING: The timestamps for the simulated MIRI '
-                         'data are currently hardcoded because they are not '
-                         'in the .fits files themselves')
-        if ('WASP_80b' in data.attrs['filename']
-                and 'transit' in data.attrs['filename']):
-            # Time array for WASP-80b MIRISIM transit observations
-            # Assuming transit near August 1, 2022
-            phase_i = 0.95434
-            phase_f = 1.032726
-            t0 = 2456487.425006
-            per = 3.06785234
-            time_i = phase_i*per+t0
-            while np.abs(time_i-2459792.54237) > per:
-                time_i += per
-            time_f = phase_f*per+t0
-            while time_f < time_i:
-                time_f += per
-            time = np.linspace(time_i, time_f, 4507,
-                               endpoint=True)[data.attrs['intstart']:
-                                              data.attrs['intend']-1]
-        elif ('WASP_80b' in data.attrs['filename']
-              and 'eclipse' in data.attrs['filename']):
-            # Time array for WASP-80b MIRISIM eclipse observations
-            # Assuming eclipse near August 1, 2022
-            phase_i = 0.45434
-            phase_f = 0.532725929856498
-            t0 = 2456487.425006
-            per = 3.06785234
-            time_i = phase_i*per+t0
-            while np.abs(time_i-2459792.54237) > per:
-                time_i += per
-            time_f = phase_f*per+t0
-            while time_f < time_i:
-                time_f += per
-            time = np.linspace(time_i, time_f, 4506,
-                               endpoint=True)[data.attrs['intstart']:
-                                              data.attrs['intend']-1]
-        elif 'new_drift' in data.attrs['filename']:
-            # Time array for the newest MIRISIM observations
-            time = np.linspace(0, 47.712*(1849)/3600/24, 1849,
-                               endpoint=True)[data.attrs['intstart']:
-                                              data.attrs['intend']-1]
-        elif data.attrs['mhdr']['EFFINTTM'] == 10.3376:
-            # There is no time information in the old simulated MIRI data
-            # As a placeholder, I am creating timestamps indentical to the
-            # ones in STSci-SimDataJWST/MIRI/Ancillary_files/times.dat.txt
-            # converted to days
-            time = np.linspace(0, 17356.28742796742/3600/24, 1680,
-                               endpoint=True)[data.attrs['intstart']:
-                                              data.attrs['intend']]
-        elif data.attrs['mhdr']['EFFINTTM'] == 47.712:
-            # A new manually created time array for the new MIRI simulations
-            # Need to subtract an extra 1 from intend for these data
-            time = np.linspace(0, 47.712*(42*44-1)/3600/24, 42*44,
-                               endpoint=True)[data.attrs['intstart']:
-                                              data.attrs['intend']-1]
-        else:
-            if meta.firstFile:
-                log.writelog('  Eureka does not currently know how to '
-                             'generate the time array for these '
-                             'simulations. Using integer number instead.')
-            time = np.arange(data.attrs['intstart'], data.attrs['intend'])
+            log.writelog('  WARNING: The timestamps for simulated MIRI data '
+                         'are not in the .fits files, so using integration '
+                         'number as the time value instead.')
+        time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'],
+                           data.intend)
     else:
         time = int_times['int_mid_BJD_TDB']
+    if len(time) > len(sci):
+        # This line is needed to still handle the simulated data
+        # which had the full time array for all segments
+        time = time[data.attrs['intstart']:data.attrs['intend']]
 
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']
@@ -220,12 +156,12 @@ def read(filename, data, meta, log):
         if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
                 meta.bg_hw == meta.bg_hw_range[0]):
             # If not, we've already done this and don't want to switch it back
-            if meta.ywindow[1] > 393:
+            if meta.ywindow[1] > 395:
                 log.writelog('WARNING: The MIRI/LRS wavelength solution is '
-                             'not defined for y-values > 393, while you '
+                             'not defined for y-values > 395, while you '
                              f'have set ywindow[1] to {meta.ywindow[1]}.\n'
                              '          It is strongly recommended to set '
-                             'ywindow[1] to be <= 393, otherwise you will '
+                             'ywindow[1] to be <= 395, otherwise you will '
                              'potentially end up with very strange results.')
 
             temp = np.copy(meta.ywindow)
@@ -256,6 +192,8 @@ def read(filename, data, meta, log):
     else:
         data['wave_1d'] = (['x'], wave_1d)
         data['wave_1d'].attrs['wave_units'] = wave_units
+    # Initialize bad pixel mask (False = good, True = bad)
+    data['mask'] = (['time', 'y', 'x'], np.zeros(data.flux.shape, dtype=bool))
 
     return data, meta, log
 
@@ -279,13 +217,6 @@ def wave_MIRI_jwst(filename, meta, log):
     -------
     lam_x_full : list
         A list of the wavelengths
-
-    Notes
-    -----
-    History:
-
-    - August 2022  Taylor J Bell
-        Initial Version
     '''
     if meta.firstFile:
         log.writelog('  WARNING: Using the jwst package because the '
@@ -326,10 +257,34 @@ def flag_bg(data, meta, log):
     return nircam.flag_bg(data, meta, log)
 
 
+def flag_bg_phot(data, meta, log):
+    '''Outlier rejection of sky background along time axis for photometry.
+
+    Uses the code written for NIRCam which also works for MIRI.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
+    '''
+    return nircam.flag_bg_phot(data, meta, log)
+
+
 def flag_ff(data, meta, log):
     '''Outlier rejection of full frame along time axis.
     For data with deep transits, there is a risk of masking good transit data.
     Proceed with caution.
+
+    Uses the code written for NIRCam which also works for MIRI.
 
     Parameters
     ----------
@@ -359,7 +314,7 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     dataim : ndarray (2D)
         The 2D image array.
     datamask : ndarray (2D)
-        An array of which data should be masked.
+        A boolean array of which data (set to True) should be masked.
     n : int
         The current integration.
     meta : eureka.lib.readECF.MetaClass
@@ -372,18 +327,18 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     bg : ndarray (2D)
         The fitted background level.
     mask : ndarray (2D)
-        The updated mask after background subtraction.
+        The updated boolean mask after background subtraction, where True
+        values should be masked.
     n : int
         The current integration number.
     """
-    if hasattr(meta, 'isrotate'):
-        isrotate = meta.isrotate
+    if meta.bg_dir == 'RxR':
+        y1, y2 = meta.bg_x1, meta.bg_x2
     else:
-        isrotate = 2
-    bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
-                                meta.bg_y2, deg=meta.bg_deg,
-                                threshold=meta.p3thresh, isrotate=isrotate,
-                                isplots=isplots)
+        y1, y2 = meta.bg_y1, meta.bg_y2
+    bg, mask = background.fitbg(dataim, meta, datamask, y1, y2,
+                                deg=meta.bg_deg, threshold=meta.p3thresh,
+                                isrotate=meta.isrotate, isplots=isplots)
     return bg, mask, n
 
 
@@ -409,28 +364,19 @@ def cut_aperture(data, meta, log):
     aperr : ndarray
         The noise values over the aperture region.
     apmask : ndarray
-        The mask values over the aperture region.
+        The mask values over the aperture region. True values should be masked.
     apbg : ndarray
         The background flux values over the aperture region.
     apv0 : ndarray
         The v0 values over the aperture region.
-
-    Notes
-    -----
-    History:
-
-    - 2022-06-17, Taylor J Bell
-        Initial version based on the code in s3_reduce.py
+    apmedflux : ndarray
+        The median flux over the aperture region.
     """
     return nircam.cut_aperture(data, meta, log)
 
 
-def flag_bg_phot(data, meta, log):
-    '''Outlier rejection of segment along time axis adjusted for the
-    photometry reduction routine.
-
-    Uses the code written for NIRCam which works for MIRI as long
-    as the MIRI data gets rotated.
+def standard_spectrum(data, meta, apdata, apmask, aperr):
+    """Instrument wrapper for computing the standard box spectrum.
 
     Parameters
     ----------
@@ -438,15 +384,21 @@ def flag_bg_phot(data, meta, log):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    log : logedit.Logedit
-        The current log.
+    apdata : ndarray
+        The pixel values in the aperture region.
+    apmask : ndarray
+        The outlier mask in the aperture region. True where pixels should be
+        masked.
+    aperr : ndarray
+        The noise values in the aperture region.
 
     Returns
     -------
     data : Xarray Dataset
-        The updated Dataset object with outlier background pixels flagged.
-    '''
-    return nircam.flag_bg_phot(data, meta, log)
+        The updated Dataset object in which the spectrum data will stored.
+    """
+
+    return nircam.standard_spectrum(data, meta, apdata, apmask, aperr)
 
 
 def calibrated_spectra(data, meta, log):
@@ -465,13 +417,6 @@ def calibrated_spectra(data, meta, log):
     -------
     data : ndarray
         The flux values in mJy
-
-    Notes
-    -----
-    History:
-
-    - 2023-07-17, KBS
-        Initial version.
     """
     # Convert from MJy/sr to mJy
     log.writelog("  Converting from MJy/sr to mJy...",
@@ -485,3 +430,89 @@ def calibrated_spectra(data, meta, log):
     data['err'].attrs["flux_units"] = 'mJy'
     data['v0'].attrs["flux_units"] = 'mJy'
     return data
+
+
+def straighten_trace(data, meta, log, m):
+    """Instrument wrapper for computing the standard box spectrum.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+            The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with the fits data stored inside.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    """
+    return straighten.straighten_trace(data, meta, log, m)
+
+
+def clean_median_flux(data, meta, log, m):
+    """Instrument wrapper for computing a median flux frame that is
+    free of bad pixels.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object.
+    """
+
+    return nircam.clean_median_flux(data, meta, log, m)
+
+
+def residualBackground(data, meta, m, vmin=None, vmax=None):
+    """Plot the median, BG-subtracted frame to study the residual BG region and
+    aperture/BG sizes. (Fig 3304)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    m : int
+        The file number.
+    vmin : int; optional
+        Minimum value of colormap. Default is None.
+    vmax : int; optional
+        Maximum value of colormap. Default is None.
+    """
+    plots_s3.residualBackground(data, meta, m, vmin=None, vmax=None)
+
+
+def lc_nodriftcorr(spec, meta):
+    '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
+
+    Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
+    detector pixel x-axis.
+
+    Parameters
+    ----------
+    spec : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    '''
+    mad = meta.mad_s3[0]
+    plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
+                            optmask=spec.optmask, mad=mad)

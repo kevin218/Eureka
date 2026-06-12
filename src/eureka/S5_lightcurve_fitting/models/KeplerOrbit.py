@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import astropy.constants as const
 import scipy.optimize
 
+from ...lib import plots
+
 
 class KeplerOrbit(object):
     """A Keplerian orbit.
@@ -394,7 +396,7 @@ class KeplerOrbit(object):
 
     def FSSI_Eccentric_Inverse(self, M, xtol=1e-10):
         """Convert mean anomaly to eccentric anomaly using FSSI algorithm.
-        
+
         Algorithm based on that from Tommasini+2018.
 
         Parameters
@@ -644,6 +646,7 @@ class KeplerOrbit(object):
         sopLat = 90.-self.inc-self.obliq
         return sopLon, sopLat
 
+    @plots.apply_style
     def plot_orbit(self):
         """A convenience routine to visualize the orbit
 

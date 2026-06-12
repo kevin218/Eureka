@@ -46,15 +46,6 @@ class Logedit:
         >>> log.closelog()
 
         >>> # See the output files: 'out.log' and 'out2.log' to see results.
-
-    Notes
-    -----
-    History:
-
-    - 2010-07-10 Patricio Cubillos
-        Initial version
-    - 2010-11-24 Patricio Cubillos
-        logedit converted to a class.
     """
 
     def __init__(self, logname, read=None):
@@ -98,8 +89,8 @@ class Logedit:
         mute : bool; optional
             If True, only log and do not pring. Defaults to False.
         end : str; optional
-            Can be set to '\\r' to have the printed line overwritten which
-            is useful for progress bars. Defaults to '\\n'.
+            Can be set to '\r' to have the printed line overwritten which
+            is useful for progress bars. Defaults to '\n'.
         """
         # print to screen:
         if not mute:

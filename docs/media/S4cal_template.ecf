@@ -1,0 +1,36 @@
+# Eureka! Control File for Stage 4cal: Calibrated Stellar Spectra
+
+# Stage 4cal Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-4cal
+
+# Transit/Eclipse time
+t0              110.810782      # BJD
+time_offset     60000           # Optional; time offset
+
+# Orbital parameters
+rprs            0.07194         # Planet-star radius ratio
+period          4.2344923       # Orbital period (in Days)
+inc             87.799          # orbital inclination (in degrees)
+ars             12.518          # Semi-major axis to stellar radius ratio
+# Transit durations. When given, the orbital parameters are ignored.
+# t14             None            # Total transit duration, from t1 to t4
+# t23             None            # Full transit duration, from t2 to t3
+
+# Light curve to be used before t1 and after t4 for the baseline flux,
+# which includes flux from (t1 - base_dur) to t1 and t4 to (t4 + base_dur).
+base_dur        0.1             # Days
+
+# Outlier detection
+smoothing       1000            # A good starting point is the number of datapoints (i.e. wavelengths).  A value of 0 will apply interpolation.
+sigma_thresh    [4,4,4]         # Three rounds of 4-sigma clipping ([4,4,4])
+
+# Diagnostics
+isplots_S4cal   3               # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+nbin_plot       200             # The number of time bins that should be used for figure 4202
+hide_plots      False           # If True, plots will automatically be closed rather than popping up
+
+# Project directory
+topdir          /home/User/Data/JWST-Sim/NIRSpec/
+
+# Directories relative to topdir
+inputdir        Stage3          # The folder containing the calibrated stellar spectra from Eureka!'s S3 pipeline
+outputdir       Stage4cal

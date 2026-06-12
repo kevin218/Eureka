@@ -20,15 +20,6 @@ def gelmanrubin(chain, nchains):
         chain has converged, this should be close to unity. If it is
         much greater than 1, the chain has not converged and requires
         more samples.
-
-    Notes
-    -----
-    History:
-
-    2010-08-20  ccampo
-        Initial version.
-    2011-07-07  kevin
-        Removed chain length constraint.
     """
     # Shorten chain by 'remainder' so that chain length is evenly divisible
     # by nchains
@@ -117,13 +108,6 @@ def convergetest(pars, nchains):
         (array([1.01392515, 1.00578357, 1.03285576, 1.13138702, 1.0001787,
                 3.52118005, 1.10592542, 1.05514509, 1.00101459]),
                 1.3185994837687156)
-
-    Notes
-    -----
-    History:
-
-    2010-08-20  ccampo
-        Initial version.
     """
     # allocate placeholder for results
     nfpar = pars.shape[0]

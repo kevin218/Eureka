@@ -29,8 +29,9 @@ def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
     wavelength_units : float
         The wavelength units currently under consideration.
     mask : ndarray (1D); optional
-        A mask array to use if data is not a masked array. Defaults to None
-        in which case only the invalid values of data will be masked.
+        A boolean mask array to use if data is not a masked array, where True
+        values will be masked. Defaults to None in which case only the invalid
+        values of data will be masked.
     sigma : float; optional
         The number of sigmas a point must be from the rolling mean to be
         considered an outlier. Defaults to 10.
@@ -60,19 +61,12 @@ def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
         A boolean array where True for values that were clipped.
     noutliers : int
         The number of outliers identified.
-
-    Notes
-    -----
-    History:
-
-    - Jan 29-31, 2022 Taylor Bell
-        Initial version, added logging
     '''
     data = np.ma.masked_invalid(np.ma.copy(data))
     data = np.ma.masked_where(mask, data)
-        
+
     kernel = Box1DKernel(box_width)
-    
+
     outliers = np.zeros_like(data, dtype=bool)
     new_clipped = True
     i = 0
@@ -133,13 +127,6 @@ def replace_moving_mean(data, outliers, kernel):
     data : ndarray (boolean)
         An array with the same dimensions as the input array with outliers
         replaced with fill_value.
-
-    Notes
-    -----
-    History:
-
-    - Jan 29, 2022 Taylor Bell
-        Initial version
     '''
     # First set outliers to NaN so they don't bias moving mean
     data[outliers] = np.nan
@@ -188,7 +175,8 @@ def gauss_removal(img, mask, linspace, where='bkg'):
     img : np.ndarray
        Single exposure image.
     mask : np.ndarray
-       An approximate mask for the orders.
+       An approximate boolean mask for the orders, where True values are
+       masked.
     linspace : array
        Sets the lower and upper bin bounds for the
        pixel values. Should be of length = 2.
@@ -202,8 +190,10 @@ def gauss_removal(img, mask, linspace, where='bkg'):
        The same input image, now masked for newly identified
        outliers.
     """
-    n, bins = np.histogram((img*mask).flatten(),
-                           bins=np.linspace(linspace[0], linspace[1], 100))
+    weights = (~mask).astype(np.float64)
+    n, bins = np.histogram(img.flatten(),
+                           bins=np.linspace(linspace[0], linspace[1], 100),
+                           weights=weights.flatten())
     bincenters = (bins[1:]+bins[:-1])/2
 
     if where == 'bkg':
@@ -222,10 +212,15 @@ def gauss_removal(img, mask, linspace, where='bkg'):
     fitter = LevMarLSQFitter()
     gfit = fitter(g, bincenters, n)
 
+    masked_img = np.ma.masked_where(mask, img)
+
     if where == 'bkg':
-        xcr, ycr = np.where(np.abs(img*mask) >= gfit.mean+2*gfit.stddev)
+        xcr, ycr = np.ma.where(np.ma.abs(masked_img) >=
+                               gfit.mean+2*gfit.stddev)
     elif where == 'order':
-        xcr, ycr = np.where(img*mask <= gfit.eta-1*gfit.omega)
+        xcr, ycr = np.ma.where(masked_img <= gfit.eta-1*gfit.omega)
+    else:
+        raise ValueError(f'Unrecognized value "{where}" for argument "where".')
 
     # returns an image that is nan-masked
     img[xcr, ycr] = np.nan

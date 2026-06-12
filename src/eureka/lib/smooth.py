@@ -60,18 +60,18 @@ def smooth(x, window_len=10, window='hanning'):
         raise ValueError("Window length is too small.")
 
     if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-        raise ValueError("Window is one of 'flat', 'hanning', 'hamming'," +
+        raise ValueError("Window is not one of 'flat', 'hanning', 'hamming'," +
                          "'bartlett', 'blackman'")
 
     # s = numpy.r_[2*x[0]-x[window_len:1:-1],x,2*x[-1]-x[-1:-window_len:-1]]
-    s = np.r_[2*np.median(x[0:window_len//5])-x[window_len:1:-1], x,
-              2*np.median(x[-window_len//5:])-x[-1:-window_len:-1]]
+    s = np.r_[2*np.ma.median(x[0:window_len//5])-x[window_len:1:-1], x,
+              2*np.ma.median(x[-window_len//5:])-x[-1:-window_len:-1]]
     if window == 'flat':  # moving average
         w = np.ones(window_len, 'd')
     else:
         w = eval('np.'+window+'(window_len)')
 
-    y = np.convolve(w/w.sum(), s, mode='same')
+    y = np.ma.convolve(w/w.sum(), s, mode='same')
     return y[window_len-1:-window_len+1]
 
 

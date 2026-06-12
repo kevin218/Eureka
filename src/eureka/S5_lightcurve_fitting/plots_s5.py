@@ -1,25 +1,32 @@
 import os
 import sys
 import numpy as np
+from copy import deepcopy
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 try:
     from mc3.stats import time_avg
-except:
-    print("Could not import MC3. No Allan variance plots will be produced.")
+except ModuleNotFoundError:
+    print("Could not import MC3. No RMS time-averaging plots will be made.")
 import corner
 from scipy import stats
+import fleck
+import astropy.units as unit
 try:
-    import arviz as az
-    from arviz.rcparams import rcParams as az_rcParams
-except:
-    # PyMC3 hasn't been installed
+    from harmonica import HarmonicaTransit
+except ModuleNotFoundError:
+    # Harmonica hasn't been installed
     pass
+import warnings
+warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
+                                          'this call because figure with num')
 
 from ..lib import plots, util
 from ..lib.split_channels import split
+from .models.AstroModel import PlanetParams
 
 
+@plots.apply_style
 def plot_fit(lc, model, meta, fitter, isTitle=True):
     """Plot the fitted model over the data. (Figs 5101)
 
@@ -35,17 +42,6 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         The name of the fitter (for plot filename).
     isTitle : bool; optional
         Should figure have a title. Defaults to True.
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved plotting code to a separate function.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter
     """
     if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
@@ -59,10 +55,10 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     model_eval = model_noGP+model_gp
 
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(lc.unc_fit)
-        model_lc = np.ma.copy(model_eval)
-        gp = np.ma.copy(model_gp)
+        flux = deepcopy(lc.flux)
+        unc = deepcopy(lc.unc_fit)
+        model_lc = deepcopy(model_eval)
+        gp = deepcopy(model_gp)
         model_sys = model_sys_full
         model_phys = model_phys_full
         color = lc.colors[i]
@@ -96,8 +92,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         residuals = flux - model_lc
 
         # Get binned data and times
-        if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
-           meta.nbin_plot > len(time):
+        if not meta.nbin_plot or meta.nbin_plot > len(time):
             binned_time = time
             binned_flux = flux
             binned_unc = unc
@@ -105,15 +100,16 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             binned_res = residuals
         else:
             nbin_plot = meta.nbin_plot
-            binned_time = util.binData_time(time, time, nbin_plot)
-            binned_flux = util.binData_time(flux, time, nbin_plot)
-            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+            binned_time = util.binData_time(time, time, nbin=nbin_plot)
+            binned_flux = util.binData_time(flux, time, nbin=nbin_plot)
+            binned_unc = util.binData_time(unc, time, nbin=nbin_plot, err=True)
             binned_normflux = util.binData_time(flux/model_sys - gp, time,
-                                                nbin_plot)
-            binned_res = util.binData_time(residuals, time, nbin_plot)
+                                                nbin=nbin_plot)
+            binned_res = util.binData_time(residuals, time, nbin=nbin_plot)
 
-        fig = plt.figure(5101, figsize=(8, 6))
-        plt.clf()
+        fig = plt.figure(5101)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
 
         ax = fig.subplots(3, 1)
         ax[0].errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
@@ -146,12 +142,13 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5101_{fname_tag}_lc_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
     """Plot the fitted model over the data. (Figs 5104 and Figs 5304)
 
@@ -167,13 +164,6 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         The name of the fitter (for plot filename).
     isTitle : bool; optional
         Should figure have a title. Defaults to True.
-
-    Notes
-    -----
-    History:
-
-    - September 12, 2022 Taylor Bell
-        Initial version.
     """
     if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
@@ -185,8 +175,8 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
     model_phys_full, new_time, nints_interp = \
         model.physeval(interp=meta.interp)
 
-    flux_full = np.ma.copy(lc.flux)
-    unc_full = np.ma.copy(lc.unc_fit)
+    flux_full = deepcopy(lc.flux)
+    unc_full = deepcopy(lc.unc_fit)
     flux_full = flux_full/model_sys-model_gp
 
     # Normalize to zero flux at eclipse
@@ -199,9 +189,9 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
     unc_full *= 1e6
 
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.ma.copy(flux_full)
-        unc = np.ma.copy(unc_full)
-        model_phys = np.ma.copy(model_phys_full)
+        flux = deepcopy(flux_full)
+        unc = deepcopy(unc_full)
+        model_phys = deepcopy(model_phys_full)
         color = lc.colors[i]
 
         if lc.share and not meta.multwhite:
@@ -229,20 +219,20 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             new_timet = new_time
 
         # Get binned data and times
-        if not hasattr(meta, 'nbin_plot') or not meta.nbin_plot or \
-           meta.nbin_plot > len(time):
+        if not meta.nbin_plot or meta.nbin_plot > len(time):
             binned_time = time
             binned_flux = flux
             binned_unc = unc
         else:
             nbin_plot = meta.nbin_plot
-            binned_time = util.binData_time(time, time, nbin_plot)
-            binned_flux = util.binData_time(flux, time, nbin_plot)
-            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+            binned_time = util.binData_time(time, time, nbin=nbin_plot)
+            binned_flux = util.binData_time(flux, time, nbin=nbin_plot)
+            binned_unc = util.binData_time(unc, time, nbin=nbin_plot, err=True)
 
         # Setup the figure
-        fig = plt.figure(5104, figsize=(8, 6))
-        plt.clf()
+        fig = plt.figure(5104)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
         ax = fig.gca()
         if isTitle:
             ax.set_title(f'{meta.eventlabel} - Channel {channel} - '
@@ -271,15 +261,16 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5104_{fname_tag}_phaseVariations_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
         if meta.isplots_S5 >= 3:
             # Setup the figure
-            fig = plt.figure(5304, figsize=(8, 6))
-            plt.clf()
+            fig = plt.figure(5304)
+            fig.set_size_inches(8, 6, forward=True)
+            fig.clf()
             ax = fig.gca()
             if isTitle:
                 ax.set_title(f'{meta.eventlabel} - Channel {channel} - '
@@ -307,14 +298,15 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
                 ch_number = str(channel).zfill(len(str(lc.nchannel)))
                 fname_tag = f'ch{ch_number}'
             fname = (f'figs{os.sep}fig5304_{fname_tag}_phaseVariations'
-                     f'_{fitter}' + plots.figure_filetype)
+                     f'_{fitter}' + plots.get_filetype())
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if not meta.hide_plots:
                 plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_rms(lc, model, meta, fitter):
-    """Create an Allan variance plot to look for red noise. (Figs 5301)
+    """Create a RMS time-averaging plot to look for red noise. (Figs 5301)
 
     Parameters
     ----------
@@ -326,15 +318,6 @@ def plot_rms(lc, model, meta, fitter):
         The metadata object.
     fitter : str
         The name of the fitter (for plot filename).
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved plotting code to a separate function.
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
     """
     if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
@@ -346,8 +329,8 @@ def plot_rms(lc, model, meta, fitter):
         if 'mc3.stats' not in sys.modules:
             # If MC3 failed to load, exit for loop
             break
-        flux = np.ma.copy(lc.flux)
-        model_lc = np.ma.copy(model_eval)
+        flux = deepcopy(lc.flux)
+        model_lc = deepcopy(model_eval)
 
         if lc.share and not meta.multwhite:
             time = lc.time
@@ -370,13 +353,14 @@ def plot_rms(lc, model, meta, fitter):
         maxbins = residuals.size//10
         if maxbins < 2:
             maxbins = residuals.size//2
-        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals, 
+        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals,
                                                     maxbins=maxbins,
                                                     binstep=1)
         normfactor = 1e-6
-        fig = plt.figure(
-            int('52{}'.format(str(0).zfill(len(str(lc.nchannel))))),
-            figsize=(8, 6))
+
+        figureNumber = int('52{}'.format(str(0).zfill(len(str(lc.nchannel)))))
+        fig = plt.figure(figureNumber)
+        fig.set_size_inches(8, 6, forward=True)
         fig.clf()
         ax = fig.gca()
         ax.set_xscale('log')
@@ -416,13 +400,14 @@ def plot_rms(lc, model, meta, fitter):
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
-        fname = (f'figs{os.sep}fig5301_{fname_tag}_allanplot_{fitter}'
-                 + plots.figure_filetype)
+        fname = (f'figs{os.sep}fig5301_{fname_tag}_RMS_TimeAveraging_{fitter}'
+                 + plots.get_filetype())
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_corner(samples, lc, meta, freenames, fitter):
     """Plot a corner plot. (Figs 5501)
 
@@ -438,16 +423,9 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         The metadata object.
     fitter : str
         The name of the fitter (for plot filename).
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved plotting code to a separate function.
     """
     ndim = len(freenames)+1  # One extra for the 1D histogram
-    
+
     # Don't allow offsets or scientific notation in tick labels
     old_useOffset = rcParams['axes.formatter.useoffset']
     old_xtick_labelsize = rcParams['xtick.labelsize']
@@ -458,7 +436,8 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     rcParams['ytick.labelsize'] = 10
     rcParams['figure.constrained_layout.use'] = False
 
-    fig = plt.figure(5501, figsize=(ndim*1.4, ndim*1.4))
+    fig = plt.figure(5501)
+    fig.set_size_inches(ndim*1.4, ndim*1.4, forward=True)
     fig.clf()
     fig = corner.corner(samples, fig=fig, quantiles=[0.16, 0.5, 0.84],
                         max_n_ticks=3, labels=freenames, show_titles=True,
@@ -472,7 +451,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
         fname_tag = f'ch{ch_number}'
     fname = (f'figs{os.sep}fig5501_{fname_tag}_corner_{fitter}'
-             + plots.figure_filetype)
+             + plots.get_filetype())
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05,
                 dpi=300)
     if not meta.hide_plots:
@@ -484,6 +463,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     rcParams['figure.constrained_layout.use'] = old_constrained_layout
 
 
+@plots.apply_style
 def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
                nburn=0, nrows=3, ncols=4, nthin=1):
     """Plot the evolution of the chain to look for temporal trends. (Figs 5303)
@@ -511,20 +491,14 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
     nthin : int; optional
         If >1, the plot will use every nthin point to help speed up
         computation and reduce clutter on the plot. Defaults to 1.
-
-    Notes
-    -----
-    History:
-
-    - December 29, 2021 Taylor Bell
-        Moved plotting code to a separate function.
     """
     nsubplots = nrows*ncols
     nplots = int(np.ceil(len(freenames)/nsubplots))
 
     k = 0
     for plot_number in range(nplots):
-        fig = plt.figure(5303, figsize=(6*ncols, 4*nrows))
+        fig = plt.figure(5303)
+        fig.set_size_inches(6*ncols, 4*nrows, forward=True)
         fig.clf()
         axes = fig.subplots(nrows, ncols, sharex=True)
 
@@ -574,73 +548,14 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
         fname += '_'+fitter
         if nplots > 1:
             fname += f'_plot{plot_number+1}of{nplots}'
-        fname += plots.figure_filetype
+        fname += plots.get_filetype()
         fig.savefig(meta.outputdir+fname, bbox_inches='tight',
                     pad_inches=0.05, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
-def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
-               **kwargs):
-    """Plot the evolution of the trace to look for temporal trends. (Figs 5305)
-
-    Parameters
-    ----------
-    trace : pymc3.backends.base.MultiTrace or arviz.InferenceData
-        A ``MultiTrace`` or ArviZ ``InferenceData`` object that contains the
-        samples.
-    model :
-
-    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object.
-    freenames : iterable
-        The names of the fitted parameters.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    fitter : str; optional
-        The name of the fitter (for plot filename). Defaults to 'nuts'.
-    compact: bool; optional
-        Plot multidimensional variables in a single plot. Defailts to False.
-    **kwargs : dict
-        Additional keyword arguments to pass to pm.traceplot.
-
-    Notes
-    -----
-    History:
-
-    - November 22, 2022 Taylor Bell
-        Initial version.
-    """
-
-    max_subplots = az_rcParams['plot.max_subplots'] // 2
-    nplots = int(np.ceil(len(freenames)/max_subplots))
-    npanels = min([len(freenames), max_subplots])
-
-    for i in range(nplots):
-        with model.model:
-            ax = az.plot_trace(trace,
-                               var_names=freenames[i*npanels:(i+1)*npanels],
-                               compact=compact, show=False, **kwargs)
-        fig = ax[0][0].figure
-
-        if lc.white:
-            fname_tag = 'white'
-        else:
-            ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-            fname_tag = f'ch{ch_number}'
-        fname = f'figs{os.sep}fig5305_{fname_tag}_trace'
-        fname += '_'+fitter
-        fname += f'figure{i+1}of{nplots}'
-        fname += plots.figure_filetype
-        fig.savefig(meta.outputdir+fname, bbox_inches='tight',
-                    pad_inches=0.05, dpi=300)
-        if not meta.hide_plots:
-            plt.pause(0.2)
-        else:
-            plt.close(fig)
-
-
+@plots.apply_style
 def plot_res_distr(lc, model, meta, fitter):
     """Plot the normalized distribution of residuals + a Gaussian. (Fig 5302)
 
@@ -654,13 +569,6 @@ def plot_res_distr(lc, model, meta, fitter):
         The metadata object.
     fitter : str
         The name of the fitter (for plot filename).
-
-    Notes
-    -----
-    History:
-
-    - February 18, 2022 Caroline Piaulet
-        Created function
     """
     if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
@@ -669,12 +577,13 @@ def plot_res_distr(lc, model, meta, fitter):
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
-        plt.figure(5302, figsize=(8, 6))
-        plt.clf()
+        fig = plt.figure(5302)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
 
-        flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(lc.unc_fit)
-        model_lc = np.ma.copy(model_eval)
+        flux = deepcopy(lc.flux)
+        unc = deepcopy(lc.unc_fit)
+        model_lc = deepcopy(model_eval)
 
         if lc.share or meta.multwhite:
             # Split the arrays that have lengths of the original time axis
@@ -698,12 +607,13 @@ def plot_res_distr(lc, model, meta, fitter):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5302_{fname_tag}_res_distri_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
+@plots.apply_style
 def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     """Plot the lightcurve + GP model + residuals (Figs 5102)
 
@@ -719,15 +629,6 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         The name of the fitter (for plot filename).
     isTitle : bool; optional
         Should figure have a title. Defaults to True.
-
-    Notes
-    -----
-    History:
-
-    - February 28, 2022 Eva-Maria Ahrer
-        Written function
-    - March 9, 2022 Eva-Maria Ahrer
-        Adapted with shared parameters
     """
     if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
@@ -738,10 +639,10 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     model_with_GP = model_eval + model_GP
 
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(lc.unc_fit)
-        model_lc = np.ma.copy(model_with_GP)
-        model_GP_component = np.ma.copy(model_GP)
+        flux = deepcopy(lc.flux)
+        unc = deepcopy(lc.unc_fit)
+        model_lc = deepcopy(model_with_GP)
+        model_GP_component = deepcopy(model_GP)
         color = lc.colors[i]
 
         if lc.share and not meta.multwhite:
@@ -759,8 +660,9 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             time = lc.time
 
         residuals = flux - model_lc
-        fig = plt.figure(5102, figsize=(8, 6))
-        plt.clf()
+        fig = plt.figure(5102)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
         ax = fig.subplots(3, 1)
         ax[0].errorbar(time, flux, yerr=unc, fmt='.', color='w',
                        ecolor=color, mec=color)
@@ -791,7 +693,234 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5102_{fname_tag}_lc_GP_{fitter}'
-                 + plots.figure_filetype)
+                 + plots.get_filetype())
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
+
+@plots.apply_style
+def plot_eclipse_map(lc, flux_maps, meta, fitter):
+    """Plot fitted eclipse map and lat-lon slices (Figs 5105)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    flux_maps : array
+        The posterior distribution of the fitted maps
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    """
+    for i, channel in enumerate(lc.fitted_channels):
+        fig = plt.figure(5105)
+        fig.set_size_inches(12, 3, forward=True)
+        fig.clf()
+        axs = fig.subplots(1, 3, width_ratios=[1.4, 1, 1])
+
+        lons = np.linspace(-180, 180, np.shape(flux_maps)[2])
+        lats = np.linspace(-90, 90, np.shape(flux_maps)[1])
+
+        # Quantiles
+        p1 = 0.841
+        p2 = 0.977
+        p3 = 0.998
+
+        # Plot median map
+        ca = axs[0].contourf(lons, lats,
+                             np.quantile(1e6*flux_maps[:], 0.5, axis=0),
+                             cmap='RdBu_r')
+        axs[0].axhline(0, color='C0', ls='--')
+        axs[0].axvline(0, color='C3', ls='--')
+        axs[0].set_xticks([-180, -90, 0, 90, 180])
+        axs[0].set_yticks([-90, -45, 0, 45, 90])
+        axs[0].set_xlim([-180, 180])
+        axs[0].set_ylim([-90, 90])
+        fig.colorbar(ca, ax=axs[0], pad=-0.04,
+                     label=r'$F_{\rm p}/F_{\rm s}$ (ppm)')
+
+        # Plot slice along equator
+        lat0 = int(np.shape(flux_maps)[2]/2)
+        axs[1].fill_between(lons,
+                            1e6*np.quantile(flux_maps[:, lat0], p1, axis=0),
+                            1e6*np.quantile(flux_maps[:, lat0], 1-p1, axis=0),
+                            color='C0', alpha=0.3, ls='None')
+        axs[1].fill_between(lons,
+                            1e6*np.quantile(flux_maps[:, lat0], p2, axis=0),
+                            1e6*np.quantile(flux_maps[:, lat0], 1-p2, axis=0),
+                            color='C0', alpha=0.3, ls='None')
+        axs[1].fill_between(lons,
+                            1e6*np.quantile(flux_maps[:, lat0], p3, axis=0),
+                            1e6*np.quantile(flux_maps[:, lat0], 1-p3, axis=0),
+                            color='C0', alpha=0.3, ls='None')
+        axs[1].set_xlim([-180, 180])
+        axs[1].set_xticks([-180, -90, 0, 90, 180])
+
+        # Plot slice along equator
+        lon0 = int(np.shape(flux_maps)[1]/2)
+        axs[2].fill_between(
+            lats,
+            1e6*np.quantile(flux_maps[:, :, lon0], p1, axis=0),
+            1e6*np.quantile(flux_maps[:, :, lon0], 1-p1, axis=0),
+            color='C3', alpha=0.3, ls='None')
+        axs[2].fill_between(
+            lats,
+            1e6*np.quantile(flux_maps[:, :, lon0], p2, axis=0),
+            1e6*np.quantile(flux_maps[:, :, lon0], 1-p2, axis=0),
+            color='C3', alpha=0.3, ls='None')
+        axs[2].fill_between(
+            lats,
+            1e6*np.quantile(flux_maps[:, :, lon0], p3, axis=0),
+            1e6*np.quantile(flux_maps[:, :, lon0], 1-p3, axis=0),
+            color='C3', alpha=0.3, ls='None')
+        axs[2].set_xlim([-90, 90])
+        axs[2].set_xticks([-90, -45, 0, 45, 90])
+
+        axs[0].set_title('Median Map')
+        axs[1].set_title('Flux Along Equator')
+        axs[2].set_title(r'Flux Along 0$^{\circ}$ Longitude')
+        axs[0].set_ylabel('Latitude', labelpad=-10)
+        axs[0].set_xlabel('Longitude')
+        axs[1].set_xlabel('Longitude')
+        axs[2].set_xlabel('Latitude')
+        axs[1].set_ylabel(r'$F_{\rm p}/F_{\rm s}$ (ppm)')
+        axs[2].set_ylabel(r'$F_{\rm p}/F_{\rm s}$ (ppm)')
+
+        fig.get_layout_engine().set(wspace=0.05, w_pad=0)
+
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5105_{fname_tag}_eclipseMap_{fitter}' +
+                 plots.get_filetype())
+
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
+
+@plots.apply_style
+def plot_fleck_star(lc, model, meta, fitter):
+    """Plot the location and contrast of the fleck star spots (Figs 5307)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    """
+    for chan in lc.fitted_channels:
+        # Initialize PlanetParams object
+        pl_params = PlanetParams(model, 0, chan)
+
+        # create arrays to hold values
+        spotrad = np.zeros(0)
+        spotlat = np.zeros(0)
+        spotlon = np.zeros(0)
+
+        for n in range(pl_params.nspots):
+            # read radii, latitudes, longitudes, and contrasts
+            if n > 0:
+                spot_id = f'{n}'
+            else:
+                spot_id = ''
+            spotrad = np.concatenate([
+                spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
+            spotlat = np.concatenate([
+                spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
+            spotlon = np.concatenate([
+                spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
+
+        if pl_params.spotnpts is None:
+            # Have a default spotnpts for fleck
+            pl_params.spotnpts = 300
+
+        fig = plt.figure(5307)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
+        ax = fig.gca()
+        star = fleck.Star(spot_contrast=pl_params.spotcon,
+                          u_ld=pl_params.u,
+                          rotation_period=pl_params.spotrot)
+        ax = star.plot(spotlon[:, None]*unit.deg,
+                       spotlat[:, None]*unit.deg,
+                       spotrad[:, None],
+                       pl_params.spotstari*unit.deg,
+                       planet=pl_params, time=pl_params.t0, ax=ax)
+
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(chan).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5307_{fname_tag}_fleck_star_{fitter}'
+                 + plots.get_filetype())
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
+
+@plots.apply_style
+def plot_harmonica_string(lc, model, meta, fitter, isTitle=True):
+    """Plot the Harmonica string (Figs 5309)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    isTitle : bool; optional
+        Should figure have a title. Defaults to True.
+    """
+    for chan in lc.fitted_channels:
+        # Initialize PlanetParams object
+        pl_params = PlanetParams(model, 0, chan)
+
+        # Make the transit model
+        ht = HarmonicaTransit()
+        ht.set_planet_transmission_string(pl_params.ab)
+
+        # Compute the transmission string
+        theta = np.linspace(-np.pi, np.pi, 1000)
+        string = ht.get_planet_transmission_string(theta)
+
+        fig = plt.figure(5309)
+        fig.set_size_inches(8, 6, forward=True)
+        fig.clf()
+        ax = fig.gca()
+        ax.set_aspect("equal", "datalim")
+        if isTitle:
+            ax.set_title(f'{meta.eventlabel} - Channel {chan} - '
+                         f'{fitter}')
+        plt.plot(string*np.cos(theta), string*np.sin(theta),
+                 c='C0', lw=2.5, label="Transmission string")
+        plt.plot(pl_params.ab[0] * np.cos(theta),
+                 pl_params.ab[0] * np.sin(theta),
+                 c='0.7', ls="--", label="Reference circle")
+        plt.xlabel("Planet x / Stellar Radius", fontsize=12)
+        plt.ylabel("Planet y / Stellar Radius", fontsize=12)
+
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(chan).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5309_{fname_tag}_harmonica_string_{fitter}'
+                 + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)

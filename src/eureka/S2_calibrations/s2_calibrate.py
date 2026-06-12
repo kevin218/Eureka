@@ -1,17 +1,5 @@
-#! /usr/bin/env python
-
-# Eureka! Stage 2 calibration pipeline
-
-# Proposed Steps
-# --------------
-# 1.  Read in Stage 1 data products
-# 2.  Change default trimming if needed
-# 3.  Run the JWST pipeline with any requested modifications
-# 4.  Save Stage 2 data products
-# 5.  Produce plots
-
 import os
-import shutil
+import inspect
 import time as time_pkg
 from copy import deepcopy
 import numpy as np
@@ -21,14 +9,14 @@ from functools import partial
 from jwst import datamodels
 from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
 from jwst.pipeline.calwebb_image2 import Image2Pipeline
-import jwst.assign_wcs.nirspec
-import crds
+from jwst.assign_wcs import nirspec as nrs
 
+from .s2_meta import S2MetaClass
 from ..lib import logedit, util
 from ..lib import manageevent as me
-from ..lib import readECF
 from ..lib import plots
-from ..version import version
+
+_orig_nrs_wcs_set_input = nrs.nrs_wcs_set_input
 
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
@@ -56,13 +44,6 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 03 Nov 2021 Taylor Bell
-        Initial version
     '''
     t0 = time_pkg.time()
 
@@ -70,23 +51,9 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     input_meta = deepcopy(input_meta)
 
     if input_meta is None:
-        # Load Eureka! control file and store values in Event object
-        ecffile = 'S2_' + eventlabel + '.ecf'
-        meta = readECF.MetaClass(ecf_path, ecffile)
+        meta = S2MetaClass(folder=ecf_path, eventlabel=eventlabel)
     else:
-        meta = input_meta
-
-    # If a specific CRDS context is entered in the ECF, apply it.
-    # Otherwise, log and fix the default CRDS context to make sure it doesn't
-    # change between different segments.
-    if not hasattr(meta, 'pmap') or meta.pmap is None:
-        # Get just the numerical value
-        meta.pmap = crds.get_context_name('jwst')[5:-5]
-    os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
-
-    meta.version = version
-    meta.eventlabel = eventlabel
-    meta.datetime = time_pkg.strftime('%Y-%m-%d')
+        meta = S2MetaClass(**input_meta.__dict__)
 
     if s1_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
@@ -103,10 +70,25 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
         # Attempt to find subdirectory containing S1 FITS files
         meta = util.find_fits(meta)
     else:
-        meta = me.mergeevents(meta, s1_meta)
+        meta = S2MetaClass(**me.mergeevents(meta, s1_meta).__dict__)
 
-    run = util.makedirectory(meta, 'S2')
-    meta.outputdir = util.pathdirectory(meta, 'S2', run)
+    # Create list of file segments
+    meta = util.readfiles(meta)
+
+    # First apply any instrument-specific defaults
+    if meta.inst == 'miri':
+        meta.set_MIRI_defaults()
+    elif meta.inst == 'nircam':
+        meta.set_NIRCam_defaults()
+    elif meta.inst == 'nirspec':
+        meta.set_NIRSpec_defaults()
+    elif meta.inst == 'niriss':
+        meta.set_NIRISS_defaults()
+    # Then apply instrument-agnostic defaults
+    meta.set_defaults()
+
+    meta.run_s2 = util.makedirectory(meta, 'S2')
+    meta.outputdir = util.pathdirectory(meta, 'S2', meta.run_s2)
 
     # Output S2 log file
     meta.s2_logname = meta.outputdir + 'S2_' + meta.eventlabel + ".log"
@@ -116,16 +98,16 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
         log = logedit.Logedit(meta.s2_logname)
     log.writelog("\nStarting Stage 2 Reduction")
     log.writelog(f"Eureka! Version: {meta.version}", mute=True)
-    log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
     log.writelog(f"Input directory: {meta.inputdir}")
+    log.writelog(f'  Found {meta.num_data_files} data file(s) ending '
+                 f'in {meta.suffix}.fits', mute=(not meta.verbose))
     log.writelog(f"Output directory: {meta.outputdir}")
 
     # Copy ecf
     log.writelog('Copying S2 control file')
     meta.copy_ecf()
 
-    # Create list of file segments
-    meta = util.readfiles(meta, log)
+    log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
 
     # If testing, only run the last file
     if meta.testing_S2:
@@ -133,61 +115,59 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     else:
         istart = 0
 
-    # Figure out which pipeline we need to use (spectra or images)
-    with fits.open(meta.segment_list[0]) as hdulist:
-        # Figure out which observatory and observation mode we are using
-        telescope = hdulist[0].header['TELESCOP']
-
-        # record instrument information in meta object for citations
-        if not hasattr(meta, 'inst'):
-            meta.inst = hdulist[0].header["INSTRUME"].lower()
-
-    if telescope == 'JWST':
-        exp_type = hdulist[0].header['EXP_TYPE']
-        if 'image' in exp_type.lower():
-            # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE,
-            # NIS_IMAGE, or NRS_IMAGING
-            pipeline = EurekaImage2Pipeline()
-        else:
-            # EXP_TYPE doesn't say image, so it should be a spectrum
-            # (or someone is putting weird files into Eureka!)
-            pipeline = EurekaSpec2Pipeline()
-
-            if (meta.waverange_start is not None or
-                    meta.waverange_end is not None):
-                # By default pipeline can trim the dispersion axis,
-                # override the function that does this with specific
-                # wavelength range that you want to trim to.
-                jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
-                    partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input,
-                            wavelength_range=[meta.waverange_start,
-                                              meta.waverange_end])
-    elif telescope == 'HST':
-        log.writelog('There is no Stage 2 for HST - skipping.')
-        # Clean up temporary folder
-        shutil.rmtree(os.path.join(meta.topdir,
-                      *meta.outputdir_raw.split(os.sep)))
-        meta.outputdir = meta.inputdir
-        return meta
+    if meta.photometry:
+        # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE,
+        # NIS_IMAGE, or NRS_IMAGING
+        pipeline = EurekaImage2Pipeline()
     else:
-        raise AssertionError(f'Telescope "{telescope}" detected in FITS '
-                             'header is not JWST or HST and is unsupported!')
+        # EXP_TYPE doesn't say image, so it should be a spectrum
+        # (or someone is putting weird files into Eureka!)
+        pipeline = EurekaSpec2Pipeline()
 
-    # Run the pipeline on each file sequentially
-    for m in range(istart, meta.num_data_files):
-        # Report progress
-        log.writelog(f'Starting file {m + 1} of {meta.num_data_files}')
-        filename = meta.segment_list[m]
+        # By default pipeline can trim the dispersion axis,
+        # override the function that does this with specific
+        # wavelength range that you want to trim to.
+        patched_nrs = False
+        if (meta.inst == 'nirspec' and meta.waverange_start is not None
+                and meta.waverange_end is not None):
+            nrs.nrs_wcs_set_input = partial(
+                _nrs_set_input_override,
+                wavelength_range=(meta.waverange_start, meta.waverange_end),
+                slit_y_low=meta.slit_y_low, slit_y_high=meta.slit_y_high)
+            patched_nrs = True
 
-        with fits.open(filename, mode='update') as hdulist:
-            if hdulist[0].header['INSTRUME'] == 'NIRCam':
-                # jwst 1.3.3 breaks unless NDITHPTS and NRIMDTPT are integers
-                # rather than the strings that they are in the old simulated
-                # NIRCam data
-                hdulist[0].header['NDITHPTS'] = 1
-                hdulist[0].header['NRIMDTPT'] = 1
+    try:
+        # Run the pipeline on each file sequentially
+        for m in range(istart, meta.num_data_files):
+            # Report progress
+            meta.m = m
+            filename = meta.segment_list[m]
+            log.writelog(f'Starting file {m + 1} of {meta.num_data_files}')
 
-        pipeline.run_eurekaS2(filename, meta, log)
+            need_update = False
+            with fits.open(filename) as hdulist:
+                if (hdulist[0].header['INSTRUME'] == 'NIRCam'
+                        and isinstance(hdulist[0].header['NDITHPTS'], str)):
+                    need_update = True
+
+                meta.intstart = hdulist[0].header['INTSTART']-1
+                meta.intend = hdulist[0].header['INTEND']
+                meta.n_int = meta.intend-meta.intstart
+
+            if need_update:
+                with fits.open(filename, mode='update') as hdulist:
+                    # If the NDITHPTS header is a string, then it is an old
+                    # simulated file and we need to change it to an integer
+                    hdulist[0].header['NDITHPTS'] = int(
+                        hdulist[0].header['NDITHPTS'])
+                    hdulist[0].header['NRIMDTPT'] = int(
+                        hdulist[0].header['NRIMDTPT'])
+
+            pipeline.run_eurekaS2(filename, meta, log)
+    finally:
+        # Restore original nrs_wcs_set_input after processing all files
+        if 'patched_nrs' in locals() and patched_nrs:
+            nrs.nrs_wcs_set_input = _orig_nrs_wcs_set_input
 
     # make citations for current stage
     util.make_citations(meta, 2)
@@ -207,19 +187,75 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     return meta
 
 
+def _nrs_set_input_override(input_model, slit_name, wavelength_range=None,
+                            slit_y_low=None, slit_y_high=None):
+    """Return a WCS object for a specific slit, slice or shutter.
+
+    Overrides the original jwst.assign_wcs.nirspec.nrs_wcs_set_input to
+    accept wavelength range and slit y-limits to avoid the newly forced
+    cropping behavior in jwst>=1.20.1.
+
+    Parameters
+    ----------
+    input_model : JwstDataModel
+        A datamodel that contains a WCS object for the all open slitlets in
+        an observation.
+    slit_name : int or str
+        Slit.name of an open slit.
+    wavelength_range : tuple of float
+        Wavelength range for the combination of filter and grating.
+    slit_y_low, slit_y_high : float
+        The lower and upper bounds of the slit. Optional.
+
+    Returns
+    -------
+    wcsobj : `~gwcs.wcs.WCS`
+        WCS object for this slit.
+    """
+    slit_wcs = _orig_nrs_wcs_set_input(input_model, slit_name)
+    # Build bbox over requested wavelength range, using cross-disp limits
+    # if provided; otherwise from slit geometry.
+    transform = slit_wcs.get_transform("detector", "slit_frame")
+    # Try to get slit geometry from WCS (fixed-slit TSO path)
+    slit = None
+    if "gwa" in input_model.meta.wcs.available_frames:
+        g2s = input_model.meta.wcs.get_transform("gwa", "slit_frame")
+        slits = getattr(g2s, "slits", [])
+        slit = next((s for s in slits if s.name == slit_name), None)
+    if slit_y_low is not None:
+        ylo = slit_y_low
+    elif slit is not None:
+        ylo = slit.ymin
+    else:
+        ylo = -0.55
+    if slit_y_high is not None:
+        yhi = slit_y_high
+    elif slit is not None:
+        yhi = slit.ymax
+    else:
+        yhi = 0.55
+
+    sig = inspect.signature(nrs.compute_bounding_box)
+    if 'slit_name' in sig.parameters:
+        bb = nrs.compute_bounding_box(
+            transform, slit_name=None, wavelength_range=wavelength_range,
+            slit_ymin=ylo, slit_ymax=yhi)
+    else:
+        # Minimal fallback for older signature in 1.18.0 without slit_name arg
+        bb = nrs.compute_bounding_box(
+            transform, wavelength_range=wavelength_range,
+            slit_ymin=ylo, slit_ymax=yhi)
+    slit_wcs.bounding_box = bb
+    return slit_wcs
+
+
 class EurekaSpec2Pipeline(Spec2Pipeline):
     '''A wrapper class for the jwst.pipeline.calwebb_spec2.Spec2Pipeline.
 
     This wrapper class allows non-standard changes to Stage 2 for Eureka!.
-
-    Notes
-    -----
-    History:
-
-    - October 2021 Taylor Bell
-        Initial version
     '''
 
+    @plots.apply_style
     def run_eurekaS2(self, filename, meta, log):
         '''Reduces rateints spectrum files ouput from Stage 1 of the JWST
         pipeline into calints and x1dints.
@@ -232,52 +268,44 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             The metadata object.
         log : logedit.Logedit
             The open log in which notes from this step can be added.
-
-        Notes
-        -----
-        History:
-
-        - June 2021 Eva-Maria Ahrer and Aarynn Carter
-            Code fragments written
-        - October 2021 Taylor Bell
-            Significantly overhauled code formatting
-        - 03 Nov 2021 Taylor Bell
-            Fragmented code to allow reuse of code between spectral and image
-            analysis.
         '''
 
-        if hasattr(meta, 'slit_y_low') and meta.slit_y_low is not None:
+        if meta.inst == 'nirspec' and meta.slit_y_low is not None:
             #  NIRSpec subarray lower bound in cross-dispersion direction
             self.assign_wcs.slit_y_low = meta.slit_y_low
 
-        if hasattr(meta, 'slit_y_high') and meta.slit_y_high is not None:
+        if meta.inst == 'nirspec' and meta.slit_y_high is not None:
             #  NIRSpec subarray upper bound in cross-dispersion direction
             self.assign_wcs.slit_y_high = meta.slit_y_high
 
-        if hasattr(meta, 'tsgrism_extract_height') and \
-           meta.tsgrism_extract_height is not None:
+        if meta.inst == 'nircam' and meta.tsgrism_extract_height is not None:
             # NIRCam grism subarray height in cross-dispersion direction
             self.extract_2d.tsgrism_extract_height = \
                 meta.tsgrism_extract_height
 
         # Skip steps according to input ecf file
+        self.msa_flagging.skip = meta.skip_msaflagopen
+        if hasattr(self, 'nsclean'):
+            # Allowing backwards compatibility with older jwst versions
+            self.nsclean.skip = meta.skip_nsclean
+        self.imprint_subtract.skip = meta.skip_imprint
         self.bkg_subtract.skip = meta.skip_bkg_subtract
-        self.imprint_subtract.skip = meta.skip_imprint_subtract
-        self.msa_flagging.skip = meta.skip_msa_flagging
         self.extract_2d.skip = meta.skip_extract_2d
         self.srctype.skip = meta.skip_srctype
-        if hasattr(self, 'master_background'):
-            self.master_background.skip = meta.skip_master_background
+        self.master_background_mos.skip = meta.skip_master_background
         self.wavecorr.skip = meta.skip_wavecorr
-        self.flat_field.skip = meta.skip_flat_field
         self.straylight.skip = meta.skip_straylight
+        self.flat_field.skip = meta.skip_flat_field
         self.fringe.skip = meta.skip_fringe
         self.pathloss.skip = meta.skip_pathloss
         self.barshadow.skip = meta.skip_barshadow
+        self.wfss_contam.skip = meta.skip_wfss_contam
         self.photom.skip = meta.skip_photom
+        self.residual_fringe.skip = meta.skip_residual_fringe
         self.resample_spec.skip = meta.skip_resample
         self.cube_build.skip = meta.skip_cube_build
         self.extract_1d.skip = meta.skip_extract_1d
+
         # Save outputs if requested to the folder specified in the ecf
         self.save_results = (not meta.testing_S2)
         self.output_dir = meta.outputdir
@@ -286,10 +314,9 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         self.suffix = None
 
         # Call the main Spec2Pipeline function (defined in the parent class)
-        log.writelog('Running the Spec2Pipeline\n')
         # Must call the pipeline in this way to ensure the skip booleans are
         # respected
-        self(filename)
+        self.run(filename)
 
         # Produce some summary plots if requested
         if not meta.testing_S2 and not self.extract_1d.skip:
@@ -301,8 +328,9 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             x1d_fname = ('_'.join(filename.split(os.sep)[-1].split('_')[:-1]) +
                          '_x1dints')
             with datamodels.open(meta.outputdir+x1d_fname+'.fits') as sp1d:
-                plt.figure(2101, figsize=[15, 5])
-                plt.clf()
+                fig = plt.figure(2101)
+                fig.set_size_inches(15, 5, forward=True)
+                fig.clf()
 
                 for i in range(len(sp1d.spec)):
                     plt.plot(sp1d.spec[i].spec_table['WAVELENGTH'],
@@ -312,7 +340,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
                 plt.xlabel('Wavelength (micron)')
                 plt.ylabel('Flux')
                 plt.savefig(meta.outputdir+'figs'+os.sep+fname +
-                            plots.figure_filetype,
+                            plots.get_filetype(),
                             bbox_inches='tight', dpi=300)
                 if meta.hide_plots:
                     plt.close()
@@ -326,13 +354,6 @@ class EurekaImage2Pipeline(Image2Pipeline):
     '''A wrapper class for the jwst.pipeline.calwebb_image2.Image2Pipeline.
 
     This wrapper class allows non-standard changes to Stage 2 for Eureka!.
-
-    Notes
-    -----
-    History:
-
-    - October 2021 Taylor Bell
-        Initial version
     '''
 
     def run_eurekaS2(self, filename, meta, log):
@@ -347,13 +368,6 @@ class EurekaImage2Pipeline(Image2Pipeline):
             The metadata object.
         log : logedit.Logedit
             The open log in which notes from this step can be added.
-
-        Notes
-        -----
-        History:
-
-        - 03 Nov 2021 Taylor Bell
-            Initial version
         '''
         # Skip steps according to input ecf file
         self.bkg_subtract.skip = meta.skip_bkg_subtract
@@ -368,9 +382,8 @@ class EurekaImage2Pipeline(Image2Pipeline):
         self.suffix = None
 
         # Call the main Image2Pipeline function (defined in the parent class)
-        log.writelog('Running the Image2Pipeline\n')
         # Must call the pipeline in this way to ensure the skip booleans are
         # respected
-        self(filename)
+        self.run(filename)
 
         return

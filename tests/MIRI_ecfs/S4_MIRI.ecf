@@ -2,7 +2,7 @@
 
 # Number of spectroscopic channels spread evenly over given wavelength range
 nspecchan   	1		# Number of spectroscopic channels spread evenly over given wavelength range. Set to None to leave the spectrum unbinned.
-compute_white   True    # Also compute the white-light lightcurve 
+compute_white   True    # Also compute the white-light lightcurve
 wave_min    	None	# Minimum wavelength
 wave_max    	None	# Maximum wavelength
 allapers		True	# Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
@@ -30,8 +30,7 @@ fill_value		mask	# Either the string 'mask' to mask the outlier values (recommen
 
 # Limb-darkening parameters needed to compute exotic-ld
 compute_ld      False
-inst_filter     LRS     # filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html 
-metallicity     0.1     # metallicity of the star 
+metallicity     0.1     # metallicity of the star
 teff            6000    # effective temperature of the star in K
 logg            4.0     # surface gravity in log g
 exotic_ld_direc /home/User/exotic-ld_data/ # Directory for ancillary files for exotic-ld, download from: https://zenodo.org/doi/10.5281/zenodo.6047317
@@ -45,7 +44,7 @@ vmin            0.97        # Sets the vmin of the color bar for Figure 4101.
 vmax            1.03        # Sets the vmax of the color bar for Figure 4101.
 time_axis       'y'         # Determines whether the time axis in Figure 4101 is along the y-axis ('y') or the x-axis ('x')
 hide_plots		True        # If True, plots will automatically be closed rather than popping up
-verbose         False       # If True, more details will be printed about steps
+verbose         True        # If True, more details will be printed about steps
 
 # Project directory
 topdir                  ../tests

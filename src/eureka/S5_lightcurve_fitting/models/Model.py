@@ -6,6 +6,8 @@ import os
 from ..utils import COLORS
 from ...lib.readEPF import Parameters
 from ...lib.split_channels import split
+from ...lib import plots
+from ...lib.util import resolve_param_key
 
 
 class Model:
@@ -20,12 +22,16 @@ class Model:
             Model object as Logedit objects cannot be pickled
             which is required for multiprocessing.
         """
+        self.default_name = 'New Model'
+
         # Set up default model attributes
-        self.name = kwargs.get('name', 'New Model')
+        self.components = kwargs.get('components', [])
+        self.name = kwargs.get('name', self.default_name)
         self.nchannel = kwargs.get('nchannel', 1)
         self.nchannel_fitted = kwargs.get('nchannel_fitted', 1)
         self.fitted_channels = kwargs.get('fitted_channels', [0, ])
-        self.multwhite = kwargs.get('multwhite')
+        self.wl_groups = kwargs.get('wl_groups', None)
+        self.multwhite = kwargs.get('multwhite', False)
         self.nints = kwargs.get('nints')
         self.fitter = kwargs.get('fitter', None)
         self.time = kwargs.get('time', None)
@@ -42,6 +48,137 @@ class Model:
         for arg, val in kwargs.items():
             if arg != 'log':
                 setattr(self, arg, val)
+
+        if self.wl_groups is None:
+            self.wl_groups = [0, ]*self.nchannel_fitted
+
+        # --- normalize/validate metadata (cast to numpy arrays) ---
+        try:
+            fc = np.asarray(self.fitted_channels, dtype=int).reshape(-1)
+            wg = np.asarray(self.wl_groups, dtype=int).reshape(-1)
+        except Exception as e:
+            raise ValueError(f"Could not parse fitted_channels/wl_groups: {e}")
+
+        if fc.size != int(self.nchannel_fitted):
+            raise ValueError(
+                f"fitted_channels must have length nchannel_fitted "
+                f"(got {fc.size}, expected {self.nchannel_fitted})."
+            )
+        if wg.size != fc.size:
+            raise ValueError(
+                f"wl_groups must be the same length as fitted_channels "
+                f"(got {wg.size} vs {fc.size})."
+            )
+        # Store normalized arrays
+        self.fitted_channels = fc
+        self.wl_groups = wg
+        # Build quick lookup table from real channel id -> position
+        self._chan_to_pos = {int(ch): i for i, ch in enumerate(fc.tolist())}
+
+    def _channels(self, channel=None):
+        """Return the list of channel IDs to evaluate.
+
+        Parameters
+        ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+
+        Returns
+        -------
+        nchan : int
+            The number of channels to evaluate.
+        channels : ndarray
+            The array of channel IDs to evaluate.
+        """
+        if channel is None:
+            channels = self.fitted_channels
+        else:
+            channels = np.array([channel, ])
+        nchan = len(channels)
+        return nchan, channels
+
+    def _wl_for_chan(self, chan):
+        """Return wavelength-group id for a real channel id.
+
+        Parameters
+        ----------
+        chan : int
+            Real channel id present in ``self.fitted_channels``.
+
+        Returns
+        -------
+        int
+            Wavelength-group id for this channel.
+        """
+        try:
+            pos = self._chan_to_pos[chan]
+        except (KeyError, ValueError, TypeError):
+            raise ValueError(
+                f"Channel {chan!r} not found in fitted_channels "
+                f"{self.fitted_channels!r}"
+            )
+        return self.wl_groups[pos]
+
+    def _get_param_value(self, base, default=0.0, *, chan=0, wl=None, pid=0):
+        """Resolve a parameter key (wl > ch > base) and return its value.
+
+        Parameters
+        ----------
+        base : str
+            Base parameter name (e.g., 'c0', 'r0', 'A').
+        default : float or None; optional
+            Fallback value if the parameter is missing. If ``None``,
+            return ``None`` when unresolved or uncastable. Default 0.0.
+        chan : int; optional
+            Channel id to resolve against. Default 0.
+        wl : int or None; optional
+            Wavelength-group id. If None, it will be inferred from ``chan``.
+            Pass ``wl=0`` to target the base (unsuffixed) key without
+            consulting the channel-to-wavelength map.
+        pid : int; optional
+            Planet id for astrophysical parameters (0 for none). Default 0.
+
+        Returns
+        -------
+        float or None
+            Scalar numeric value, or ``None`` if ``default is None`` and the
+            key is missing or cannot be cast to float.
+        """
+        params = getattr(self, "parameters", None)
+
+        if params is None:
+            # No parameters object at all
+            return None if default is None else float(default)
+
+        if wl is None:
+            # Infer wl from chan; raise with guidance if chan isn't present.
+            try:
+                wl = self._wl_for_chan(chan)
+            except ValueError as e:
+                raise ValueError(
+                    f"_get_param_value({base}): cannot infer wl for "
+                    f"chan={chan}; pass wl explicitly (e.g., wl=0 for base)."
+                ) from e
+
+        key = resolve_param_key(base, params, pid=pid, channel=chan, wl=wl)
+        val = getattr(self.parameters, key, default)
+
+        # If unresolved and caller asked for None, propagate None.
+        if val is default and default is None:
+            return None
+
+        # Parameters objects have a .value attribute
+        if hasattr(val, "value"):
+            val = val.value
+
+        # Attempt robust float cast (handles numpy scalars/arrays)
+        try:
+            arr = np.asanyarray(val)
+            if arr.shape == () or arr.size == 1:
+                return float(arr.reshape(-1)[0])
+            return float(arr.flat[0])
+        except (TypeError, ValueError):
+            return None if default is None else float(default)
 
     def __mul__(self, other):
         """Multiply model components to make a combined model.
@@ -64,11 +201,18 @@ class Model:
         # Combine the model parameters too
         parameters = self.parameters + other.parameters
         if self.paramtitles is None:
-            paramtitles = other.paramtitles
-        elif other.paramtitles is not None:
-            paramtitles = self.paramtitles.append(other.paramtitles)
+            if isinstance(other.paramtitles, list):
+                paramtitles = other.paramtitles[:]
+            else:
+                paramtitles = other.paramtitles
+        elif other.paramtitles is None:
+            if isinstance(self.paramtitles, list):
+                paramtitles = self.paramtitles[:]
+            else:
+                paramtitles = self.paramtitles
         else:
-            paramtitles = self.paramtitles
+            # both are present: concatenate
+            paramtitles = self.paramtitles + other.paramtitles
 
         return CompositeModel([copy.copy(self), other], parameters=parameters,
                               paramtitles=paramtitles)
@@ -109,6 +253,10 @@ class Model:
         # Set the array
         self._time = np.ma.masked_array(time_array)
 
+        # Set the array for the components
+        for component in self.components:
+            component.time = time_array
+
     @property
     def parameters(self):
         """A getter for the parameters."""
@@ -130,7 +278,39 @@ class Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def interp(self, new_time, nints, **kwargs):
+        # Set the attribute for the components
+        for component in self.components:
+            component.parameters = params
+
+    @property
+    def freenames(self):
+        """A getter for the freenames."""
+        return self._freenames
+
+    @freenames.setter
+    def freenames(self, freenames):
+        """A setter for the freenames."""
+        # Set the freenames attribute
+        self._freenames = freenames
+
+        # Update the components' freenames
+        for component in self.components:
+            component.freenames = freenames
+
+    @property
+    def nints(self):
+        """A getter for the nints."""
+        return self._nints
+
+    @nints.setter
+    def nints(self, nints_array):
+        """A setter for the nints."""
+        self._nints = nints_array
+        # Update the components' nints
+        for component in self.components:
+            component.nints = nints_array
+
+    def interp(self, new_time, nints, channel=None, **kwargs):
         """Evaluate the model over a different time array.
 
         Parameters
@@ -140,6 +320,8 @@ class Model:
         nints : list
             The number of integrations for each channel, for the new
             time array.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Additional parameters to pass to self.eval().
         """
@@ -150,7 +332,7 @@ class Model:
         # Evaluate the model on the new time array
         self.time = new_time
         self.nints = nints
-        interp_flux = self.eval(**kwargs)
+        interp_flux = self.eval(channel=channel, **kwargs)
 
         # Reset the old values
         self.time = old_time
@@ -173,15 +355,11 @@ class Model:
             # For now, the dict and Parameter are separate
             self.parameters.dict[arg][0] = val
             getattr(self.parameters, arg).value = val
-        self._parse_coeffs()
-        return
 
-    def _parse_coeffs(self):
-        """A placeholder function to do any additional processing when
-        calling update.
-        """
-        return
+        for component in self.components:
+            component.update(newparams, **kwargs)
 
+    @plots.apply_style
     def plot(self, components=False, ax=None, draw=False, color='blue',
              zorder=np.inf, share=False, chan=0, **kwargs):
         """Plot the model.
@@ -201,7 +379,8 @@ class Model:
         share : bool; optional
             Whether or not this model is a shared model. Defaults to False.
         chan : int; optional
-            The current channel number. Detaults to 0.
+            The real channel id to render. `LightCurve.plot()` passes the
+            correct value; this function now always respects it.
         **kwargs : dict
             Additional parameters to pass to plot and self.eval().
         """
@@ -210,16 +389,23 @@ class Model:
             fig = plt.figure(5103, figsize=(8, 6))
             ax = fig.gca()
 
+        # Validate channel choice (helps catch accidental chan=0 when fitting
+        # a nonzero channel)
+        try:
+            fc = np.asarray(self.fitted_channels).reshape(-1)
+            if fc.size and (chan not in fc):
+                raise ValueError(
+                    f"Model.plot: chan={chan} not in fitted_channels {fc!r}")
+        except Exception:
+            # If fitted_channels is not set/array-like, skip this guard.
+            pass
+
         # Plot the model
         label = self.fitter
-        if self.name != 'New Model':
+        if self.name != self.default_name:
             label += ': '+self.name
 
-        if not share:
-            channel = 0
-        else:
-            channel = chan
-        model = self.eval(channel=channel, incl_GP=True, **kwargs)
+        model = self.eval(channel=chan, incl_GP=True, **kwargs)
 
         time = self.time
         if self.multwhite:
@@ -231,7 +417,7 @@ class Model:
 
         if components and self.components is not None:
             for component in self.components:
-                component.plot(self.time, ax=ax, draw=False,
+                component.plot(components=components, ax=ax, draw=False,
                                color=next(COLORS), zorder=zorder, share=share,
                                chan=chan, **kwargs)
 
@@ -247,22 +433,20 @@ class Model:
 
 class CompositeModel(Model):
     """A class to create composite models."""
-    def __init__(self, models, **kwargs):
+    def __init__(self, components, **kwargs):
         """Initialize the composite model.
 
         Parameters
         ----------
-        models : sequence
-            The list of models.
+        components : sequence
+            The list of model components.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
         """
-        # Store the models
-        self.components = models
-
         # Inherit from Model class
-        super().__init__(**kwargs)
+        kwargs['name'] = kwargs.get('name', 'composite model')
+        super().__init__(components=components, **kwargs)
 
         self.GP = False
         for component in self.components:
@@ -284,16 +468,16 @@ class CompositeModel(Model):
         # Set the freenames attribute
         self._freenames = freenames
 
-    def eval(self, incl_GP=False, channel=None, **kwargs):
+    def eval(self, channel=None, incl_GP=False, **kwargs):
         """Evaluate the model components.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         incl_GP : bool; optional
             Whether or not to include the GP's predictions in the
             evaluated model predictions.
-        channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -304,6 +488,7 @@ class CompositeModel(Model):
         """
         # Get the time
         if self.time is None:
+            # This also updates all components
             self.time = kwargs.get('time')
 
         if channel is None:
@@ -311,19 +496,19 @@ class CompositeModel(Model):
         else:
             nchan = 1
 
-        if self.multwhite:
-            time = self.time
-            if channel is not None:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, channel)[0]
-            flux = np.ma.ones(len(time))
+        if self.multwhite and channel is None:
+            # Evaluating all channels of a multwhite fit
+            flux_length = len(self.time)
+        elif self.multwhite:
+            # Evaluating a single channel of a multwhite fit
+            flux_length = self.nints[channel]
         else:
-            flux = np.ma.ones(len(self.time)*nchan)
+            # Evaluating a non-multwhite fit (individual or shared)
+            flux_length = len(self.time)*nchan
+        flux = np.ma.ones(flux_length)
 
         # Evaluate flux of each component
         for component in self.components:
-            if component.time is None:
-                component.time = self.time
             if component.modeltype != 'GP':
                 flux *= component.eval(channel=channel, **kwargs)
 
@@ -359,14 +544,16 @@ class CompositeModel(Model):
         else:
             nchan = 1
 
-        if self.multwhite:
-            time = self.time
-            if channel is not None:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, channel)[0]
-            flux = np.ma.ones(len(time))
+        if self.multwhite and channel is None:
+            # Evaluating all channels of a multwhite fit
+            flux_length = len(self.time)
+        elif self.multwhite:
+            # Evaluating a single channel of a multwhite fit
+            flux_length = self.nints[channel]
         else:
-            flux = np.ma.ones(len(self.time)*nchan)
+            # Evaluating a non-multwhite fit (individual or shared)
+            flux_length = len(self.time)*nchan
+        flux = np.ma.ones(flux_length)
 
         # Evaluate flux at each component
         for component in self.components:
@@ -406,14 +593,16 @@ class CompositeModel(Model):
         else:
             nchan = 1
 
-        if self.multwhite:
-            time = self.time
-            if channel is not None:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, channel)[0]
-            flux = np.ma.zeros(len(time))
+        if self.multwhite and channel is None:
+            # Evaluating all channels of a multwhite fit
+            flux_length = len(self.time)
+        elif self.multwhite:
+            # Evaluating a single channel of a multwhite fit
+            flux_length = self.nints[channel]
         else:
-            flux = np.ma.zeros(len(self.time)*nchan)
+            # Evaluating a non-multwhite fit (individual or shared)
+            flux_length = len(self.time)*nchan
+        flux = np.ma.zeros(flux_length)
 
         # Evaluate flux
         for component in self.components:
@@ -511,24 +700,9 @@ class CompositeModel(Model):
         # Evaluate flux at each component
         for component in self.components:
             if component.modeltype == 'physical':
-                if component.time is None:
-                    component.time = self.time
                 if interp:
-                    flux *= component.interp(new_time, nints_interp, **kwargs)
+                    flux *= component.interp(new_time, nints_interp,
+                                             channel=channel, **kwargs)
                 else:
                     flux *= component.eval(channel=channel, **kwargs)
         return flux, new_time, nints_interp
-
-    def update(self, newparams, **kwargs):
-        """Update parameters in the model components.
-
-        Parameters
-        ----------
-        newparams : ndarray
-            New parameter values.
-        **kwargs : dict
-            Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.update().
-        """
-        for component in self.components:
-            component.update(newparams, **kwargs)

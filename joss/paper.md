@@ -113,7 +113,7 @@ The calibration, reduction, and fitting of exoplanet time-series observations is
 
 # Documentation
 
-Documentation for `Eureka!` is available at [https://eurekadocs.readthedocs.io/en/latest/](https://eurekadocs.readthedocs.io/en/latest/). 
+Documentation for `Eureka!` is available at [https://eurekadocs.readthedocs.io/en/latest/](https://eurekadocs.readthedocs.io/en/latest/).
 
 
 # Similar Tools

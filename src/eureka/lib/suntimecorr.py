@@ -46,13 +46,6 @@ def getcoords(file):
         >>> x, y, z, t = getcoords(data)
 
         >>> print(x, y, z, t)
-
-    Notes
-    -----
-    History:
-
-    - 2010-11-01, Patricio Cubillos
-        Initial version
     """
     x, y, z, time = [], [], [], []
     for i in np.arange(len(file)):
@@ -165,30 +158,6 @@ def suntimecorr(ra, dec, obst, coordtable, verbose=False):
     the adjustment from, e.g., geocentric (RA-DEC) coordinates to
     barycentric coordinates has a negligible effect on the trig
     functions used in the routine.
-
-    History:
-
-    - 2005-12-01, Statia Luszcz
-        Initial version.
-    - 2006-03-09, jh
-        Corrected 90deg error in algorithm, renamed,
-        updated header, made Coordtable a positional
-        arg since it's required, switched to radians.
-    - 2007-06-28, jh
-        Renamed to suntimecorr since we now use
-        barycentric Julian date.
-    - 2009-01-28, jh
-        Change variables to long, use spline instead
-        of linfit so we can use one HORIZONS file for
-        the whole mission.
-    - 2009-02-22, jh
-        Reshape spline results to shape of obst.  Make
-        it handle unsorted unput data properly.
-        Header update.
-    - 2010-07-10, patricio
-        Converted to python.
-    - 2010-11-01, patricio
-        Docstring updated.
     """
     start_data = '$$SOE'
     end_data = '$$EOE'

@@ -5,19 +5,21 @@ from scipy.stats import norm
 from ..lib.split_channels import get_trim
 
 
-def update_uncertainty(theta, nints, unc, freenames):
+def update_uncertainty(theta, nints, unc, freenames, nchannel_fitted):
     """Compute updated uncertainty array when inflating errors during fitting.
 
     Parameters
     ----------
     theta : np.array
-        The 
+        The
     nints : list
         The number of integrations for each channel being fit at once.
     unc : np.array
         The initial guessed uncertainty array.
     freenames : list
         The names of the fitted parameters.
+    nchannel_fitted : int
+        The total number of fitted channels.
 
     Returns
     -------
@@ -27,18 +29,23 @@ def update_uncertainty(theta, nints, unc, freenames):
     # Make a copy so we don't edit in place
     unc_fit = copy.deepcopy(unc)
 
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
+    param_type = None
+    if "scatter_mult" in freenames:
+        param_type = "scatter_mult"
+    elif "scatter_ppm" in freenames:
+        param_type = "scatter_ppm"
+
+    if param_type in ("scatter_mult", "scatter_ppm"):
+        for chan in range(nchannel_fitted):
             trim1, trim2 = get_trim(nints, chan)
-            unc_fit[trim1:trim2] = theta[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in range(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(nints, chan)
-            unc_fit[trim1:trim2] = theta[ind[chan]]*unc[trim1:trim2]
+            param_name = f"{param_type}_ch{chan}" if chan > 0 else param_type
+            loc = np.flatnonzero(np.array(freenames) == param_name)
+            param_val = theta[loc]
+
+            if param_type == "scatter_mult":
+                unc_fit[trim1:trim2] *= param_val
+            elif param_type == "scatter_ppm":
+                unc_fit[trim1:trim2] = param_val * 1e-6
 
     return unc_fit
 
@@ -61,21 +68,11 @@ def ln_like(theta, lc, model, freenames):
     -------
     ln_like_val : ndarray
         The log-likelihood value at the position theta.
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Moved code to separate file, added documentation.
-    - January 22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - February, 2022 Eva-Maria Ahrer
-        Adding GP likelihood
     """
     model.update(theta)
     model_lc = model.eval()
-    lc.unc_fit = update_uncertainty(theta, lc.nints, lc.unc, freenames)
+    lc.unc_fit = update_uncertainty(theta, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     if model.GP:
         ln_like_val = 0
@@ -111,15 +108,6 @@ def lnprior(theta, prior1, prior2, priortype, freenames):
     -------
     lnprior_prob : ndarray
         The log-prior probability value at the position theta.
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Moved code to separate file, added documentation.
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
     """
     lnprior_prob = 0.
     for i in range(len(theta)):
@@ -181,15 +169,6 @@ def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
     -------
     ln_prob_val : ndarray
         The log-probability value at the position theta.
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Moved code to separate file, added documentation.
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
     """
     lp = lnprior(theta, prior1, prior2, priortype, freenames)
     if not np.isfinite(lp):
@@ -282,13 +261,6 @@ def ptform(theta, prior1, prior2, priortype):
     -------
     p : ndarray
         The prior transform.
-
-    Notes
-    -----
-    History:
-
-    - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.
     """
     p = np.zeros_like(theta)
     n = len(theta)
@@ -324,15 +296,6 @@ def computeRedChiSq(lc, log, model, meta, freenames):
     -------
     chi2red : float
         The reduced chi-squared value.
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Moved code to separate file, added documentation.
-    - February, 2022 Eva-Maria Ahrer
-        Added GP functionality
     """
     model_lc = model.eval(incl_GP=True)
     residuals = (lc.flux - model_lc)
@@ -368,13 +331,6 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
         The different bin sizes.
     rmserr : ndarray; optional
         The uncertainty in the RMS. Only returned if isrmserr==True.
-
-    Notes
-    -----
-    History:
-
-    - December 29-30, 2021 Taylor Bell
-        Moved code to separate file, added documentation.
     """
     data = np.ma.masked_invalid(np.ma.copy(data))
 

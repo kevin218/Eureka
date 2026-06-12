@@ -3,10 +3,14 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import re
+import warnings
+warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
+                                          'this call because figure with num')
 
 from ..lib import plots
 
 
+@plots.apply_style
 def plot_spectrum(meta, model_x=None, model_y=None,
                   y_scalar=1, ylabel=r'$R_{\rm p}/R_{\rm *}$',
                   xlabel=r'Wavelength ($\mu$m)',
@@ -33,10 +37,11 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         The reference radius for the scale height, by default None
     """
     if scaleHeight is not None:
-        fig = plt.figure(6301, figsize=(8, 4))
+        fig = plt.figure(6301)
     else:
-        fig = plt.figure(6101, figsize=(8, 4))
-    plt.clf()
+        fig = plt.figure(6101)
+    fig.set_size_inches(8, 4, forward=True)
+    fig.clf()
     ax = fig.subplots(1, 1)
 
     wavelength = deepcopy(meta.wavelengths)
@@ -47,7 +52,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     model_y = deepcopy(model_y)
 
     # Trim repeated wavelengths for multwhite fits
-    if len(set(wavelength)) == 1: 
+    if len(set(wavelength)) == 1:
         wavelength = wavelength[0]
         wavelength_error = wavelength_error[0]
 
@@ -66,8 +71,6 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         in_range = np.logical_and(model_x >= wavelength[0]-wavelength_error[0],
                                   model_x <= (wavelength[-1] +
                                               wavelength_error[-1]))
-        if not hasattr(meta, 'model_zorder'):
-            meta.model_zorder = 0
         ax.plot(model_x[in_range], model_y[in_range], color='r',
                 zorder=meta.model_zorder)
         if wavelength_error is not None:
@@ -93,7 +96,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
             expFactor = 1
 
         if planet_R0 is None:
-            H_0 = np.mean(spectrum/y_scalar)**(1/expFactor)/scaleHeight
+            H_0 = np.nanmean(spectrum/y_scalar)**(1/expFactor)/scaleHeight
         else:
             H_0 = planet_R0/scaleHeight
 
@@ -124,7 +127,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
     fname += '_'+clean_y_param
 
-    fig.savefig(meta.outputdir+fname+plots.figure_filetype,
+    fig.savefig(meta.outputdir+fname+plots.get_filetype(),
                 bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)

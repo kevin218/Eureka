@@ -39,7 +39,7 @@ nplots          5           # How many of each type of figure do you want to mak
 testing_S3      False       # Boolean, set True to only use last file and generate select figures
 hide_plots      True        # If True, plots will automatically be closed rather than popping up
 save_output     True        # Save outputs for use in S4
-verbose         False       # If True, more details will be printed about steps
+verbose         True        # If True, more details will be printed about steps
 
 # Project directory
 topdir     ../tests

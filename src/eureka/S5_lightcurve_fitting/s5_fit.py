@@ -5,18 +5,14 @@ from glob import glob
 from copy import deepcopy
 import astraeus.xarrayIO as xrio
 
-from ..lib import manageevent as me
-from ..lib import readECF
-from ..lib import util, logedit
-from ..lib.readEPF import Parameters
-from ..version import version
+from .s5_meta import S5MetaClass
 from . import lightcurve
 from . import models as m
-try:
-    from . import differentiable_models as dm
-except:
-    # PyMC3 hasn't been installed
-    dm = None
+from ..lib import manageevent as me
+from ..lib import util, logedit
+from ..lib.util import resolve_param_key
+from ..lib.readEPF import Parameters
+from ..version import version
 
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
@@ -40,23 +36,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S5.
-
-    Notes
-    -----
-    History:
-
-    - November 12-December 15, 2021 Megan Mansfield
-        Original version
-    - December 17-20, 2021 Megan Mansfield
-        Connecting S5 to S4 outputs
-    - December 17-20, 2021 Taylor Bell
-        Increasing connectedness of S5 and S4
-    - January 7-22, 2022 Megan Mansfield
-        Adding ability to do a single shared fit across all channels
-    - January - February, 2022 Eva-Maria Ahrer
-        Adding GP functionality
-    - April 2022 Kevin Stevenson
-        Enabled Astraeus
     '''
     s4_meta = deepcopy(s4_meta)
     input_meta = deepcopy(input_meta)
@@ -64,16 +43,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S5_' + eventlabel + '.ecf'
-        meta = readECF.MetaClass(ecf_path, ecffile)
+        meta = S5MetaClass(ecf_path, ecffile)
     else:
-        meta = input_meta
+        meta = S5MetaClass(**input_meta.__dict__)
 
     meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
-
-    if not hasattr(meta, 'multwhite'):
-        meta.multwhite = False
 
     if s4_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
@@ -86,23 +62,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
         meta.inputdir = s4_meta.outputdir
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
-    meta = me.mergeevents(meta, s4_meta)
-
-    # Check to make sure that dm is accessible if using dm models/fitters
-    if (dm is None and ('starry' in meta.fit_method or
-                        'exoplanet' in meta.fit_method)):
-        raise AssertionError(f"fit_method is set to {meta.fit_method}, but "
-                             "could not import starry and/or pymc3 related "
-                             "packages. Ensure that you have installed the "
-                             "pymc3-related packages when installing Eureka!.")
-
-    if not meta.allapers:
-        # The user indicated in the ecf that they only want to consider one
-        # aperture in which case the code will consider only the one which
-        # made s4_meta. Alternatively, if S4 was run without allapers, S5
-        # will already only consider that one
-        meta.spec_hw_range = [meta.spec_hw, ]
-        meta.bg_hw_range = [meta.bg_hw, ]
+    meta = S5MetaClass(**me.mergeevents(meta, s4_meta).__dict__)
+    meta.set_defaults()
+    meta = me.filter_allapers_inputdir(meta)
 
     if meta.testing_S5:
         # Only fit a single channel while testing unless doing a shared fit,
@@ -115,27 +77,31 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s5 = None
-    if not hasattr(meta, 'expand'):
-        meta.expand = 1
-    for spec_hw_val in meta.spec_hw_range:
-        for bg_hw_val in meta.bg_hw_range:
-            if not isinstance(bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
-            meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
-                                             ap=spec_hw_val//meta.expand, 
-                                             bg=bg_hw_val)
+    for spec_hw_val, bg_hw_val in me.get_allapers_pairs(meta):
+        spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+            meta.expand, spec_hw_val, bg_hw_val)
+        meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
+                                         ap=spec_hw_val,
+                                         bg=bg_hw_val)
 
+    allapers_pairs = me.get_allapers_pairs(meta)
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
+            if (spec_hw_val, bg_hw_val) not in allapers_pairs:
+                continue
 
             t0 = time_pkg.time()
 
-            meta.spec_hw = spec_hw_val
-            meta.bg_hw = bg_hw_val
-
             # Load in the S4 metadata used for this particular aperture pair
-            meta = load_specific_s4_meta_info(meta)
+            if (meta.data_format == 'eureka' and
+                    (meta.spec_hw != spec_hw_val or meta.bg_hw != bg_hw_val)):
+                meta.spec_hw = spec_hw_val
+                meta.bg_hw = bg_hw_val
+                meta = load_specific_s4_meta_info(meta)
+            elif meta.data_format != 'eureka':
+                meta.spec_hw = spec_hw_val
+                meta.bg_hw = bg_hw_val
+
             filename_S4_hold = meta.filename_S4_LCData.split(os.sep)[-1]
             lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
 
@@ -153,15 +119,21 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     # Search
                     path = glob(path+os.sep+f'**{os.sep}*LCData.h5',
                                 recursive=True)
+
+                    # Get lightcurve file with latest modified time
+                    path = np.unique([os.sep.join(fname.split(os.sep))
+                                      for fname in path])
+
                     if len(path) == 0:
                         raise AssertionError(
                             'Unable to find any LCData save files at '
                             f'{path}')
                     elif len(path) > 1:
-                        print(f'WARNING: Found {len(path)} LCData save '
-                              f'files... Using {path[0]}')
-                    # Use the first file found
-                    path = path[0]
+                        print(f'WARNING: Found {len(path)} LCData save files'
+                              f'... Using {max(path, key=os.path.getmtime)}')
+
+                    # Use the latest file found
+                    path = max(path, key=os.path.getmtime)
                     lc_hold = xrio.readXR(path)
                     meta.wave_low = np.append(meta.wave_low,
                                               lc_hold.wave_low.values)
@@ -176,13 +148,11 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     lc_whites.append(lc_hold)
 
             # Directory structure should not use expanded HW values
-            spec_hw_val //= meta.expand
-            if not isinstance(bg_hw_val, str):
-                # Only divide if value is not a string (spectroscopic modes)
-                bg_hw_val //= meta.expand
+            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+                meta.expand, spec_hw_val, bg_hw_val)
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.run_s5,
-                                                ap=spec_hw_val, 
+                                                ap=spec_hw_val,
                                                 bg=bg_hw_val)
 
             # Copy existing S4 log file and resume log
@@ -192,6 +162,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
+            me.log_allapers_inputdir_glob(meta, log)
 
             # Copy ECF
             log.writelog('Copying S5 control file', mute=(not meta.verbose))
@@ -214,12 +185,12 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             if meta.sharedp and meta.testing_S5:
                 chanrng = min([2, meta.nspecchan])
 
-            if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
+            if meta.manual_clip is not None:
                 # Remove requested data points
                 if meta.multwhite:
                     for p in range(len(meta.inputdirlist)+1):
                         meta, lc_whites[p], log = \
-                            util.manual_clip(lc_whites[p], meta, log)
+                            util.manual_clip(lc_whites[p], meta, log, p)
                         meta.nints[p] = len(lc_whites[p].time.values)
                 else:
                     meta, lc, log = util.manual_clip(lc, meta, log)
@@ -282,8 +253,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     ld_coeffs = None
 
                 # Make a long list of parameters for each channel
-                longparamlist, paramtitles = make_longparamlist(meta, params,
-                                                                1)
+                longparamlist, paramtitles, freenames, params = \
+                    make_longparamlist(meta, params, 1)
 
                 log.writelog("\nStarting Fit of White-light Light Curve\n")
 
@@ -301,8 +272,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
-                                           paramtitles, 1, ld_coeffs,
-                                           xpos, ypos, xwidth, ywidth, True)
+                                           paramtitles, freenames, 1,
+                                           ld_coeffs, xpos, ypos,
+                                           xwidth, ywidth, True)
 
                 # Save results
                 log.writelog('Saving results', mute=(not meta.verbose))
@@ -356,8 +328,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 ld_coeffs = None
 
             # Make a long list of parameters for each channel
-            longparamlist, paramtitles = make_longparamlist(meta, params,
-                                                            chanrng)
+            longparamlist, paramtitles, freenames, params = \
+                make_longparamlist(meta, params, chanrng)
 
             # Joint White Light Fits (may have different time axis)
             if meta.multwhite:
@@ -380,7 +352,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     err_temp = np.ma.masked_where(
                         mask, lc_whites[pi].err.values[0, :])
                     flux_temp, err_temp = util.normalize_spectrum(
-                        meta, flux_temp, err_temp, mask)
+                        meta, flux_temp, err_temp, mask,
+                        scandir=getattr(lc_whites[pi], 'scandir', None))
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
                     time = np.ma.append(time, time_temp)
@@ -390,25 +363,25 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                             lc_whites[pi].centroid_x.values)
                         xpos_temp = np.ma.masked_where(mask, xpos_temp)
                     else:
-                        xpos_temp = None
-                    if hasattr(lc_whites[pi], 'centroid_x'):
+                        xpos_temp = np.ones_like(time_temp)
+                    if hasattr(lc_whites[pi], 'centroid_sx'):
                         xwidth_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_sx.values)
                         xwidth_temp = np.ma.masked_where(mask, xwidth_temp)
                     else:
-                        xwidth_temp = None
+                        xwidth_temp = np.ones_like(time_temp)
                     if hasattr(lc_whites[pi], 'centroid_y'):
                         ypos_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_y.values)
                         ypos_temp = np.ma.masked_where(mask, ypos_temp)
                     else:
-                        ypos_temp = None
-                    if hasattr(lc_whites[pi], 'centroid_y'):
+                        ypos_temp = np.ones_like(time_temp)
+                    if hasattr(lc_whites[pi], 'centroid_sy'):
                         ywidth_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_sy.values)
                         ywidth_temp = np.ma.masked_where(mask, ywidth_temp)
                     else:
-                        ywidth_temp = None
+                        ywidth_temp = np.ones_like(time_temp)
 
                     xpos = np.ma.append(xpos, xpos_temp)
                     ypos = np.ma.append(ypos, ypos_temp)
@@ -418,8 +391,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
-                                           paramtitles, chanrng, ld_coeffs,
-                                           xpos, ypos, xwidth, ywidth)
+                                           paramtitles, freenames, chanrng,
+                                           ld_coeffs, xpos, ypos,
+                                           xwidth, ywidth)
 
                 # Save results
                 log.writelog('Saving results')
@@ -452,8 +426,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
-                                           paramtitles, chanrng, ld_coeffs,
-                                           xpos, ypos, xwidth, ywidth)
+                                           paramtitles, freenames, chanrng,
+                                           ld_coeffs, xpos, ypos,
+                                           xwidth, ywidth)
 
                 # Save results
                 log.writelog('Saving results')
@@ -461,8 +436,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                                     "_Meta_Save"), save=[])
             else:
                 for channel in range(chanrng):
-                    log.writelog(f"\nStarting Channel {channel} of "
-                                 f"{chanrng}\n")
+                    if channel in meta.skip_channels:
+                        log.writelog(f"\nSkipping Channel {channel} as "
+                                     "requested.\n")
+                        continue
+                    else:
+                        log.writelog(f"\nStarting Channel {channel} of "
+                                     f"{chanrng}\n")
 
                     # Get the flux and error measurements for
                     # the current channel
@@ -482,8 +462,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     meta, params = fit_channel(meta, time_temp, flux, channel,
                                                flux_err, eventlabel, params,
                                                log, longparamlist, time_units,
-                                               paramtitles, chanrng, ld_coeffs,
-                                               xpos, ypos, xwidth, ywidth)
+                                               paramtitles, freenames, chanrng,
+                                               ld_coeffs, xpos, ypos,
+                                               xwidth, ywidth)
 
                     # Save results
                     log.writelog('Saving results', mute=(not meta.verbose))
@@ -500,8 +481,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
 
 def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
-                log, longparamlist, time_units, paramtitles, chanrng, ldcoeffs,
-                xpos, ypos, xwidth, ywidth, white=False):
+                log, longparamlist, time_units, paramtitles, freenames,
+                chanrng, ldcoeffs, xpos, ypos, xwidth, ywidth, white=False):
     """Run a fit for one channel or perform a shared fit.
 
     Parameters
@@ -528,7 +509,9 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     time_units : str
         The units of the time array.
     paramtitles : list
-        The names of the fitted parameters.
+        The generic names of the fitted parameters.
+    freenames : list
+        The specific names of all fitted parameters (e.g., including _ch#)
     chanrng : int
         The number of fitted channels.
     ldcoeffs : list
@@ -541,114 +524,83 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
     """
+    if np.all(flux.mask):
+        # All of the data for this channel are masked - skip it
+        log.writelog("=========================")
+        log.writelog(f"All data for channel {chan} are masked, so skipping "
+                     "this channel.")
+        log.writelog("=========================")
+        return meta, params
+
+    LightCurve = lightcurve.LightCurve
+    AstroModel = m.AstroModel
+    BatmanEclipseModel = m.BatmanEclipseModel
+    BatmanTransitModel = m.BatmanTransitModel
+    CatwomanTransitModel = m.CatwomanTransitModel
+    CentroidModel = m.CentroidModel
+    CommonModeModel = m.CommonModeModel
+    DampedOscillatorModel = m.DampedOscillatorModel
+    ExpRampModel = m.ExpRampModel
+    FleckTransitModel = m.FleckTransitModel
+    GPModel = m.GPModel
+    HarmonicaTransitModel = m.HarmonicaTransitModel
+    HSTRampModel = m.HSTRampModel
+    LorentzianModel = m.LorentzianModel
+    PoetEclipseModel = m.PoetEclipseModel
+    PoetPCModel = m.PoetPCModel
+    PoetTransitModel = m.PoetTransitModel
+    PolynomialModel = m.PolynomialModel
+    QuasiLambertianPhaseCurve = m.QuasiLambertianPhaseCurve
+    SinusoidModel = m.SinusoidPhaseCurveModel
+    StepModel = m.StepModel
+    CompositeModel = m.CompositeModel
+
     # Load the relevant values into the LightCurve model object
-    lc_model = lightcurve.LightCurve(time, flux, chan, chanrng, log,
-                                     longparamlist, params,
-                                     unc=flux_err, time_units=time_units,
-                                     name=eventlabel, share=meta.sharedp,
-                                     white=white, multwhite=meta.multwhite,
-                                     nints=meta.nints)
+    lc_model = LightCurve(time, flux, chan, chanrng, log,
+                          longparamlist, params, freenames,
+                          unc=flux_err, time_units=time_units,
+                          name=eventlabel, share=meta.sharedp,
+                          white=white, multwhite=meta.multwhite,
+                          nints=meta.nints)
 
     nchannel_fitted = lc_model.nchannel_fitted
     fitted_channels = lc_model.fitted_channels
 
-    if hasattr(meta, 'testing_model') and meta.testing_model:
+    if white:
+        spotcon_file = meta.spotcon_file_white
+    else:
+        spotcon_file = meta.spotcon_file
+
+    if meta.testing_model:
         # FINDME: Use this area to add systematics into the data
         # when testing new systematics models. In this case, I'm
         # introducing an exponential ramp to test m.ExpRampModel().
         log.writelog('***Adding exponential ramp systematic to light curve***')
-        fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--',
-                                  log=log, time=time,
-                                  longparamlist=lc_model.longparamlist,
-                                  nchannel=chanrng,
-                                  nchannel_fitted=nchannel_fitted,
-                                  fitted_channels=fitted_channels,
-                                  paramtitles=paramtitles)
-        fakeramp.coeffs = (np.array([-1, 40, -3, 0, 0, 0]).reshape(1, -1)
+        fakeramp = ExpRampModel(parameters=params, fmt='r--',
+                                log=log, time=time, time_units=time_units,
+                                freenames=freenames,
+                                longparamlist=lc_model.longparamlist,
+                                nchannel=chanrng,
+                                nchannel_fitted=nchannel_fitted,
+                                fitted_channels=fitted_channels,
+                                paramtitles=paramtitles,
+                                multwhite=lc_model.multwhite,
+                                nints=lc_model.nints)
+        fakeramp.coeffs = (np.array([-1, 40, 0, 0]).reshape(1, -1)
                            * np.ones(nchannel_fitted))
         flux *= fakeramp.eval(time=time)
         lc_model.flux = flux
 
-    freenames = []
-    for key in params.dict:
-        if params.dict[key][1] in ['free', 'shared', 'white_free',
-                                   'white_fixed']:
-            freenames.append(key)
-    freenames = np.array(freenames)
-
-    if not hasattr(meta, 'recenter_ld_prior'):
-        meta.recenter_ld_prior = True
-    if not hasattr(meta, 'num_planets'):
-        meta.num_planets = 1
-    if not hasattr(meta, 'compute_ltt'):
-        # Let each model have its own default
-        meta.compute_ltt = None
-
     # Make the astrophysical and detector models
     modellist = []
     if 'starry' in meta.run_myfuncs:
-        # Fixed any masked uncertainties
-        masked = np.logical_or(np.ma.getmaskarray(flux),
-                               np.ma.getmaskarray(flux_err))
-        lc_model.unc[masked] = np.ma.median(lc_model.unc)
-        lc_model.unc_fit[masked] = np.ma.median(lc_model.unc_fit)
-        lc_model.unc.mask = False
-        lc_model.unc_fit.mask = False
-
-        t_starry = dm.StarryModel(parameters=params, name='starry',
-                                  fmt='r--', log=log,
-                                  time=time, time_units=time_units,
-                                  freenames=freenames,
-                                  longparamlist=lc_model.longparamlist,
-                                  nchannel=chanrng,
-                                  nchannel_fitted=nchannel_fitted,
-                                  fitted_channels=fitted_channels,
-                                  paramtitles=paramtitles,
-                                  ld_from_S4=meta.use_generate_ld,
-                                  ld_from_file=meta.ld_file,
-                                  ld_coeffs=ldcoeffs,
-                                  recenter_ld_prior=meta.recenter_ld_prior,
-                                  compute_ltt=meta.compute_ltt,
-                                  multwhite=lc_model.multwhite,
-                                  nints=lc_model.nints)
-        modellist.append(t_starry)
-        meta.ydeg = t_starry.ydeg
+        raise NotImplementedError(
+            'PyMC3/starry support within Eureka! had to be dropped because'
+            ' PyMC3 is now extremely deprecated and incompatible with the '
+            'current jwst pipeline version. For the time being, you must '
+            'instead use the numpy-based models.')
     if 'batman_tr' in meta.run_myfuncs:
-        t_transit = m.BatmanTransitModel(parameters=params, name='batman_tr',
-                                         fmt='r--', log=log, time=time,
-                                         time_units=time_units,
-                                         freenames=freenames,
-                                         longparamlist=lc_model.longparamlist,
-                                         nchannel=chanrng,
-                                         nchannel_fitted=nchannel_fitted,
-                                         fitted_channels=fitted_channels,
-                                         paramtitles=paramtitles,
-                                         ld_from_S4=meta.use_generate_ld,
-                                         ld_from_file=meta.ld_file,
-                                         ld_coeffs=ldcoeffs,
-                                         recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
-                                         compute_ltt=meta.compute_ltt,
-                                         multwhite=lc_model.multwhite,
-                                         nints=lc_model.nints,
-                                         num_planets=meta.num_planets)
-        modellist.append(t_transit)
-    if 'batman_ecl' in meta.run_myfuncs:
-        t_eclipse = m.BatmanEclipseModel(parameters=params, name='batman_ecl',
-                                         fmt='r--', log=log, time=time,
-                                         time_units=time_units,
-                                         freenames=freenames,
-                                         longparamlist=lc_model.longparamlist,
-                                         nchannel=chanrng,
-                                         nchannel_fitted=nchannel_fitted,
-                                         fitted_channels=fitted_channels,
-                                         paramtitles=paramtitles,
-                                         compute_ltt=meta.compute_ltt,
-                                         multwhite=lc_model.multwhite,
-                                         nints=lc_model.nints,
-                                         num_planets=meta.num_planets)
-        modellist.append(t_eclipse)
-    if 'poet_tr' in meta.run_myfuncs:
-        t_poet_tr = m.PoetTransitModel(parameters=params, name='poet_tr',
+        t_transit = BatmanTransitModel(parameters=params,
                                        fmt='r--', log=log, time=time,
                                        time_units=time_units,
                                        freenames=freenames,
@@ -656,6 +608,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        nchannel=chanrng,
                                        nchannel_fitted=nchannel_fitted,
                                        fitted_channels=fitted_channels,
+                                       wl_groups=meta.wl_groups,
                                        paramtitles=paramtitles,
                                        ld_from_S4=meta.use_generate_ld,
                                        ld_from_file=meta.ld_file,
@@ -665,60 +618,9 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        multwhite=lc_model.multwhite,
                                        nints=lc_model.nints,
                                        num_planets=meta.num_planets)
-        modellist.append(t_poet_tr)
-    if 'poet_ecl' in meta.run_myfuncs:
-        t_poet_ecl = m.PoetEclipseModel(parameters=params, name='poet_ecl',
-                                        fmt='r--', log=log, time=time,
-                                        time_units=time_units,
-                                        freenames=freenames,
-                                        longparamlist=lc_model.longparamlist,
-                                        nchannel=chanrng,
-                                        nchannel_fitted=nchannel_fitted,
-                                        fitted_channels=fitted_channels,
-                                        paramtitles=paramtitles,
-                                        compute_ltt=meta.compute_ltt,
-                                        multwhite=lc_model.multwhite,
-                                        nints=lc_model.nints,
-                                        num_planets=meta.num_planets)
-        modellist.append(t_poet_ecl)
-    if 'poet_pc' in meta.run_myfuncs:
-        model_names = np.array([model.name for model in modellist])
-        t_model = None
-        e_model = None
-        # Nest any transit and/or eclipse models inside of the
-        # phase curve model
-        if 'poet_tr' in model_names:
-            t_model = modellist.pop(np.where(model_names == 'poet_tr')[0][0])
-            model_names = np.array([model.name for model in modellist])
-        if 'poet_ecl' in model_names:
-            e_model = modellist.pop(np.where(model_names == 'poet_ecl')[0][0])
-            model_names = np.array([model.name for model in modellist])
-        # Check if should enforce positivity
-        if not hasattr(meta, 'force_positivity'):
-            meta.force_positivity = False
-        t_poet_pc = m.PoetPCModel(parameters=params, name='phasecurve',
-                                  fmt='r--', log=log, time=time,
-                                  time_units=time_units,
-                                  freenames=freenames,
-                                  longparamlist=lc_model.longparamlist,
-                                  nchannel=chanrng,
-                                  nchannel_fitted=nchannel_fitted,
-                                  fitted_channels=fitted_channels,
-                                  paramtitles=paramtitles,
-                                  force_positivity=meta.force_positivity,
-                                  transit_model=t_model,
-                                  eclipse_model=e_model,
-                                  multwhite=lc_model.multwhite,
-                                  nints=lc_model.nints,
-                                  num_planets=meta.num_planets)
-        modellist.append(t_poet_pc)
-    if 'sinusoid_pc' in meta.run_myfuncs and 'starry' in meta.run_myfuncs:
-        model_names = np.array([model.name for model in modellist])
-        # Nest the starry model inside of the phase curve model
-        starry_model = modellist.pop(np.where(model_names == 'starry')[0][0])
-        t_phase = \
-            dm.SinusoidPhaseCurveModel(starry_model,
-                                       parameters=params, name='phasecurve',
+        modellist.append(t_transit)
+    if 'batman_ecl' in meta.run_myfuncs:
+        t_eclipse = BatmanEclipseModel(parameters=params,
                                        fmt='r--', log=log, time=time,
                                        time_units=time_units,
                                        freenames=freenames,
@@ -726,61 +628,15 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        nchannel=chanrng,
                                        nchannel_fitted=nchannel_fitted,
                                        fitted_channels=fitted_channels,
+                                       wl_groups=meta.wl_groups,
                                        paramtitles=paramtitles,
+                                       compute_ltt=meta.compute_ltt,
                                        multwhite=lc_model.multwhite,
                                        nints=lc_model.nints,
                                        num_planets=meta.num_planets)
-        modellist.append(t_phase)
-    elif 'sinusoid_pc' in meta.run_myfuncs:
-        model_names = np.array([model.name for model in modellist])
-        t_model = None
-        e_model = None
-        # Nest any transit and/or eclipse models inside of the
-        # phase curve model
-        if 'batman_tr' in model_names:
-            t_model = modellist.pop(
-                np.where(model_names == 'batman_tr')[0][0])
-            model_names = np.array([model.name for model in modellist])
-        if 'batman_ecl' in model_names:
-            e_model = modellist.pop(
-                np.where(model_names == 'batman_ecl')[0][0])
-            model_names = np.array([model.name for model in modellist])
-        # Check if should enforce positivity
-        if not hasattr(meta, 'force_positivity'):
-            meta.force_positivity = False
-        t_phase = \
-            m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve',
-                                      fmt='r--', log=log, time=time,
-                                      time_units=time_units,
-                                      freenames=freenames,
-                                      longparamlist=lc_model.longparamlist,
-                                      nchannel=chanrng,
-                                      nchannel_fitted=nchannel_fitted,
-                                      fitted_channels=fitted_channels,
-                                      paramtitles=paramtitles,
-                                      force_positivity=meta.force_positivity,
-                                      transit_model=t_model,
-                                      eclipse_model=e_model,
-                                      multwhite=lc_model.multwhite,
-                                      nints=lc_model.nints,
-                                      num_planets=meta.num_planets)
-        modellist.append(t_phase)
-    if 'damped_osc' in meta.run_myfuncs:
-        t_osc = m.DampedOscillatorModel(parameters=params, name='damped_osc',
-                                        fmt='r--', log=log, time=time,
-                                        time_units=time_units,
-                                        freenames=freenames,
-                                        longparamlist=lc_model.longparamlist,
-                                        nchannel=chanrng,
-                                        nchannel_fitted=nchannel_fitted,
-                                        fitted_channels=fitted_channels,
-                                        paramtitles=paramtitles,
-                                        multwhite=lc_model.multwhite,
-                                        nints=lc_model.nints)
-        modellist.append(t_osc)
-    if 'lorentzian' in meta.run_myfuncs:
-        t_lorentzian = m.LorentzianModel(parameters=params, 
-                                         name='lorentzian',
+        modellist.append(t_eclipse)
+    if 'catwoman_tr' in meta.run_myfuncs:
+        t_transit = CatwomanTransitModel(parameters=params,
                                          fmt='r--', log=log, time=time,
                                          time_units=time_units,
                                          freenames=freenames,
@@ -788,16 +644,174 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          nchannel=chanrng,
                                          nchannel_fitted=nchannel_fitted,
                                          fitted_channels=fitted_channels,
+                                         wl_groups=meta.wl_groups,
                                          paramtitles=paramtitles,
+                                         ld_from_S4=meta.use_generate_ld,
+                                         ld_from_file=meta.ld_file,
+                                         ld_coeffs=ldcoeffs,
+                                         recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
+                                         compute_ltt=meta.compute_ltt,
                                          multwhite=lc_model.multwhite,
-                                         nints=lc_model.nints)
+                                         nints=lc_model.nints,
+                                         num_planets=meta.num_planets,
+                                         fac=meta.catwoman_fac,
+                                         max_err=meta.catwoman_max_err)
+        modellist.append(t_transit)
+    if 'harmonica_tr' in meta.run_myfuncs:
+        t_transit = HarmonicaTransitModel(parameters=params,
+                                          fmt='r--', log=log, time=time,
+                                          time_units=time_units,
+                                          freenames=freenames,
+                                          longparamlist=lc_model.longparamlist,
+                                          nchannel=chanrng,
+                                          nchannel_fitted=nchannel_fitted,
+                                          fitted_channels=fitted_channels,
+                                          wl_groups=meta.wl_groups,
+                                          paramtitles=paramtitles,
+                                          ld_from_S4=meta.use_generate_ld,
+                                          ld_from_file=meta.ld_file,
+                                          ld_coeffs=ldcoeffs,
+                                          recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
+                                          compute_ltt=meta.compute_ltt,
+                                          multwhite=lc_model.multwhite,
+                                          nints=lc_model.nints,
+                                          num_planets=meta.num_planets)
+        modellist.append(t_transit)
+    if 'fleck_tr' in meta.run_myfuncs:
+        t_transit = FleckTransitModel(parameters=params,
+                                      fmt='r--', log=log, time=time,
+                                      time_units=time_units,
+                                      freenames=freenames,
+                                      longparamlist=lc_model.longparamlist,
+                                      nchannel=chanrng,
+                                      nchannel_fitted=nchannel_fitted,
+                                      fitted_channels=fitted_channels,
+                                      wl_groups=meta.wl_groups,
+                                      paramtitles=paramtitles,
+                                      ld_from_S4=meta.use_generate_ld,
+                                      ld_from_file=meta.ld_file,
+                                      ld_coeffs=ldcoeffs,
+                                      recenter_ld_prior=meta.recenter_ld_prior,
+                                      spotcon_file=spotcon_file,
+                                      recenter_spotcon_prior=meta.recenter_spotcon_prior,  # noqa: E501
+                                      compute_ltt=meta.compute_ltt,
+                                      multwhite=lc_model.multwhite,
+                                      nints=lc_model.nints,
+                                      num_planets=meta.num_planets)
+        modellist.append(t_transit)
+    if 'poet_tr' in meta.run_myfuncs:
+        t_poet_tr = PoetTransitModel(parameters=params,
+                                     fmt='r--', log=log, time=time,
+                                     time_units=time_units,
+                                     freenames=freenames,
+                                     longparamlist=lc_model.longparamlist,
+                                     nchannel=chanrng,
+                                     nchannel_fitted=nchannel_fitted,
+                                     fitted_channels=fitted_channels,
+                                     paramtitles=paramtitles,
+                                     ld_from_S4=meta.use_generate_ld,
+                                     ld_from_file=meta.ld_file,
+                                     ld_coeffs=ldcoeffs,
+                                     recenter_ld_prior=meta.recenter_ld_prior,
+                                     compute_ltt=meta.compute_ltt,
+                                     multwhite=lc_model.multwhite,
+                                     nints=lc_model.nints,
+                                     num_planets=meta.num_planets)
+        modellist.append(t_poet_tr)
+    if 'poet_ecl' in meta.run_myfuncs:
+        t_poet_ecl = PoetEclipseModel(parameters=params,
+                                      fmt='r--', log=log, time=time,
+                                      time_units=time_units,
+                                      freenames=freenames,
+                                      longparamlist=lc_model.longparamlist,
+                                      nchannel=chanrng,
+                                      nchannel_fitted=nchannel_fitted,
+                                      fitted_channels=fitted_channels,
+                                      wl_groups=meta.wl_groups,
+                                      paramtitles=paramtitles,
+                                      compute_ltt=meta.compute_ltt,
+                                      multwhite=lc_model.multwhite,
+                                      nints=lc_model.nints,
+                                      num_planets=meta.num_planets)
+        modellist.append(t_poet_ecl)
+    if 'poet_pc' in meta.run_myfuncs:
+        t_poet_pc = PoetPCModel(parameters=params,
+                                fmt='r--', log=log, time=time,
+                                time_units=time_units,
+                                freenames=freenames,
+                                longparamlist=lc_model.longparamlist,
+                                nchannel=chanrng,
+                                nchannel_fitted=nchannel_fitted,
+                                fitted_channels=fitted_channels,
+                                wl_groups=meta.wl_groups,
+                                paramtitles=paramtitles,
+                                force_positivity=meta.force_positivity,
+                                multwhite=lc_model.multwhite,
+                                nints=lc_model.nints,
+                                num_planets=meta.num_planets)
+        modellist.append(t_poet_pc)
+    if 'sinusoid_pc' in meta.run_myfuncs:
+        t_phase = SinusoidModel(parameters=params,
+                                fmt='r--', log=log, time=time,
+                                time_units=time_units,
+                                freenames=freenames,
+                                longparamlist=lc_model.longparamlist,
+                                nchannel=chanrng,
+                                nchannel_fitted=nchannel_fitted,
+                                fitted_channels=fitted_channels,
+                                wl_groups=meta.wl_groups,
+                                paramtitles=paramtitles,
+                                force_positivity=meta.force_positivity,
+                                multwhite=lc_model.multwhite,
+                                nints=lc_model.nints,
+                                num_planets=meta.num_planets)
+        modellist.append(t_phase)
+    if 'quasilambert_pc' in meta.run_myfuncs:
+        t_phase = \
+            QuasiLambertianPhaseCurve(parameters=params,
+                                      fmt='r--', log=log, time=time,
+                                      time_units=time_units,
+                                      freenames=freenames,
+                                      longparamlist=lc_model.longparamlist,
+                                      nchannel=chanrng,
+                                      nchannel_fitted=nchannel_fitted,
+                                      fitted_channels=fitted_channels,
+                                      wl_groups=meta.wl_groups,
+                                      paramtitles=paramtitles,
+                                      multwhite=lc_model.multwhite,
+                                      nints=lc_model.nints,
+                                      num_planets=meta.num_planets)
+        modellist.append(t_phase)
+    if 'damped_osc' in meta.run_myfuncs:
+        t_osc = DampedOscillatorModel(parameters=params,
+                                      fmt='r--', log=log, time=time,
+                                      time_units=time_units,
+                                      freenames=freenames,
+                                      longparamlist=lc_model.longparamlist,
+                                      nchannel=chanrng,
+                                      nchannel_fitted=nchannel_fitted,
+                                      fitted_channels=fitted_channels,
+                                      wl_groups=meta.wl_groups,
+                                      paramtitles=paramtitles,
+                                      multwhite=lc_model.multwhite,
+                                      nints=lc_model.nints)
+        modellist.append(t_osc)
+    if 'lorentzian' in meta.run_myfuncs:
+        t_lorentzian = LorentzianModel(parameters=params,
+                                       fmt='r--', log=log, time=time,
+                                       time_units=time_units,
+                                       freenames=freenames,
+                                       longparamlist=lc_model.longparamlist,
+                                       nchannel=chanrng,
+                                       nchannel_fitted=nchannel_fitted,
+                                       fitted_channels=fitted_channels,
+                                       wl_groups=meta.wl_groups,
+                                       paramtitles=paramtitles,
+                                       multwhite=lc_model.multwhite,
+                                       nints=lc_model.nints)
         modellist.append(t_lorentzian)
     if 'polynomial' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            PolynomialModel = dm.PolynomialModel
-        else:
-            PolynomialModel = m.PolynomialModel
-        t_polynom = PolynomialModel(parameters=params, name='polynom',
+        t_polynom = PolynomialModel(parameters=params,
                                     fmt='r--', log=log, time=time,
                                     time_units=time_units,
                                     freenames=freenames,
@@ -805,168 +819,171 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                     nchannel=chanrng,
                                     nchannel_fitted=nchannel_fitted,
                                     fitted_channels=fitted_channels,
+                                    wl_groups=meta.wl_groups,
                                     paramtitles=paramtitles,
                                     multwhite=lc_model.multwhite,
                                     nints=lc_model.nints)
         modellist.append(t_polynom)
     if 'step' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            StepModel = dm.StepModel
-        else:
-            StepModel = m.StepModel
-        t_step = StepModel(parameters=params, name='step', fmt='r--',
+        t_step = StepModel(parameters=params, fmt='r--',
                            log=log, time=time, time_units=time_units,
                            freenames=freenames,
                            longparamlist=lc_model.longparamlist,
                            nchannel=chanrng,
                            nchannel_fitted=nchannel_fitted,
                            fitted_channels=fitted_channels,
+                           wl_groups=meta.wl_groups,
                            paramtitles=paramtitles,
                            multwhite=lc_model.multwhite,
                            nints=lc_model.nints)
         modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            ExpRampModel = dm.ExpRampModel
-        else:
-            ExpRampModel = m.ExpRampModel
-        t_expramp = ExpRampModel(parameters=params, name='ramp', fmt='r--',
+        t_expramp = ExpRampModel(parameters=params, fmt='r--',
                                  log=log, time=time, time_units=time_units,
                                  freenames=freenames,
                                  longparamlist=lc_model.longparamlist,
                                  nchannel=chanrng,
                                  nchannel_fitted=nchannel_fitted,
                                  fitted_channels=fitted_channels,
+                                 wl_groups=meta.wl_groups,
                                  paramtitles=paramtitles,
                                  multwhite=lc_model.multwhite,
                                  nints=lc_model.nints)
         modellist.append(t_expramp)
     if 'hstramp' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            HSTRampModel = dm.HSTRampModel
-        else:
-            HSTRampModel = m.HSTRampModel
-        t_hstramp = HSTRampModel(parameters=params, name='hstramp', fmt='r--',
+        t_hstramp = HSTRampModel(parameters=params, fmt='r--',
                                  log=log, time=time, time_units=time_units,
                                  freenames=freenames,
                                  longparamlist=lc_model.longparamlist,
                                  nchannel=chanrng,
                                  nchannel_fitted=nchannel_fitted,
                                  fitted_channels=fitted_channels,
+                                 wl_groups=meta.wl_groups,
                                  paramtitles=paramtitles,
                                  multwhite=lc_model.multwhite,
                                  nints=lc_model.nints)
         modellist.append(t_hstramp)
     if 'xpos' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
-        t_cent = CentroidModel(parameters=params, name='xpos', fmt='r--',
+        t_cent = CentroidModel(parameters=params, fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
                                longparamlist=lc_model.longparamlist,
                                nchannel=chanrng,
                                nchannel_fitted=nchannel_fitted,
                                fitted_channels=fitted_channels,
+                               wl_groups=meta.wl_groups,
                                paramtitles=paramtitles,
                                axis='xpos', centroid=xpos,
                                multwhite=lc_model.multwhite,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'xwidth' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
-        t_cent = CentroidModel(parameters=params, name='xwidth', fmt='r--',
+        t_cent = CentroidModel(parameters=params, fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
                                longparamlist=lc_model.longparamlist,
                                nchannel=chanrng,
                                nchannel_fitted=nchannel_fitted,
                                fitted_channels=fitted_channels,
+                               wl_groups=meta.wl_groups,
                                paramtitles=paramtitles,
                                axis='xwidth', centroid=xwidth,
                                multwhite=lc_model.multwhite,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'ypos' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
-        t_cent = CentroidModel(parameters=params, name='ypos', fmt='r--',
+        t_cent = CentroidModel(parameters=params, fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
                                longparamlist=lc_model.longparamlist,
                                nchannel=chanrng,
                                nchannel_fitted=nchannel_fitted,
                                fitted_channels=fitted_channels,
+                               wl_groups=meta.wl_groups,
                                paramtitles=paramtitles,
                                axis='ypos', centroid=ypos,
                                multwhite=lc_model.multwhite,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'ywidth' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
-        t_cent = CentroidModel(parameters=params, name='ywidth', fmt='r--',
+        t_cent = CentroidModel(parameters=params, fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
                                longparamlist=lc_model.longparamlist,
                                nchannel=chanrng,
                                nchannel_fitted=nchannel_fitted,
                                fitted_channels=fitted_channels,
+                               wl_groups=meta.wl_groups,
                                paramtitles=paramtitles,
                                axis='ywidth', centroid=ywidth,
                                multwhite=lc_model.multwhite,
                                nints=lc_model.nints)
         modellist.append(t_cent)
+    if 'common_mode' in meta.run_myfuncs:
+        t_cm = CommonModeModel(parameters=params, meta=meta,
+                               fmt='r--', log=log, time=time,
+                               time_units=time_units,
+                               freenames=freenames,
+                               longparamlist=lc_model.longparamlist,
+                               nchannel=chanrng,
+                               nchannel_fitted=nchannel_fitted,
+                               fitted_channels=fitted_channels,
+                               wl_groups=meta.wl_groups,
+                               paramtitles=paramtitles,
+                               multwhite=lc_model.multwhite,
+                               nints=lc_model.nints)
+        modellist.append(t_cm)
     if 'GP' in meta.run_myfuncs:
-        if not hasattr(meta, 'useHODLR'):
-            meta.useHODLR = False
-        if 'starry' in meta.run_myfuncs:
-            GPModel = dm.GPModel
-        else:
-            GPModel = m.GPModel
         t_GP = GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
-                       parameters=params, name='GP', fmt='r--', log=log,
+                       parameters=params, fmt='r--', log=log,
                        time=time, time_units=time_units,
-                       gp_code=meta.GP_package,
+                       gp_code_name=meta.GP_package,
                        useHODLR=meta.useHODLR,
                        freenames=freenames,
                        longparamlist=lc_model.longparamlist,
                        nchannel=chanrng,
                        nchannel_fitted=nchannel_fitted,
                        fitted_channels=fitted_channels,
+                       wl_groups=meta.wl_groups,
                        paramtitles=paramtitles,
                        multwhite=lc_model.multwhite,
                        nints=lc_model.nints)
         modellist.append(t_GP)
 
-    if 'starry' in meta.run_myfuncs:
-        # Only have that one model for starry
-        model = dm.CompositePyMC3Model(modellist, parameters=params,
-                                       log=log, time=time,
-                                       time_units=time_units,
-                                       freenames=freenames,
-                                       longparamlist=lc_model.longparamlist,
-                                       nchannel=chanrng,
-                                       nchannel_fitted=nchannel_fitted,
-                                       fitted_channels=fitted_channels,
-                                       paramtitles=paramtitles,
-                                       multwhite=lc_model.multwhite,
-                                       nints=lc_model.nints)
-    else:
-        model = m.CompositeModel(modellist, parameters=params, time=time,
-                                 nchannel=chanrng,
-                                 nchannel_fitted=nchannel_fitted,
-                                 fitted_channels=fitted_channels,
-                                 multwhite=lc_model.multwhite,
-                                 nints=lc_model.nints)
+    # Combine all physical models into an AstroModel
+    physical_models = [model for model in modellist
+                       if model.modeltype == 'physical']
+    modellist = [model for model in modellist
+                 if model.modeltype != 'physical']
+    astroModel = AstroModel(components=physical_models,
+                            parameters=params,
+                            fmt='r--', log=log, time=time,
+                            time_units=time_units,
+                            freenames=freenames,
+                            longparamlist=lc_model.longparamlist,
+                            nchannel=chanrng,
+                            nchannel_fitted=nchannel_fitted,
+                            fitted_channels=fitted_channels,
+                            wl_groups=meta.wl_groups,
+                            paramtitles=paramtitles,
+                            multwhite=lc_model.multwhite,
+                            nints=lc_model.nints,
+                            num_planets=meta.num_planets)
+    modellist.append(astroModel)
+
+    # Combine all models into a composite model
+    model = CompositeModel(modellist, parameters=params,
+                           log=log, time=time, time_units=time_units,
+                           freenames=freenames,
+                           longparamlist=lc_model.longparamlist,
+                           nchannel=chanrng,
+                           nchannel_fitted=nchannel_fitted,
+                           fitted_channels=fitted_channels,
+                           wl_groups=meta.wl_groups,
+                           paramtitles=paramtitles,
+                           multwhite=lc_model.multwhite,
+                           nints=lc_model.nints,
+                           num_planets=meta.num_planets)
 
     # Fit the models using one or more fitters
     log.writelog("=========================")
@@ -995,17 +1012,17 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         log.writelog("Completed lmfit fit.")
         log.writelog("-------------------------")
     if 'exoplanet' in meta.fit_method:
-        log.writelog("Starting exoplanet fit.")
-        model.fitter = 'exoplanet'
-        lc_model.fit(model, meta, log, fitter='exoplanet')
-        log.writelog("Completed exoplanet fit.")
-        log.writelog("-------------------------")
+        raise NotImplementedError(
+            'PyMC3/starry support within Eureka! had to be dropped because'
+            ' PyMC3 is now extremely deprecated and incompatible with the '
+            'current jwst pipeline version. For the time being, you must '
+            'instead use the numpy-based models.')
     if 'nuts' in meta.fit_method:
-        log.writelog("Starting PyMC3 NUTS fit.")
-        model.fitter = 'nuts'
-        lc_model.fit(model, meta, log, fitter='nuts')
-        log.writelog("Completed PyMC3 NUTS fit.")
-        log.writelog("-------------------------")
+        raise NotImplementedError(
+            'PyMC3/starry support within Eureka! had to be dropped because'
+            ' PyMC3 is now extremely deprecated and incompatible with the '
+            'current jwst pipeline version. For the time being, you must '
+            'instead use the numpy-based models.')
     log.writelog("=========================")
 
     # Plot the results from the fit(s)
@@ -1059,7 +1076,9 @@ def make_longparamlist(meta, params, chanrng):
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
-        The current metadata object.
+        The current metadata object. If wavelength grouping is desired,
+        provide `meta.wl_groups` as a list of integer group IDs (one per
+        fitted channel). wl=0 is implicit (no `_wl0` keys).
     params : eureka.lib.readEPF.Parameters
         The Parameters object containing the fitted parameters
         and their priors.
@@ -1068,43 +1087,137 @@ def make_longparamlist(meta, params, chanrng):
 
     Returns
     -------
-    longparamlist : list
-        The long list of all parameters relevant to this fit.
-    paramtitles : list
-        The names of the fitted parameters.
+    longparamlist : list[list[str]]
+        Per-channel list of parameter keys to use in the fit.
+    paramtitles : list[str]
+        Base parameter names (without _ch# or _wl# suffixes).
+    freenames_sorted : list[str]
+        Ordered list of free/shared parameter keys to optimize.
+    params : eureka.lib.readEPF.Parameters
+        Possibly updated Parameters object (due to _ch# auto-completion).
     """
     if meta.multwhite:
-        nspecchan = int(len(meta.inputdirlist)+1)
-    elif meta.sharedp and not meta.multwhite:
+        nspecchan = int(len(meta.inputdirlist) + 1)
+    elif meta.sharedp:
         nspecchan = chanrng
     else:
         nspecchan = 1
 
-    longparamlist = [[] for i in range(nspecchan)]
-    tlist = list(params.dict.keys())
-    for param in tlist:
-        if 'free' in params.dict[param]:
-            longparamlist[0].append(param)
-            for c in np.arange(nspecchan-1):
-                title = param+'_'+str(c+1)
-                if title in tlist:
-                    # The user specifically set this channel's parameter
-                    longparamlist[c+1].append(title)
-                    # Remove this parameter from tlist so we don't set it twice
-                    tlist.remove(title)
-                else:
-                    # Set this parameter based on channel 0's parameter
-                    params.__setattr__(title, params.dict[param])
-                    longparamlist[c+1].append(title)
-        elif 'shared' in params.dict[param]:
-            for c in np.arange(nspecchan):
-                longparamlist[c].append(param)
-        else:
-            for c in np.arange(nspecchan):
-                longparamlist[c].append(param)
-    paramtitles = longparamlist[0]
+    # Wavelength group index per channel; default all to 0.
+    wl_groups = getattr(meta, "wl_groups", None)
+    if not isinstance(wl_groups, (list, tuple)) or len(wl_groups) != nspecchan:
+        wl_groups = [0] * nspecchan
 
-    return longparamlist, paramtitles
+    longparamlist = [[] for _ in range(nspecchan)]
+
+    # Preserve user-declared ordering based on first appearance in params.dict
+    order = {par: i for i, par in enumerate(params.dict.keys())}
+
+    # Strip both _ch# and _wl# to get base names
+    paramtitles = sorted(
+        np.unique([k.split("_ch")[0].split("_wl")[0]
+                   for k in params.dict.keys()]),
+        key=order.get,
+    )
+
+    # Track whether the user defined any wavelength-specific variants
+    has_wl_variant = {
+        base: any(key.startswith(f"{base}_wl") for key in params.dict.keys())
+        for base in paramtitles
+    }
+
+    for base in paramtitles:
+        # Robust ptype lookup: fall back to any existing variant if needed
+        try:
+            ptype = getattr(params, base).ptype
+        except AttributeError:
+            pkey = next(
+                (k for k in params.dict.keys()
+                 if k == base or k.startswith(f"{base}_wl")
+                 or k.startswith(f"{base}_ch")),
+                base,
+            )
+            ptype = getattr(params, pkey).ptype
+
+        for c in range(nspecchan):
+            wl = wl_groups[c]
+            chosen = resolve_param_key(base, params, channel=c, wl=wl)
+
+            # Guard: ensure the chosen key actually exists
+            if chosen not in params.dict:
+                if has_wl_variant[base]:
+                    msg = (
+                        f"Parameter '{base}' is required for wl=0 "
+                        f"(channel {c}) but was not defined. You defined "
+                        f"wavelength-scoped variants for '{base}' but no base "
+                        f"'{base}'. Define '{base}' for wl=0"
+                    )
+                    if c > 0:
+                        msg += f", or provide '{base}_ch{c}'."
+                    else:
+                        msg += "."
+                    raise AssertionError(msg)
+                msg = (
+                    f"Parameter '{base}' is not defined for channel {c}. "
+                    f"Define '{base}' (applies to ch=0/wl=0)"
+                )
+                if c > 0:
+                    msg += f" or '{base}_ch{c}'."
+                else:
+                    msg += "."
+                raise AssertionError(msg)
+
+            if chosen not in longparamlist[c]:
+                longparamlist[c].append(chosen)
+
+            # Auto-complete per-channel copies ONLY when:
+            # - param is not 'independent'
+            # - param is not 'shared' for c>0
+            # - user has NOT introduced any wavelength variants for this base
+            # - we're on a nonzero channel (implicit ch0 stays base)
+            # - the channel-specific key doesn't already exist
+            if (
+                ptype != "independent"
+                and (c == 0 or ptype != "shared")
+                and not has_wl_variant[base]
+                and c > 0
+            ):
+                ch_key = f"{base}_ch{c}"
+                if ch_key not in params.dict and base in params.dict:
+                    # Clone base (implicit ch0/wl0) into _ch{c}
+                    params.__setattr__(ch_key, params.dict[base])
+
+            # Ensure longparamlist holds the final resolved key (legacy parity)
+            final_chosen = resolve_param_key(base, params, channel=c, wl=wl)
+            if final_chosen not in longparamlist[c]:
+                try:
+                    idx = longparamlist[c].index(chosen)
+                    longparamlist[c][idx] = final_chosen
+                except ValueError:
+                    longparamlist[c].append(final_chosen)
+
+    # Determine free/shared parameter keys
+    freenames = [
+        key
+        for key in params.dict.keys()
+        if getattr(params, key).ptype in (
+            "free",
+            "shared",
+            "white_fixed",
+            "white_free",
+        )
+    ]
+
+    # Preserve user ordering while applying per-channel resolution
+    freenames_sorted = []
+    for base in paramtitles:
+        for c in range(nspecchan):
+            wl = wl_groups[c]
+            chosen = resolve_param_key(base, params, channel=c, wl=wl)
+            if chosen in freenames and chosen not in freenames_sorted:
+                freenames_sorted.append(chosen)
+
+    return longparamlist, paramtitles, freenames_sorted, params
 
 
 def load_specific_s4_meta_info(meta):
@@ -1120,14 +1233,14 @@ def load_specific_s4_meta_info(meta):
     eureka.lib.readECF.MetaClass
         The current metadata object with values from the old MetaClass.
     """
-    inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
-    # Get directory containing S4 outputs for this aperture pair
-    if not isinstance(meta.bg_hw, str):
-        # Only divide if value is not a string (spectroscopic modes)
-        bg_hw = meta.bg_hw//meta.expand
-    else:
-        bg_hw = meta.bg_hw
-    inputdir += f'ap{meta.spec_hw//meta.expand}_bg{bg_hw}'+os.sep
+    # Directory structure should not use expanded HW values
+    spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+        meta.expand, meta.spec_hw, meta.bg_hw)
+    inputdir = me.get_allapers_specific_inputdir(
+        meta, meta.spec_hw, meta.bg_hw)
+    if inputdir is None:
+        inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
+        inputdir += f'ap{spec_hw_val}_bg{bg_hw_val}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir
@@ -1135,7 +1248,7 @@ def load_specific_s4_meta_info(meta):
         me.findevent(meta, 'S4', allowFail=False)
     filename_S4_LCData = s4_meta.filename_S4_LCData
     # Merge S5 meta into old S4 meta
-    meta = me.mergeevents(meta, s4_meta)
+    meta = S5MetaClass(**me.mergeevents(meta, s4_meta).__dict__)
 
     # Make sure the filename_S4_LCData is kept
     meta.filename_S4_LCData = filename_S4_LCData

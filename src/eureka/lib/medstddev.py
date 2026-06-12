@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 
 def medstddev(data, mask=None, medi=False, axis=0):
@@ -10,8 +11,8 @@ def medstddev(data, mask=None, medi=False, axis=0):
     ----------
     data : ndarray
         An array from which to caculate the median standard deviation.
-    mask : 1D ndarray
-        Mask indicating the good values (ones) and bad values (zeros).
+    mask : 1D ndarray; optional
+        Boolean mask indicating the bad values with True.
         Same shape as data. Defaults to None.
     medi : boolean; optional
         If True return a tuple with (stddev, median) of data. Defaults
@@ -44,7 +45,7 @@ def medstddev(data, mask=None, medi=False, axis=0):
 
         >>> # use masks
         >>> a    = np.array([1,3,4,5,6,7,7])
-        >>> mask = np.array([1,1,1,0,0,0,0])
+        >>> mask = np.array([False,False,False,True,True,True,True])
         >>> std, med = m.medstddev(a, mask, medi=True)
         >>> print(std)
         1.58113883008
@@ -60,13 +61,13 @@ def medstddev(data, mask=None, medi=False, axis=0):
         >>> # critical cases:
         >>> # only one value, return std = 0.0
         >>> a    = np.array([1, 4, 6])
-        >>> mask = np.array([0, 0, 1])
+        >>> mask = np.array([True, True, False])
         >>> std, med = m.medstddev(a, mask, medi=True)
         >>> print(std, med)
         (0.0, 6.0)
 
         >>> # no good values, return std = nan, med = nan
-        >>> mask[-1] = 0
+        >>> mask[-1] = True
         >>> std, med = m.medstddev(a, mask, medi=True)
         >>> print(std, med)
         (nan, nan)
@@ -80,36 +81,29 @@ def medstddev(data, mask=None, medi=False, axis=0):
     moment.pro doesn't work for the median standard deviation.  It
     only works for the mean, because by definition the residuals from
     the mean add to zero.
-
-    History:
-
-    - 2005-01-18  statia
-        Written by Statia Luszcz.
-    - 2005-01-19  statia
-        Updated variance calculation according to algorithm in moment.pro,
-        added medi keyword.
-    - 2005-01-20  Joe Harrington, Cornell, jh@oobleck.astro.cornell.edu
-        Header update.  Removed algorithm from moment.pro because it
-        doesn't work for the median.  Added /double.
-    - 2010-11-05  patricio  pcubillos@fulbrightmail.org
-        Converted to python, documented.
-    - 2022-04-11  Taylor James Bell
-        Efficiently using numpy axes
     """
-    # mask invalid values:
-    data = np.ma.masked_invalid(data)
-    if mask is not None:
-        data = np.ma.masked_where(~mask.astype(bool), data)
+    # Default mask: only non-finite values are bad
+    if mask is None:
+        mask = ~np.isfinite(data)
+
+    # Apply the mask
+    data = np.ma.masked_where(mask, data)
+
     # number of good values:
-    ngood = np.sum(~np.ma.getmaskarray(data), axis=axis)
+    ngood = np.sum(~mask, axis=axis)
 
     # calculate median of good values:
     median = np.ma.median(data, axis=axis)
     # residuals is data - median, masked values don't count:
     residuals = data - median
     # calculate standar deviation:
-    with np.errstate(divide='ignore', invalid='ignore'):
-        std = np.ma.std(residuals, axis=axis, ddof=1)
+    std = np.full(median.shape, np.nan)  # initialize output
+    valid = ngood > 1
+    if np.any(valid):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                std[valid] = np.ma.std(residuals, axis=axis, ddof=1)[valid]
 
     # Convert masked arrays to just arrays
     std = np.array(std)
@@ -121,10 +115,10 @@ def medstddev(data, mask=None, medi=False, axis=0):
 
     # critical case fixes:
     if np.any(ngood == 0):
-        std[np.where(ngood == 0)] = np.nan
-        median[np.where(ngood == 0)] = np.nan
+        std[ngood == 0] = np.nan
+        median[ngood == 0] = np.nan
     if np.any(ngood == 1):
-        std[np.where(ngood == 1)] = 0.
+        std[ngood == 1] = 0.
 
     if len(std) == 1:
         std = std[0]

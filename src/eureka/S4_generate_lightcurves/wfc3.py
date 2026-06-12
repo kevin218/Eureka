@@ -50,7 +50,7 @@ def sum_reads(spec, lc, meta):
 
     # Average together the reads' times
     time = time.mean(axis=1)
-    
+
     # Take every nread value out of the spec and lc object
     spec = spec.isel(time=np.arange(0, len(spec.optspec.time),
                                     meta.nreads))

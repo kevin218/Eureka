@@ -1,0 +1,28 @@
+# Eureka! Control File for Stage 5: Lightcurve Fitting
+
+ncpu            1 # The number of CPU threads to use when running emcee or dynesty in parallel
+
+allapers        False # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
+
+fit_par         ./S5_Harmonica.epf # What fitting epf do you want to use?
+verbose         True  # If True, more details will be printed about steps
+fit_method      [lsq] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
+run_myfuncs     [harmonica_tr, polynomial] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
+
+#lsq
+lsq_method      'Powell' # The scipy.optimize.minimize optimization method to use
+lsq_tol         1e-6 # The tolerance for the scipy.optimize.minimize optimization method
+
+# Plotting controls
+interp          True    # Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
+
+# Diagnostics
+isplots_S5      1 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+hide_plots      True # If True, plots will automatically be closed rather than popping up
+
+# Project directory
+topdir          ../tests
+
+# Directories relative to project dir
+inputdir        /data/JWST-Sim/NIRCam/Stage4/    # The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
+outputdir       /data/JWST-Sim/NIRCam/Stage5/

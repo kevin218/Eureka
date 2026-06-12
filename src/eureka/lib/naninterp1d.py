@@ -11,7 +11,7 @@ def naninterp1d(y, replace_val=0):
     ----------
     y : 1D array
         Data array with possible NaNs
-    replace_val : float, optional
+    replace_val : float; optional
         Value to use when entire dataset is NaNs (default is 0).
 
     Returns
@@ -48,4 +48,4 @@ def nan_helper(y):
         https://stackoverflow.com/questions/6518811/
         interpolate-nan-values-in-a-numpy-array
     """
-    return np.isnan(y), lambda z: z.nonzero()[0]
+    return np.isnan(y), lambda z: np.nonzero(z)[0]

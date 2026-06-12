@@ -1,6 +1,8 @@
 import numpy as np
 from ..lib import smooth
 from . import plots_s3
+from .source_pos import gauss
+from scipy.optimize import curve_fit
 
 
 def find_column_median_shifts(data, meta, m):
@@ -24,15 +26,37 @@ def find_column_median_shifts(data, meta, m):
     new_center : int
         The central row of the detector where the trace is moved to.
     '''
+    # make a copy of the array
+    data = np.ma.masked_invalid(data)
+
     # get the dimensions of the data
     nb_rows = data.shape[0]
 
     # define an array of pixel positions (in their centers)
-    pix_centers = np.arange(nb_rows) + 0.5
+    pix_centers = np.arange(nb_rows)
+
+    # Do a super quick/simple background subtraction to reduce biases
+    data = np.copy(data) - np.ma.min(data, axis=0)
 
     # Compute the center of mass of each column
-    column_coms = (np.sum(pix_centers[:, None]*data, axis=0) /
-                   np.sum(data, axis=0))
+    column_coms = (np.ma.sum(pix_centers[:, None]*data, axis=0) /
+                   np.ma.sum(data, axis=0))
+
+    # Center of mass doesn't always work well with calibrated spectra
+    # Therefore, use CoM as starting point for Gaussian fit
+    if meta.calibrated_spectra:
+        # Rough initial guess (heigh, center, width, BG)
+        width = np.ma.sqrt(np.ma.sum(data[:, 0] *
+                           (pix_centers-column_coms[0])**2) /
+                           np.ma.sum(data[:, 0]))
+        guess = [np.ma.max(data[:, 0]), column_coms[0], width, 0]
+        for i in np.arange(data.shape[1]):
+            # Gaussian fit for each column
+            params, _ = curve_fit(gauss, pix_centers, data[:, i],
+                                  guess, maxfev=10000)
+            column_coms[i] = params[1]
+            # Update guess for next iteration
+            guess = params
 
     # Smooth CoM values to get rid of outliers
     smooth_coms = smooth.medfilt(column_coms, 11)
@@ -40,8 +64,8 @@ def find_column_median_shifts(data, meta, m):
     smooth_coms[np.isnan(smooth_coms)] = \
         smooth_coms[~np.isnan(smooth_coms)][-1]
 
-    # Convert to interget pixels
-    int_coms = np.around(smooth_coms - 0.5).astype(int)
+    # Convert to integer pixels
+    int_coms = np.round(smooth_coms).astype(int)
 
     if meta.isplots_S3 >= 1:
         plots_s3.curvature(meta, column_coms, smooth_coms, int_coms, m)
@@ -85,7 +109,7 @@ def roll_columns(data, shifts):
         # in each column
 
         arr = np.swapaxes(data[i], 0, -1)
-        all_idcs = np.ogrid[[slice(0, n) for n in arr.shape]]
+        all_idcs = list(np.ogrid[[slice(0, n) for n in arr.shape]])
 
         # make the shifts positive
         shifts_i = shifts[i]
@@ -129,12 +153,13 @@ def straighten_trace(data, meta, log, m):
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
     '''
+    if meta.fittype != 'meddata':
+        # This method only works with the median profile for the extraction
+        log.writelog('  !!! Strongly recommend using meddata as the optimal '
+                     'extraction profile !!!', mute=(not meta.verbose))
+
     log.writelog('  Correcting curvature and bringing the trace to the '
                  'center of the detector...', mute=(not meta.verbose))
-    # This method only works with the median profile for the extraction
-    log.writelog('  !!! Ensure that you are using meddata for the optimal '
-                 'extraction profile !!!', mute=(not meta.verbose))
-
     # compute the correction needed from this median frame
     shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
 
@@ -148,12 +173,12 @@ def straighten_trace(data, meta, log, m):
     # apply the correction and update wave_1d accordingly
     data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
     data.wave_1d.values = data.wave_2d[new_center].values
-
-    log.writelog('    Correcting the curvature over all integrations...',
-                 mute=(not meta.verbose))
     # broadcast the shifts to the number of integrations
     shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
                         (data.flux.shape[0], data.flux.shape[2]), order='F')
+
+    log.writelog('    Correcting the curvature over all integrations...',
+                 mute=(not meta.verbose))
 
     # apply the shifts to the data
     data.flux.values = roll_columns(data.flux.values, shifts)

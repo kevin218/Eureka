@@ -1,9 +1,3 @@
-#! /usr/bin/env python
-
-# File with functions to perform GLBS
-# trace masking,
-# custom ref pixel correction for PRISM
-# EMMay, Nov 2022
 import numpy as np
 
 import scipy.signal as sgn
@@ -40,57 +34,68 @@ def GLBS(input_model, log, meta):
     meta.inst = input_model.meta.instrument.name.lower()
     meta.n_int = all_data.shape[0]
     meta.int_start = 0
-    if not hasattr(meta, 'nplots') or meta.nplots is None:
+    if meta.nplots is None:
         meta.int_end = meta.n_int
     elif meta.int_start+meta.nplots > meta.n_int:
         # Too many figures requested, so reduce it
         meta.int_end = meta.n_int
     else:
         meta.int_end = meta.int_start+meta.nplots
-    if meta.inst == 'miri':
-        meta.isrotate = False
 
     for ngrp in range(all_data.shape[1]):
         log.writelog(f'  Starting group {ngrp}.')
 
         grp_data = all_data[:, ngrp, :, :]
-        grp_mask = np.ones(grp_data.shape, dtype=bool)
-        dqmask = np.where((dq[:, ngrp, :, :] % 2 == 1) |
-                          (dq[:, ngrp, :, :] == 2))
-        grp_mask[dqmask] = 0
+        grp_mask = (dq[:, ngrp, :, :] % 2 == 1) | (dq[:, ngrp, :, :] == 2)
+        grp_mask |= ~np.isfinite(all_data[:, ngrp, :, :])
 
-        if hasattr(meta, 'masktrace') and meta.masktrace:
+        if meta.masktrace:
             trace_mask = np.broadcast_to(input_model.trace_mask,
-                                         (grp_data.shape[0],
-                                          grp_data.shape[1],
-                                          grp_data.shape[2]))
-            trace_mask = np.nan_to_num(trace_mask).astype(bool)
-            grp_mask *= trace_mask
+                                         grp_data.shape)
+            grp_mask |= trace_mask
 
-        xrdata = (['time', 'y', 'x'], grp_data)
-        xrmask = (['time', 'y', 'x'], grp_mask)
-        xrdict = dict(flux=xrdata, mask=xrmask)
-        data = xrio.makeDataset(dictionary=xrdict)
-        data['flux'].attrs['flux_units'] = 'n/a'
+        data = xrio.makeDataset()
+        time = np.arange(grp_data.shape[0])
+        data['flux'] = xrio.makeFluxLikeDA(grp_data, time, flux_units='n/a',
+                                           time_units='n/a', name='flux')
+        data['mask'] = (['time', 'y', 'x'], grp_mask)
         data.attrs['intstart'] = meta.intstart
         meta.bg_dir = 'CxC'
+        meta.skip_bg = False
+        if meta.inst == 'miri':
+            meta.isrotate = 0
 
-        # Only show plots for the last group
-        if ngrp == all_data.shape[1]-1:
+        if meta.isplots_S1 >= 4:
+            # Plot all groups
+            isplots_S1 = meta.isplots_S1
+        # Otherwise, only show plots for the last good group
+        elif meta.inst == 'miri' and ngrp == all_data.shape[1]-2:
+            isplots_S1 = meta.isplots_S1
+        elif meta.inst != 'miri' and ngrp == all_data.shape[1]-1:
             isplots_S1 = meta.isplots_S1
         else:
             isplots_S1 = 0
-        data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1)
+        data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1,
+                                 group=ngrp)
 
         # Perform BG subtraction along dispersion direction
         # (only useful for NIRCam data)
-        if hasattr(meta, 'bg_disp') and meta.bg_disp:
+        if meta.bg_row_by_row:
             meta.bg_dir = 'RxR'
-            if ngrp == all_data.shape[1]-1:
+            if meta.inst == 'miri':
+                meta.isrotate = 2
+            if meta.isplots_S1 == 4:
+                # Plot all groups
+                isplots_S1 = meta.isplots_S1
+            # Otherwise, only show plots for the last good group
+            elif meta.inst == 'miri' and ngrp == all_data.shape[1]-2:
+                isplots_S1 = meta.isplots_S1
+            elif meta.inst != 'miri' and ngrp == all_data.shape[1]-1:
                 isplots_S1 = meta.isplots_S1
             else:
                 isplots_S1 = 0
-            data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1)
+            data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1,
+                                     group=ngrp)
 
         # Overwrite values in all_data
         all_data[:, ngrp, :, :] = data['flux'].values
@@ -124,7 +129,7 @@ def mask_trace(input_model, log, meta):
     ngrp = all_data.shape[1]
     ncol = all_data.shape[3]
     nrow = all_data.shape[2]
-    trace_mask = np.ones_like(all_data[0, 0, :, :])
+    trace_mask = np.zeros_like(all_data[0, 0, :, :], dtype=bool)
 
     # take a median across groups and smooth
     med_data = np.nanmedian(all_data[:, ngrp-1, :, :], axis=0)
@@ -148,7 +153,7 @@ def mask_trace(input_model, log, meta):
     for nc in range_cols:
         mask_low = np.nanmax([0, smooth_coms[nc]-meta.expand_mask])
         mask_hih = np.nanmin([smooth_coms[nc]+meta.expand_mask, nrow-1])
-        trace_mask[mask_low:mask_hih, nc] = np.nan
+        trace_mask[mask_low:mask_hih, nc] = True
 
     input_model.trace_mask = trace_mask
 
@@ -180,25 +185,26 @@ def custom_ref_pixel(input_model, log, meta):
     nrow = all_data.shape[2]
     row_ind_ref = np.append(np.arange(nrow)[:meta.npix_top],
                             np.arange(nrow)[nrow-meta.npix_bot:])
-    evn_row_ref = row_ind_ref[np.where(row_ind_ref % 2 == 0)[0]]
-    odd_row_ref = row_ind_ref[np.where(row_ind_ref % 2 == 1)[0]]
+    evn_row_ref = row_ind_ref[row_ind_ref % 2 == 0]
+    odd_row_ref = row_ind_ref[row_ind_ref % 2 == 1]
 
     row_ind = np.arange(nrow)
-    evn_ind = np.where(row_ind % 2 == 0)[0]
-    odd_ind = np.where(row_ind % 2 == 1)[0]
+    evn_ind = np.flatnonzero(row_ind % 2 == 0)
+    odd_ind = np.flatnonzero(row_ind % 2 == 1)
 
     for nint in range(all_data.shape[0]):
         for ngrp in range(all_data.shape[1]):
             intgrp_data = all_data[nint, ngrp, :, :]
-            dqmask = np.where((dq[nint, ngrp, :, :] % 2 == 1) |
-                              (dq[nint, ngrp, :, :] == 2))
-            intgrp_data[dqmask] = np.nan
+            dqmask = ((dq[nint, ngrp, :, :] % 2 == 1) |
+                      (dq[nint, ngrp, :, :] == 2))
+            intgrp_data = np.ma.masked_where(dqmask, intgrp_data)
 
-            if hasattr(meta, 'masktrace') and meta.masktrace:
-                intgrp_data *= input_model.trace_mask
+            if meta.masktrace:
+                intgrp_data = np.ma.masked_where(input_model.trace_mask,
+                                                 intgrp_data)
 
-            odd_med = np.nanmedian(intgrp_data[odd_row_ref, :])
-            evn_med = np.nanmedian(intgrp_data[evn_row_ref, :])
+            odd_med = np.ma.median(intgrp_data[odd_row_ref, :])
+            evn_med = np.ma.median(intgrp_data[evn_row_ref, :])
 
             all_data[nint, ngrp, odd_ind, :] -= odd_med
             all_data[nint, ngrp, evn_ind, :] -= evn_med

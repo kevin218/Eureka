@@ -1,8 +1,7 @@
 import numpy as np
 
 from .Model import Model
-from ...lib.readEPF import Parameters
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class ExpRampModel(Model):
@@ -20,22 +19,10 @@ class ExpRampModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'exp. ramp'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
-
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            coeff_dict = kwargs.get('coeff_dict')
-            params = {rN: coeff for rN, coeff in coeff_dict.items()
-                      if rN.startswith('r') and rN[1:].isdigit()}
-            self.parameters = Parameters(**params)
-
-        # Update coefficients
-        self.coeffs = np.zeros((self.nchannel_fitted, 6))
-        self._parse_coeffs()
 
     @property
     def time(self):
@@ -45,45 +32,25 @@ class ExpRampModel(Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        self._time = time_array
-        if self.time is not None:
-            # Convert to local time
-            if self.multwhite:
-                self.time_local = []
-                for chan in self.fitted_channels:
-                    # Split the arrays that have lengths
-                    # of the original time axis
-                    time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local.extend(time - time[0])
-                self.time_local = np.array(self.time_local)
-            else:
-                self.time_local = self.time - self.time[0]
+        if time_array is None:
+            self._time = None
+            self.time_local = None
+            return
 
-    def _parse_coeffs(self):
-        """Convert dict of 'r#' coefficients into a list
-        of coefficients in increasing order, i.e. ['r0','r1','r2'].
-
-        Returns
-        -------
-        np.ndarray
-            The sequence of coefficient values.
-        """
-        # Parse 'r#' keyword arguments as coefficients
-        for c in range(self.nchannel_fitted):
-            if self.nchannel_fitted > 1:
-                chan = self.fitted_channels[c]
-            else:
-                chan = 0
-
-            for i in range(6):
-                try:
-                    if chan == 0:
-                        self.coeffs[c, i] = self.parameters.dict[f'r{i}'][0]
-                    else:
-                        self.coeffs[c, i] = \
-                            self.parameters.dict[f'r{i}_{chan}'][0]
-                except KeyError:
-                    pass
+        self._time = np.ma.masked_invalid(time_array)
+        # Convert to local time
+        if self.multwhite:
+            self.time_local = np.ma.zeros(self._time.shape)
+            for chan in self.fitted_channels:
+                # Split the arrays that have lengths
+                # of the original time axis
+                trim1, trim2 = get_trim(self.nints, chan)
+                piece = self._time[trim1:trim2]
+                # Use .data[0] to be robust to masks
+                self.time_local[trim1:trim2] = piece - piece.data[0]
+        else:
+            # Use .data[0] to be robust to masks
+            self.time_local = self._time - self._time.data[0]
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -97,35 +64,32 @@ class ExpRampModel(Model):
 
         Returns
         -------
-        lcfinal : ndarray
-            The value of the model at the times self.time.
+        lcfinal : np.ma.MaskedArray
+            The ramp model evaluated at self.time (or provided time).
         """
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
+        nchan, channels = self._channels(channel)
 
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
         # Create the ramp from the coeffs
-        lcfinal = np.array([])
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-            else:
-                chan = 0
-
-            time = self.time_local
+        pieces = []
+        for chan in channels:
+            t = self.time_local
             if self.multwhite:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
+                # Split arrays that have lengths of the original time axis
+                t = split([t], self.nints, chan)[0]
 
-            r0, r1, r2, r3, r4, r5 = self.coeffs[chan]
-            lcpiece = (1+r0*np.exp(-r1*time + r2)
-                       + r3*np.exp(-r4*time + r5))
-            lcfinal = np.append(lcfinal, lcpiece)
-        return lcfinal
+            # Get the coefficients for this channel
+            r0 = self._get_param_value('r0', chan=chan)
+            r1 = self._get_param_value('r1', chan=chan)
+            r2 = self._get_param_value('r2', chan=chan)
+            r3 = self._get_param_value('r3', chan=chan)
+            lcpiece = 1. + r0*np.exp(-r1*t) + r2*np.exp(-r3*t)
+            pieces.append(lcpiece)
+
+        if len(pieces) == 1:
+            return pieces[0]
+        else:
+            return np.ma.concatenate(pieces)

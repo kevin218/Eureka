@@ -8,7 +8,7 @@ from glob import glob
 import multiprocessing
 import os
 import pickle
-from pkg_resources import resource_filename
+from importlib.resources import files
 import time
 import warnings
 
@@ -239,9 +239,9 @@ class ModelGrid(object):
         model = self.get(**kwargs)
 
         # Get a dummy FITS file
-        ffile = resource_filename('ExoCTK',
-                                  f'data{os.sep}core{os.sep}' +
-                                  'ModelGrid_tmp.fits')
+        ffile = str(files('ExoCTK').joinpath(
+            f'data{os.sep}core{os.sep}' +
+            'ModelGrid_tmp.fits'))
         hdu = fits.open(ffile)
 
         # Replace the data

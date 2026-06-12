@@ -1,6 +1,145 @@
 [build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=6.2"]
+requires = [
+    "setuptools>=77,<81",
+    "setuptools_scm[toml]>=6.2", # Needed to support pyproject.toml config
+    "unidep>=3.2.0",
+]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "eureka-bang"
+description = "A data reduction and analysis pipeline intended for time-series observations with JWST."
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+authors = [
+    { name = "Eureka! pipeline developers", email = "kbstevenson@gmail.com" },
+]
+keywords = [
+    "JWST",
+    "HST",
+    "timeseries",
+    "astronomy",
+    "exoplanets",
+    "transit",
+    "eclipse",
+    "light curve",
+    "phase curve",
+    "spectroscopy",
+    "photometry",
+    "data reduction",
+    "data analysis",
+    "pipeline",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["version", "dependencies", "optional-dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/kevin218/Eureka"
+Documentation = "https://eurekadocs.readthedocs.io/en/stable/"
+"Bug Tracker" = "https://github.com/kevin218/Eureka/issues"
+"Source Code" = "https://github.com/kevin218/Eureka"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["eureka*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+"eureka.lib" = ["*.mplstyle"]
 
 [tool.setuptools_scm]
 write_to = "src/eureka/version.py"
+
+[tool.unidep]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+dependencies = [
+    { conda = "python>=3.11,<3.13" }, # Python 3.13 fails to build with conda for some dependencies on some platforms
+    { conda = "pip" },
+    { conda = "libopenblas=*=openmp*" },
+    { conda = "libblas=*=*openblas*" },
+    { conda = "liblapack=*=*openblas*" },
+
+    "astropy",
+    "astroquery",
+    "bokeh",
+    "ccdproc",
+    "corner",
+    "dynesty>1.0", # Lower limit needed for specific arguments
+    "emcee>3.0.0", # Lower limit needed for specific arguments
+    "h5py>=3.7.0", # Lower limit needed to avoid issues with JWST I/O routines
+    "lmfit",
+    "matplotlib>=3.6", # Lower limit needed for set_layout_engine()
+    "numpy>=1.25,<2.0", # Current tested py311 floor is NumPy >=1.25; the practical tested outcome still resolves below NumPy 2 and should be revisited as upstream blockers move
+    "pandas",
+    "photutils",
+    "requests",
+    "pyyaml",
+    "scipy>=1.12.0", # Lower limit needed for stcal.ramp_fitting.likely_fit
+    "shapely",
+    "tqdm",
+
+    { pip = "astraeus-io" },
+    { pip = "batman-package" },
+    { pip = "catwoman>=1.0.16" }, # Lower limit needed to avoid installation bug
+    { pip = "celerite2" }, # Needed for GP
+    { pip = "crds" },
+    { pip = "exotic-ld @ git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8" }, # Pin needed for pkg_resources deprecation
+    { pip = "fleck" },
+    { pip = "george" }, # Needed for GP
+    { pip = "planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main" }, # PyPI build currently only supports for python 3.8 -- 3.10
+    { pip = "pastasoss>=1.2.3" }, # Lower limit needed for pkg_resources deprecation
+    { pip = "setuptools_scm>=6.2" }, # Needed when importing from a source tree without generated version.py
+    { pip = "stdatamodels" },
+    { pip = "svo_filters>=0.5.3" }, # Lower limit needed for pkg_resources deprecation
+    { pip = "mc3" }, # Needed for uncertainties in the RMS time-averaging plots in S5
+]
+
+[tool.unidep.optional_dependencies]
+jwst = [
+    { pip = "jwst==1.20.2" }, # Pinned due to CRDS/stcal compatibility requirements
+    { pip = "stcal>=1.15.2" }, # Lower limit needed for updated stcal.ramp_fitting.ramp_fit.ramp_fit arguments
+]
+hst = [
+    { pip = "image_registration>=0.2.10" }, # Lower bound needed to avoid np.float issue
+]
+docs = [
+    { pip = "myst-parser>=0.18.0" }, # Lower bound for stable MyST support
+    "nbsphinx>=0.8.9", # Compatible with modern Sphinx and Jupyter
+    "numpydoc>=1.5", # Avoids issues with recent Sphinx versions
+    "sphinx>=6.0", # Modern baseline version
+    "sphinx-automodapi>=0.13.0", # Known to work with sphinx>=6
+    { pip = "sphinx-rtd-theme>=1.3.0" }, # Style updates and Sphinx compatibility
+]
+test = [
+    "flake8",
+    "pytest<8.0", # Upper limit due to asdf+pytest incompatibility
+    "pytest-cov",
+    "pytest-doctestplus",
+]
+jupyter = [
+    "ipykernel>=6.0.0", # Needed for modern Jupyter compatibility
+    "ipympl>=0.9.3", # Needed for interactive backend stability
+    "ipython>=7.0.0", # Avoid legacy issues with async REPL
+    "jupyter>=1.0.0", # Base metapackage
+]
+dev = [
+    "pre-commit",
+    { conda = "python-build", pip = "build" },
+    "twine",
+    "unidep>=3.2.0",
+]

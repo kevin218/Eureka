@@ -273,7 +273,6 @@ S5_lightcurve_fitting.modelgrid
     :members:
     :undoc-members:
     :show-inheritance:
-    
 
 S5_lightcurve_fitting.plots_s5
 ------------------------------
