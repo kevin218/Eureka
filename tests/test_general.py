@@ -177,6 +177,10 @@ def test_optimizer_cleanup_retries_transient_enotempty(monkeypatch):
                         (None, input_meta))
     monkeypatch.setattr(objective_funcs.s4, 'genlc', fake_genlc)
     monkeypatch.setattr(objective_funcs.shutil, 'rmtree', transient_rmtree)
+    monkeypatch.setattr(objective_funcs.os.path, 'exists',
+                        lambda outputdir: outputdir == 'Stage3')
+    monkeypatch.setattr(objective_funcs.os.path, 'isdir',
+                        lambda outputdir: False)
     monkeypatch.setattr(objective_funcs.time, 'sleep', lambda delay: None)
 
     fitness = objective_funcs.single(False, meta, stage=1, s1_meta=s1_meta,
@@ -197,9 +201,40 @@ def test_remove_output_directory_retries_transient_ebusy(monkeypatch):
                           'Device or resource busy', outputdir)
 
     monkeypatch.setattr(objective_funcs.shutil, 'rmtree', transient_rmtree)
+    monkeypatch.setattr(objective_funcs.os.path, 'exists',
+                        lambda outputdir: True)
+    monkeypatch.setattr(objective_funcs.os.path, 'isdir',
+                        lambda outputdir: False)
     monkeypatch.setattr(objective_funcs.time, 'sleep', lambda delay: None)
 
     removed = objective_funcs._remove_output_directory('output')
 
     assert removed
     assert attempts['output'] == 2
+
+
+def test_remove_output_directory_rmdirs_empty_after_rmtree_error(monkeypatch):
+    calls = {'rmtree': 0, 'rmdir': 0}
+
+    def failing_rmtree(outputdir):
+        calls['rmtree'] += 1
+        raise OSError(objective_funcs.errno.EBUSY,
+                      'Device or resource busy', outputdir)
+
+    def successful_rmdir(outputdir):
+        calls['rmdir'] += 1
+
+    monkeypatch.setattr(objective_funcs.shutil, 'rmtree', failing_rmtree)
+    monkeypatch.setattr(objective_funcs.os.path, 'exists',
+                        lambda outputdir: True)
+    monkeypatch.setattr(objective_funcs.os.path, 'isdir',
+                        lambda outputdir: True)
+    monkeypatch.setattr(objective_funcs.os, 'listdir',
+                        lambda outputdir: [])
+    monkeypatch.setattr(objective_funcs.os, 'rmdir', successful_rmdir)
+    monkeypatch.setattr(objective_funcs.time, 'sleep', lambda delay: None)
+
+    removed = objective_funcs._remove_output_directory('output')
+
+    assert removed
+    assert calls == {'rmtree': 1, 'rmdir': 1}
