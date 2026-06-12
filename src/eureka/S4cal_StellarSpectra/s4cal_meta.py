@@ -35,6 +35,8 @@ class S4cal_MetaClass(MetaClass):
     def set_defaults(self):
         '''Set Stage 4cal specific defaults for generic instruments.
         '''
+        # NIRISS spectral order
+        self.s4_order = getattr(self, 's4_order', None)
         # System parameters
         self.rprs = getattr(self, 'rprs', None)
         self.period = getattr(self, 'period', None)

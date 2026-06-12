@@ -257,6 +257,89 @@ In short this weights each pixel, :math:`i`, within a slope following :math:`w_i
 ``custom``: As with default, except a custom SNR to :math:`P` lookup table can be defined through the ``default_ramp_fit_custom_snr_bounds`` and ``default_ramp_fit_custom_exponents`` (see example .ecf file).
 
 
+
+Stages 1/3/4 Optimizer
+----------------------
+This tool allows users to optimize the parameter values of Stages 1, 3, and 4 by performing a parametric sweep over a specified set of parameter values and evaluating the resulting spectra with a user-defined weighting of the fitness function.  The optimizer starts with an intial run of a stage using the default parameter values, performs a sweep over the specified parameter values, and then completes a final run with the best parameter values from the sweep.
+
+The fitness function is a weighted combination of the 2D MAD and the white light curve MAD.  The optimizer will generate a plot showing how the fitness function improves with each parameter sweep.  In the rare event that the final fitness value is worse than the initial value, users should consider trying smaller step sizes or a different set of parameter values that include the default parameter values.
+
+**Important Warning:** The optimizer is designed as a tool for parameter exploration and fine-tuning, not as a black-box solution. Users must critically investigate all outputs before and after optimization to ensure the final tunings are appropriate and scientifically valid. The fitness metric is inherently imperfect and may lead to undesirable outcomes in complex scenarios, such as observations affected by nearby binary stars or other astrophysical contaminants. Always review the spectra from different parameter values in the sweep to understand their impact, and remember that optimal parameter values can vary significantly between datasets. Thus, re-running the optimizer for each new dataset is recommended.
+
+scaling_MAD_spec
+''''''''''''''''
+Scaling factor applied to the pixel-level 2D Median Absolute Difference (MAD) value in the fitness function. Higher values prioritize spectral quality.
+
+scaling_MAD_white
+'''''''''''''''''
+Scaling factor applied to the white light curve MAD value in the fitness function. Higher values prioritize band-integrated quality.
+
+params_to_optimize_s1
+''''''''''''''''''''''
+List of parameters to optimize in Stage 1. Commenting out this line will use all single parameters.  Single parameter options: jump_rejection_threshold, expand_mask, bg_deg, bg_method, p3thresh, window_len. Double parameter options: any combination of the above, joined by two underscores (e.g., expand_mask__p3thresh). Example:
+
+.. code-block:: python
+
+   params_to_optimize = ['jump_rejection_threshold', 'expand_mask', 'p3thresh']
+
+params_to_optimize_s3
+'''''''''''''''''''''
+List of parameters to optimize in Stage 3. Commenting out this line will use all single parameters. Single parameter options: dqmask, bg_deg, bg_thresh, bg_hw, bg_method, p3thresh, spec_hw, median_thresh, window_len, p7thresh. Double parameter options: any combination of the above, joined by two underscores (e.g., bg_hw__p3thresh). Special cases: spec_hw__bg_hw (requires spec_hw < bg_hw). Recommended parameters:
+
+.. code-block:: python
+
+   params_to_optimize_s3 = ['spec_hw__bg_hw', 'dqmask', 'bg_deg', 'bg_thresh', 'bg_method', 'p3thresh', 'median_thresh__window_len', 'p7thresh']
+
+params_to_optimize_s4
+'''''''''''''''''''''
+List of parameters to optimize in Stage 4. Single parameter options: mad_sigma, mad_box_width, sigma, box_width. Double parameter options: mad_sigma__mad_box_width, sigma__box_width. Recommended parameters:
+
+.. code-block:: python
+
+    params_to_optimize_s4 = ['mad_sigma__mad_box_width', 'sigma__box_width']
+
+sweep_<parameter_name>
+''''''''''''''''''''''
+Set of parameter values to optimize. Only specify if overriding the default values in the meta Python files. For single parameters, use any of the following formats:
+
+.. code-block:: python
+
+   sweep_<parameter_name> = range(min, max+1)
+   sweep_<parameter_name> = np.arange(min, max+step, step)
+   sweep_<parameter_name> = [3, 5, 6, 7]
+   sweep_<parameter_name> = [True, False]
+
+sweep_<parameter1>__<parameter2>
+''''''''''''''''''''''''''''''''
+Set of parameter values to optimize. Only specify if overriding the default values in the meta Python files. For double parameters, use the following format:
+
+.. code-block:: python
+
+   sweep_<parameter1>__<parameter2> = [range(min1, max1+1), range(min2, max2+1)]
+
+isplots_S1opt and isplots_S3opt
+'''''''''''''''''''''''''''''''
+Sets how many plots should be saved during optimization. Can generate none (0), few (1), some (3), or many (5) figures (Options: 1 - 5).
+
+delete_final
+''''''''''''
+If True, intermediate directories will be deleted after the optimizer finishes. Outputs from the optimizer's final run remain in the usual output location. Set to ``False`` if you want to retain all trial outputs for
+inspection or debugging.
+
+delete_intermediate
+'''''''''''''''''''
+If True, intermediate directories will be deleted after each optimization step.  Outputs from the optimizer's final run remain in the usual output location. This may be useful for Stage 1 optimization since the outputs can be quite large. For Stage 3 optimization, this can usually be set to ``False``.
+
+verbose
+'''''''
+If True, more details will be printed about steps in the optimization process.
+
+hide_plots
+''''''''''
+If True, plots will automatically be closed rather than popping up on the screen.
+
+
+
 Stage 2
 -------
 
@@ -727,7 +810,7 @@ Optional. The path to a file that contains the time array you want to use instea
 
 
 Stage 4
---------
+-------
 
 .. include:: ../media/S4_template.ecf
    :literal:

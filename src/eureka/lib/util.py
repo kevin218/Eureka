@@ -1,16 +1,17 @@
-import numpy as np
-import os
 import glob
+import multiprocessing as mp
+import os
+
+import numpy as np
 from astropy.io import fits
 from scipy.interpolate import griddata
 from scipy.ndimage import zoom
 from scipy.stats import binned_statistic
-import multiprocessing as mp
 from tqdm import tqdm
 
 from . import sort_nicely as sn
-from .naninterp1d import naninterp1d
 from .citations import CITATIONS
+from .naninterp1d import naninterp1d
 
 # populate common imports for current stage
 COMMON_IMPORTS = np.array([
@@ -44,7 +45,7 @@ def readfiles(meta):
     meta.segment_list = []
 
     # Look for files in the input directory
-    for fname in glob.glob(meta.inputdir+'*'+meta.suffix+'.fits'):
+    for fname in glob.glob(_fits_glob_pattern(meta.inputdir, meta.suffix)):
         if not ignore_nonscience(fname):
             meta.segment_list.append(fname)
 
@@ -53,18 +54,19 @@ def readfiles(meta):
         # Add files from the sci directory if present
         if not hasattr(meta, 'sci_dir') or meta.sci_dir is None:
             meta.sci_dir = 'sci'
-        sci_path = os.path.join(meta.inputdir, meta.sci_dir)+os.sep
-        for fname in glob.glob(sci_path+'*'+meta.suffix+'.fits'):
+        sci_path = os.path.join(meta.inputdir, meta.sci_dir)
+        for fname in glob.glob(_fits_glob_pattern(sci_path, meta.suffix)):
             if not ignore_nonscience(fname):
                 meta.segment_list.append(fname)
         # Add files from the cal directory if present
         if not hasattr(meta, 'cal_dir') or meta.cal_dir is None:
             meta.cal_dir = 'cal'
-        cal_path = os.path.join(meta.inputdir, meta.cal_dir)+os.sep
-        for fname in glob.glob(cal_path+'*'+meta.suffix+'.fits'):
+        cal_path = os.path.join(meta.inputdir, meta.cal_dir)
+        for fname in glob.glob(_fits_glob_pattern(cal_path, meta.suffix)):
             if not ignore_nonscience(fname):
                 meta.segment_list.append(fname)
 
+    meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
     meta.num_data_files = len(meta.segment_list)
     if meta.num_data_files == 0:
         raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files '
@@ -73,11 +75,41 @@ def readfiles(meta):
                              f'{meta.filename} to point to the folder '
                              f'containing the "{meta.suffix}.fits" files.')
 
-    meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
+    if meta.firstSegOnly_S1 or meta.firstSegOnly_S3:
+        # For optimization, only use the first file to speed things up
+        meta.segment_list = np.array([meta.segment_list[0]])
+        meta.num_data_files = 1
 
     meta = get_inst(meta, meta.segment_list[-1])
 
     return meta
+
+
+def _fits_glob_pattern(inputdir, suffix, recursive=False):
+    """Build a glob pattern for FITS files with a given suffix.
+
+    Parameters
+    ----------
+    inputdir : str
+        The directory to search for FITS files. This path may be provided with
+        or without a trailing path separator.
+    suffix : str
+        The data product suffix to match before the ``.fits`` extension
+        (e.g. ``'uncal'``, ``'rateints'``, or ``'calints'``).
+    recursive : bool; optional
+        If True, build a pattern that searches all subdirectories of
+        ``inputdir``. Defaults to False.
+
+    Returns
+    -------
+    str
+        A glob-compatible search pattern matching files named
+        ``*<suffix>.fits`` in ``inputdir``. If ``recursive`` is True, the
+        pattern matches files in any child directory.
+    """
+    if recursive:
+        return os.path.join(inputdir, '**', f'*{suffix}.fits')
+    return os.path.join(inputdir, f'*{suffix}.fits')
 
 
 def ignore_nonscience(filename):
@@ -134,6 +166,15 @@ def get_inst(meta, file):
         meta.inst = getattr(meta, 'inst',
                             hdulist[0].header['INSTRUME'].lower())
         if meta.inst != 'wfc3':
+            # Determine the instrument detector, filter, and grating
+            meta.inst_detector = getattr(meta, 'inst_detector',
+                                         hdulist[0].header['DETECTOR'].lower())
+            meta.inst_filter = getattr(meta, 'inst_filter',
+                                       hdulist[0].header['FILTER'].lower())
+            if meta.inst == 'nirspec':
+                meta.inst_grating = getattr(
+                    meta, 'inst_grating',
+                    hdulist[0].header['GRATING'].lower())
             # Also figure out which pipeline we need to use
             # (spectra or images)
             exp_type = getattr(meta, 'exp_type',
@@ -235,7 +276,7 @@ def manual_clip(lc, meta, log, channel=0):
     return meta, lc, log
 
 
-def check_nans(data, mask, log, name=''):
+def check_nans(data, mask, log, name='', mute=True):
     """Checks where a data-like array is invalid (contains NaNs or infs).
 
     Parameters
@@ -249,6 +290,8 @@ def check_nans(data, mask, log, name=''):
     name : str; optional
         The name of the data array passed in (e.g. SUBDATA, SUBERR, SUBV0).
         Defaults to ''.
+    mute : bool; optional
+        If True, suppress output to screen. Defaults to True.
 
     Returns
     -------
@@ -270,7 +313,7 @@ def check_nans(data, mask, log, name=''):
                      f"may be poor.")
     elif num_nans > 0:
         log.writelog(f"    {name} has {num_nans} NaNs/infs, which is "
-                     f"{perc_nans:.2f}% of all pixels.")
+                     f"{perc_nans:.2f}% of all pixels.", mute=mute)
         mask[inan] = True
     if perc_nans > 10:
         log.writelog("  WARNING: Your region of interest may be off the edge "
@@ -413,11 +456,12 @@ def find_fits(meta):
         The meta object with the updated inputdir pointing to the location of
         the input files to use.
     '''
-    fnames = glob.glob(meta.inputdir+'*'+meta.suffix + '.fits')
+    fnames = glob.glob(_fits_glob_pattern(meta.inputdir, meta.suffix))
     if len(fnames) == 0:
         # There were no rateints files in that folder, so let's see if
         # there are in children folders
-        fnames = glob.glob(meta.inputdir+'**'+os.sep+'*'+meta.suffix+'.fits',
+        fnames = glob.glob(_fits_glob_pattern(meta.inputdir, meta.suffix,
+                                              recursive=True),
                            recursive=True)
 
     if len(fnames) == 0:

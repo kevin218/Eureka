@@ -35,6 +35,10 @@ class S2MetaClass(MetaClass):
         # Set a default data file suffix
         self.suffix = getattr(self, 'suffix', 'rateints')
 
+        # Set optimization flag
+        self.firstSegOnly_S1 = getattr(self, 'firstSegOnly_S1', False)
+        self.firstSegOnly_S3 = getattr(self, 'firstSegOnly_S3', False)
+
     def set_defaults(self):
         '''Set Stage 2 specific defaults for generic instruments.
         '''

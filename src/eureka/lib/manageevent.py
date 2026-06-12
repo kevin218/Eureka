@@ -309,7 +309,7 @@ def findevent(meta, stage, allowFail=False):
     meta : eureka.lib.readECF.MetaClass
         The new meta object for the current processing.
     stage : str
-        The previous stage (e.g. "S2" for Stage 3).
+        The previous stage (e.g. "S2" when running Stage 3).
     allowFail : bool; optional
         Whether to allow the code to find no previous stage metadata files
         (for S2, S3) or throw an error if no metadata files are found.
@@ -383,7 +383,7 @@ def findevent(meta, stage, allowFail=False):
     elif len(fnames) == 0:
         # There were no metafiles in the inputdir or its children - raise an
         # error and give a helpful message
-        raise AssertionError(f'WARNING: Unable to find an output metadata file'
+        raise AssertionError(f'Unable to find an output metadata file'
                              f' of kind {file_suffix} from Eureka!\'s {stage}'
                              f' in the folder:\n"{meta.inputdir}"')
     elif len(fnames) > 1:
