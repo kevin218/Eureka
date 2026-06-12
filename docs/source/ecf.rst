@@ -321,13 +321,14 @@ isplots_S1opt and isplots_S3opt
 '''''''''''''''''''''''''''''''
 Sets how many plots should be saved during optimization. Can generate none (0), few (1), some (3), or many (5) figures (Options: 1 - 5).
 
-delete_intermediate
-'''''''''''''''''''
-If True, intermediate directories will be deleted after each optimization step.  This may be useful for Stage 1 optimization since the outputs can be quite large.
-
 delete_final
 ''''''''''''
-If True, intermediate directories will be deleted upon completion of optimization run.
+If True, intermediate directories will be deleted after the optimizer finishes. Outputs from the optimizer's final run remain in the usual output location. Set to ``False`` if you want to retain all trial outputs for
+inspection or debugging.
+
+delete_intermediate
+'''''''''''''''''''
+If True, intermediate directories will be deleted after each optimization step.  Outputs from the optimizer's final run remain in the usual output location. This may be useful for Stage 1 optimization since the outputs can be quite large. For Stage 3 optimization, this can usually be set to ``False``.
 
 verbose
 '''''''
