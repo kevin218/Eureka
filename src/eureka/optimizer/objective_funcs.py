@@ -1,13 +1,14 @@
 import errno
+import os
+import shutil
+import time
+
 import eureka.S1_detector_processing.s1_process as s1
 import eureka.S2_calibrations.s2_calibrate as s2
 import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4
-import shutil
-import time
 
-
-_RMTREE_ATTEMPTS = 3
+_RMTREE_ATTEMPTS = 10
 _RMTREE_RETRY_DELAY = 1.0
 _RMTREE_RETRYABLE_ERRNOS = {errno.ENOTEMPTY, errno.EBUSY}
 
@@ -101,8 +102,9 @@ def _remove_output_directory(outputdir, log=None):
     -----
     Some shared filesystems can briefly report ``ENOTEMPTY`` or ``EBUSY`` after
     files have been closed or removed. Those errors are retried after a short
-    delay. Other ``OSError`` exceptions are treated as persistent and logged
-    immediately.
+    delay. If ``rmtree`` has already emptied the directory, a direct
+    ``os.rmdir`` is attempted before the next retry. Other ``OSError``
+    exceptions are treated as persistent and logged immediately.
     """
     for attempt in range(_RMTREE_ATTEMPTS):
         try:
@@ -111,11 +113,23 @@ def _remove_output_directory(outputdir, log=None):
         except FileNotFoundError:
             return True
         except OSError as err:
+            if not os.path.exists(outputdir):
+                return True
+
             should_retry = (
                 err.errno in _RMTREE_RETRYABLE_ERRNOS and
                 attempt < _RMTREE_ATTEMPTS - 1
             )
             if should_retry:
+                if os.path.isdir(outputdir):
+                    try:
+                        if len(os.listdir(outputdir)) == 0:
+                            os.rmdir(outputdir)
+                            return True
+                    except FileNotFoundError:
+                        return True
+                    except OSError:
+                        pass
                 time.sleep(_RMTREE_RETRY_DELAY)
                 continue
 
