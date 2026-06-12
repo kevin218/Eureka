@@ -1,10 +1,10 @@
 
 import os
-import pickle
 import time as time_pkg
 from copy import deepcopy
 
 import numpy as np
+import yaml
 
 import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4
@@ -15,6 +15,23 @@ from eureka.S4_generate_lightcurves.s4_meta import S4MetaClass
 from ..lib import logedit, util
 from . import objective_funcs, optimizers
 from .S3opt_meta import S3optMetaClass
+
+
+def _convert_to_native_types(value):
+    """Recursively convert numpy types to YAML-serializable Python types."""
+    if isinstance(value, dict):
+        return {k: _convert_to_native_types(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_convert_to_native_types(v) for v in value]
+    if isinstance(value, tuple):
+        return [_convert_to_native_types(v) for v in value]
+    if isinstance(value, np.ndarray):
+        return _convert_to_native_types(value.tolist())
+    if isinstance(value, (np.integer, np.floating)):
+        return value.item()
+    if isinstance(value, (np.bool_,)):
+        return bool(value)
+    return value
 
 
 def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
@@ -99,10 +116,11 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
 
     # Combine best parameters from both stages
     best = {**best_s3, **best_s4}
-    # Save the best dictionary to a pickle file
-    with open(os.path.join(s3opt_meta.outputdir, "best_params.pkl"),
-              "wb") as f:
-        pickle.dump(best, f)
+    # Save the best dictionary to a YAML file
+    yaml_path = os.path.join(s3opt_meta.outputdir, "best_params.yaml")
+    with open(yaml_path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(_convert_to_native_types(best), f,
+                       sort_keys=False)
 
     # Plot fitness history
     if s3opt_meta.isplots_S3opt >= 1:
