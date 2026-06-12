@@ -4,7 +4,6 @@ import json
 import numpy as np
 from copy import deepcopy
 import time as time_pkg
-import shutil
 
 import eureka.S1_detector_processing.s1_process as s1
 import eureka.S2_calibrations.s2_calibrate as s2
@@ -16,7 +15,7 @@ from eureka.S3_data_reduction.s3_meta import S3MetaClass
 from eureka.S3_data_reduction import plots_s3
 from eureka.S4_generate_lightcurves.s4_meta import S4MetaClass
 from .S1opt_meta import S1optMetaClass
-from . import optimizers
+from . import objective_funcs, optimizers
 from ..lib import logedit, util
 
 
@@ -132,12 +131,12 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     if s1opt_meta.isplots_S1opt >= 1:
         plots_s3.fitness_scores(s1opt_meta, history)
 
-    log.closelog()
-
     # Delete intermediate files if requested
     if s1opt_meta.delete_final:
-        if os.path.exists(s1_meta.outputdir_raw):
-            shutil.rmtree(s1_meta.outputdir_raw)
+        objective_funcs._remove_output_directory(s1_meta.outputdir_raw,
+                                                 log=log)
+
+    log.closelog()
 
     return s1opt_meta, history, best
 

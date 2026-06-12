@@ -185,3 +185,21 @@ def test_optimizer_cleanup_retries_transient_enotempty(monkeypatch):
 
     assert fitness == 11.0
     assert attempts['Stage3'] == 2
+
+
+def test_remove_output_directory_retries_transient_ebusy(monkeypatch):
+    attempts = {'output': 0}
+
+    def transient_rmtree(outputdir):
+        attempts[outputdir] += 1
+        if attempts[outputdir] == 1:
+            raise OSError(objective_funcs.errno.EBUSY,
+                          'Device or resource busy', outputdir)
+
+    monkeypatch.setattr(objective_funcs.shutil, 'rmtree', transient_rmtree)
+    monkeypatch.setattr(objective_funcs.time, 'sleep', lambda delay: None)
+
+    removed = objective_funcs._remove_output_directory('output')
+
+    assert removed
+    assert attempts['output'] == 2
