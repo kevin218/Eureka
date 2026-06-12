@@ -238,3 +238,34 @@ def test_remove_output_directory_rmdirs_empty_after_rmtree_error(monkeypatch):
 
     assert removed
     assert calls == {'rmtree': 1, 'rmdir': 1}
+
+
+def test_remove_output_directory_rmdirs_after_final_wait(monkeypatch):
+    calls = {'rmtree': 0, 'rmdir': 0}
+
+    def failing_rmtree(outputdir):
+        calls['rmtree'] += 1
+        raise OSError(objective_funcs.errno.EBUSY,
+                      'Device or resource busy', outputdir)
+
+    def delayed_rmdir(outputdir):
+        calls['rmdir'] += 1
+        if calls['rmdir'] == 1:
+            raise OSError(objective_funcs.errno.EBUSY,
+                          'Device or resource busy', outputdir)
+
+    monkeypatch.setattr(objective_funcs, '_RMTREE_ATTEMPTS', 1)
+    monkeypatch.setattr(objective_funcs.shutil, 'rmtree', failing_rmtree)
+    monkeypatch.setattr(objective_funcs.os.path, 'exists',
+                        lambda outputdir: True)
+    monkeypatch.setattr(objective_funcs.os.path, 'isdir',
+                        lambda outputdir: True)
+    monkeypatch.setattr(objective_funcs.os, 'listdir',
+                        lambda outputdir: [])
+    monkeypatch.setattr(objective_funcs.os, 'rmdir', delayed_rmdir)
+    monkeypatch.setattr(objective_funcs.time, 'sleep', lambda delay: None)
+
+    removed = objective_funcs._remove_output_directory('output')
+
+    assert removed
+    assert calls == {'rmtree': 1, 'rmdir': 2}

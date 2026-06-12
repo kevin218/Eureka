@@ -8,7 +8,7 @@ import eureka.S2_calibrations.s2_calibrate as s2
 import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4
 
-_RMTREE_ATTEMPTS = 10
+_RMTREE_ATTEMPTS = 5
 _RMTREE_RETRY_DELAY = 1.0
 _RMTREE_RETRYABLE_ERRNOS = {errno.ENOTEMPTY, errno.EBUSY}
 
@@ -106,6 +106,9 @@ def _remove_output_directory(outputdir, log=None):
     ``os.rmdir`` is attempted before the next retry. Other ``OSError``
     exceptions are treated as persistent and logged immediately.
     """
+    last_error = None
+    last_rmdir_error = None
+
     for attempt in range(_RMTREE_ATTEMPTS):
         try:
             shutil.rmtree(outputdir)
@@ -113,35 +116,51 @@ def _remove_output_directory(outputdir, log=None):
         except FileNotFoundError:
             return True
         except OSError as err:
+            last_error = err
             if not os.path.exists(outputdir):
                 return True
 
-            should_retry = (
-                err.errno in _RMTREE_RETRYABLE_ERRNOS and
-                attempt < _RMTREE_ATTEMPTS - 1
-            )
-            if should_retry:
-                if os.path.isdir(outputdir):
-                    try:
-                        if len(os.listdir(outputdir)) == 0:
-                            os.rmdir(outputdir)
-                            return True
-                    except FileNotFoundError:
-                        return True
-                    except OSError:
-                        pass
-                time.sleep(_RMTREE_RETRY_DELAY)
-                continue
+            if err.errno not in _RMTREE_RETRYABLE_ERRNOS:
+                break
 
-            message = (f"WARNING: Could not delete output directory "
-                       f"{outputdir}: {err}")
-            if log is None:
-                print(message)
-            else:
-                log.writelog(message)
-            return False
+            removed, rmdir_error = _remove_empty_directory(outputdir)
+            if removed:
+                return True
+            last_rmdir_error = rmdir_error or last_rmdir_error
 
+            time.sleep(_RMTREE_RETRY_DELAY)
+
+            removed, rmdir_error = _remove_empty_directory(outputdir)
+            if removed:
+                return True
+            last_rmdir_error = rmdir_error or last_rmdir_error
+
+    message = (f"WARNING: Could not delete output directory "
+               f"{outputdir}:\n{last_error}")
+    if last_rmdir_error is not None:
+        message += f" Direct rmdir also failed:\n{last_rmdir_error}"
+    if log is None:
+        print(message)
+    else:
+        log.writelog(message)
     return False
+
+
+def _remove_empty_directory(outputdir):
+    """Remove ``outputdir`` if it exists and is empty."""
+    try:
+        if not os.path.exists(outputdir):
+            return True, None
+        if not os.path.isdir(outputdir):
+            return False, None
+        if len(os.listdir(outputdir)) != 0:
+            return False, None
+        os.rmdir(outputdir)
+        return True, None
+    except FileNotFoundError:
+        return True, None
+    except OSError as err:
+        return False, err
 
 
 def single(val, meta, stage, run_S3=True, **kwargs):
