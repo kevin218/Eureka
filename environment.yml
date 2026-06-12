@@ -36,6 +36,7 @@ dependencies:
   - pytest-doctestplus
   - python >=3.11,<3.13
   - python-build
+  - pyyaml
   - requests
   - scipy >=1.12.0
   - shapely
