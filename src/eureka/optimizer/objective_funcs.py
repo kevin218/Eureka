@@ -5,6 +5,83 @@ import eureka.S4_generate_lightcurves.s4_genLC as s4
 import shutil
 
 
+def _calculate_fitness(meta, s4_meta):
+    """Calculate the optimizer fitness score from Stage 4 metadata.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The optimizer metadata object. Must include ``scaling_MAD_spec`` and
+        ``scaling_MAD_white``, which set the relative weights applied to the
+        spectral and white-light MAD values.
+    s4_meta : eureka.lib.readECF.MetaClass
+        The Stage 4 metadata object returned by ``s4.genlc``. Must include
+        ``mad_s4`` and ``mad_s4_binned``, where ``mad_s4_binned[0]`` is the
+        white-light MAD value.
+
+    Returns
+    -------
+    float
+        The weighted fitness score. Lower values correspond to a better
+        optimizer result.
+    """
+    return (
+        meta.scaling_MAD_spec * s4_meta.mad_s4 +
+        meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
+
+
+def _remove_intermediate_outputs(meta, run_stage, s1_meta=None, s2_meta=None,
+                                 s3_meta=None, s4_meta=None, log=None):
+    """Delete intermediate optimizer outputs without failing the sweep.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The optimizer metadata object. If ``meta.delete_intermediate`` is
+        False, no directories are removed.
+    run_stage : list of bool
+        Boolean flags indicating which stages were run during the current
+        objective-function evaluation. Entries 1 through 4 correspond to
+        Stages 1 through 4, respectively.
+    s1_meta, s2_meta, s3_meta, s4_meta : eureka.lib.readECF.MetaClass; optional
+        Metadata objects for each stage. For each stage that ran, the
+        corresponding ``outputdir`` will be removed if present.
+    log : eureka.lib.logedit.Logedit; optional
+        The optimizer log. Cleanup warnings are written here when provided;
+        otherwise they are printed to stdout.
+
+    Notes
+    -----
+    Cleanup is intentionally best-effort. Missing directories are ignored, and
+    other ``OSError`` exceptions are logged as warnings so that a completed
+    parameter evaluation is not discarded only because its intermediate output
+    directory could not be removed.
+    """
+    if not meta.delete_intermediate:
+        return
+
+    for should_remove, stage_meta in zip(run_stage[1:],
+                                         [s1_meta, s2_meta, s3_meta, s4_meta]):
+        if not should_remove or stage_meta is None:
+            continue
+
+        outputdir = getattr(stage_meta, 'outputdir', None)
+        if outputdir is None:
+            continue
+
+        try:
+            shutil.rmtree(outputdir)
+        except FileNotFoundError:
+            pass
+        except OSError as err:
+            message = (f"WARNING: Could not delete intermediate output "
+                       f"directory {outputdir}: {err}")
+            if log is None:
+                print(message)
+            else:
+                log.writelog(message)
+
+
 def single(val, meta, stage, run_S3=True, **kwargs):
     """Single variable objective function.
 
@@ -69,19 +146,9 @@ def single(val, meta, stage, run_S3=True, **kwargs):
         s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, input_meta=s4_meta,
                                            s3_meta=s3_meta)
 
-    if meta.delete_intermediate:
-        if run_stage[1]:
-            shutil.rmtree(s1_meta.outputdir)
-        if run_stage[2]:
-            shutil.rmtree(s2_meta.outputdir)
-        if run_stage[3]:
-            shutil.rmtree(s3_meta.outputdir)
-        if run_stage[4]:
-            shutil.rmtree(s4_meta.outputdir)
-
-    fitness_value = (
-        meta.scaling_MAD_spec * s4_meta.mad_s4 +
-        meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
+    fitness_value = _calculate_fitness(meta, s4_meta)
+    _remove_intermediate_outputs(meta, run_stage, s1_meta, s2_meta, s3_meta,
+                                 s4_meta, log=kwargs.get('log'))
 
     return fitness_value
 
@@ -153,18 +220,8 @@ def double(val, meta, stage, run_S3=True, **kwargs):
         s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, input_meta=s4_meta,
                                            s3_meta=s3_meta)
 
-    if meta.delete_intermediate:
-        if run_stage[1]:
-            shutil.rmtree(s1_meta.outputdir)
-        if run_stage[2]:
-            shutil.rmtree(s2_meta.outputdir)
-        if run_stage[3]:
-            shutil.rmtree(s3_meta.outputdir)
-        if run_stage[4]:
-            shutil.rmtree(s4_meta.outputdir)
-
-    fitness_value = (
-        meta.scaling_MAD_spec * s4_meta.mad_s4 +
-        meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
+    fitness_value = _calculate_fitness(meta, s4_meta)
+    _remove_intermediate_outputs(meta, run_stage, s1_meta, s2_meta, s3_meta,
+                                 s4_meta, log=kwargs.get('log'))
 
     return fitness_value

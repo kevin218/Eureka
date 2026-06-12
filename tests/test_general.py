@@ -7,6 +7,7 @@ sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib import util
 from eureka.lib.readECF import MetaClass
 from eureka.lib.medstddev import medstddev
+from eureka.optimizer import objective_funcs
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
 
@@ -104,3 +105,39 @@ def test_readfiles_accepts_inputdir_without_trailing_separator(tmp_path):
     assert meta.num_data_files == 1
     assert meta.segment_list[0] == str(filename)
     assert meta.inst == 'miri'
+
+
+def test_optimizer_cleanup_failure_does_not_discard_fitness(monkeypatch):
+    meta = SimpleNamespace(delete_intermediate=True, scaling_MAD_spec=0.01,
+                           scaling_MAD_white=1.0,
+                           opt_param_name='skip_firstframe',
+                           eventlabel='test')
+    s1_meta = SimpleNamespace(outputdir='Stage1')
+    s2_meta = SimpleNamespace(outputdir='Stage2')
+    s3_meta = SimpleNamespace(outputdir='Stage3')
+    s4_meta = SimpleNamespace(outputdir='Stage4')
+
+    def fake_genlc(eventlabel, input_meta, s3_meta):
+        input_meta.mad_s4 = 100.0
+        input_meta.mad_s4_binned = [10.0]
+        return None, None, input_meta
+
+    def failing_rmtree(outputdir):
+        if outputdir == 'Stage3':
+            raise OSError(39, 'Directory not empty', outputdir)
+
+    monkeypatch.setattr(objective_funcs.s1, 'rampfitJWST',
+                        lambda eventlabel, input_meta: input_meta)
+    monkeypatch.setattr(objective_funcs.s2, 'calibrateJWST',
+                        lambda eventlabel, input_meta, s1_meta: input_meta)
+    monkeypatch.setattr(objective_funcs.s3, 'reduce',
+                        lambda eventlabel, input_meta, s2_meta:
+                        (None, input_meta))
+    monkeypatch.setattr(objective_funcs.s4, 'genlc', fake_genlc)
+    monkeypatch.setattr(objective_funcs.shutil, 'rmtree', failing_rmtree)
+
+    fitness = objective_funcs.single(False, meta, stage=1, s1_meta=s1_meta,
+                                     s2_meta=s2_meta, s3_meta=s3_meta,
+                                     s4_meta=s4_meta)
+
+    assert fitness == 11.0
