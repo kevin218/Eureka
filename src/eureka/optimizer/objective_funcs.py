@@ -9,6 +9,7 @@ import time
 
 _RMTREE_ATTEMPTS = 3
 _RMTREE_RETRY_DELAY = 1.0
+_RMTREE_RETRYABLE_ERRNOS = {errno.ENOTEMPTY, errno.EBUSY}
 
 
 def _calculate_fitness(meta, s4_meta):
@@ -59,11 +60,10 @@ def _remove_intermediate_outputs(meta, run_stage, s1_meta=None, s2_meta=None,
     Notes
     -----
     Cleanup is intentionally best-effort. Missing directories are ignored, and
-    ``ENOTEMPTY`` errors are retried after a short delay to handle transient
-    filesystem metadata races. Other ``OSError`` exceptions, or ``ENOTEMPTY``
-    errors that persist after all retry attempts, are logged as warnings so
-    that a completed parameter evaluation is not discarded only because its
-    intermediate output directory could not be removed.
+    transient filesystem errors are retried by ``_remove_output_directory``.
+    Persistent cleanup errors are logged as warnings so that a completed
+    parameter evaluation is not discarded only because its intermediate output
+    directory could not be removed.
     """
     if not meta.delete_intermediate:
         return
@@ -77,28 +77,57 @@ def _remove_intermediate_outputs(meta, run_stage, s1_meta=None, s2_meta=None,
         if outputdir is None:
             continue
 
-        for attempt in range(_RMTREE_ATTEMPTS):
-            try:
-                shutil.rmtree(outputdir)
-                break
-            except FileNotFoundError:
-                break
-            except OSError as err:
-                should_retry = (
-                    err.errno == errno.ENOTEMPTY and
-                    attempt < _RMTREE_ATTEMPTS - 1
-                )
-                if should_retry:
-                    time.sleep(_RMTREE_RETRY_DELAY)
-                    continue
+        _remove_output_directory(outputdir, log=log)
 
-                message = (f"WARNING: Could not delete intermediate output "
-                           f"directory {outputdir}: {err}")
-                if log is None:
-                    print(message)
-                else:
-                    log.writelog(message)
-                break
+
+def _remove_output_directory(outputdir, log=None):
+    """Delete an output directory with retries for transient failures.
+
+    Parameters
+    ----------
+    outputdir : str
+        The directory to remove.
+    log : eureka.lib.logedit.Logedit; optional
+        The optimizer log. Cleanup warnings are written here when provided;
+        otherwise they are printed to stdout.
+
+    Returns
+    -------
+    bool
+        True if the directory was removed or was already absent. False if the
+        directory could not be removed after all retry attempts.
+
+    Notes
+    -----
+    Some shared filesystems can briefly report ``ENOTEMPTY`` or ``EBUSY`` after
+    files have been closed or removed. Those errors are retried after a short
+    delay. Other ``OSError`` exceptions are treated as persistent and logged
+    immediately.
+    """
+    for attempt in range(_RMTREE_ATTEMPTS):
+        try:
+            shutil.rmtree(outputdir)
+            return True
+        except FileNotFoundError:
+            return True
+        except OSError as err:
+            should_retry = (
+                err.errno in _RMTREE_RETRYABLE_ERRNOS and
+                attempt < _RMTREE_ATTEMPTS - 1
+            )
+            if should_retry:
+                time.sleep(_RMTREE_RETRY_DELAY)
+                continue
+
+            message = (f"WARNING: Could not delete output directory "
+                       f"{outputdir}: {err}")
+            if log is None:
+                print(message)
+            else:
+                log.writelog(message)
+            return False
+
+    return False
 
 
 def single(val, meta, stage, run_S3=True, **kwargs):

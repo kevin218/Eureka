@@ -1,7 +1,6 @@
 
 import os
 import pickle
-import shutil
 import time as time_pkg
 from copy import deepcopy
 
@@ -14,7 +13,7 @@ from eureka.S3_data_reduction.s3_meta import S3MetaClass
 from eureka.S4_generate_lightcurves.s4_meta import S4MetaClass
 
 from ..lib import logedit, util
-from . import optimizers
+from . import objective_funcs, optimizers
 from .S3opt_meta import S3optMetaClass
 
 
@@ -140,14 +139,14 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
         log.writelog(f"Final white MAD: {s4_meta.mad_s4_binned[0]}")
         log.writelog(f"Final spec MAD: {s4_meta.mad_s4}\n")
 
-    log.closelog()
-
     # Delete intermediate files if requested
     if s3opt_meta.delete_final:
-        if os.path.exists(s3_meta.outputdir_raw):
-            shutil.rmtree(s3_meta.outputdir_raw)
-        if os.path.exists(s4_meta.outputdir_raw):
-            shutil.rmtree(s4_meta.outputdir_raw)
+        objective_funcs._remove_output_directory(s3_meta.outputdir_raw,
+                                                 log=log)
+        objective_funcs._remove_output_directory(s4_meta.outputdir_raw,
+                                                 log=log)
+
+    log.closelog()
 
     return s3opt_meta, history, best
 
