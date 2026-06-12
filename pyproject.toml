@@ -88,6 +88,7 @@ dependencies = [
     "pandas",
     "photutils",
     "requests",
+    "pyyaml",
     "scipy>=1.12.0", # Lower limit needed for stcal.ramp_fitting.likely_fit
     "shapely",
     "tqdm",
