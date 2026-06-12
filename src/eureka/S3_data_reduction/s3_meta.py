@@ -39,8 +39,8 @@ class S3MetaClass(MetaClass):
         self.suffix = getattr(self, 'suffix', 'calints')
 
         # Set optimization flag
-        self.isopt_S1 = getattr(self, 'isopt_S1', False)
-        self.isopt_S3 = getattr(self, 'isopt_S3', False)
+        self.firstSegOnly_S1 = getattr(self, 'firstSegOnly_S1', False)
+        self.firstSegOnly_S3 = getattr(self, 'firstSegOnly_S3', False)
 
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.

@@ -273,8 +273,8 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     s1_meta.inputdir = meta.inputdir
     s1_meta.outputdir = os.path.join(meta.outputdir, 'Stage1')
     s1_meta.isplots_S1 = meta.isplots_S1opt
-    s1_meta.isopt_S1 = meta.isopt_S1
-    s1_meta.isopt_S3 = meta.isopt_S3
+    s1_meta.firstSegOnly_S1 = meta.firstSegOnly_S1
+    s1_meta.firstSegOnly_S3 = meta.firstSegOnly_S3
     s1_meta.verbose = meta.verbose
 
     # Setup Stage 2 Meta object and overwrite certain Meta values
@@ -283,8 +283,8 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     s2_meta.inputdir = s1_meta.outputdir
     s2_meta.outputdir = 'Stage2'
     s2_meta.isplots_S2 = meta.isplots_S1opt
-    s2_meta.isopt_S1 = meta.isopt_S1
-    s2_meta.isopt_S3 = meta.isopt_S3
+    s2_meta.firstSegOnly_S1 = meta.firstSegOnly_S1
+    s2_meta.firstSegOnly_S3 = meta.firstSegOnly_S3
     s2_meta.verbose = meta.verbose
 
     # Setup Stage 3 Meta object and overwrite certain Meta values
@@ -292,8 +292,8 @@ def initialize_meta(meta, eventlabel, ecf_path=None):
     s3_meta.topdir = meta.outputdir
     s3_meta.inputdir = s2_meta.outputdir
     s3_meta.outputdir = 'Stage3'
-    s3_meta.isopt_S1 = meta.isopt_S1
-    s3_meta.isopt_S3 = meta.isopt_S3
+    s3_meta.firstSegOnly_S1 = meta.firstSegOnly_S1
+    s3_meta.firstSegOnly_S3 = meta.firstSegOnly_S3
     s3_meta.isplots_S3 = meta.isplots_S1opt
     s3_meta.verbose = meta.verbose
     s3_meta.record_ypos = False

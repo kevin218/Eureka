@@ -97,7 +97,7 @@ def test_readfiles_accepts_inputdir_without_trailing_separator(tmp_path):
     hdu.writeto(filename)
 
     meta = SimpleNamespace(inputdir=str(inputdir), suffix='uncal',
-                           isopt_S1=True, isopt_S3=False,
+                           firstSegOnly_S1=True, firstSegOnly_S3=False,
                            filename='S1opt_test.ecf')
 
     meta = util.readfiles(meta)

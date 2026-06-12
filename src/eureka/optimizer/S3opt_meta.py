@@ -43,8 +43,8 @@ class S3optMetaClass(MetaClass):
         self.suffix = getattr(self, 'suffix', 'calints')
 
         # Set optimization flag
-        self.isopt_S1 = getattr(self, 'isopt_S1', False)
-        self.isopt_S3 = getattr(self, 'isopt_S3', True)
+        self.firstSegOnly_S1 = getattr(self, 'firstSegOnly_S1', False)
+        self.firstSegOnly_S3 = getattr(self, 'firstSegOnly_S3', True)
 
         # Set deletion flags
         self.delete_intermediate = getattr(self, 'delete_intermediate', False)
