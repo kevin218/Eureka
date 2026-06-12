@@ -1,8 +1,14 @@
+import errno
 import eureka.S1_detector_processing.s1_process as s1
 import eureka.S2_calibrations.s2_calibrate as s2
 import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4
 import shutil
+import time
+
+
+_RMTREE_ATTEMPTS = 3
+_RMTREE_RETRY_DELAY = 1.0
 
 
 def _calculate_fitness(meta, s4_meta):
@@ -53,9 +59,11 @@ def _remove_intermediate_outputs(meta, run_stage, s1_meta=None, s2_meta=None,
     Notes
     -----
     Cleanup is intentionally best-effort. Missing directories are ignored, and
-    other ``OSError`` exceptions are logged as warnings so that a completed
-    parameter evaluation is not discarded only because its intermediate output
-    directory could not be removed.
+    ``ENOTEMPTY`` errors are retried after a short delay to handle transient
+    filesystem metadata races. Other ``OSError`` exceptions, or ``ENOTEMPTY``
+    errors that persist after all retry attempts, are logged as warnings so
+    that a completed parameter evaluation is not discarded only because its
+    intermediate output directory could not be removed.
     """
     if not meta.delete_intermediate:
         return
@@ -69,17 +77,28 @@ def _remove_intermediate_outputs(meta, run_stage, s1_meta=None, s2_meta=None,
         if outputdir is None:
             continue
 
-        try:
-            shutil.rmtree(outputdir)
-        except FileNotFoundError:
-            pass
-        except OSError as err:
-            message = (f"WARNING: Could not delete intermediate output "
-                       f"directory {outputdir}: {err}")
-            if log is None:
-                print(message)
-            else:
-                log.writelog(message)
+        for attempt in range(_RMTREE_ATTEMPTS):
+            try:
+                shutil.rmtree(outputdir)
+                break
+            except FileNotFoundError:
+                break
+            except OSError as err:
+                should_retry = (
+                    err.errno == errno.ENOTEMPTY and
+                    attempt < _RMTREE_ATTEMPTS - 1
+                )
+                if should_retry:
+                    time.sleep(_RMTREE_RETRY_DELAY)
+                    continue
+
+                message = (f"WARNING: Could not delete intermediate output "
+                           f"directory {outputdir}: {err}")
+                if log is None:
+                    print(message)
+                else:
+                    log.writelog(message)
+                break
 
 
 def single(val, meta, stage, run_S3=True, **kwargs):

@@ -124,7 +124,8 @@ def test_optimizer_cleanup_failure_does_not_discard_fitness(monkeypatch):
 
     def failing_rmtree(outputdir):
         if outputdir == 'Stage3':
-            raise OSError(39, 'Directory not empty', outputdir)
+            raise OSError(objective_funcs.errno.ENOTEMPTY,
+                          'Directory not empty', outputdir)
 
     monkeypatch.setattr(objective_funcs.s1, 'rampfitJWST',
                         lambda eventlabel, input_meta: input_meta)
@@ -135,9 +136,52 @@ def test_optimizer_cleanup_failure_does_not_discard_fitness(monkeypatch):
                         (None, input_meta))
     monkeypatch.setattr(objective_funcs.s4, 'genlc', fake_genlc)
     monkeypatch.setattr(objective_funcs.shutil, 'rmtree', failing_rmtree)
+    monkeypatch.setattr(objective_funcs.time, 'sleep', lambda delay: None)
 
     fitness = objective_funcs.single(False, meta, stage=1, s1_meta=s1_meta,
                                      s2_meta=s2_meta, s3_meta=s3_meta,
                                      s4_meta=s4_meta)
 
     assert fitness == 11.0
+
+
+def test_optimizer_cleanup_retries_transient_enotempty(monkeypatch):
+    meta = SimpleNamespace(delete_intermediate=True, scaling_MAD_spec=0.01,
+                           scaling_MAD_white=1.0,
+                           opt_param_name='skip_firstframe',
+                           eventlabel='test')
+    s1_meta = SimpleNamespace(outputdir='Stage1')
+    s2_meta = SimpleNamespace(outputdir='Stage2')
+    s3_meta = SimpleNamespace(outputdir='Stage3')
+    s4_meta = SimpleNamespace(outputdir='Stage4')
+    attempts = {'Stage3': 0}
+
+    def fake_genlc(eventlabel, input_meta, s3_meta):
+        input_meta.mad_s4 = 100.0
+        input_meta.mad_s4_binned = [10.0]
+        return None, None, input_meta
+
+    def transient_rmtree(outputdir):
+        if outputdir == 'Stage3':
+            attempts['Stage3'] += 1
+            if attempts['Stage3'] == 1:
+                raise OSError(objective_funcs.errno.ENOTEMPTY,
+                              'Directory not empty', outputdir)
+
+    monkeypatch.setattr(objective_funcs.s1, 'rampfitJWST',
+                        lambda eventlabel, input_meta: input_meta)
+    monkeypatch.setattr(objective_funcs.s2, 'calibrateJWST',
+                        lambda eventlabel, input_meta, s1_meta: input_meta)
+    monkeypatch.setattr(objective_funcs.s3, 'reduce',
+                        lambda eventlabel, input_meta, s2_meta:
+                        (None, input_meta))
+    monkeypatch.setattr(objective_funcs.s4, 'genlc', fake_genlc)
+    monkeypatch.setattr(objective_funcs.shutil, 'rmtree', transient_rmtree)
+    monkeypatch.setattr(objective_funcs.time, 'sleep', lambda delay: None)
+
+    fitness = objective_funcs.single(False, meta, stage=1, s1_meta=s1_meta,
+                                     s2_meta=s2_meta, s3_meta=s3_meta,
+                                     s4_meta=s4_meta)
+
+    assert fitness == 11.0
+    assert attempts['Stage3'] == 2
