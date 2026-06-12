@@ -41,8 +41,8 @@ class S1optMetaClass(MetaClass):
         self.suffix = getattr(self, 'suffix', 'uncal')
 
         # Set optimization flag
-        self.isopt_S1 = getattr(self, 'isopt_S1', True)
-        self.isopt_S3 = getattr(self, 'isopt_S3', False)
+        self.firstSegOnly_S1 = getattr(self, 'firstSegOnly_S1', True)
+        self.firstSegOnly_S3 = getattr(self, 'firstSegOnly_S3', False)
 
         # Set deletion flags
         self.delete_intermediate = getattr(self, 'delete_intermediate', False)

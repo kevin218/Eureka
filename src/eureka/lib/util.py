@@ -75,7 +75,7 @@ def readfiles(meta):
                              f'{meta.filename} to point to the folder '
                              f'containing the "{meta.suffix}.fits" files.')
 
-    if meta.isopt_S1 or meta.isopt_S3:
+    if meta.firstSegOnly_S1 or meta.firstSegOnly_S3:
         # For optimization, only use the first file to speed things up
         meta.segment_list = np.array([meta.segment_list[0]])
         meta.num_data_files = 1
