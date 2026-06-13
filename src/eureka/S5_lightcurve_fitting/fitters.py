@@ -1365,12 +1365,19 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
             individual_models.append([comp.name, comp.eval(fit)])
     individual_models = np.array(individual_models, dtype=object)
 
+    model_noGP = model.eval(incl_GP=False)
+    gp = model.GPeval(model_noGP)
+
+    model_sys = model.syseval()
+
+    lcdata_cal = lc.flux/model_sys - gp
+
     model_lc = model.eval()
     residuals = lc.flux-model_lc
     astropytable.savetable_S5(meta.tab_filename_s5, meta, lc.time,
                               wavelengths[lc.fitted_channels],
                               wave_errs[lc.fitted_channels],
-                              lc.flux, lc.unc_fit, individual_models, model_lc,
+                              lc.flux, lcdata_cal, lc.unc_fit, individual_models, model_lc,
                               residuals)
 
     return
