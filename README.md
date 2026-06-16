@@ -9,30 +9,26 @@
 
 **Welcome to Eureka!**
 
-Please note that the package is continually being improved, so be sure to check back often for new updates.
-
-## Installation
-
-Up-to-date installation instructions can be found at
-[https://eurekadocs.readthedocs.io/en/latest/installation.html](https://eurekadocs.readthedocs.io/en/latest/installation.html).
-
-## Quickstart
-
-Once Eureka! has been installed, you can learn how to use some aspects of the package using our
-[quickstart guide](https://eurekadocs.readthedocs.io/en/latest/quickstart.html).
-
-## Issues and FAQ
-
-If you experience an issue when installing or using Eureka!, first check out our
-[FAQ page](https://eurekadocs.readthedocs.io/en/latest/faq.html).
-If the answer to your question is not there, try looking searching for an open or closed issue on
-[GitHub](https://github.com/kevin218/Eureka/issues?q=is%3Aissue).
-If you still can't find the solution to your issue, please open a new issue on GitHub at
-[GitHub](https://github.com/kevin218/Eureka/issues)
-and leave as many details about your issue/error as you can, such as your operating system version, your conda version,
-your python version, the version of Eureka! you are using, and as many details about how we can reproduce the error you
-encountered.
+Eureka! is a data reduction and analysis pipeline for time-series
+observations with JWST and HST.
 
 ## Documentation
 
-Check out the rest of the Eureka! documentation at [https://eurekadocs.readthedocs.io](https://eurekadocs.readthedocs.io).
+Documentation lives on Read the Docs:
+
+- [Main docs](https://eurekadocs.readthedocs.io/en/latest/)
+- [Installation](https://eurekadocs.readthedocs.io/en/latest/installation.html)
+- [Quickstart](https://eurekadocs.readthedocs.io/en/latest/quickstart.html)
+- [FAQ](https://eurekadocs.readthedocs.io/en/latest/faq.html)
+
+For installation details, please follow the documentation rather than using
+commands copied from old issues or third-party examples.
+
+## Issues
+
+If you run into a problem, please search existing
+[GitHub issues](https://github.com/kevin218/Eureka/issues?q=is%3Aissue)
+first. If you do not find a matching report, open a new issue at
+[GitHub](https://github.com/kevin218/Eureka/issues) and include your
+operating system, conda version, Python version, Eureka! version, and the full
+error message when possible.

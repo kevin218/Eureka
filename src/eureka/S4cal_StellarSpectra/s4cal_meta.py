@@ -29,12 +29,14 @@ class S4cal_MetaClass(MetaClass):
         # Remove the stage from kwargs if present
         if 'stage' in kwargs:
             kwargs.pop('stage')
-            
+
         super().__init__(folder, file, eventlabel, stage='4cal', **kwargs)
 
     def set_defaults(self):
         '''Set Stage 4cal specific defaults for generic instruments.
         '''
+        # NIRISS spectral order
+        self.s4_order = getattr(self, 's4_order', None)
         # System parameters
         self.rprs = getattr(self, 'rprs', None)
         self.period = getattr(self, 'period', None)

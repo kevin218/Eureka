@@ -1,12 +1,15 @@
 # NIRISS specific rountines go here
 import numpy as np
 from astropy.io import fits
+from astropy.table import Table
 import astraeus.xarrayIO as xrio
+from jwst.photom.photom import find_row
 from . import nircam, sigrej, optspex, plots_s3
 from ..lib.util import read_time, supersample
 from pastasoss import get_soss_traces, rotate
 from .straighten import roll_columns
 from .background import fitbg
+from .bright2flux import retrieve_ancil
 
 __all__ = ['read', 'get_wave', 'straighten_trace', 'flag_ff', 'flag_bg',
            'clean_median_flux', 'fit_bg', 'cut_aperture', 'standard_spectrum',
@@ -132,7 +135,7 @@ def get_wave(data, meta, log):
     pwcpos = data.attrs['mhdr']['PWCPOS']
 
     # Keep track of base pupil position for custom offset correction
-    base_pwcpos = 245.76 
+    base_pwcpos = 245.76
 
     # Keep track of PASTASOSS trace rotation pivots
     pivots = [
@@ -145,7 +148,7 @@ def get_wave(data, meta, log):
 
     # Calculate offset amount from header (given in arcsec) and
     # NIRISS pixel scale (0.0653 arcsec/px in X direction)
-    pixscale = 0.0653 
+    pixscale = 0.0653
     trace_xoffset = data.attrs['mhdr']['XOFFSET'] / pixscale
     log.writelog(f"  There is an X offset of {trace_xoffset:.3f} pixels",
                  mute=(not meta.verbose))
@@ -162,10 +165,10 @@ def get_wave(data, meta, log):
         # Get trace for the given order and pupil position
         if trace_xoffset > 0:
             # Need to translate trace position before rotating
-            trace = get_soss_traces(pwcpos=base_pwcpos, 
+            trace = get_soss_traces(pwcpos=base_pwcpos,
                                     order=str(order), interp=True)
         else:
-            trace = get_soss_traces(pwcpos=pwcpos, 
+            trace = get_soss_traces(pwcpos=pwcpos,
                                     order=str(order), interp=True)
         if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96' and \
                 meta.trace_yoffset is None:
@@ -195,25 +198,25 @@ def get_wave(data, meta, log):
             pivot_wav = np.copy(pivot).astype(float)
             ind = np.argmin(np.abs(base_x - pivot[0]))
             pivot_wav[0] = base_wav[ind]
-            
-            # If using a custom X-direction offset, 
+
+            # If using a custom X-direction offset,
             # shift X dimension by xoffset pixels
             shift_x = base_x - trace_xoffset
 
-            # Extrapolate trace to longer wavelengths 
+            # Extrapolate trace to longer wavelengths
             # by fitting an 8th order polynomial
             fitdeg = 8
 
             y_interp = np.polynomial.polynomial.Polynomial.fit(
-                base_x, base_y, fitdeg, 
+                base_x, base_y, fitdeg,
                 domain=[shift_x[0], shift_x[-1]])(shift_x)
-            
+
             wav_interp = np.polynomial.polynomial.Polynomial.fit(
-                base_x, base_wav, fitdeg, 
+                base_x, base_wav, fitdeg,
                 domain=[shift_x[0], shift_x[-1]])(shift_x)
 
             # Rotate trace only after translating to new offset wavelengths
-            rotate_wav, rotate_y = rotate(wav_interp, y_interp, 
+            rotate_wav, rotate_y = rotate(wav_interp, y_interp,
                                           pwcpos - base_pwcpos, pivot_wav)
 
             trace.y = rotate_y
@@ -621,3 +624,58 @@ def lc_nodriftcorr(spec, meta):
         mad = meta.mad_s3[k]
         plots_s3.lc_nodriftcorr(meta, wave_1d, optspec, optmask=optmask,
                                 mad=mad, order=order)
+
+
+def calibrated_spectra(data, meta, log):
+    """Modify data to compute calibrated spectra in units of mJy.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : ndarray
+        The flux values in mJy
+    """
+    # Load file, open table
+    if meta.photfile is None:
+        meta.photfile = retrieve_ancil(data.attrs['filename'], 'photom')
+    log.writelog(f"  Using photfile={meta.photfile} to convert from "
+                 " DN/s to mJy...", mute=(not meta.verbose))
+    phot_table = fits.open(meta.photfile)
+    tabdata = Table(phot_table['PHOTOM'].data)
+
+    filter = data.attrs['mhdr']['FILTER']
+    pupil = data.attrs['mhdr']['PUPIL']
+    for order in meta.orders:
+        # Find the appropriate row in the photom table
+        fields_to_match = {'filter': filter, 'pupil': pupil, 'order': order}
+        row = find_row(tabdata, fields_to_match)
+
+        # Get the wavelength-dependent conversion factors
+        nelem = tabdata['nelem'][row]
+        conversion = tabdata['photmj'][row]
+        wavelength = tabdata['wavelength'][row][:nelem]
+        relresps = tabdata['relresponse'][row][:nelem]
+
+        # Interpolate sensitivity to wavelength solution
+        sensitivity = np.interp(data.wave_1d.sel(order=order),
+                                wavelength, relresps)
+
+        # Apply conversion and sensitivity curve
+        data['flux'].sel(order=order).data *= 1e3*conversion*sensitivity
+        data['err'].sel(order=order).data *= 1e3*conversion*sensitivity
+        data['v0'].sel(order=order).data *= 1e3*conversion*sensitivity
+
+    # Update units
+    data['flux'].attrs["flux_units"] = 'mJy'
+    data['err'].attrs["flux_units"] = 'mJy'
+    data['v0'].attrs["flux_units"] = 'mJy'
+
+    return data

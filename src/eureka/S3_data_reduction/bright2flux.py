@@ -118,7 +118,8 @@ def dn2electrons(data, meta, log):
     gain = xr.DataArray(gain, dims=("y", "x"))
     data['flux'] *= gain
     data['err'] *= gain
-    data['v0'] *= (gain)**2  # FINDME: should this really be squared
+    # v0 is a variance-like quantity, so square the conversion
+    data['v0'] *= (gain)**2
 
     return data
 
@@ -213,7 +214,7 @@ def bright2dn(data, meta, log, mjy=False):
     # Convert to DN/sec
     data['flux'] /= scalar * response
     data['err'] /= scalar * response
-    # FINDME: should this really be squared
+    # v0 is a variance-like quantity, so square the conversion
     data['v0'] /= (scalar * response)**2
 
     return data
@@ -246,7 +247,8 @@ def bright2flux(data, pixel_area):
 
     data['flux'] *= srperas * 1e6 * pixel_area
     data['err'] *= srperas * 1e6 * pixel_area
-    data['v0'] *= srperas * 1e6 * pixel_area
+    # v0 is a variance-like quantity, so square the conversion
+    data['v0'] *= (srperas * 1e6 * pixel_area)**2
 
     return data
 

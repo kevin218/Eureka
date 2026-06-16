@@ -595,11 +595,9 @@ def residualBackground(data, meta, m, vmin=None, vmax=None,
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
 
-    fig = plt.figure(3304)
-    fig.set_size_inches(8, 4, forward=True)
-    fig.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
-                                 num=3304)
+                                 num=3304, clear=True)
+    fig.set_size_inches(8, 4, forward=True)
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
               extent=[xmin, xmax, ymin, ymax])
@@ -714,23 +712,22 @@ def median_frame(data, meta, m, medflux, order=None):
         if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96':
             order = 1
             trace = data["trace"].sel(order=order)
-            
-            plt.plot(data.flux.x.values, trace, 
+
+            plt.plot(data.flux.x.values, trace,
                      c="white", lw=2)
-            plt.plot(data.flux.x.values, trace, 
+            plt.plot(data.flux.x.values, trace,
                      "--k", lw=1, label=f"Trace Order {order}")
         else:
             for order in meta.all_orders:
                 trace = data["trace"].sel(order=order)
-                plt.plot(data.flux.x.values, trace, 
+                plt.plot(data.flux.x.values, trace,
                          c="white", lw=2)
-                plt.plot(data.flux.x.values, trace, 
+                plt.plot(data.flux.x.values, trace,
                          "--k", lw=1, label=f"Trace Order {order}")
+        plt.legend()
 
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
-
-    plt.legend()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     if order is None:
@@ -1513,3 +1510,42 @@ def get_bounds(x, y=None):
         return xmin, xmax, ymin, ymax
     else:
         return xmin, xmax
+
+
+@plots.apply_style
+def fitness_scores(meta, history_fitness_score):
+    """
+    Visualizes the progress of best fitness scores across parameter sweeps.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    history_fitness_score : dict
+        The fitness score after optimizing each parameter.  The lower the
+        fitness score, the better the individual.
+
+    Notes
+    -----
+    - The function assumes that a lower fitness score is better.
+    - The x-axis represents the generation number (starting from 1), and the
+      y-axis represents the best fitness score.
+    - A plot illustrating the trend of best fitness scores across generations
+      is saved to the Stage 3 output directory.
+    """
+    # Extract values from the history fitness score dictionary
+    best_fitness_values = [history_fitness_score[key]
+                           for key in history_fitness_score.keys()]
+    params_to_optimize = history_fitness_score.keys()
+
+    fig = plt.figure(3110, figsize=(8, 6))
+    fig.clf()
+    plt.title("History of Best Fitness Scores")
+    plt.plot(range(1, len(best_fitness_values) + 1), best_fitness_values)
+    plt.xticks(range(1, len(params_to_optimize) + 1),
+               params_to_optimize, rotation=25, ha='right')
+    plt.ylabel("Best Fitness Score")
+    fname = f'figs{os.sep}fig3110_FitnessScore'+plots.get_filetype()
+    plt.savefig(meta.outputdir+fname, dpi=150)
+    if not meta.hide_plots:
+        plt.pause(0.2)

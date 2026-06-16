@@ -36,6 +36,10 @@ class S1MetaClass(MetaClass):
         # Set a default data file suffix
         self.suffix = getattr(self, 'suffix', 'uncal')
 
+        # Set optimization flag
+        self.firstSegOnly_S1 = getattr(self, 'firstSegOnly_S1', False)
+        self.firstSegOnly_S3 = getattr(self, 'firstSegOnly_S3', False)
+
     def set_defaults(self):
         '''Set Stage 1 specific defaults for generic instruments.
         '''
@@ -188,6 +192,7 @@ class S1MetaClass(MetaClass):
         self.nplots = getattr(self, 'nplots', 5)
         self.hide_plots = getattr(self, 'hide_plots', True)
         self.testing_S1 = getattr(self, 'testing_S1', False)
+        self.save_results = getattr(self, 'save_results', not self.testing_S1)
         self.verbose = getattr(self, 'verbose', True)
 
         # Project directory

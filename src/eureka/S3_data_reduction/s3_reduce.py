@@ -306,13 +306,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                              mute=(not meta.verbose))
                 data.mask.values = util.check_nans(data.flux.values,
                                                    data.mask.values,
-                                                   log, name='FLUX')
+                                                   log, name='FLUX',
+                                                   mute=(not meta.verbose))
                 data.mask.values = util.check_nans(data.err.values,
                                                    data.mask.values,
-                                                   log, name='ERR')
+                                                   log, name='ERR',
+                                                   mute=(not meta.verbose))
                 data.mask.values = util.check_nans(data.v0.values,
                                                    data.mask.values,
-                                                   log, name='V0')
+                                                   log, name='V0',
+                                                   mute=(not meta.verbose))
 
                 # Start masking pixels based on DQ flags
                 # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags

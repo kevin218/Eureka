@@ -134,7 +134,7 @@ class MetaClass:
             stage = 0
 
         if (item == 'inst' and value == 'wfc3' and stage != '4cal'
-                and stage < 4):
+                and stage != '1opt' and stage != '3opt' and stage < 4):
             # Fix issues with CRDS server set for JWST
             if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for JWST and not HST.'
@@ -151,7 +151,7 @@ class MetaClass:
                                 crds.get_context_name('hst')[4:-5])
             os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
         elif (item == 'inst' and value is not None and stage != '4cal'
-              and stage < 4):
+              and stage != '1opt' and stage != '3opt' and stage < 4):
             # Fix issues with CRDS server set for HST
             if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for HST and not JWST.'
@@ -184,6 +184,24 @@ class MetaClass:
             print(f'WARNING: The Eureka! version was {self.version} in the '
                   f'previous stage but is now {value} in this stage. This may '
                   'cause unexpected or undesireable behaviors.')
+
+        if item == 'topdir':
+            # Make sure topdir ends with a separator
+            value = os.path.join(value, '')
+        elif item == 'inputdir' and hasattr(self, 'topdir'):
+            if self.topdir in value:
+                # Strip off the topdir if it's included in the inputdir
+                value = value.replace(self.topdir, '')
+            # Make sure inputdir ends with a separator
+            self.inputdir_raw = os.path.join(value, '')
+            value = os.path.join(self.topdir, *value.split(os.sep))
+        elif item == 'outputdir' and hasattr(self, 'topdir'):
+            if self.topdir in value:
+                # Strip off the topdir if it's included in the outputdir
+                value = value.replace(self.topdir, '')
+            # Make sure outputdir ends with a separator
+            self.outputdir_raw = os.path.join(value, '')
+            value = os.path.join(self.topdir, *value.split(os.sep))
 
         # Set the attribute
         self.__dict__[item] = value
@@ -232,25 +250,14 @@ class MetaClass:
                 pass
             self.params[name] = val
 
+        # Need to define these now otherwise the following loop will complain
+        # about changing dictionary size
+        self.params['inputdir_raw'] = self.params['inputdir']
+        self.params['outputdir_raw'] = self.params['outputdir']
+
         # Store each as an attribute
         for param, value in self.params.items():
             setattr(self, param, value)
-
-        self.inputdir_raw = self.inputdir
-        self.outputdir_raw = self.outputdir
-
-        # Join inputdir_raw and outputdir_raw to topdir for convenience
-        # Use split to avoid issues from beginning
-        self.inputdir = os.path.join(self.topdir,
-                                     *self.inputdir.split(os.sep))
-        self.outputdir = os.path.join(self.topdir,
-                                      *self.outputdir.split(os.sep))
-
-        # Make sure there's a trailing slash at the end of the paths
-        if self.inputdir[-1] != os.sep:
-            self.inputdir += os.sep
-        if self.outputdir[-1] != os.sep:
-            self.outputdir += os.sep
 
     def write(self, folder):
         """Write an ECF file based on the current MetaClass settings.
@@ -267,7 +274,7 @@ class MetaClass:
 
         for i in range(len(self.lines)):
             line = self.lines[i]
-            # Strip off comments:
+            # Strip off comments
             if "#" in line:
                 line = line[0:line.index('#')]
             line = line.strip()
@@ -276,10 +283,11 @@ class MetaClass:
                 name = line.split()[0]
                 val = ''.join(line.split()[1:])
                 new_val = self.params[name]
-                # check if values have been updated
-                if val != new_val:
-                    self.lines[i] = self.lines[i].replace(str(val),
-                                                          str(new_val))
+                # Comparing val to new_val doesn't work since
+                # val is a str and new_val can be anything, but that's ok.
+                # Just always update the line with the new value
+                self.lines[i] = self.lines[i].replace(str(val),
+                                                      str(new_val))
 
         with open(os.path.join(folder, self.filename), 'w') as file:
             file.writelines(self.lines)

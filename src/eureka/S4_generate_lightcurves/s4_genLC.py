@@ -88,20 +88,23 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
     meta = S4MetaClass(**me.mergeevents(meta, s3_meta).__dict__)
     meta.set_defaults()
+    meta = me.filter_allapers_inputdir(meta)
 
-    # Create directories for Stage 5 outputs
+    # Create directories for Stage 4 outputs
     meta.run_s4 = None
-    for spec_hw_val in meta.spec_hw_range:
-        for bg_hw_val in meta.bg_hw_range:
-            # Directory structure should not use expanded HW values
-            spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
-                meta.expand, spec_hw_val, bg_hw_val)
-            meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
-                                             ap=spec_hw_val,
-                                             bg=bg_hw_val)
+    for spec_hw_val, bg_hw_val in me.get_allapers_pairs(meta):
+        # Directory structure should not use expanded HW values
+        spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
+            meta.expand, spec_hw_val, bg_hw_val)
+        meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
+                                         ap=spec_hw_val,
+                                         bg=bg_hw_val)
 
+    allapers_pairs = me.get_allapers_pairs(meta)
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
+            if (spec_hw_val, bg_hw_val) not in allapers_pairs:
+                continue
 
             t0 = time_pkg.time()
 
@@ -131,6 +134,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
+            me.log_allapers_inputdir_glob(meta, log)
 
             # Copy ecf
             log.writelog('Copying S4 control file', mute=(not meta.verbose))
@@ -209,7 +213,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.wave = (meta.wave_low + meta.wave_hi)/2
                 meta.nspecchan = len(meta.wave)
                 log.writelog(f'  Using input file to create {meta.nspecchan} '
-                             'channels.')
+                             'channels.', mute=(not meta.verbose))
             elif meta.nspecchan is None and meta.npixelbins is not None:
                 # User wants bins defined by the given number of pixels
                 mask = (wave_1d >= meta.wave_min)
@@ -234,7 +238,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.wave = (meta.wave_low + meta.wave_hi)/2
                 meta.nspecchan = len(meta.wave)
                 log.writelog(f'  Creating {meta.nspecchan} channels of '
-                             f'width {meta.npixelbins} pixels each.')
+                             f'width {meta.npixelbins} pixels each.',
+                             mute=(not meta.verbose))
             elif meta.nspecchan is None:
                 # User wants unbinned spectra
                 dwav = np.ediff1d(wave_1d)/2
@@ -251,7 +256,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.wave_hi = meta.wave+pos_dwav
                 meta.nspecchan = len(meta.wave)
                 log.writelog(f'  Creating {meta.nspecchan} channels at '
-                             f'native resolution.')
+                             f'native resolution.', mute=(not meta.verbose))
             elif meta.wave_hi is None or meta.wave_low is None:
                 binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
                 meta.wave_low = np.round(np.linspace(meta.wave_min,
@@ -261,7 +266,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                                     meta.wave_max,
                                                     meta.nspecchan), 3)
                 meta.wave = (meta.wave_low + meta.wave_hi)/2
-                log.writelog('  Using defined wave_hi and wave_low arrays.')
+                log.writelog('  Using defined wave_hi and wave_low arrays.',
+                             mute=(not meta.verbose))
             else:
                 # wave_low and wave_hi were passed in - make them arrays
                 meta.wave_low = np.array(meta.wave_low)
@@ -353,7 +359,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
             # Manually mask pixel columns by index number
             for w in meta.mask_columns:
-                log.writelog(f"  Masking detector pixel column {w}.")
+                log.writelog(f"  Masking detector pixel column {w}.",
+                             mute=(not meta.verbose))
                 matches = np.nonzero(spec.optmask.x.values == w)[0]
                 if matches.size == 0:
                     log.writelog(
@@ -489,7 +496,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                         (spec.wave_1d.values < lc.wave_hi.values[i]))[0]
                     if index.size > 0:
                         log.writelog(f"    indices {index[0]} - {index[-1]}, "
-                                     f"{len(index)} in total")
+                                     f"{len(index)} in total",
+                                     mute=(not meta.verbose))
                     else:
                         log.writelog(
                             "    No indices found in this wavelength range.")
@@ -746,12 +754,15 @@ def load_specific_s3_meta_info(meta):
     eureka.lib.readECF.MetaClass
         The current metadata object with values from the old MetaClass.
     """
-    # Get directory containing S3 outputs for this aperture pair
-    inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
     # Directory structure should not use expanded HW values
     spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
         meta.expand, meta.spec_hw, meta.bg_hw)
-    inputdir += f'ap{spec_hw_val}_bg{bg_hw_val}'+os.sep
+    # Get directory containing S3 outputs for this aperture pair
+    inputdir = me.get_allapers_specific_inputdir(
+        meta, meta.spec_hw, meta.bg_hw)
+    if inputdir is None:
+        inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
+        inputdir += f'ap{spec_hw_val}_bg{bg_hw_val}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir

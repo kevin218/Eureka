@@ -1,59 +1,71 @@
+# This file is created and managed by `unidep` 3.3.2.
+# For details see https://github.com/conda-incubator/unidep
+# File generated with: `unidep merge -n eureka -o environment.yml --all-optional-dependencies`
+
 name: eureka
 channels:
-    - conda-forge
+  - conda-forge
 dependencies:
-    - python==3.12
-    - astropy
-    - astroquery
-    - bokeh[version='<3.0']
-    - ccdproc
-    - corner
-    - dynesty[version='>1.0'] # Lower limit needed for specific arguments
-    - emcee[version='>3.0.0'] # Lower limit needed for specific arguments
-    - flake8 # Needed for testing
-    - h5py
-    - ipykernel
-    - ipympl # Needed for the interactive matplotlib backend
-    - ipython
-    - jupyter
-    - libopenblas=*=openmp*       # ensure conda-forge OpenBLAS ABI
-    - libblas=*=*openblas*        # BLAS/LAPACK consistency
-    - liblapack=*=*openblas*
-    - lmfit
-    - matplotlib[version='>=3.6'] # Lower limit needed for set_layout_engine()
-    - nbsphinx # Needed for documentation
-    - numpy[version='>=1.20.0,<2'] # Lower limit needed for some packages, upper limit to avoid conflicts
-    - numpydoc # Needed for documentation
-    - pandas
-    - photutils
-    - pip # required for the pip installs below
-    - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest, an asdf package, and something in the pymc3 set of installs. Needed for testing
-    - pytest-cov # Needed for testing
-    - pytest-doctestplus # Needed for testing
-    - requests
-    - scipy[version='>=1.8.0'] # Lower limit needed for scipy.spatial.QhullError
-    - shapely
-    - sphinx # Needed for documentation
-    - sphinx-automodapi # Needed for documentation
-    - tqdm
-    - pip:
-        - astraeus-io
-        - batman-package
-        - catwoman>=1.0.16 # Lower limit needed to avoid installation bug
-        - celerite2 # Needed for GP
-        - crds
-        - exotic-ld@git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8 # Pin needed for pkg_resources deprecation
-        - fleck
-        - george # Needed for GP
-        - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
-        - jwst==1.20.2
-        - mc3 # Needed for uncertainties in the RMS time-averaging plots in S5
-        - myst-parser # Needed for documentation
-        - pastasoss>=1.2.3 # Lower limit needed for pkg_resources deprecation
-        # - planet-harmonica # Currently only supports for python 3.8 -- 3.10
-        - planet-harmonica@git+https://github.com/DavoGrant/harmonica@main
-        - setuptools_scm # Needed for version number
-        - sphinx-rtd-theme # Needed for documentation
-        - stcal>=1.15.2 # Lower limit needed for updated stcal.ramp_fitting.ramp_fit.ramp_fit arguments
-        - stdatamodels
-        - svo_filters>=0.5.3 # Lower limit needed for pkg_resources deprecation
+  - astropy
+  - astroquery
+  - bokeh
+  - ccdproc
+  - corner
+  - dynesty >1.0
+  - emcee >3.0.0
+  - flake8
+  - h5py >=3.7.0
+  - ipykernel >=6.0.0
+  - ipympl >=0.9.3
+  - ipython >=7.0.0
+  - jupyter >=1.0.0
+  - libblas =*=*openblas*
+  - liblapack =*=*openblas*
+  - libopenblas =*=openmp*
+  - lmfit
+  - matplotlib >=3.6
+  - nbsphinx >=0.8.9
+  - numpy >=1.25,<2.0
+  - numpydoc >=1.5
+  - pandas
+  - photutils
+  - pip
+  - pre-commit
+  - pytest <8.0
+  - pytest-cov
+  - pytest-doctestplus
+  - python >=3.11,<3.13
+  - python-build
+  - pyyaml
+  - requests
+  - scipy >=1.12.0
+  - shapely
+  - sphinx >=6.0
+  - sphinx-automodapi >=0.13.0
+  - tqdm
+  - twine
+  - unidep >=3.2.0
+  - pip:
+    - astraeus-io
+    - batman-package
+    - catwoman >=1.0.16
+    - celerite2
+    - crds
+    - exotic-ld @ git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8
+    - fleck
+    - george
+    - image_registration >=0.2.10
+    - jwst ==1.20.2
+    - mc3
+    - myst-parser >=0.18.0
+    - pastasoss >=1.2.3
+    - planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main
+    - setuptools_scm >=6.2
+    - sphinx-rtd-theme >=1.3.0
+    - stcal >=1.15.2
+    - stdatamodels
+    - svo_filters >=0.5.3
+platforms:
+  - linux-64
+  - osx-64
+  - osx-arm64
