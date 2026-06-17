@@ -24,7 +24,7 @@ pandas==2.2.3
 photutils==2.1.0
 requests==2.32.2
 scipy==1.14.1
-shapely==2.0.5
+shapely==2.1.1
 tqdm==4.66.3
 
 astraeus-io==1.0
