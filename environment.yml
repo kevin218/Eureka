@@ -55,7 +55,7 @@ dependencies:
     - fleck
     - george
     - image_registration >=0.2.10
-    - jwst ==1.20.2
+    - jwst ==2.0.1
     - mc3
     - myst-parser >=0.18.0
     - pastasoss >=1.2.3
