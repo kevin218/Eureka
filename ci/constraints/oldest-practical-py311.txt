@@ -37,7 +37,7 @@ george==0.4.2
 mc3==3.2.1
 pastasoss==1.2.3
 setuptools-scm==8.3.0
-stdatamodels==4.1.0
+stdatamodels==5.0.2
 svo_filters==0.5.3
 
 jwst==2.0.1
