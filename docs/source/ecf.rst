@@ -1332,11 +1332,17 @@ String or ``None``. Previous dynesty checkpoint file or parent folder, relative 
 
 dynesty_maxiter
 ^^^^^^^^^^^^^^^
-Integer or ``None``. Optional maximum number of dynesty iterations to run.
+Integer or ``None``. Optional maximum number of dynesty iterations to run. Defaults to ``None``.
 
 dynesty_maxcall
 ^^^^^^^^^^^^^^^
-Integer or ``None``. Optional maximum number of likelihood calls for dynesty.
+Integer or ``None``. Optional maximum number of likelihood calls for dynesty. Defaults to ``None``.
+
+For normal science runs, it is strongly recommended leaving both ``dynesty_maxiter`` and ``dynesty_maxcall``
+set to ``None`` so dynesty can run until its convergence criterion is satisfied. These parameters are
+hard stop limits, and setting either one too low can stop the sampler before convergence, producing unreliable
+posterior samples and evidence estimates. Finite values are mainly useful for debugging, smoke tests, benchmarking,
+CI tests, or intentionally running only a partial fit.
 
 
 Dynamic Nested Sampling Parameters
