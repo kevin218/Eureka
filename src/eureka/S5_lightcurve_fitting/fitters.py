@@ -1,30 +1,102 @@
-import numpy as np
-import pandas as pd
 import copy
-from io import StringIO
 import os
 import sys
-import h5py
-import xarray as xr
-from astraeus import xarrayIO as xrio
 import time as time_pkg
-
-from scipy.optimize import minimize
-import lmfit
-import emcee
-
-from dynesty import NestedSampler, DynamicNestedSampler
-from dynesty.utils import resample_equal
-
-from .likelihood import (computeRedChiSq, lnprob, ln_like, ptform,
-                         update_uncertainty)
-from . import plots_s5 as plots
-from ..lib import astropytable, util
-from ..lib.split_channels import get_trim
-
+from io import StringIO
 from multiprocessing import Pool
 
+import emcee
+import h5py
+import lmfit
+import numpy as np
+import pandas as pd
+import xarray as xr
+from astraeus import xarrayIO as xrio
 from astropy import table
+from dynesty import DynamicNestedSampler, NestedSampler
+from dynesty.utils import resample_equal
+from scipy.optimize import minimize
+
+from ..lib import astropytable, util
+from ..lib.split_channels import get_trim
+from . import plots_s5 as plots
+from .likelihood import (
+    computeRedChiSq, ln_like, lnprob, ptform,
+    update_uncertainty
+)
+
+
+def _get_dynesty_checkpoint_file(meta, lc, fittername):
+    """Get the dynesty checkpoint file path for the current fit.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    fittername : str
+        Name of the dynesty fitter, used in Eureka's standardized checkpoint
+        filename.
+
+    Returns
+    -------
+    str
+        Full path to the checkpoint file in ``meta.outputdir``. The filename
+        has the form ``S5_<fittername>_checkpoint_<tag>.save``, where
+        ``<tag>`` is ``white``, ``shared``, or a zero-padded channel tag
+        such as ``ch01``.
+    """
+    if lc.white:
+        channel_tag = '_white'
+    elif lc.share:
+        channel_tag = '_shared'
+    else:
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        channel_tag = f'_ch{ch_number}'
+
+    filename = f'S5_{fittername}_checkpoint{channel_tag}.save'
+    return os.path.join(meta.outputdir, filename)
+
+
+def _get_old_dynesty_checkpoint_file(meta, lc, fittername):
+    """Get the previous dynesty checkpoint file path for resuming.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    fittername : str
+        Name of the dynesty fitter, used in Eureka's standardized checkpoint
+        filename.
+
+    Returns
+    -------
+    str
+        Full path to the previous checkpoint file. If
+        ``old_dynesty_checkpoint`` points to a folder, the returned path is
+        that folder joined with the standardized checkpoint filename for the
+        current lightcurve and fitter.
+
+    Raises
+    ------
+    ValueError
+        If ``old_dynesty_checkpoint`` is not set.
+    """
+    old_checkpoint = getattr(meta, 'old_dynesty_checkpoint', None)
+    if old_checkpoint is None:
+        raise ValueError('old_dynesty_checkpoint must be set when '
+                         'dynesty_resume is True.')
+
+    old_checkpoint = os.path.join(meta.topdir,
+                                  *old_checkpoint.split(os.sep))
+    if os.path.isdir(old_checkpoint):
+        filename = os.path.basename(
+            _get_dynesty_checkpoint_file(meta, lc, fittername))
+        return os.path.join(old_checkpoint, filename)
+    return old_checkpoint
 
 
 def _get_dynesty_checkpoint_file(meta, lc, fittername):
@@ -854,28 +926,28 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     bound = meta.run_bound
     sample = meta.run_sample
     l_args = [lc, model, freenames]
-    checkpoint_file = None
+    meta.checkpoint_file = None
     if meta.dynesty_checkpoint or meta.dynesty_resume:
-        checkpoint_file = _get_dynesty_checkpoint_file(meta, lc, fittername)
-        meta.checkpoint_file = checkpoint_file
+        meta.checkpoint_file = _get_dynesty_checkpoint_file(meta, lc,
+                                                            fittername)
         log.writelog('  Dynesty checkpoint file: '
-                     f'{checkpoint_file}')
+                     f'{meta.checkpoint_file}')
         log.writelog('  Dynesty checkpoint cadence: '
                      f'{meta.dynesty_checkpoint_every} seconds')
-    old_checkpoint_file = None
+    meta.old_checkpoint_file = None
     if meta.dynesty_resume:
-        old_checkpoint_file = _get_old_dynesty_checkpoint_file(
+        meta.old_checkpoint_file = _get_old_dynesty_checkpoint_file(
             meta, lc, fittername)
-        if not os.path.exists(old_checkpoint_file):
+        if not os.path.exists(meta.old_checkpoint_file):
             raise FileNotFoundError(
                 'Old dynesty checkpoint file does not exist: '
-                f'{old_checkpoint_file}')
+                f'{meta.old_checkpoint_file}')
         log.writelog('  Resuming dynesty run from existing checkpoint: '
-                     f'{old_checkpoint_file}')
+                     f'{meta.old_checkpoint_file}')
 
     run_kwargs = {'print_progress': True}
     if meta.dynesty_checkpoint or meta.dynesty_resume:
-        run_kwargs['checkpoint_file'] = checkpoint_file
+        run_kwargs['checkpoint_file'] = meta.checkpoint_file
         run_kwargs['checkpoint_every'] = meta.dynesty_checkpoint_every
     if meta.dynesty_resume:
         run_kwargs['resume'] = True
@@ -937,7 +1009,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
             log.writelog(nlive_log, mute=(not meta.verbose))
 
         if meta.dynesty_resume:
-            sampler = DynamicNestedSampler.restore(old_checkpoint_file,
+            sampler = DynamicNestedSampler.restore(meta.old_checkpoint_file,
                                                    pool=pool)
         else:
             sampler = DynamicNestedSampler(
@@ -964,7 +1036,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
             log.writelog(nlive_log, mute=(not meta.verbose))
 
         if meta.dynesty_resume:
-            sampler = NestedSampler.restore(old_checkpoint_file, pool=pool)
+            sampler = NestedSampler.restore(meta.old_checkpoint_file,
+                                            pool=pool)
         else:
             sampler = NestedSampler(
                 ln_like, ptform, ndims, nlive=nlive, pool=pool,
