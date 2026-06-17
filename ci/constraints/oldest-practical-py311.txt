@@ -40,7 +40,7 @@ setuptools-scm==8.3.0
 stdatamodels==4.1.0
 svo_filters==0.5.3
 
-jwst==1.20.2
+jwst==2.0.1
 stcal==1.15.2
 
 flake8==7.1.0
