@@ -41,7 +41,7 @@ stdatamodels==5.0.2
 svo_filters==0.5.3
 
 jwst==2.0.1
-stcal==1.15.2
+stcal==1.18.0
 
 flake8==7.1.0
 pytest==7.4.4

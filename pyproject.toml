@@ -112,7 +112,7 @@ dependencies = [
 [tool.unidep.optional_dependencies]
 jwst = [
     { pip = "jwst==2.0.1" }, # Pinned due to CRDS/stcal compatibility requirements
-    { pip = "stcal>=1.15.2" }, # Lower limit needed for updated stcal.ramp_fitting.ramp_fit.ramp_fit arguments
+    { pip = "stcal>=1.18.0" }, # Lower limit implied by jwst 2.0.1
 ]
 hst = [
     { pip = "image_registration>=0.2.10" }, # Lower bound needed to avoid np.float issue
