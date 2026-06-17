@@ -158,12 +158,10 @@ class S5MetaClass(MetaClass):
         self.dynesty_resume = getattr(self, 'dynesty_resume', False)
         if not isinstance(self.dynesty_checkpoint, bool):
             raise TypeError(
-                'dynesty_checkpoint must be a boolean, not a string or other '
-                'type.')
+                'dynesty_checkpoint must be a boolean.')
         if not isinstance(self.dynesty_resume, bool):
             raise TypeError(
-                'dynesty_resume must be a boolean, not a string or other '
-                'type.')
+                'dynesty_resume must be a boolean.')
         self.dynesty_checkpoint_every = getattr(
             self, 'dynesty_checkpoint_every', 600)
         self.old_dynesty_checkpoint = getattr(
@@ -175,7 +173,7 @@ class S5MetaClass(MetaClass):
         self.run_dynamic = getattr(self, 'run_dynamic', False)
         if not isinstance(self.run_dynamic, bool):
             raise TypeError(
-                'run_dynamic must be a boolean, not a string or other type.')
+                'run_dynamic must be a boolean.')
         if self.run_dynamic:
             self.run_nlive_batch = getattr(self, 'run_nlive_batch', 'auto')
             self.run_pfrac = getattr(self, 'run_pfrac', 0.5)
