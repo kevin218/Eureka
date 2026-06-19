@@ -55,15 +55,15 @@ dependencies:
     - fleck
     - george
     - image_registration >=0.2.10
-    - jwst ==1.20.2
+    - jwst ==2.0.1
     - mc3
     - myst-parser >=0.18.0
     - pastasoss >=1.2.3
     - planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main
     - setuptools_scm >=6.2
     - sphinx-rtd-theme >=1.3.0
-    - stcal >=1.15.2
-    - stdatamodels
+    - stcal >=1.18.0
+    - stdatamodels >=5.0.2
     - svo_filters >=0.5.3
 platforms:
   - linux-64
