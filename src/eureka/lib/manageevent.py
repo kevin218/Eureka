@@ -361,14 +361,14 @@ def findevent(meta, stage, allowFail=False):
     fnames = []
     for file_suffix in ['*_Meta_Save.dat', '*SpecData.h5']:
         for search_dir in search_dirs:
-            newfnames = glob.glob(search_dir+stage+'_'+meta.eventlabel +
-                                  file_suffix)
+            newfnames = glob.glob(os.path.join(search_dir, stage + '_' +
+                                  meta.eventlabel + file_suffix))
 
             if len(newfnames) == 0:
                 # There were no metadata files in that folder, so let's see if
                 # there are in children folders
-                newfnames = glob.glob(search_dir+'**'+os.sep+stage+'_' +
-                                      meta.eventlabel+file_suffix,
+                newfnames = glob.glob(os.path.join(search_dir, '**', stage +
+                                      '_' + meta.eventlabel + file_suffix),
                                       recursive=True)
 
             fnames.extend(newfnames)
