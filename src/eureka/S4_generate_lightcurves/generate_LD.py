@@ -1,6 +1,7 @@
 from exotic_ld import StellarLimbDarkening
 import numpy as np
 import pandas as pd
+from scipy.interpolate import interp1d
 
 from . import plots_s4
 
@@ -98,10 +99,44 @@ def exotic_ld(meta, spec, log, white=False):
                                    custom_wavelengths=s_wvs,
                                    custom_mus=s_mus,
                                    custom_stellar_model=custom_si)
+
     else:
         sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
                                    meta.exotic_ld_grid, meta.exotic_ld_direc)
+     
+    # Now if Phoenix, rescale the mu grid                         
+    if meta.exotic_ld_grid == 'phoenix' and meta.rescale_phoenix:
+        print('Rescaling Phoenix')
+        # loop over wavelengths and rescale
+        
+        interp_I_mu = np.empty([sld.stellar_intensities.shape[0], 50])
+        
+        for wi in range(sld.stellar_intensities.shape[0]):  
+            # Can fail at edges of phoenix grid, only rescaling where needed
+            if (sld.stellar_wavelengths[wi] < wavelength_range[0][0] or 
+                    sld.stellar_wavelengths[wi] > wavelength_range[-1][-1]):
+                continue
+            interp_mus, interp_I_mu[wi, :], _ = phoenix_rescaled(
+                sld.mus, sld.stellar_intensities[wi, :]
+            ) 
 
+        wvs_new = sld.stellar_wavelengths
+        mus_new = np.flip(interp_mus)
+        sis_new = np.flip(interp_I_mu, axis=1)
+        sld_new = StellarLimbDarkening(ld_data_path=meta.exotic_ld_direc,
+                                       ld_model="custom",
+                                       custom_wavelengths=wvs_new,
+                                       custom_mus=mus_new,
+                                       custom_stellar_model=sis_new)  
+        if meta.isplots_S4 >= 3: 
+            sld._integrate_I_mu([meta.wave_min*1e4, meta.wave_max*1e4], 
+                                mode, None, None)
+            sld_new._integrate_I_mu([meta.wave_min*1e4, meta.wave_max*1e4], 
+                                    mode, None, None)
+            plots_s4.plot_rescaled_phoenix(meta, sld, sld_new)
+        
+        sld = sld_new
+                   
     if mode != 'custom':
         # Figure out if we need to extrapolate the throughput, since the
         # ExoTiC-LD throughput files don't go close enought to the edges of
@@ -241,3 +276,62 @@ def spam_ld(meta, white=False):
     # Replace relevant item with actual values
     ld_list[num_ld_coef-1] = ld_coeffs
     return ld_list
+
+
+def phoenix_rescaled(mus, I_mu, n_interp=50, edge_buffer=4):
+    """Rescale the Phoenix spherical-model mu grid before fitting.
+
+    Phoenix intensities include very sharp, low-mu limb points.  This follows
+    the rescaling approach commonly used for these spherical grids:
+
+        mu_scaled = (mu - mu_cri) / (1 - mu_cri)
+
+    where mu_cri is selected just inside the largest intensity-gradient point.
+    The resulting profile is interpolated onto a fixed 0..1 mu grid before the
+    limb-darkening law is fit.
+    """
+    mus = np.asarray(mus, dtype=float)
+    I_mu = np.asarray(I_mu, dtype=float)
+
+    finite = np.isfinite(mus) & np.isfinite(I_mu)
+    mus = mus[finite]
+    I_mu = I_mu[finite]
+    if mus.size < 4:
+        raise ValueError(
+            "Need at least four finite Phoenix mu points to rescale the grid."
+        )
+
+    dy_dx = np.gradient(I_mu, mus)
+    max_derivative_index = int(np.nanargmax(dy_dx))
+    mu_cri_index = max(max_derivative_index - edge_buffer, 0)
+    mu_cri = mus[mu_cri_index]
+    if (not np.isfinite(mu_cri)) or np.isclose(mu_cri, 1.0):
+        raise ValueError(
+            "Could not identify a valid Phoenix critical mu for rescaling."
+        )
+
+    mu_scaled = (mus - mu_cri) / (1.0 - mu_cri)
+    good = (np.isfinite(mu_scaled) & np.isfinite(I_mu) &
+            (mu_scaled > 0.0) & (mu_scaled <= 1.0 + 1e-12))
+    if np.sum(good) < 4:
+        raise ValueError(
+            "Too few Phoenix mu points remain after rescaling; try reducing "
+            "PHOENIX_EDGE_BUFFER."
+        )
+
+    x = mu_scaled[good]
+    y = I_mu[good]
+    order = np.argsort(x)
+    x = x[order]
+    y = y[order]
+    x, unique = np.unique(x, return_index=True)
+    y = y[unique]
+
+    interp_kind = 'cubic' if x.size >= 4 else 'linear'
+    intensity_interp = interp1d(x, y, kind=interp_kind,
+                                fill_value='extrapolate',
+                                bounds_error=False)
+    interp_mus = np.linspace(0.0, 1.0, n_interp)
+    interp_I_mu = intensity_interp(interp_mus)
+
+    return interp_mus, interp_I_mu, mu_cri
