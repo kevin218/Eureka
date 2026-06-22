@@ -99,36 +99,6 @@ def _get_old_dynesty_checkpoint_file(meta, lc, fittername):
     return old_checkpoint
 
 
-def _get_dynesty_checkpoint_file(meta, lc, fittername):
-    """Get the dynesty checkpoint file path."""
-    if lc.white:
-        channel_tag = '_white'
-    elif lc.share:
-        channel_tag = '_shared'
-    else:
-        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-        channel_tag = f'_ch{ch_number}'
-
-    filename = f'S5_{fittername}_checkpoint{channel_tag}.save'
-    return os.path.join(meta.outputdir, filename)
-
-
-def _get_old_dynesty_checkpoint_file(meta, lc, fittername):
-    """Get the old dynesty checkpoint file path for resuming."""
-    old_checkpoint = getattr(meta, 'old_dynesty_checkpoint', None)
-    if old_checkpoint is None:
-        raise ValueError('old_dynesty_checkpoint must be set when '
-                         'dynesty_resume is True.')
-
-    old_checkpoint = os.path.join(meta.topdir,
-                                  *old_checkpoint.split(os.sep))
-    if os.path.isdir(old_checkpoint):
-        filename = os.path.basename(
-            _get_dynesty_checkpoint_file(meta, lc, fittername))
-        return os.path.join(old_checkpoint, filename)
-    return old_checkpoint
-
-
 def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
 
