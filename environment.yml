@@ -18,6 +18,7 @@ dependencies:
   - ipykernel >=6.0.0
   - ipympl >=0.9.3
   - ipython >=7.0.0
+  - isort
   - jupyter >=1.0.0
   - libblas =*=*openblas*
   - liblapack =*=*openblas*
