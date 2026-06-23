@@ -42,6 +42,7 @@ def preparation_step(meta, log):
 
     if meta.segment_list[0].endswith('flt.fits'):
         # FLT files subtract first from last, 2 reads
+        meta.nreads_full = 1
         meta.nreads = 1
     else:
         meta.nreads_full = 0
@@ -126,7 +127,9 @@ def get_reference_frames(meta, log):
                 meta.iref[i] -= 1
 
     # Make sure that the scan directions are in the right order
-    if len(meta.iref) > 1 and meta.iref[0] % 2 != 0:
+    if len(meta.iref) > 1 and meta.iref[0] % 2 != 0 and meta.scandir[0] == 0:
+        meta.iref = meta.iref[::-1]
+    elif len(meta.iref) > 1 and meta.iref[0] % 2 == 0 and meta.scandir[0] != 0:
         meta.iref = meta.iref[::-1]
 
     # Save the reference frame for each scan direction
@@ -464,11 +467,23 @@ def read(filename, data, meta, log):
     frametime = (2400000.5+0.5*(data.attrs['mhdr']['EXPSTART']
                                 + data.attrs['mhdr']['EXPEND']))
 
-    # Make sure there aren't any NaN times so that concat works later
-    # Increment by something smaller than t_exp for safety
-    t_exp = np.nanmedian(np.diff(jd))
+    # Make sure there aren't any NaN times so that concat works later.
+    # Increment by something smaller than t_exp for safety.
     nan_inds = np.flatnonzero(np.isnan(jd))
-    jd[nan_inds] = jd[nan_inds - 1] + t_exp / 10
+    if len(nan_inds) > 0:
+        finite_inds = np.flatnonzero(np.isfinite(jd))
+        if len(finite_inds) > 1:
+            t_exp = np.nanmedian(np.diff(jd[finite_inds]))
+        else:
+            t_exp = data.attrs['exptime'] / 86400.
+        for ind in nan_inds:
+            prev_inds = finite_inds[finite_inds < ind]
+            if len(prev_inds) > 0:
+                jd[ind] = jd[prev_inds[-1]] + t_exp / 10
+            else:
+                next_inds = finite_inds[finite_inds > ind]
+                if len(next_inds) > 0:
+                    jd[ind] = jd[next_inds[0]] - t_exp / 10
 
     if meta.horizonsfile is not None:
         horizon_path = os.path.join(meta.hst_cal,
@@ -546,7 +561,10 @@ def read(filename, data, meta, log):
 
     # Assign dq to diffdata
     # This is a bit of a hack, but dq is not currently being used
-    diffdata['dq'] = data.dq[:-1]
+    if meta.nreads_full > 1:
+        diffdata['dq'] = data.dq[:-1]
+    else:
+        diffdata['dq'] = data.dq
 
     # Assign wavelength to diffdata
     diffdata['wave'] = (['x'], wave)
@@ -555,8 +573,8 @@ def read(filename, data, meta, log):
     diffdata['wave_2d'].attrs['wave_units'] = wave_units
 
     # Figure out which read this file starts and ends with
-    diffdata.attrs['intstart'] = image_number*(meta.nreads-1)
-    diffdata.attrs['intend'] = (image_number+1)*(meta.nreads-1)
+    diffdata.attrs['intstart'] = image_number*meta.nreads
+    diffdata.attrs['intend'] = (image_number+1)*meta.nreads
 
     # Copy science and master headers
     diffdata.attrs['shdr'] = data.attrs['shdr']
@@ -1027,7 +1045,7 @@ def cut_aperture(data, meta, log):
     apv0 : ndarray
         The v0 values over the aperture region.
     apmedflux : ndarray
-        The median flux over the aperture region. Currently None.
+        The median flux over the aperture region.
     """
     log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))
@@ -1037,6 +1055,9 @@ def cut_aperture(data, meta, log):
     apmask = np.ones((meta.n_int, meta.spec_hw*2+1, meta.subnx), dtype=bool)
     apbg = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
     apv0 = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    apmedflux = None
+    if hasattr(data, 'medflux'):
+        apmedflux = np.zeros_like(apdata)
 
     for f in range(int(meta.n_int/meta.nreads)):
         # Get index of reference frame
@@ -1066,8 +1087,10 @@ def cut_aperture(data, meta, log):
             apmask[n] = data.mask.values[n, ap_y1:ap_y2]
             apbg[n] = data.bg.values[n, ap_y1:ap_y2]
             apv0[n] = data.v0.values[n, ap_y1:ap_y2]
+            if apmedflux is not None:
+                apmedflux[n] = data.medflux.values[ap_y1:ap_y2]
 
-    return apdata, aperr, apmask, apbg, apv0, None
+    return apdata, aperr, apmask, apbg, apv0, apmedflux
 
 
 def standard_spectrum(data, meta, apdata, apmask, aperr):

@@ -646,6 +646,17 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
     data['optmask'].attrs['time_units'] = data.flux.attrs['time_units']
     data['optmask'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
 
+    def select_meddata(n, order_index=None):
+        if apmedflux is None:
+            return None
+        if order_index is None:
+            if np.ndim(apmedflux) == 3:
+                return apmedflux[n]
+            return apmedflux
+        if np.ndim(apmedflux) == 4:
+            return apmedflux[n, :, :, order_index]
+        return apmedflux[:, :, order_index]
+
     # Write optimal extraction results
     def writeOptSpex(arg):
         optspec, opterr, _, n, _ = arg
@@ -674,7 +685,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
                     p5thresh=meta.p5thresh, p7thresh=meta.p7thresh,
                     fittype=meta.fittype, window_len=meta.window_len,
                     deg=meta.prof_deg, windowtype=windowtype,
-                    n=n, m=m, meddata=apmedflux))
+                    n=n, m=m, meddata=select_meddata(n)))
         else:
             norders = len(meta.orders)
             for n in iterfn:
@@ -686,7 +697,8 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
                         p7thresh=meta.p7thresh, fittype=meta.fittype,
                         window_len=meta.window_len, deg=meta.prof_deg,
                         windowtype=windowtype, n=n, m=m,
-                        meddata=apmedflux[:, :, k], order=meta.orders[k]))
+                        meddata=select_meddata(n, k),
+                        order=meta.orders[k]))
     else:
         # Multiple CPU threads
         pool = mp.Pool(meta.ncpu)
@@ -699,7 +711,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
                     meta.p5thresh, meta.p7thresh,
                     meta.fittype, meta.window_len,
                     meta.prof_deg, windowtype,
-                    n, m, apmedflux), callback=writeOptSpex)
+                    n, m, select_meddata(n)), callback=writeOptSpex)
                 jobs.append(job)
         else:
             norders = len(meta.orders)
@@ -710,8 +722,9 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
                         apbg[n, :, :, k], data.stdspec[n, :, k].values,
                         gain, apv0[n, :, :, k], meta.p5thresh,
                         meta.p7thresh, meta.fittype, meta.window_len,
-                        meta.prof_deg, windowtype, n, m, apmedflux[:, :, k],
-                        meta.orders[k]), callback=writeOptSpexMultiOrder)
+                        meta.prof_deg, windowtype, n, m,
+                        select_meddata(n, k), meta.orders[k]),
+                        callback=writeOptSpexMultiOrder)
                     jobs.append(job)
         pool.close()
         iterfn = jobs
@@ -805,6 +818,9 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                                      windowtype=windowtype,
                                      isplots=meta.isplots_S3)
         elif fittype == 'meddata':
+            if meddata is None:
+                raise ValueError("fittype='meddata' requires a median flux "
+                                 "aperture, but none was provided.")
             profile = profile_meddata(meddata)
         elif fittype == 'wavelet2D':
             profile = profile_wavelet2D(subdata, submask, wavelet='bior5.5',
