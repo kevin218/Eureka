@@ -316,6 +316,9 @@ class S3MetaClass(MetaClass):
         else:
             self.trace_yoffset = getattr(self, 'trace_yoffset', None)
 
+        self.xwindow = getattr(self, 'xwindow', [6, 2043])
+        self.ywindow = getattr(self, 'ywindow', [0, -1])
+
         self.set_spectral_defaults()
 
     def set_WFC3_defaults(self):

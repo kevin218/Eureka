@@ -37,16 +37,23 @@ def sum_reads(spec, lc, meta):
     std_var = std_var.reshape(-1, meta.nreads, std_var.shape[1])
     time = time.reshape(-1, meta.nreads)
 
+    # Convert to masked arrays to safely sum reads
+    flux = np.ma.masked_array(flux, mask=optmask)
+    err = np.ma.masked_array(err, mask=optmask)
+    std_flux = np.ma.masked_array(std_flux, mask=optmask)
+    std_var = np.ma.masked_array(std_var, mask=optmask)
+    time = np.ma.masked_array(time, mask=np.all(optmask, axis=2))
+
     # Sum together the reads to get (nfiles, nwaves)
-    flux = flux.sum(axis=1)
-    std_flux = std_flux.sum(axis=1)
+    flux = flux.mean(axis=1)*meta.nreads
+    std_flux = std_flux.mean(axis=1)*meta.nreads
 
     # Add errors in quadrature
-    err = np.sqrt(np.sum(err**2, axis=1))
-    std_var = np.sqrt(np.sum(std_var**2, axis=1))
+    err = np.ma.sqrt(np.ma.mean(err**2, axis=1)*meta.nreads)
+    std_var = np.ma.sqrt(np.ma.mean(std_var**2, axis=1)*meta.nreads)
 
-    # Mask if any of the reads were masked
-    optmask = np.any(optmask, axis=1)
+    # Mask if all of the reads were masked
+    optmask = np.all(optmask, axis=1)
 
     # Average together the reads' times
     time = time.mean(axis=1)

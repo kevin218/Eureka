@@ -260,7 +260,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_rms(lc, model, meta, fitter=calling_function)
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3 and calling_function == 'lsq':
+    if meta.isplots_S5 >= 5 and calling_function == 'lsq':
         plots.plot_res_distr(lc, model, meta, fitter=calling_function)
 
     # Make a new model instance
@@ -399,6 +399,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     args=(lc, model, prior1, prior2,
                                           priortype, freenames),
+                                    a=meta.stretch_scale,
                                     pool=pool)
     log.writelog('Running emcee burn-in and production steps...')
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
@@ -409,7 +410,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # log.writelog(f"Mean acceptance fraction: {acceptance_fraction:.3f}",
     #              mute=(not meta.verbose))
     # try:
-    # autocorr = sampler.get_autocorr_time()
+    #     autocorr = sampler.get_autocorr_time()
     #     log.writelog(f"Mean autocorrelation time: {autocorr:.3f} steps",
     #                  mute=(not meta.verbose))
     # except:
@@ -526,7 +527,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_rms(lc, model, meta, fitter='emcee')
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 5:
         plots.plot_res_distr(lc, model, meta, fitter='emcee')
 
     # Plot chain evolution
@@ -991,6 +992,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                 queue_size=queue_size, bound=bound, sample=sample,
                 logl_args=l_args, ptform_args=[prior1, prior2, priortype])
 
+        # Log what sample='auto' resolves to since the default depends on the
+        # number of dimensions
+        if sample == 'auto':
+            log.writelog(f'  run_sample=auto was resolved to '
+                         f'"{type(sampler.sampling).__name__}"',
+                         mute=(not meta.verbose))
+
         # Handle 'auto' for meta.run_nlive_batch
         nlive_batch = meta.run_nlive_batch
         if nlive_batch == 'auto':
@@ -1017,6 +1025,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                 ln_like, ptform, ndims, nlive=nlive, pool=pool,
                 queue_size=queue_size, bound=bound, sample=sample,
                 logl_args=l_args, ptform_args=[prior1, prior2, priortype])
+
+        # Log what sample='auto' resolves to since the default depends on the
+        # number of dimensions
+        if sample == 'auto':
+            log.writelog(f'  run_sample=auto was resolved to '
+                         f'"{type(sampler.sampling).__name__}"',
+                         mute=(not meta.verbose))
 
         # Run the sampler
         sampler.run_nested(dlogz=meta.run_tol, **run_kwargs)
@@ -1130,7 +1145,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_rms(lc, model, meta, fitter=fittername)
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 5:
         plots.plot_res_distr(lc, model, meta, fitter=fittername)
 
     # plot using corner.py
@@ -1244,7 +1259,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_rms(lc, model, meta, fitter='lmfitter')
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 5:
         plots.plot_res_distr(lc, model, meta, fitter='lmfitter')
 
     # Create new model with best fit parameters

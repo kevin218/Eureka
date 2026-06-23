@@ -134,9 +134,9 @@ def ctrgauss(data, guess=None, mask=None, indarr=None, trim=None):
     # Trim the image around the star if requested
     if trim is not None:
         image = data[roundguess[0]-trim:roundguess[0]+trim,
-                     roundguess[1]-trim:roundguess[1]+trim]
+                     roundguess[1]-trim:roundguess[1]+trim+1]
         mask = mask[roundguess[0]-trim:roundguess[0]+trim,
-                    roundguess[1]-trim:roundguess[1]+trim]
+                    roundguess[1]-trim:roundguess[1]+trim+1]
         loc = (trim, trim)
     else:
         image = np.ma.copy(data)

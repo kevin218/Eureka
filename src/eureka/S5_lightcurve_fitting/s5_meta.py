@@ -148,6 +148,7 @@ class S5MetaClass(MetaClass):
             self.run_nsteps = getattr(self, 'run_nsteps')
             self.run_nwalkers = getattr(self, 'run_nwalkers')
             self.run_nburn = getattr(self, 'run_nburn')
+            self.stretch_scale = getattr(self, 'stretch_scale', 2.0)
 
         # dynesty inputs
         self.run_nlive = getattr(self, 'run_nlive', 'min')
