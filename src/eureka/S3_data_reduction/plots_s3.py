@@ -15,6 +15,7 @@ warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
                                           'this call because figure with num')
 
 from .source_pos import gauss
+from .straighten import find_column_median_shifts
 from ..lib import util, plots
 
 
@@ -706,9 +707,9 @@ def median_frame(data, meta, m, medflux, order=None):
                vmin=vmin, vmax=vmax, interpolation='nearest',
                extent=[xmin, xmax, ymin, ymax], cmap=cmap)
 
-    # Overplot nominal spectral trace for NIRISS SOSS
-    # (TODO: Probably also useful for NIRSpec, etc.)
-    if meta.inst == "niriss":
+    # Plot spectral traces over median frame
+    if meta.inst == "niriss": # nominal trace for NIRISS/SOSS
+        # SUBSTRIP96 only deals with a single order
         if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96':
             order = 1
             trace = data["trace"].sel(order=order)
@@ -717,7 +718,7 @@ def median_frame(data, meta, m, medflux, order=None):
                      c="white", lw=2)
             plt.plot(data.flux.x.values, trace,
                      "--k", lw=1, label=f"Trace Order {order}")
-        else:
+        else: # SUBSTRIP256 handles both orders
             for order in meta.all_orders:
                 trace = data["trace"].sel(order=order)
                 plt.plot(data.flux.x.values, trace,
@@ -725,7 +726,15 @@ def median_frame(data, meta, m, medflux, order=None):
                 plt.plot(data.flux.x.values, trace,
                          "--k", lw=1, label=f"Trace Order {order}")
         plt.legend()
+    else: # NIRSpec, NIRCam, MIRI
+        # identify empirical smoothed center-of-mass trace
+        smooth_coms, new_center = find_column_median_shifts(data.medflux, meta, m, plot_3308=True)
 
+        # overplot empirical trace
+        plt.plot(data.x.values, smooth_coms+meta.ywindow[0], c="white", lw=2)
+        plt.plot(data.x.values, smooth_coms+meta.ywindow[0], "--k", lw=1, label="Spectral Trace")
+        plt.legend()
+        
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
 
