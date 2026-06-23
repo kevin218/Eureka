@@ -1,21 +1,23 @@
-import numpy as np
 import os
-from tqdm import tqdm
+import warnings
+
+import imageio
+import matplotlib.patches as patches
 import matplotlib.pyplot as plt
+import numpy as np
 import scipy.interpolate as spi
 import scipy.stats as stats
-from scipy.interpolate import interp1d
 from matplotlib.colors import LogNorm
-import matplotlib.patches as patches
 from matplotlib.path import Path
 from mpl_toolkits import axes_grid1
-import imageio
-import warnings
+from scipy.interpolate import interp1d
+from tqdm import tqdm
+
 warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
                                           'this call because figure with num')
 
+from ..lib import plots, util
 from .source_pos import gauss
-from ..lib import util, plots
 
 
 @plots.apply_style
@@ -92,9 +94,9 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
         im1 = ax1.pcolormesh(wave_1d, np.arange(meta.n_int)+0.5,
                              normspec, vmin=meta.vmin, vmax=meta.vmax,
                              cmap=cmap)
-        im2 = ax2.imshow(normspec, origin='lower', aspect='auto',
-                         extent=[pmin, pmax, 0, meta.n_int], vmin=meta.vmin,
-                         vmax=meta.vmax, cmap=cmap)
+        im2 = ax2.pcolormesh(optspec.x.values, np.arange(meta.n_int)+0.5,
+                             normspec, vmin=meta.vmin, vmax=meta.vmax,
+                             cmap=cmap)
         ax1.set_xlim(wmin, wmax)
         ax2.set_xlim(pmin, pmax)
         ax1.set_ylim(0, meta.n_int)
@@ -107,9 +109,9 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
         im1 = ax1.pcolormesh(np.arange(meta.n_int), wave_1d,
                              normspec.swapaxes(0, 1), vmin=meta.vmin,
                              vmax=meta.vmax, cmap=cmap)
-        im2 = ax2.imshow(normspec.swapaxes(0, 1), origin='lower',
-                         aspect='auto', extent=[0, meta.n_int, pmin, pmax],
-                         vmin=meta.vmin, vmax=meta.vmax, cmap=cmap)
+        im2 = ax1.pcolormesh(np.arange(meta.n_int), optspec.x.values,
+                             normspec.swapaxes(0, 1), vmin=meta.vmin,
+                             vmax=meta.vmax, cmap=cmap)
         ax1.set_ylim(wmin, wmax)
         ax2.set_ylim(pmin, pmax)
         ax1.set_xlim(0, meta.n_int)
@@ -702,7 +704,7 @@ def median_frame(data, meta, m, medflux, order=None):
     fig.set_size_inches(8, 4, forward=True)
     fig.clf()
     plt.title("Cleaned Median Frame")
-    plt.imshow(medflux, origin='lower', aspect='auto',
+    plt.imshow(medflux, origin='lower', aspect='equal',
                vmin=vmin, vmax=vmax, interpolation='nearest',
                extent=[xmin, xmax, ymin, ymax], cmap=cmap)
 
@@ -724,10 +726,13 @@ def median_frame(data, meta, m, medflux, order=None):
                          c="white", lw=2)
                 plt.plot(data.flux.x.values, trace,
                          "--k", lw=1, label=f"Trace Order {order}")
-        plt.legend()
 
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
+
+    handles, labels = plt.gca().get_legend_handles_labels()
+    if len(labels) > 0:
+        plt.legend(handles, labels)
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     if order is None:
@@ -928,7 +933,8 @@ def phot_centroid_fgc(img, mask, x, y, sx, sy, i, m, meta):
     plt.suptitle('Centroid gaussian fit')
 
     # Image of source
-    ax[1, 0].imshow(img, origin='lower', aspect='auto')
+    ax[1, 0].imshow(img, origin='lower', aspect='equal',
+                    interpolation='nearest')
 
     # X gaussian plot
     norm_x_factor = np.ma.sum(np.ma.sum(img, axis=0))
@@ -1308,7 +1314,7 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
     fig.clf()
     cmap = plt.cm.viridis.copy()
     plt.title(f'Std. Dev. from Optimal Profile - Integration {n}')
-    plt.imshow(stdevs, origin='lower', aspect='auto',
+    plt.imshow(stdevs, origin='lower', aspect='equal',
                vmax=p7thresh, vmin=0, cmap=cmap,
                interpolation='nearest')
     plt.ylabel('Relative Pixel Position')

@@ -65,8 +65,8 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
                      f" pixels to x, y centroid position for integrations "
                      f"related to staring-mode image #{i}.",
                      mute=(not meta.verbose))
-        log.writelog(f"Final centroid is {np.round(centers[i][0], 3)},"
-                     f" {np.round(centers[i][1], 3)}",
+        log.writelog(f"Final centroid is {np.round(centers[i][1], 3)},"
+                     f" {np.round(centers[i][0], 3)}",
                      mute=(not meta.verbose))
     return centers
 

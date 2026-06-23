@@ -557,7 +557,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
 
 @plots.apply_style
 def plot_res_distr(lc, model, meta, fitter):
-    """Plot the normalized distribution of residuals + a Gaussian. (Fig 5302)
+    """Plot the normalized distribution of residuals + a Gaussian. (Fig 5502)
 
     Parameters
     ----------
@@ -577,7 +577,7 @@ def plot_res_distr(lc, model, meta, fitter):
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
-        fig = plt.figure(5302)
+        fig = plt.figure(5502)
         fig.set_size_inches(8, 6, forward=True)
         fig.clf()
 
@@ -606,7 +606,7 @@ def plot_res_distr(lc, model, meta, fitter):
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
-        fname = (f'figs{os.sep}fig5302_{fname_tag}_res_distri_{fitter}'
+        fname = (f'figs{os.sep}fig5502_{fname_tag}_res_distri_{fitter}'
                  + plots.get_filetype())
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:

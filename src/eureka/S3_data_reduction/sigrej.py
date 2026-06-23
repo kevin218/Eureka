@@ -70,9 +70,6 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
     # Get sizes
     dims = list(np.shape(data))
     nsig = np.size(sigma)
-    if nsig == 0:
-        nsig = 1
-        sigma = [sigma]
 
     # Default mask: only non-finite values are bad
     if mask is None:

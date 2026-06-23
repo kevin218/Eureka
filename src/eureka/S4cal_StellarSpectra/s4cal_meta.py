@@ -56,7 +56,7 @@ class S4cal_MetaClass(MetaClass):
 
         # Outlier detection
         self.smoothing = getattr(self, 'smoothing', 0)
-        self.sigma_thresh = getattr(self, 'sigma_thresh', [4, 4, 4])
+        self.sigma_thresh = list(getattr(self, 'sigma_thresh', [4, 4, 4]))
 
         # Diagnostics
         self.isplots_S4cal = getattr(self, 'isplots_S4cal', 3)
