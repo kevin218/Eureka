@@ -132,7 +132,7 @@ Boolean, an experimental step which removes the 390 Hz periodic noise in MIRI/LR
 
 grouplevel_bg
 '''''''''''''
-Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting.
+Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting. NOTE: NIRISS users should always set this to `False`, as group-level background subtraction is handled in Stage 3 for this instrument.
 
 ncpu
 ''''
