@@ -89,7 +89,7 @@ class HarmonicaTransitModel(BatmanTransitModel):
                              a=pl_params.a,
                              inc=pl_params.inc * np.pi / 180.,
                              ecc=pl_params.ecc,
-                             omega=pl_params.w)
+                             omega=pl_params.w * np.pi / 180.)
                 ht.set_stellar_limb_darkening(
                     pl_params.u, limb_dark_law=pl_params.limb_dark)
                 ht.set_planet_transmission_string(pl_params.ab)

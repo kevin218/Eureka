@@ -775,15 +775,15 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
     if len(ind_max) > 0 or len(ind_max_LU) > 0:
         log.writelog('Warning: >=1 params hit the upper bound in the lsq fit. '
                      'Setting to the middle of the interval.')
-        freepars[u][ind_max] = pmid[u][ind_max]
-        freepars[lu][ind_max_LU] = (np.exp(prior2[lu][ind_max_LU]) +
-                                    np.exp(prior1[lu][ind_max_LU]))/2.
+        freepars[u[ind_max]] = pmid[u[ind_max]]
+        freepars[lu[ind_max_LU]] = (np.exp(prior2[lu[ind_max_LU]]) +
+                                    np.exp(prior1[lu[ind_max_LU]]))/2.
     if len(ind_min) > 0 or len(ind_min_LU) > 0:
         log.writelog('Warning: >=1 params hit the lower bound in the lsq fit. '
                      'Setting to the middle of the interval.')
-        freepars[u][ind_min] = pmid[u][ind_min]
-        freepars[lu][ind_min_LU] = (np.exp(prior2[lu][ind_min_LU]) +
-                                    np.exp(prior1[lu][ind_min_LU]))/2.
+        freepars[u[ind_min]] = pmid[u[ind_min]]
+        freepars[lu[ind_min_LU]] = (np.exp(prior2[lu[ind_min_LU]]) +
+                                    np.exp(prior1[lu[ind_min_LU]]))/2.
 
     # Generate the walker positions
     pos = np.array([freepars + step_size*np.random.randn(ndim)

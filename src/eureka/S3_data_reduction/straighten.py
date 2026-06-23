@@ -112,7 +112,7 @@ def roll_columns(data, shifts):
         all_idcs = list(np.ogrid[[slice(0, n) for n in arr.shape]])
 
         # make the shifts positive
-        shifts_i = shifts[i]
+        shifts_i = np.copy(shifts[i])
         shifts_i[shifts_i < 0] += arr.shape[-1]
 
         # apply the shifts

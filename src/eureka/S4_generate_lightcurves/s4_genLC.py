@@ -206,80 +206,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 # Too many figures requested, so reduce it
                 meta.nplots = meta.n_int
 
-            # Determine wavelength bins
-            if meta.wave_input is not None:
-                # bins defined by file input. 2 columns: low and high edges
-                meta.wave_low, meta.wave_hi = np.genfromtxt(meta.wave_input).T
-                meta.wave = (meta.wave_low + meta.wave_hi)/2
-                meta.nspecchan = len(meta.wave)
-                log.writelog(f'  Using input file to create {meta.nspecchan} '
-                             'channels.', mute=(not meta.verbose))
-            elif meta.nspecchan is None and meta.npixelbins is not None:
-                # User wants bins defined by the given number of pixels
-                mask = (wave_1d >= meta.wave_min)
-                if not np.any(mask):
-                    raise ValueError(f"No wavelengths ≥ {meta.wave_min}")
-                istart = np.nonzero(mask)[0][0]
-
-                mask = (wave_1d >= meta.wave_max)
-                if not np.any(mask):
-                    raise ValueError(f"No wavelengths ≥ {meta.wave_max}")
-                iend = np.nonzero(mask)[0][0]
-                # Shift bins by some number of pixels (only useful for MIRI)
-                istart += meta.npixelshift
-                iend += meta.npixelshift
-                edges = wave_1d[istart:iend+meta.npixelbins:meta.npixelbins]
-                dwav = np.ediff1d(
-                    wave_1d[istart:iend+meta.npixelbins])[::meta.npixelbins]/2
-                if len(edges) != len(dwav):
-                    edges = edges[:len(dwav)]
-                meta.wave_low = (edges-dwav)[:-1]
-                meta.wave_hi = (edges-dwav)[1:]
-                meta.wave = (meta.wave_low + meta.wave_hi)/2
-                meta.nspecchan = len(meta.wave)
-                log.writelog(f'  Creating {meta.nspecchan} channels of '
-                             f'width {meta.npixelbins} pixels each.',
-                             mute=(not meta.verbose))
-            elif meta.nspecchan is None:
-                # User wants unbinned spectra
-                dwav = np.ediff1d(wave_1d)/2
-                # Approximate the first neg_dwav as the same as the second
-                neg_dwav = np.append(dwav[0], dwav)
-                # Approximate the last pos_dwav as the same as the second last
-                pos_dwav = np.append(dwav, dwav[-1])
-                indices = np.logical_and(wave_1d >= meta.wave_min,
-                                         wave_1d <= meta.wave_max)
-                neg_dwav = neg_dwav[indices]
-                pos_dwav = pos_dwav[indices]
-                meta.wave = wave_1d[indices]
-                meta.wave_low = meta.wave-neg_dwav
-                meta.wave_hi = meta.wave+pos_dwav
-                meta.nspecchan = len(meta.wave)
-                log.writelog(f'  Creating {meta.nspecchan} channels at '
-                             f'native resolution.', mute=(not meta.verbose))
-            elif meta.wave_hi is None or meta.wave_low is None:
-                binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
-                meta.wave_low = np.round(np.linspace(meta.wave_min,
-                                                     meta.wave_max-binsize,
-                                                     meta.nspecchan), 3)
-                meta.wave_hi = np.round(np.linspace(meta.wave_min+binsize,
-                                                    meta.wave_max,
-                                                    meta.nspecchan), 3)
-                meta.wave = (meta.wave_low + meta.wave_hi)/2
-                log.writelog('  Using defined wave_hi and wave_low arrays.',
-                             mute=(not meta.verbose))
-            else:
-                # wave_low and wave_hi were passed in - make them arrays
-                meta.wave_low = np.array(meta.wave_low)
-                meta.wave_hi = np.array(meta.wave_hi)
-                meta.wave = (meta.wave_low + meta.wave_hi)/2
-                if (meta.nspecchan is not None
-                        and meta.nspecchan != len(meta.wave)):
-                    log.writelog(f'WARNING: Your nspecchan value of '
-                                 f'{meta.nspecchan} differs from the size of '
-                                 f'wave_hi ({len(meta.wave)}). Using the '
-                                 f'latter instead.')
-                    meta.nspecchan = len(meta.wave)
+            meta = compute_wavelength_bins(meta, wave_1d, log)
 
             # Define light curve DataArray
             if meta.photometry:
@@ -501,33 +428,17 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     else:
                         log.writelog(
                             "    No indices found in this wavelength range.")
-                    # Make masked arrays for easy summing
-                    optspec_ma = np.ma.masked_where(
-                        spec.optmask.values[:, index],
-                        spec.optspec.values[:, index])
-                    opterr_ma = np.ma.masked_where(
-                        spec.optmask.values[:, index],
-                        spec.opterr.values[:, index])
-                    # Compute mean flux for each spectroscopic channel
-                    # Sumation leads to outliers when there are masked points
-                    lc['data'][i] = np.ma.mean(optspec_ma, axis=1)
-                    # Add uncertainties in quadrature
-                    # then divide by number of good points to get
-                    # proper uncertainties
-                    lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
-                                    np.ma.MaskedArray.count(opterr_ma, axis=1))
+                    lc_data, lc_err = compute_spectral_lightcurve(
+                        spec.optspec.values, spec.opterr.values,
+                        spec.optmask.values, index)
+                    lc['data'][i] = lc_data
+                    lc['err'][i] = lc_err
                     if 'skylev' in list(spec.keys()):
-                        # if bg level/error was saved in S3, make bg lcs
-                        skylev_ma = np.ma.masked_where(
-                            spec.optmask.values[:, index],
-                            spec.skylev.values[:, index])
-                        skyerr_ma = np.ma.masked_where(
-                            spec.optmask.values[:, index],
-                            spec.skyerr.values[:, index])
-                        lc['skylev'][i] = np.ma.mean(skylev_ma, axis=1)
-                        lc['skyerr'][i] = (np.sqrt(np.ma.sum(
-                            skyerr_ma**2, axis=1)) /
-                            np.ma.MaskedArray.count(skyerr_ma, axis=1))
+                        lc_skylev, lc_skyerr = compute_spectral_lightcurve(
+                            spec.skylev.values, spec.skyerr.values,
+                            spec.optmask.values, index)
+                        lc['skylev'][i] = lc_skylev
+                        lc['skyerr'][i] = lc_skyerr
 
                 else:
                     lc['data'][i] = spec.aplev.values
@@ -593,23 +504,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
                 log.writelog(f"  White-light Bandpass = {meta.wave_min:.3f} - "
                              f"{meta.wave_max:.3f}")
-                # Make masked arrays for easy summing
-                optspec_ma = np.ma.masked_where(spec.optmask.values[:, index],
-                                                spec.optspec.values[:, index])
-                opterr_ma = np.ma.masked_where(spec.optmask.values[:, index],
-                                               spec.opterr.values[:, index])
-                # Compute mean flux for each spectroscopic channel
-                # Sumation leads to outliers when there are masked points
-                lc.flux_white[:] = np.ma.mean(optspec_ma, axis=1).data
-                # Add uncertainties in quadrature
-                # then divide by number of good points to get
-                # proper uncertainties
-                lc.err_white[:] = (np.sqrt(np.ma.sum(opterr_ma**2,
-                                                     axis=1)) /
-                                   np.ma.MaskedArray.count(opterr_ma,
-                                                           axis=1)).data
-                lc.mask_white[:] = np.ma.getmaskarray(np.ma.mean(optspec_ma,
-                                                                 axis=1))
+                lc_data, lc_err, lc_mask = compute_spectral_lightcurve(
+                    spec.optspec.values, spec.opterr.values,
+                    spec.optmask.values, index, return_mask=True)
+                lc.flux_white[:] = lc_data.data
+                lc.err_white[:] = lc_err.data
+                lc.mask_white[:] = lc_mask
 
                 if 'skylev' in list(spec.keys()):
                     # if bg level/error was saved in S3, make bg lcs
@@ -625,16 +525,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     lc['skyerr_white'].attrs['time_units'] = time_units
                     lc['skyerr_white'].attrs['flux_units'] = flux_units
 
-                    skylev_ma = np.ma.masked_where(
-                        spec.optmask.values[:, index],
-                        spec.skylev.values[:, index])
-                    skyerr_ma = np.ma.masked_where(
-                        spec.optmask.values[:, index],
-                        spec.skyerr.values[:, index])
-                    lc['skylev_white'][:] = np.ma.mean(skylev_ma, axis=1).data
-                    lc['skyerr_white'][:] = (np.sqrt(np.ma.sum(
-                        skyerr_ma**2, axis=1)) /
-                        np.ma.MaskedArray.count(skyerr_ma, axis=1)).data
+                    lc_skylev, lc_skyerr = compute_spectral_lightcurve(
+                        spec.skylev.values, spec.skyerr.values,
+                        spec.optmask.values, index)
+                    lc['skylev_white'][:] = lc_skylev.data
+                    lc['skyerr_white'][:] = lc_skyerr.data
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.clip_binned:
@@ -739,6 +634,98 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             log.closelog()
 
     return spec, lc, meta
+
+
+def compute_wavelength_bins(meta, wave_1d, log):
+    """Populate Stage 4 wavelength bin edges using the genlc conventions."""
+    mute = not getattr(meta, 'verbose', True)
+    if meta.wave_input is not None:
+        # bins defined by file input. 2 columns: low and high edges
+        meta.wave_low, meta.wave_hi = np.genfromtxt(meta.wave_input).T
+        meta.wave = (meta.wave_low + meta.wave_hi)/2
+        meta.nspecchan = len(meta.wave)
+        log.writelog(f'  Using input file to create {meta.nspecchan} '
+                     'channels.', mute=mute)
+    elif meta.nspecchan is None and meta.npixelbins is not None:
+        # User wants bins defined by the given number of pixels
+        mask = (wave_1d >= meta.wave_min)
+        if not np.any(mask):
+            raise ValueError(f"No wavelengths ≥ {meta.wave_min}")
+        istart = np.nonzero(mask)[0][0]
+
+        mask = (wave_1d >= meta.wave_max)
+        if not np.any(mask):
+            raise ValueError(f"No wavelengths ≥ {meta.wave_max}")
+        iend = np.nonzero(mask)[0][0]
+        # Shift bins by some number of pixels (only useful for MIRI)
+        istart += meta.npixelshift
+        iend += meta.npixelshift
+        edges = wave_1d[istart:iend+meta.npixelbins:meta.npixelbins]
+        dwav = np.ediff1d(
+            wave_1d[istart:iend+meta.npixelbins])[::meta.npixelbins]/2
+        if len(edges) != len(dwav):
+            edges = edges[:len(dwav)]
+        meta.wave_low = (edges-dwav)[:-1]
+        meta.wave_hi = (edges-dwav)[1:]
+        meta.wave = (meta.wave_low + meta.wave_hi)/2
+        meta.nspecchan = len(meta.wave)
+        log.writelog(f'  Creating {meta.nspecchan} channels of '
+                     f'width {meta.npixelbins} pixels each.', mute=mute)
+    elif meta.nspecchan is None:
+        # User wants unbinned spectra
+        dwav = np.ediff1d(wave_1d)/2
+        # Approximate the first neg_dwav as the same as the second
+        neg_dwav = np.append(dwav[0], dwav)
+        # Approximate the last pos_dwav as the same as the second last
+        pos_dwav = np.append(dwav, dwav[-1])
+        indices = np.logical_and(wave_1d >= meta.wave_min,
+                                 wave_1d <= meta.wave_max)
+        neg_dwav = neg_dwav[indices]
+        pos_dwav = pos_dwav[indices]
+        meta.wave = wave_1d[indices]
+        meta.wave_low = meta.wave-neg_dwav
+        meta.wave_hi = meta.wave+pos_dwav
+        meta.nspecchan = len(meta.wave)
+        log.writelog(f'  Creating {meta.nspecchan} channels at '
+                     f'native resolution.', mute=mute)
+    elif meta.wave_hi is None or meta.wave_low is None:
+        binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
+        meta.wave_low = np.round(np.linspace(meta.wave_min,
+                                             meta.wave_max-binsize,
+                                             meta.nspecchan), 3)
+        meta.wave_hi = np.round(np.linspace(meta.wave_min+binsize,
+                                            meta.wave_max,
+                                            meta.nspecchan), 3)
+        meta.wave = (meta.wave_low + meta.wave_hi)/2
+        log.writelog('  Using defined wave_hi and wave_low arrays.',
+                     mute=mute)
+    else:
+        # wave_low and wave_hi were passed in - make them arrays
+        meta.wave_low = np.array(meta.wave_low)
+        meta.wave_hi = np.array(meta.wave_hi)
+        meta.wave = (meta.wave_low + meta.wave_hi)/2
+        if (meta.nspecchan is not None
+                and meta.nspecchan != len(meta.wave)):
+            log.writelog(f'WARNING: Your nspecchan value of '
+                         f'{meta.nspecchan} differs from the size of '
+                         f'wave_hi ({len(meta.wave)}). Using the '
+                         f'latter instead.')
+            meta.nspecchan = len(meta.wave)
+
+    return meta
+
+
+def compute_spectral_lightcurve(optspec, opterr, optmask, index,
+                                return_mask=False):
+    """Average spectral columns and propagate errors for one S4 bandpass."""
+    optspec_ma = np.ma.masked_where(optmask[:, index], optspec[:, index])
+    opterr_ma = np.ma.masked_where(optmask[:, index], opterr[:, index])
+    lc_data = np.ma.mean(optspec_ma, axis=1)
+    lc_err = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
+              np.ma.MaskedArray.count(opterr_ma, axis=1))
+    if return_mask:
+        return lc_data, lc_err, np.ma.getmaskarray(lc_data)
+    return lc_data, lc_err
 
 
 def load_specific_s3_meta_info(meta):
