@@ -42,7 +42,7 @@ dq_sat_percentile   50      # Percentile of the entire time series to use to def
 dq_sat_columns      [[0, 0], [0,0], [0,0], [0,0], [0,0]]  #for dq_sat_mode = defined, user defined saturated columns
 
 # Background subtraction
-grouplevel_bg       True    # NOTE: NIRISS users should always set this to `False`, as group-level background subtraction is handled in Stage 3 for this instrument
+grouplevel_bg       True    # NOTE: NIRISS users should always set this to `False`, as group-level background subtraction is not supported for NIRISS.
 ncpu                6
 bg_y1               6
 bg_y2               26
