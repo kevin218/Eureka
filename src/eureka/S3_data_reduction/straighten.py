@@ -89,12 +89,13 @@ def find_column_median_shifts(data, meta, m, plot_3308=False):
     shifts[column_coms < 0] = 0
     shifts[column_coms > nb_rows] = 0
 
-    if not plot_3308:
-        # return shifts to straighten trace
-        return shifts, new_center
-    else:
+    if plot_3308:
         # return empirical smoothed center of mass trace
         return smooth_coms, new_center
+    
+    # return shifts to straighten trace
+    return shifts, new_center
+
 
 def roll_columns(data, shifts):
     '''For each column of each integration, rolls the columns by the

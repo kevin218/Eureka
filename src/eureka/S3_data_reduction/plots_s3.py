@@ -708,7 +708,7 @@ def median_frame(data, meta, m, medflux, order=None):
                extent=[xmin, xmax, ymin, ymax], cmap=cmap)
 
     # Plot spectral traces over median frame
-    if meta.inst == "niriss": # nominal trace for NIRISS/SOSS
+    if meta.inst == "niriss":  # nominal trace for NIRISS/SOSS
         # SUBSTRIP96 only deals with a single order
         if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96':
             order = 1
@@ -718,7 +718,7 @@ def median_frame(data, meta, m, medflux, order=None):
                      c="white", lw=2)
             plt.plot(data.flux.x.values, trace,
                      "--k", lw=1, label=f"Trace Order {order}")
-        else: # SUBSTRIP256 handles both orders
+        else:  # SUBSTRIP256 handles both orders
             for order in meta.all_orders:
                 trace = data["trace"].sel(order=order)
                 plt.plot(data.flux.x.values, trace,
@@ -726,13 +726,15 @@ def median_frame(data, meta, m, medflux, order=None):
                 plt.plot(data.flux.x.values, trace,
                          "--k", lw=1, label=f"Trace Order {order}")
         plt.legend()
-    else: # NIRSpec, NIRCam, MIRI
+    else:  # NIRSpec, NIRCam, MIRI
         # identify empirical smoothed center-of-mass trace
-        smooth_coms, new_center = find_column_median_shifts(data.medflux, meta, m, plot_3308=True)
+        smooth_coms, new_center = find_column_median_shifts(data.medflux, meta, 
+                                                            m, plot_3308=True)
 
         # overplot empirical trace
         plt.plot(data.x.values, smooth_coms+meta.ywindow[0], c="white", lw=2)
-        plt.plot(data.x.values, smooth_coms+meta.ywindow[0], "--k", lw=1, label="Spectral Trace")
+        plt.plot(data.x.values, smooth_coms+meta.ywindow[0], "--k", lw=1, 
+                 label="Spectral Trace")
         plt.legend()
         
     plt.ylabel('Detector Pixel Position')
