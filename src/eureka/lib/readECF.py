@@ -1,7 +1,8 @@
 import os
-import time as time_pkg
-import crds
 import shlex
+import time as time_pkg
+
+import crds
 # Required in case user passes in a numpy object (e.g. np.inf)
 import numpy as np
 

@@ -1,6 +1,6 @@
-from astropy.table import QTable
-from astropy.io import ascii
 import numpy as np
+from astropy.io import ascii
+from astropy.table import QTable
 
 from .split_channels import get_trim
 

@@ -1,18 +1,20 @@
-import numpy as np
 import os
 import time as time_pkg
-from glob import glob
 from copy import deepcopy
-import astraeus.xarrayIO as xrio
+from glob import glob
 
-from .s5_meta import S5MetaClass
+import astraeus.xarrayIO as xrio
+import numpy as np
+
+from ..lib import logedit
+from ..lib import manageevent as me
+from ..lib import util
+from ..lib.readEPF import Parameters
+from ..lib.util import resolve_param_key
+from ..version import version
 from . import lightcurve
 from . import models as m
-from ..lib import manageevent as me
-from ..lib import util, logedit
-from ..lib.util import resolve_param_key
-from ..lib.readEPF import Parameters
-from ..version import version
+from .s5_meta import S5MetaClass
 
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):

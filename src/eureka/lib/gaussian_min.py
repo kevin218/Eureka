@@ -1,8 +1,9 @@
-from scipy.optimize import minimize
-import numpy as np
 import sys
-from photutils.centroids import (centroid_com, centroid_1dg,  # noqa: F401
-                                 centroid_2dg, centroid_sources)
+
+import numpy as np
+from photutils.centroids import (centroid_1dg, centroid_2dg,  # noqa: F401
+                                 centroid_com, centroid_sources)
+from scipy.optimize import minimize
 
 
 def evalgauss(params, x, y, x0, y0):

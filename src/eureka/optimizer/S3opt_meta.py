@@ -1,7 +1,8 @@
 import numpy as np
-from ..lib.readECF import MetaClass
-from ..lib import util
+
 from ..lib import manageevent as me
+from ..lib import util
+from ..lib.readECF import MetaClass
 
 
 class S3optMetaClass(MetaClass):

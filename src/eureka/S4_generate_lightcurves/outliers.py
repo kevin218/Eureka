@@ -1,6 +1,7 @@
 import numpy as np
 from astropy.stats import sigma_clip
-from ..lib import util, smooth
+
+from ..lib import smooth, util
 
 
 def get_outliers(meta, spec):
