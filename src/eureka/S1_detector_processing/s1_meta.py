@@ -277,7 +277,7 @@ class S1MetaClass(MetaClass):
         self.grouplevel_bg = getattr(self, 'grouplevel_bg', False)
         if self.grouplevel_bg:
             warnings.warn('grouplevel_bg must be False for Stage 1 NIRISS ' 
-                          'analyses! Group level background subtraction is ' 
+                          'analyses! Standard background subtraction is ' 
                           'performed in Stage 3 instead. ' 
                           ''
                           'Setting grouplevel_bg to False...')
