@@ -709,22 +709,12 @@ def median_frame(data, meta, m, medflux, order=None):
 
     # Plot spectral traces over median frame
     if meta.inst == "niriss":  # nominal trace for NIRISS/SOSS
-        # SUBSTRIP96 only deals with a single order
-        if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96':
-            order = 1
+        for order in meta.orders:
             trace = data["trace"].sel(order=order)
-
             plt.plot(data.flux.x.values, trace,
                      c="white", lw=2)
             plt.plot(data.flux.x.values, trace,
                      "--k", lw=1, label=f"Trace Order {order}")
-        else:  # SUBSTRIP256 handles both orders
-            for order in meta.all_orders:
-                trace = data["trace"].sel(order=order)
-                plt.plot(data.flux.x.values, trace,
-                         c="white", lw=2)
-                plt.plot(data.flux.x.values, trace,
-                         "--k", lw=1, label=f"Trace Order {order}")
         plt.legend()
     else:  # NIRSpec, NIRCam, MIRI
         # identify empirical smoothed center-of-mass trace
