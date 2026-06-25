@@ -25,7 +25,8 @@ def find_column_median_shifts(data, meta, m, plot_3308=False):
     Returns
     -------
     shifts : ndarray (2D)
-        The shifts to apply to each column to straighten the trace.
+        If plot_3308 is False, return the shifts to apply to each 
+        column to straighten the trace.
     smooth_coms : ndarray (1D)
         If plot_3308 is True, the y positions of the smoothed center
         of mass trace.
