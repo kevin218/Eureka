@@ -63,6 +63,31 @@ If True, skip the named step.
 .. note::
    Note that some instruments and observing modes might skip a step either way! See the `calwebb_detector1 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
 
+For MIRI data, ``skip_rscd`` also controls the first-group flagging that was
+previously performed by the now-deprecated ``firstframe`` step. Legacy ECFs
+that run ``firstframe`` but skip the old RSCD step are mapped to one-group
+flagging in every integration.
+
+rscd_group_skip1
+''''''''''''''''
+For MIRI data, the number of initial groups that the RSCD step should flag in
+the first integration. The default is ``None``, which uses the ``group_skip1``
+value from the CRDS RSCD reference file. Set this to a nonnegative integer to
+override the reference-file value.
+
+rscd_group_skip
+'''''''''''''''
+For MIRI data, the number of initial groups that the RSCD step should flag in
+the second and subsequent integrations. The default is ``None``, which uses
+the ``group_skip`` value from the CRDS RSCD reference file. Set this to a
+nonnegative integer to override the reference-file value.
+
+These values are passed through the JWST pipeline's dynamic RSCD handling, so
+the number of flagged groups can still be reduced for short ramps or pixels
+that saturate quickly. Setting both parameters to 1 reproduces the group count
+used by the deprecated ``firstframe`` step. These parameters are only used
+when ``skip_rscd`` is ``False``.
+
 emicorr_algorithm
 '''''''''''''''''
 A string that specifies the ``jwst`` EMI-correction algorithm to use if ``skip_emicorr`` is set to ``False``. The options are ``'joint'`` (default), which should work well for all observations (even with few groups per integration),
