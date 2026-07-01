@@ -84,7 +84,7 @@ dependencies = [
     "h5py>=3.7.0", # Lower limit needed to avoid issues with JWST I/O routines
     "lmfit",
     "matplotlib>=3.6", # Lower limit needed for set_layout_engine()
-    "numpy>=1.25,<2.0", # Current tested py311 floor is NumPy >=1.25; the practical tested outcome still resolves below NumPy 2 and should be revisited as upstream blockers move
+    "numpy>=1.25,<3.0", # Current tested py311 floor is NumPy >=1.25
     "pandas",
     "photutils",
     "requests",
@@ -102,7 +102,7 @@ dependencies = [
     { pip = "fleck" },
     { pip = "george" }, # Needed for GP
     { pip = "planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main" }, # PyPI build currently only supports for python 3.8 -- 3.10
-    { pip = "pastasoss>=1.2.3" }, # Lower limit needed for pkg_resources deprecation
+    { pip = "pastasoss @ git+https://github.com/taylorbell57/pastasoss@0512d0f" }, # GitHub pin needed to allow numpy>=2
     { pip = "setuptools_scm>=6.2" }, # Needed when importing from a source tree without generated version.py
     { pip = "stdatamodels>=5.0.2" },
     { pip = "svo_filters>=0.5.3" }, # Lower limit needed for pkg_resources deprecation
