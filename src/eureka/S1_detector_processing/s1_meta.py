@@ -1,4 +1,6 @@
 # pylint: disable=attribute-defined-outside-init
+from numbers import Integral
+
 from ..lib.readECF import MetaClass
 
 
@@ -230,13 +232,31 @@ class S1MetaClass(MetaClass):
 
         # jwst skips by default for MIRI TSO, but should likely be set False
         # (that may depend on the dataset though).
-        self.skip_firstframe = getattr(self, 'skip_firstframe', True)
-        # jwst skips by default for MIRI TSO, but should likely be set False
-        # (that may depend on the dataset though).
         self.skip_lastframe = getattr(self, 'skip_lastframe', True)
         self.skip_reset = getattr(self, 'skip_reset', False)
-        # jwst skips by default for MIRI TSO.
         self.skip_rscd = getattr(self, 'skip_rscd', True)
+        self.rscd_group_skip1 = getattr(self, 'rscd_group_skip1', None)
+        self.rscd_group_skip = getattr(self, 'rscd_group_skip', None)
+
+        for parameter in ['rscd_group_skip1', 'rscd_group_skip']:
+            value = getattr(self, parameter)
+            if value is not None and (
+                    not isinstance(value, Integral) or isinstance(value, bool)
+                    or value < 0):
+                raise ValueError(
+                    f'{parameter} must be a nonnegative integer or None.')
+            if value is not None:
+                setattr(self, parameter, int(value))
+
+        # Preserve legacy "run firstframe, skip RSCD" ECFs by using the new
+        # RSCD machinery to flag exactly one group in every integration.
+        legacy_firstframe = getattr(self, 'skip_firstframe', True)
+        no_rscd_override = (self.rscd_group_skip1 is None and
+                            self.rscd_group_skip is None)
+        if not legacy_firstframe and self.skip_rscd and no_rscd_override:
+            self.skip_rscd = False
+            self.rscd_group_skip1 = 1
+            self.rscd_group_skip = 1
         # Skip since pretty time consuming and testing has shown it has
         # negligible effect on the data.
         self.skip_emicorr = getattr(self, 'skip_emicorr', True)

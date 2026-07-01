@@ -145,13 +145,12 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for MIRI photometry.
         '''
-        full_list = ['jump_rejection_threshold', 'skip_firstframe',
-                     'skip_lastframe', 'skip_rscd']
+        full_list = ['jump_rejection_threshold', 'skip_lastframe',
+                     'skip_rscd']
         self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
                                              full_list)
 
         defaults = {
-            "sweep_skip_firstframe": [True, False],
             "sweep_skip_lastframe": [True, False],
             "sweep_skip_rscd": [True, False],
         }
@@ -171,13 +170,12 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for MIRI.
         '''
-        full_list = ['jump_rejection_threshold', 'skip_firstframe',
-                     'skip_lastframe', 'skip_rscd']
+        full_list = ['jump_rejection_threshold', 'skip_lastframe',
+                     'skip_rscd']
         self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
                                              full_list)
 
         defaults = {
-            "sweep_skip_firstframe": [True, False],
             "sweep_skip_lastframe": [True, False],
             "sweep_skip_rscd": [True, False],
         }

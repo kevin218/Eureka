@@ -23,12 +23,12 @@ from jwst.datamodels import dqflags
 from jwst.ramp_fitting.ramp_fit_step import get_reference_file_subarrays, \
     create_image_model, create_integration_model, set_groupdq
 
-from jwst.firstframe.firstframe_step import FirstFrameStep
 from jwst.lastframe.lastframe_step import LastFrameStep
 
 from . import update_saturation
 from . import group_level
 from . import remove390
+from .rscd import Eureka_RscdStep
 
 import logging
 log = logging.getLogger(__name__)
@@ -144,16 +144,8 @@ class Eureka_RampFitStep(Step):
             if self.s1_meta.remove_390hz:
                 input_model = remove390.run(input_model, self.s1_log,
                                             self.s1_meta)
-
-                # Need to apply these steps afterward to remove 390 Hz
-                if not self.s1_meta.skip_firstframe:
-                    self.firstframe = FirstFrameStep()
-                    self.firstframe.skip = self.s1_meta.skip_firstframe
-                    input_model = self.firstframe(input_model)
-                if not self.s1_meta.skip_lastframe:
-                    self.lastframe = LastFrameStep()
-                    self.lastframe.skip = self.s1_meta.skip_lastframe
-                    input_model = self.lastframe(input_model)
+                input_model = self._apply_deferred_miri_group_flags(
+                    input_model)
 
             if self.s1_meta.mask_groups:
                 self.s1_log.writelog('Manually marking groups '
@@ -328,6 +320,41 @@ class Eureka_RampFitStep(Step):
             int_model.meta.cal_step.ramp_fit = "COMPLETE"
 
         return out_model, int_model
+
+    def _apply_deferred_miri_group_flags(self, input_model):
+        """Apply MIRI group flags deferred until after 390 Hz removal.
+
+        Parameters
+        ----------
+        input_model : stdatamodels.jwst.datamodels.RampModel
+            MIRI ramp model after Eureka!'s custom 390 Hz noise correction.
+
+        Returns
+        -------
+        input_model : stdatamodels.jwst.datamodels.RampModel
+            Ramp model after any requested lastframe and RSCD flags have been
+            applied.
+
+        Notes
+        -----
+        The correction order matches the normal MIRI Detector1 pipeline:
+        lastframe is applied before RSCD. Both steps honor their Stage 1 skip
+        settings, and RSCD receives Eureka!'s first- and later-integration
+        group-count overrides.
+        """
+        if not self.s1_meta.skip_lastframe:
+            self.lastframe = LastFrameStep()
+            self.lastframe.skip = False
+            input_model = self.lastframe.run(input_model)
+
+        if not self.s1_meta.skip_rscd:
+            self.rscd = Eureka_RscdStep()
+            self.rscd.group_skip1 = self.s1_meta.rscd_group_skip1
+            self.rscd.group_skip = self.s1_meta.rscd_group_skip
+            self.rscd.skip = False
+            input_model = self.rscd.run(input_model)
+
+        return input_model
 
 #######################################
 #         CUSTOM FUNCTIONS            #

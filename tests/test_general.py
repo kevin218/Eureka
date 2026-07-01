@@ -110,7 +110,7 @@ def test_readfiles_accepts_inputdir_without_trailing_separator(tmp_path):
 def test_optimizer_cleanup_failure_does_not_discard_fitness(monkeypatch):
     meta = SimpleNamespace(delete_intermediate=True, scaling_MAD_spec=0.01,
                            scaling_MAD_white=1.0,
-                           opt_param_name='skip_firstframe',
+                           opt_param_name='skip_rscd',
                            eventlabel='test')
     s1_meta = SimpleNamespace(outputdir='Stage1')
     s2_meta = SimpleNamespace(outputdir='Stage2')
@@ -148,7 +148,7 @@ def test_optimizer_cleanup_failure_does_not_discard_fitness(monkeypatch):
 def test_optimizer_cleanup_retries_transient_enotempty(monkeypatch):
     meta = SimpleNamespace(delete_intermediate=True, scaling_MAD_spec=0.01,
                            scaling_MAD_white=1.0,
-                           opt_param_name='skip_firstframe',
+                           opt_param_name='skip_rscd',
                            eventlabel='test')
     s1_meta = SimpleNamespace(outputdir='Stage1')
     s2_meta = SimpleNamespace(outputdir='Stage2')

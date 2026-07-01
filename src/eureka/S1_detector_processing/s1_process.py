@@ -7,6 +7,7 @@ from astropy.io import fits
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
 
 from .ramp_fitting import Eureka_RampFitStep
+from .rscd import Eureka_RscdStep
 from .superbias import Eureka_SuperBiasStep
 from .s1_meta import S1MetaClass
 
@@ -187,17 +188,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
             if meta.custom_bias:
                 self.superbias.override_superbias = meta.superbias_file
         elif meta.inst in ['miri']:
-            if meta.remove_390hz:
-                # Need to apply these steps later to be able to remove 390 Hz
-                self.firstframe.skip = True
-                self.lastframe.skip = True
-            else:
-                self.firstframe.skip = meta.skip_firstframe
-                self.lastframe.skip = meta.skip_lastframe
-            self.reset.skip = meta.skip_reset
-            self.rscd.skip = meta.skip_rscd
-            self.emicorr.skip = meta.skip_emicorr
-            self.emicorr.algorithm = meta.emicorr_algorithm
+            self._configure_miri_steps(meta)
 
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
@@ -227,3 +218,43 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.run(filename)
 
         return
+
+    def _configure_miri_steps(self, meta):
+        """Configure the MIRI-specific detector-level pipeline steps.
+
+        The deprecated firstframe step is disabled because its functionality
+        is included in the JWST RSCD step. Eureka!'s RSCD group-count
+        overrides are transferred to the replacement step. When 390 Hz noise
+        removal is requested, lastframe and RSCD are deferred until the custom
+        correction has used the unflagged ramp data.
+
+        Parameters
+        ----------
+        meta : eureka.lib.readECF.MetaClass
+            Stage 1 metadata containing the MIRI step skip flags, RSCD group
+            counts, and EMI-correction settings.
+
+        Returns
+        -------
+        None
+            This method configures pipeline step attributes in place.
+        """
+        # FirstFrameStep is deprecated in jwst 2.0 and its functionality is
+        # now included in RscdStep. Keep it disabled while it remains part of
+        # Detector1Pipeline.
+        if hasattr(self, 'firstframe'):
+            self.firstframe.skip = True
+
+        self.rscd = Eureka_RscdStep()
+        self.rscd.group_skip1 = meta.rscd_group_skip1
+        self.rscd.group_skip = meta.rscd_group_skip
+
+        # The 390 Hz correction needs access to all groups. Defer group
+        # flagging until after that correction is complete.
+        defer_group_flagging = meta.remove_390hz
+        self.lastframe.skip = meta.skip_lastframe or defer_group_flagging
+        self.rscd.skip = meta.skip_rscd or defer_group_flagging
+
+        self.reset.skip = meta.skip_reset
+        self.emicorr.skip = meta.skip_emicorr
+        self.emicorr.algorithm = meta.emicorr_algorithm
