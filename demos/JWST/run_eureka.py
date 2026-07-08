@@ -21,7 +21,7 @@ if __name__ == '__main__':
     # To skip one or more stages that were already run,
     # just comment them out below
 
-    meta = s1.rampfitJWST(eventlabel, ecf_path=ecf_path)
+    #meta = s1.rampfitJWST(eventlabel, ecf_path=ecf_path)
 
     meta = s2.calibrateJWST(eventlabel, ecf_path=ecf_path)
 

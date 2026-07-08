@@ -76,16 +76,15 @@ You can combine groups as needed. For example:
 	python -m pip install "eureka-bang[jwst,hst] @ git+https://github.com/kevin218/Eureka.git"
 	python -m pip install "eureka-bang[jwst,test,docs] @ git+https://github.com/kevin218/Eureka.git"
 
-Installing with the repository ``environment.yml``
+Option 2) Installing with the repository ``environment.yml``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The repository also includes an ``environment.yml`` file for users who want the
+The repository includes an ``environment.yml`` file for users who want the
 repository-managed conda environment. This file is generated from
 ``pyproject.toml`` and should not be edited manually. It currently constrains
 the repository-managed conda environment to Python 3.11-3.12.
 
-This route is especially useful for contributors and for users who want the
-repository-managed environment. To install this way:
+To install this way, begin by cloning the repository and creating your conda environment:
 
 .. code-block:: bash
 
@@ -93,15 +92,13 @@ repository-managed environment. To install this way:
 	cd Eureka
 	conda env create -f environment.yml
 	conda activate eureka
-	python -m pip install --no-deps .
-
 
 This set of commands clones the ``main`` branch of ``Eureka!`` to your local machine, 
 creates a conda environment called ``eureka`` with the correct dependencies (as defined in the ``environment.yml``), and switches over to that environment.
 
 Finally, to install the ``Eureka!`` package into your new conda environment, you have 2 options. For users that expect to edit the source code in any way, 
 perhaps by contributing to ``Eureka!`` development or debugging, we recommend installing ``Eureka!`` in editable mode with the ``-e`` flag. Users that expect only to run Eureka code may 
-choose to omit the ``-e`` flag.
+choose to omit this flag.
 
 Install in editable mode:
 
@@ -109,7 +106,7 @@ Install in editable mode:
 
 	python -m pip install --no-deps -e .
 
-Install in non-editable mode:
+OR install in non-editable mode:
 
 .. code-block:: bash
 

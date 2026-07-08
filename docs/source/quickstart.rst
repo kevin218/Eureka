@@ -20,14 +20,14 @@ Now, I'm sure you wouldn't just leave the data in your Downloads folder, but if 
 
 .. code-block:: bash
 
-	mkdir /User/Data/JWST-Sim/NIRSpec/
-	cd /User/Data/JWST-Sim/NIRSpec/
+	mkdir -p ~/Desktop/Eureka_Quickstart_Data/JWST-Sim/NIRSPEC/
+	cd ~/Dekstop/Eureka_Quickstart_Data/JWST-Sim/NIRSPEC/
 	unzip -j ~/Downloads/Tiny.zip -d .
 
 Note that for Eureka! you do *not* need to download any ancillary data - any additional files will be downloaded automatically (if you correctly set the CRDS environment variables during installation).
 
 
-3. Set up your run directory 🗂
+1. Set up your run directory 🗂
 -------------------------------
 
 In general, it is recommended to interface with Eureka! using "Eureka! Control Files" (ECFs) and running command line scripts.
@@ -46,8 +46,8 @@ We're almost there, but before you can get things running you need to set up a d
 
 .. code-block:: bash
 
-	mkdir /User/DataAnalysis/JWST/MyFirstEureka
-	cd /User/DataAnalysis/JWST/MyFirstEureka
+	mkdir -p ~/Desktop/Eureka_Quickstart_Data_Analysis/JWST/MyFirstEureka/
+	cd ~/Desktop/Eureka_Quickstart_Data_Analysis/JWST/MyFirstEureka/
 
 From here, the simplest way to set up all of the Eureka! input files is to download them from the JWST demos directory on the Github repository (`direct download <https://downgit.github.io/#/home?url=https://github.com/kevin218/Eureka/tree/main/demos/JWST>`_). Then we can copy them over:
 
@@ -91,28 +91,22 @@ Finally, you need to connect everything together by opening up each ``.ecf`` fil
 .. code-block:: bash
 
 	topdir		/home/User/
-	inputdir	Data/JWST-Sim/NIRSpec
-	outputdir	DataAnalysis/JWST/MyFirstEureka/Stage2
+	inputdir	Eureka_Quickstart_Data/JWST-Sim/NIRSPEC
+	outputdir	Eureka_Quickstart_Data_Analysis/JWST/MyFirstEureka/Stage2
 
-Specifically, you'll want to set ``inputdir`` to the folder where you have put your downloaded FITS files, and ``outputdir`` to the folder where you want the results of your analyses to be stored. This may be useful if you want to store the raw data on an external hard drive while storing the analysis outputs on your internal hard drive. For the later stages you could use something simpler, e.g. for the ``S3_wasp39b.ecf``:
+Specifically, you'll want to set ``inputdir`` to the folder where you have put your downloaded FITS files, and ``outputdir`` to the folder where you want the results of your analyses to be stored. This may be useful if you want to store the raw data on an external hard drive while storing the analysis outputs on your internal hard drive. 
+
+For the later stages you could use something simpler, e.g. for the ``S3_wasp39b.ecf``:
 
 .. code-block:: bash
 
-	topdir		/home/User/DataAnalysis/JWST/MyFirstEureka/
+	topdir		/home/User/Eureka_Quickstart_Data_Analysis/JWST/MyFirstEureka/
 	inputdir	Stage2
 	outputdir	Stage3
 
 The explicit settings for the ``S4_wasp39b.ecf``, ``S5_wasp39b.ecf`` and ``S6_wasp39b.ecf`` will be skipped here for brevity (but you should still do them!). However, there are a few important settings we must adjust.
 
-First, you must decide if you want to freely fit for your limb-darkening parameters in Stage 5 or if you want to fix them to model predictions made using the ``exotic-ld`` package. If you want to fit
-for limb-darkening, you can simply use the template files as they currently are. However, if you want to use ``exotic-ld``, you must download the ``exotic-ld`` `ancillary files <https://zenodo.org/record/6344946>`_
-and change the ``exotic_ld_direc`` in the ``S4_wasp39b.ecf`` file to point to the location you saved those ancillary files. You also need to set ``compute_ld`` to True. In general, you must also
-update the stellar parameters for your target, but these have already been set for WASP-39. You will also need to adjust your ``S5_fit_par_template.epf`` limb-darkening parameters to use the
-limb-darkening law you want to use (note that not all laws are supported by exotic-ld), and you will also need to change your limb-darkening parameters to be fixed instead of free if you don't
-want to fit them. Finally, you will also need to set the ``use_generate_ld`` parameter to ``exotic-ld`` in your ``S5_wasp39b.ecf`` file.
-
-
-Also, it is important to notice a few settings in the ``S5_wasp39b.ecf``. Specifically, you need to assign the correct ``.epf`` file, and modify the number of processors you want to use during the light curve fitting.
+It is important to notice a few settings in the ``S5_wasp39b.ecf``. Specifically, you need to assign the correct ``.epf`` file, and modify the number of processors you want to use during the light curve fitting.
 
 .. code-block:: bash
 
@@ -132,10 +126,11 @@ get a fairly nice corner plot but also speed up the fit, so set the following in
 
 	run_nlive    256
 
-While editing all those files, you may have noticed that there is a whole range of other inputs that can be tweaked and adjusted at each different stage. For now you can ignore these as the demo files have been specifically tailored to this simulated dataset of WASP-39b.
+While editing all those files, you may have noticed that there is a whole range of other inputs that can be tweaked and adjusted at each different stage. 
+For example, in general, you must update the stellar parameters for your target. However, for now you can ignore these other inputs as the demo files have been specifically tailored to this simulated dataset of WASP-39b.
 
 
-4. Run Eureka! 💡
+1. Run Eureka! 💡
 -----------------
 
 Now that everything is set up, you should now be able to run the pipeline using:
@@ -150,7 +145,7 @@ While running ``Eureka!`` on these simulated data, you should expect to see a fe
 When you begin to work on your own real observation, you should use your critical judgement to determine whether a warning is relevant to your situation. In general though, it's not uncommon for you to
 see a warning about leaked semaphore objects at the end of a run that includes ``ncpu > 1`` in Stage 3 or 5, and these warnings can be safely ignored.
 
-5. Examine Outputs 🤨
+5. Examine Outputs 🤨 (TODO: move this to a separate page)
 -------------------------
 
 Carry on reading for more information on each individual stage in the pipeline and some of the products it produces. Also, feel free to dig through the output directories and get a gauge of what each stage is doing at your own speed.
