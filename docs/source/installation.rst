@@ -11,24 +11,20 @@ are still installed from GitHub or other pip-only sources.
 
 There are two supported installation routes:
 
-- Install directly from GitHub with ``pip``.
-- Create the repository-managed conda environment from the generated
+- Option 1): Install directly from GitHub with ``pip``.
+- Option 2): Create the repository-managed conda environment from the generated
   ``environment.yml`` file, then install ``Eureka!`` into that environment.
 
-The examples below use the ``v1.4`` tag. If you prefer a different branch or
-tag, substitute that ref in the Git URL shown below.
-
 If you are using a macOS device with an Apple Silicon processor (for example,
-M1), you may need to use the ``environment.yml`` route below because some pip
+M1), you may need to use the ``environment.yml`` route below (Option 2) because some pip
 dependencies have been reported to fail to build on that platform.
 
 For the current testing/support expectations, including the tested
 ``oldest-practical`` recipe and how it differs from declared metadata ranges,
 see the :doc:`dependency policy <dependency_policy>` page.
 
-
-Initial environment preparation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Option 1) Install directly from GitHub with ``pip``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 It is **strongly** recommended that you install ``Eureka!`` in a fresh
 ``conda`` environment, since previously installed packages can introduce
 dependency conflicts. You can install a lightweight version of conda at
@@ -39,19 +35,13 @@ installed, create a new environment with:
 
 	conda create -n eureka python=3.12
 	conda activate eureka
-
-If you use the repository ``environment.yml`` route below, the environment
-creation command will create the environment for you.
-
-Option 1) Install directly from GitHub with ``pip``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+	
 Once your environment is active, install ``Eureka!`` directly from GitHub with
 ``pip``:
 
 .. code-block:: bash
 
-	python -m pip install "eureka-bang[jwst] @ git+https://github.com/kevin218/Eureka.git@v1.4"
+	python -m pip install "eureka-bang[jwst] @ git+https://github.com/kevin218/Eureka.git"
 
 To install from a branch or a different tag, append the desired Git ref with
 ``@``. For example:
@@ -59,7 +49,6 @@ To install from a branch or a different tag, append the desired Git ref with
 .. code-block:: bash
 
 	python -m pip install "eureka-bang[jwst] @ git+https://github.com/kevin218/Eureka.git@mybranchname"
-	python -m pip install "eureka-bang[jwst] @ git+https://github.com/kevin218/Eureka.git@v1.3"
 
 In order to use any of the demo ECF files, follow the instructions in the
 :ref:`Demos <demos>` section of the :ref:`Quickstart <quickstart>` page.
@@ -84,8 +73,8 @@ You can combine groups as needed. For example:
 
 .. code-block:: bash
 
-	python -m pip install "eureka-bang[jwst,hst] @ git+https://github.com/kevin218/Eureka.git@v1.4"
-	python -m pip install "eureka-bang[jwst,test,docs] @ git+https://github.com/kevin218/Eureka.git@v1.4"
+	python -m pip install "eureka-bang[jwst,hst] @ git+https://github.com/kevin218/Eureka.git"
+	python -m pip install "eureka-bang[jwst,test,docs] @ git+https://github.com/kevin218/Eureka.git"
 
 Installing with the repository ``environment.yml``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -100,12 +89,31 @@ repository-managed environment. To install this way:
 
 .. code-block:: bash
 
-	git clone -b v1.4 https://github.com/kevin218/Eureka.git
+	git clone https://github.com/kevin218/Eureka.git
 	cd Eureka
-	conda env create --file environment.yml --force
+	conda env create -f environment.yml
 	conda activate eureka
 	python -m pip install --no-deps .
 
+
+This set of commands clones the ``main`` branch of ``Eureka!`` to your local machine, 
+creates a conda environment called ``eureka`` with the correct dependencies (as defined in the ``environment.yml``), and switches over to that environment.
+
+Finally, to install the ``Eureka!`` package into your new conda environment, you have 2 options. For users that expect to edit the source code in any way, 
+perhaps by contributing to ``Eureka!`` development or debugging, we recommend installing ``Eureka!`` in editable mode with the ``-e`` flag. Users that expect only to run Eureka code may 
+choose to omit the ``-e`` flag.
+
+Install in editable mode:
+
+.. code-block:: bash
+
+	python -m pip install --no-deps -e .
+
+Install in non-editable mode:
+
+.. code-block:: bash
+
+	python -m pip install --no-deps .
 
 Upgrading your Eureka! installation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -113,20 +121,6 @@ The safest and most reliable way to upgrade ``Eureka!`` is to create a fresh
 environment and reinstall the desired version there. Trying to mutate an older
 environment in place can lead to dependency mismatches, and we cannot provide
 support for upgrades performed that way.
-
-
-Additional ExoTiC-LD Downloads
-------------------------------
-
-If you wish to use the ExoTiC-LD package to compute model stellar
-limb-darkening profile coefficients (computed in Eureka!'s Stage 4 and used in
-Stage 5), you will need to download the ExoTiC-LD stellar models and
-instrument throughputs. For details, please visit ExoTiC-LD's
-`installation instructions <https://exotic-ld.readthedocs.io/en/latest/views/installation.html>`_,
-making sure to download the files corresponding to your installed ExoTiC-LD
-version. The first number in the version number should match. For example, you
-can use the v3.1.2 files with the v3.0.0 ExoTiC-LD package version.
-
 
 CRDS Environment Variables
 --------------------------
