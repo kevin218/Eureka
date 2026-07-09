@@ -6,7 +6,7 @@ name: eureka
 channels:
   - conda-forge
 dependencies:
-  - astropy
+  - astropy <=7.2.1
   - astroquery
   - bokeh
   - ccdproc
