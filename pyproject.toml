@@ -79,7 +79,7 @@ dependencies = [
     { conda = "libblas=*=*openblas*" },
     { conda = "liblapack=*=*openblas*" },
 
-    "astropy",
+    "astropy<=7.2.1",  # Upper limit needed to avoid failing tests
     "astroquery",
     "bokeh",
     "ccdproc",
