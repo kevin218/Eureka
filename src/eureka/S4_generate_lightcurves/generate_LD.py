@@ -103,22 +103,22 @@ def exotic_ld(meta, spec, log, white=False):
     else:
         sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
                                    meta.exotic_ld_grid, meta.exotic_ld_direc)
-     
-    # Now if Phoenix, rescale the mu grid                         
+
+    # Now if Phoenix, rescale the mu grid
     if meta.exotic_ld_grid == 'phoenix' and meta.rescale_phoenix:
-        print('Rescaling Phoenix')
+        log.writelog('Rescaling Phoenix model', mute=(not meta.verbose))
         # loop over wavelengths and rescale
-        
+
         interp_I_mu = np.empty([sld.stellar_intensities.shape[0], 50])
-        
-        for wi in range(sld.stellar_intensities.shape[0]):  
+
+        for wi in range(sld.stellar_intensities.shape[0]):
             # Can fail at edges of phoenix grid, only rescaling where needed
-            if (sld.stellar_wavelengths[wi] < wavelength_range[0][0] or 
+            if (sld.stellar_wavelengths[wi] < wavelength_range[0][0] or
                     sld.stellar_wavelengths[wi] > wavelength_range[-1][-1]):
                 continue
             interp_mus, interp_I_mu[wi, :], _ = phoenix_rescaled(
                 sld.mus, sld.stellar_intensities[wi, :]
-            ) 
+            )
 
         wvs_new = sld.stellar_wavelengths
         mus_new = np.flip(interp_mus)
@@ -127,16 +127,16 @@ def exotic_ld(meta, spec, log, white=False):
                                        ld_model="custom",
                                        custom_wavelengths=wvs_new,
                                        custom_mus=mus_new,
-                                       custom_stellar_model=sis_new)  
-        if meta.isplots_S4 >= 3: 
-            sld._integrate_I_mu([meta.wave_min*1e4, meta.wave_max*1e4], 
+                                       custom_stellar_model=sis_new)
+        if meta.isplots_S4 >= 3:
+            sld._integrate_I_mu([meta.wave_min*1e4, meta.wave_max*1e4],
                                 mode, None, None)
-            sld_new._integrate_I_mu([meta.wave_min*1e4, meta.wave_max*1e4], 
+            sld_new._integrate_I_mu([meta.wave_min*1e4, meta.wave_max*1e4],
                                     mode, None, None)
             plots_s4.plot_rescaled_phoenix(meta, sld, sld_new)
-        
+
         sld = sld_new
-                   
+
     if mode != 'custom':
         # Figure out if we need to extrapolate the throughput, since the
         # ExoTiC-LD throughput files don't go close enought to the edges of
@@ -281,14 +281,36 @@ def spam_ld(meta, white=False):
 def phoenix_rescaled(mus, I_mu, n_interp=50, edge_buffer=4):
     """Rescale the Phoenix spherical-model mu grid before fitting.
 
-    Phoenix intensities include very sharp, low-mu limb points.  This follows
-    the rescaling approach commonly used for these spherical grids:
+    Phoenix intensity profiles contain very sharp, low-mu limb points that can
+    make the original grid difficult to fit with a limb-darkening law. This
+    function applies the common spherical-grid rescaling
 
         mu_scaled = (mu - mu_cri) / (1 - mu_cri)
 
-    where mu_cri is selected just inside the largest intensity-gradient point.
-    The resulting profile is interpolated onto a fixed 0..1 mu grid before the
-    limb-darkening law is fit.
+    where ``mu_cri`` is selected just inside the largest intensity-gradient
+    point, then interpolates the rescaled profile onto a fixed 0..1 mu grid.
+
+    Parameters
+    ----------
+    mus : array-like
+        Original mu values from the Phoenix model grid.
+    I_mu : array-like
+        Intensity values corresponding to ``mus``.
+    n_interp : int, optional
+        Number of points to use when interpolating onto the rescaled 0..1 mu
+        grid. Defaults to 50.
+    edge_buffer : int, optional
+        Number of points to move back from the largest intensity-gradient index
+        when selecting the critical mu value. Defaults to 4.
+
+    Returns
+    -------
+    interp_mus : ndarray
+        Interpolated mu values on the uniform 0..1 grid.
+    interp_I_mu : ndarray
+        Interpolated intensities evaluated at ``interp_mus``.
+    mu_cri : float
+        The critical mu value used for the rescaling transformation.
     """
     mus = np.asarray(mus, dtype=float)
     I_mu = np.asarray(I_mu, dtype=float)

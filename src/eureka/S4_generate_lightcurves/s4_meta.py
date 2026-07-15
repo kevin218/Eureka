@@ -132,6 +132,7 @@ class S4MetaClass(MetaClass):
         elif self.compute_ld in ['exotic-ld', True]:
             self.exotic_ld_file = getattr(self, 'exotic_ld_file', None)
             self.custom_si_grid = getattr(self, 'custom_si_grid', None)
+            self.rescale_phoenix = getattr(self, 'rescale_phoenix', False)
             if self.custom_si_grid is None:
                 # Require the following to be specified if relevant
                 self.exotic_ld_direc = getattr(self, 'exotic_ld_direc')

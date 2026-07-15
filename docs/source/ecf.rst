@@ -871,12 +871,16 @@ Used by exotic-ld if compute_ld=True. The fully qualified path to the directory 
 
 exotic_ld_grid
 ''''''''''''''
-Used by exotic-ld if compute_ld=True. You can choose from "kurucz" (or "1D"), "stagger" (or "3D"), "mps1", or "mps2" model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
+Used by exotic-ld if compute_ld=True. You can choose from "phoenix", "kurucz" (or "1D"), "stagger" (or "3D"), "mps1", or "mps2" model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
 You can also use "custom" for a custom stellar intensity grid specified through the ``custom_si_grid`` parameter.
 
 exotic_ld_file
 ''''''''''''''
 Used by exotic-ld as throughput input file. If none, exotic-ld uses throughput from ancillary files. Make sure that wavelength is given in Angstrom!
+
+rescale_phoenix
+'''''''''''''''
+If True, Eureka! rescales the PHOENIX mu/intensity profiles using the critical-mu transformation described in Section 2.2 of Espinoza & Jordan (2015, https://academic.oup.com/mnras/article/450/2/1879/985166), then interpolates them onto a uniform mu grid before computing limb-darkening coefficients. If False, the original PHOENIX profiles are used.
 
 custom_si_grid
 ''''''''''''''
