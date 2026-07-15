@@ -496,3 +496,48 @@ def plot_extrapolated_throughput(meta, throughput_wavelengths, throughput,
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
+
+@plots.apply_style
+def plot_rescaled_phoenix(meta, sld, sld_new):
+    '''Make a plot comparing the original and rescaled Phoenix profiles
+    (Fig 4304).
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    sld : object
+        The original ExoTiC-LD stellar limb-darkening object containing the
+        Phoenix intensity profile on the original mu grid.
+    sld_new : object
+        The rescaled ExoTiC-LD stellar limb-darkening object containing the
+        Phoenix intensity profile after the mu/intensity transformation.
+    '''
+
+    fig = plt.figure(4304)
+    fig.set_size_inches(8, 8, forward=True)
+    fig.clf()
+    plt.title('Phoenix Grid Rescaling, Full Band Integrated')
+    plt.plot(sld.mus, sld.I_mu, color = 'goldenrod', lw = 1.5,
+            marker = 'o', ms = 6,
+            label = 'Original Phoenix Intensity Profile')
+    plt.plot(sld_new.mus, sld_new.I_mu, color = 'tomato', lw = 1.0,
+            marker = 'o', ms = 6,
+            label = 'Rescaled Phoenix Intensity Profile')
+
+    plt.xlim(-0.05,1.05)
+    plt.ylim(-0.05,1.05)
+
+    plt.ylabel('I($\mu$)')
+    plt.xlabel('$\mu$')
+    plt.legend(loc='best')
+
+    fname = ('figs'+os.sep+'fig4304_RescaledPhoenix' +
+             plots.get_filetype())
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+
+
