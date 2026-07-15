@@ -107,22 +107,23 @@ def exotic_ld(meta, spec, log, white=False):
     # Now if Phoenix, rescale the mu grid
     if meta.exotic_ld_grid == 'phoenix' and meta.rescale_phoenix:
         log.writelog('Rescaling Phoenix model', mute=(not meta.verbose))
-        # loop over wavelengths and rescale
+        # Only rescale the wavelengths needed for the requested bandpass.
+        valid = ((sld.stellar_wavelengths >= wavelength_range[0][0]) &
+                 (sld.stellar_wavelengths <= wavelength_range[-1][-1]))
+        if not np.any(valid):
+            raise ValueError("No PHOENIX wavelengths overlap the requested "
+                             "band for rescaling.")
 
-        interp_I_mu = np.empty([sld.stellar_intensities.shape[0], 50])
-
-        for wi in range(sld.stellar_intensities.shape[0]):
-            # Can fail at edges of phoenix grid, only rescaling where needed
-            if (sld.stellar_wavelengths[wi] < wavelength_range[0][0] or
-                    sld.stellar_wavelengths[wi] > wavelength_range[-1][-1]):
-                continue
-            interp_mus, interp_I_mu[wi, :], _ = phoenix_rescaled(
+        rescaled_intensities = []
+        for wi in np.where(valid)[0]:
+            interp_mus, interp_I_mu, _ = phoenix_rescaled(
                 sld.mus, sld.stellar_intensities[wi, :]
             )
+            rescaled_intensities.append(interp_I_mu)
 
-        wvs_new = sld.stellar_wavelengths
+        wvs_new = sld.stellar_wavelengths[valid]
         mus_new = np.flip(interp_mus)
-        sis_new = np.flip(interp_I_mu, axis=1)
+        sis_new = np.flip(np.asarray(rescaled_intensities), axis=1)
         sld_new = StellarLimbDarkening(ld_data_path=meta.exotic_ld_direc,
                                        ld_model="custom",
                                        custom_wavelengths=wvs_new,

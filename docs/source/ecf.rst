@@ -880,7 +880,7 @@ Used by exotic-ld as throughput input file. If none, exotic-ld uses throughput f
 
 rescale_phoenix
 '''''''''''''''
-If True, Eureka! rescales the PHOENIX mu/intensity profiles using the critical-mu transformation described in Section 2.2 of Espinoza & Jordan (2015, https://academic.oup.com/mnras/article/450/2/1879/985166), then interpolates them onto a uniform mu grid before computing limb-darkening coefficients. If False, the original PHOENIX profiles are used.
+If True and when exotic_ld_grid = phoenix, Eureka! rescales the PHOENIX mu/intensity profiles using the critical-mu transformation described in Section 2.2 of Espinoza & Jordan (2015, https://academic.oup.com/mnras/article/450/2/1879/985166), then interpolates them onto a uniform mu grid before computing limb-darkening coefficients. If False, the original PHOENIX profiles are used.
 
 custom_si_grid
 ''''''''''''''
