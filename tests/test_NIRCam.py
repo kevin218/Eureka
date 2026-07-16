@@ -20,7 +20,7 @@ except ModuleNotFoundError:
     harmonica_installed = False
 
 
-def test_NIRCam(capsys):
+def test_NIRCam(capsys, keep_s3_output):
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
@@ -148,7 +148,8 @@ def test_NIRCam(capsys):
         assert os.path.exists(name+os.sep+'figs')
 
     # remove temporary files
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage3")
+    if not keep_s3_output:
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage3")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage4")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage5")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage6")

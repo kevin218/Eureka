@@ -14,7 +14,7 @@ from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 
 
-def test_NIRSpec(capsys):
+def test_NIRSpec(capsys, keep_s3_output):
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
@@ -94,6 +94,7 @@ def test_NIRSpec(capsys):
 
     # remove temporary files
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage2")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3")
+    if not keep_s3_output:
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage4")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage5")

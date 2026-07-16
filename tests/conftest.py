@@ -1,4 +1,25 @@
 # conftest.py
+import pytest
+
+
+def pytest_addoption(parser):
+    """Register options used by Eureka's integration tests."""
+    parser.addoption(
+        "--keep-s3-output",
+        action="store_true",
+        default=False,
+        help=("Preserve Stage 3 output directories after integration tests. "
+              "Use this only when creating or inspecting regression "
+              "reference data."),
+    )
+
+
+@pytest.fixture
+def keep_s3_output(pytestconfig):
+    """Whether a test should retain its generated Stage 3 products."""
+    return pytestconfig.getoption("--keep-s3-output")
+
+
 def pytest_collection_modifyitems(session, config, items):
     """Modifies test items to ensure test functions run in a given order
 
