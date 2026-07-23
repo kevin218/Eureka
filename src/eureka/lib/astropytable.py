@@ -33,7 +33,7 @@ def savetable_S1(filename, scale_factor):
     return
 
 
-def savetable_S5(filename, meta, time, wavelength, bin_width, lcdata, lcerr,
+def savetable_S5(filename, meta, time, wavelength, bin_width, lcdata, lcdata_cal, lcerr,
                  individual_models, model, residuals):
     """Save the results from Stage 5 as an ECSV file.
 
@@ -49,6 +49,8 @@ def savetable_S5(filename, meta, time, wavelength, bin_width, lcdata, lcerr,
         The width of each wavelength bin.
     lcdata : ndarray (1D)
         The normalized flux measurements for each data point.
+    lcdata_cal : ndarray (1D)
+        The calibrated flux measurements for each data point.
     lcerr : ndarray (1D)
         The normalized uncertainties for each data point.
     individual_models : ndarray (2D)
@@ -80,31 +82,32 @@ def savetable_S5(filename, meta, time, wavelength, bin_width, lcdata, lcerr,
             bin_width[trim1:trim2] = terse_widths[chan]
 
     orig_shapes = [str(time.shape), str(wavelength.shape),
-                   str(bin_width.shape), str(lcdata.shape), str(lcerr.shape)]
+                   str(bin_width.shape), str(lcdata.shape), str(lcdata_cal.shape), str(lcerr.shape)]
     orig_shapes.extend([str(individual_models[i, 1].shape)
                         for i in range(individual_models.shape[0])])
     orig_shapes.extend([str(model.shape), str(residuals.shape)])
 
     lcdata = lcdata.flatten()
+    lcdata_cal = lcdata_cal.flatten()
     lcerr = lcerr.flatten()
     model_names = individual_models[:, 0]
     model_values = individual_models[:, 1]
     full_model = model.flatten()
     residuals = residuals.flatten()
 
-    arr = [time, wavelength, bin_width, lcdata, lcerr, *model_values,
+    arr = [time, wavelength, bin_width, lcdata, lcdata_cal, lcerr, *model_values,
            full_model, residuals]
 
     try:
         table = QTable(arr, names=('time', 'wavelength', 'bin_width',
-                                   'lcdata', 'lcerr', *model_names, 'model',
+                                   'lcdata', "lcdata_cal", 'lcerr', *model_names, 'model',
                                    'residuals'))
         ascii.write(table, filename, format='ecsv', overwrite=True,
                     fast_writer=True)
     except ValueError as e:
         raise ValueError("There was a shape mismatch between your arrays which"
                          " had shapes:\n"
-                         "time, wavelength, bin_width, lcdata, lcerr, " +
+                         "time, wavelength, bin_width, lcdata, lcdata_cal, lcerr, " +
                          ', '.join(model_names) +
                          ", model, residuals\n" +
                          ", ".join(orig_shapes)) from e
