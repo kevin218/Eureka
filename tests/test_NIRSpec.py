@@ -12,6 +12,7 @@ from eureka.S2_calibrations import s2_calibrate as s2
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
+from tests.s3_reference import write_s3_reference_metadata
 
 
 def test_NIRSpec(capsys, keep_s3_output):
@@ -44,6 +45,8 @@ def test_NIRSpec(capsys, keep_s3_output):
 
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path,
                                  s2_meta=s2_meta)
+    if keep_s3_output:
+        write_s3_reference_metadata(s3_meta)
     # Ensure that our custom code to avoid NIRSpec cropping has worked
     assert s3_spec.wave_1d.shape == (511,)
     assert s3_spec.medflux.shape == (31, 511)

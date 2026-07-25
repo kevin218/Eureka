@@ -11,7 +11,6 @@ from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
-
 try:
     import image_registration
     imported_image_registration = True
@@ -44,6 +43,8 @@ def test_WFC3(capsys, keep_s3_output):
     reload(s3)
     reload(s4)
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
+    if keep_s3_output:
+        write_s3_reference_metadata(s3_meta)
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
 

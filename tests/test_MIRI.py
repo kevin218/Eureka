@@ -21,6 +21,7 @@ from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
+from tests.s3_reference import write_s3_reference_metadata
 
 
 def test_MIRI(capsys, keep_s3_output):
@@ -71,6 +72,8 @@ def test_MIRI(capsys, keep_s3_output):
 
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path,
                                  s2_meta=s2_meta)
+    if keep_s3_output:
+        write_s3_reference_metadata(s3_meta)
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)

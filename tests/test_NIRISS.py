@@ -10,6 +10,7 @@ from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
+from tests.s3_reference import write_s3_reference_metadata
 
 
 def test_NIRISS(capsys, keep_s3_output):
@@ -35,6 +36,8 @@ def test_NIRISS(capsys, keep_s3_output):
     s3_cites = np.union1d(COMMON_IMPORTS[2], ["niriss"])
 
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
+    if keep_s3_output:
+        write_s3_reference_metadata(s3_meta)
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
 
