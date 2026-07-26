@@ -24,7 +24,7 @@ from eureka.S6_planet_spectra import s6_spectra as s6
 from tests.s3_reference import write_s3_reference_metadata
 
 
-def test_MIRI(capsys, keep_s3_output):
+def test_MIRI(capsys, keep_s2_output, keep_s3_output):
     s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
     if not s2_installed:
         with capsys.disabled():
@@ -167,7 +167,7 @@ def test_MIRI(capsys, keep_s3_output):
     assert os.path.exists(name+os.sep+'figs')
 
     # remove temporary files
-    if s2_installed:
+    if s2_installed and not keep_s2_output:
         # os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}"
         #           f"Stage1{os.sep}S1_*")
         os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}"

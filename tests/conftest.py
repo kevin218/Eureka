@@ -12,12 +12,26 @@ def pytest_addoption(parser):
               "Use this only when creating or inspecting regression "
               "reference data."),
     )
+    parser.addoption(
+        "--keep-s2-output",
+        action="store_true",
+        default=False,
+        help=("Preserve Stage 2 output directories after integration tests. "
+              "Use this only when preparing fixed Stage 2 inputs for Stage "
+              "3 regression tests."),
+    )
 
 
 @pytest.fixture
 def keep_s3_output(pytestconfig):
     """Whether a test should retain its generated Stage 3 products."""
     return pytestconfig.getoption("--keep-s3-output")
+
+
+@pytest.fixture
+def keep_s2_output(pytestconfig):
+    """Whether a test should retain its generated Stage 2 products."""
+    return pytestconfig.getoption("--keep-s2-output")
 
 
 def pytest_collection_modifyitems(session, config, items):
