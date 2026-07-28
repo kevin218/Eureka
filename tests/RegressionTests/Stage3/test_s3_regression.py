@@ -20,6 +20,8 @@ def _reference_paths(case):
 
 
 def _assert_array(case, variable, actual, expected):
+    # Compare variable actual value to expected value. Type of comparison (exact, absolute, relative)
+    # depends on the variable being tested.
     assert actual.shape == expected.shape, (
         f"{case.name}: {variable} shape changed from {expected.shape} "
         f"to {actual.shape}."
@@ -43,6 +45,7 @@ def _assert_array(case, variable, actual, expected):
 
 
 def _assert_mad(case, actual_meta, metadata_path):
+    # Comparison test for MAD value.
     reference_mad = np.asarray(json.loads(metadata_path.read_text())["mad_s3"])
     actual_mad = np.asarray(actual_meta.mad_s3)
     assert actual_mad.shape == reference_mad.shape, (
@@ -55,6 +58,7 @@ def _assert_mad(case, actual_meta, metadata_path):
 
 
 def _assert_case_semantics(case, actual, expected):
+    # Checks NIRISS multi-order extraction (which is special from other modes)
     if case.check_niriss_orders:
         np.testing.assert_array_equal(actual["order"].values,
                                       expected["order"].values,
@@ -62,19 +66,6 @@ def _assert_case_semantics(case, actual, expected):
         assert actual.optspec.ndim == 3, (
             f"{case.name}: expected time, wavelength, and order dimensions."
         )
-
-    if case.check_miri_orientation:
-        actual_order = np.argsort(actual.wave_1d.values)
-        expected_order = np.argsort(expected.wave_1d.values)
-        np.testing.assert_allclose(actual.wave_1d.values[actual_order],
-                                   expected.wave_1d.values[expected_order],
-                                   rtol=0, atol=0, equal_nan=True,
-                                   err_msg=f"{case.name}: sorted wavelengths")
-        np.testing.assert_allclose(actual.optspec.values[:, actual_order],
-                                   expected.optspec.values[:, expected_order],
-                                   rtol=RTOL, atol=0, equal_nan=True,
-                                   err_msg=f"{case.name}: sorted spectrum")
-
 
 @pytest.mark.parametrize("case", CASES, ids=lambda case: case.name)
 def test_s3_science_products(case, run_s3):
@@ -85,7 +76,7 @@ def test_s3_science_products(case, run_s3):
     assert metadata_path.is_file(), f"Missing reference: {metadata_path}"
 
     expected = xrio.readXR(str(specdata_path), verbose=False)
-    for variable in case.variables:
+    for variable in case.variables: # loop over cases defined in cases.py and test
         assert variable in actual, f"{case.name}: missing output {variable}"
         assert variable in expected, f"{case.name}: missing reference {variable}"
         _assert_array(case, variable, actual[variable].values,

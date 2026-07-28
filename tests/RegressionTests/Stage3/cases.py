@@ -15,7 +15,6 @@ class S3RegressionCase:
     variables: tuple[str, ...]
     exact_variables: tuple[str, ...] = ()
     atol_variables: tuple[str, ...] = ()
-    check_miri_orientation: bool = False
     check_niriss_orders: bool = False
 
 
@@ -55,7 +54,6 @@ CASES = (
         mode="spectroscopy",
         variables=SPECTROSCOPY_VARIABLES,
         exact_variables=("optmask", "wave_1d"),
-        check_miri_orientation=True,
     ),
     S3RegressionCase(
         name="niriss_spectroscopy",

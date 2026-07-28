@@ -701,7 +701,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     """
     # Make sure wavelengths are in ascending order. Some instruments have
     # detector pixels outside an order's wavelength solution, represented by
-    # NaNs at either end of wave_1d.
+    # NaNs at either end of wave_1d, so we handle that possibility as well.
     finite_wave = np.flatnonzero(np.isfinite(wave_1d))
     if finite_wave.size == 0:
         return np.nan
