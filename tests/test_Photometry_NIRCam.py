@@ -6,12 +6,13 @@ from importlib import reload
 import numpy as np
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
+from tests.s3_reference import write_s3_reference_metadata
+
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
-from tests.s3_reference import write_s3_reference_metadata
 
 
 def test_NIRCamPhotometry(capsys, keep_s3_output):

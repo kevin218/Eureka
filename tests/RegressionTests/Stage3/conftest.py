@@ -1,13 +1,12 @@
 """Fixtures shared only by the Stage 3 regression suite."""
-from copy import deepcopy
 import os
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
 
 from eureka.S3_data_reduction import s3_reduce
 from eureka.S3_data_reduction.s3_meta import S3MetaClass
-
 
 REFERENCE_ROOT = Path(__file__).parent / "references"
 

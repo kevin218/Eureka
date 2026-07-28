@@ -1,9 +1,9 @@
 """Science-product regression tests for Eureka Stage 3."""
 import json
 
+import astraeus.xarrayIO as xrio
 import numpy as np
 import pytest
-import astraeus.xarrayIO as xrio
 
 from .cases import CASES
 from .conftest import REFERENCE_ROOT

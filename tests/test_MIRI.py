@@ -17,11 +17,12 @@ try:
     from eureka.S2_calibrations import s2_calibrate as s2
 except ModuleNotFoundError:
     pass
+from tests.s3_reference import write_s3_reference_metadata
+
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
-from tests.s3_reference import write_s3_reference_metadata
 
 
 def test_MIRI(capsys, keep_s2_output, keep_s3_output):

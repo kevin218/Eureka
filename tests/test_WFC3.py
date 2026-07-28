@@ -6,6 +6,8 @@ from importlib import reload
 import numpy as np
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
+from tests.s3_reference import write_s3_reference_metadata
+
 import eureka.lib.plots
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
