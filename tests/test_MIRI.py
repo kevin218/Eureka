@@ -22,9 +22,10 @@ from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
+from tests.s4_reference import write_s4_reference_metadata
 
 
-def test_MIRI(capsys, keep_s2_output, keep_s3_output):
+def test_MIRI(capsys, keep_s2_output, keep_s3_output, keep_s4_output):
     s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
     if not s2_installed:
         with capsys.disabled():
@@ -74,6 +75,8 @@ def test_MIRI(capsys, keep_s2_output, keep_s3_output):
                                  s2_meta=s2_meta)
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
+    if keep_s4_output:
+        write_s4_reference_metadata(s4_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
     s6_meta, s6_lc = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
@@ -172,6 +175,7 @@ def test_MIRI(capsys, keep_s2_output, keep_s3_output):
                   f"Stage2{os.sep}S2_*")
     if not keep_s3_output:
         os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage3")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage4")
+    if not keep_s4_output:
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage4")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage5")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage6")
