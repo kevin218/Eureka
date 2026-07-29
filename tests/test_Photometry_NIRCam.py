@@ -12,9 +12,10 @@ from eureka.lib.util import COMMON_IMPORTS, pathdirectory
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
+from tests.s4_reference import write_s4_reference_metadata
 
 
-def test_NIRCamPhotometry(capsys, keep_s3_output):
+def test_NIRCamPhotometry(capsys, keep_s3_output, keep_s4_output):
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
@@ -37,6 +38,8 @@ def test_NIRCamPhotometry(capsys, keep_s3_output):
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
+    if keep_s4_output:
+        write_s4_reference_metadata(s4_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
     # run assertions for S3
@@ -76,7 +79,8 @@ def test_NIRCamPhotometry(capsys, keep_s3_output):
     # remove temporary files
     if not keep_s3_output:
         os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage3")
-    os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage4")
+    if not keep_s4_output:
+        os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage4")
     os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage5")
 
 

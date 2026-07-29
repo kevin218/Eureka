@@ -31,6 +31,14 @@ def pytest_addoption(parser):
         help=("Replace the selected regression-test reference files with "
               "their current outputs after an interactive confirmation."),
     )
+    parser.addoption(
+        "--keep-s4-output",
+        action="store_true",
+        default=False,
+        help=("Preserve Stage 4 output directories after integration tests. "
+              "Use this only when creating or inspecting regression "
+              "reference data."),
+    )
 
 
 @pytest.fixture
@@ -69,6 +77,12 @@ def overwrite_ref_files(pytestconfig):
     if stdin.readline().strip() != "OVERWRITE":
         raise pytest.UsageError("Reference overwrite cancelled.")
     return True
+
+
+@pytest.fixture
+def keep_s4_output(pytestconfig):
+    """Whether a test should retain its generated Stage 4 products."""
+    return pytestconfig.getoption("--keep-s4-output")
 
 
 def pytest_collection_modifyitems(session, config, items):
