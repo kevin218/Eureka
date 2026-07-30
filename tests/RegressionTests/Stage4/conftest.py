@@ -15,7 +15,7 @@ S3_REFERENCE_ROOT = Path(__file__).parents[1] / "Stage3" / "references"
 
 @pytest.fixture
 def run_s4(tmp_path, pytestconfig, monkeypatch):
-    """Run standalone Stage 4 from an approved Stage 3 golden product."""
+    """Run standalone Stage 4 from an approved Stage 3 reference product."""
     repo_root = Path(pytestconfig.rootpath)
 
     def _run(case):
@@ -36,7 +36,7 @@ def run_s4(tmp_path, pytestconfig, monkeypatch):
         # attributes in file order, where ``inst`` precedes ``pmap``; without
         # a local CRDS cache it consequently asks CRDS for the context before
         # reaching the saved value.  The scientific Stage 4 calculation does
-        # not use CRDS, so provide that already-saved context locally and keep
+        # not use CRDS, so we provide that already-saved context locally and keep
         # this regression test independent of network/cache state.
         if case.name == "wfc3_spectroscopy":
             monkeypatch.setattr(readECF.crds, "get_context_name",
