@@ -1,9 +1,7 @@
 # Stage 4 regression tests
 
-Each case runs only Eureka Stage 4. Its input is the approved Stage 3
-`SpecData.h5` reference for the corresponding case, copied to a temporary
-production-style filename so Eureka follows its normal standalone Stage 4
-metadata-loading path.
+Each regression test case runs only Eureka Stage 4. The Stage 3
+`SpecData.h5` reference files for the corresponding case is used as the input file. We rename this file to a different temporary filename so Eureka can follow its normal standalone Stage 4 metadata-loading path.
 
 Each Stage 4 reference directory contains:
 
@@ -19,5 +17,4 @@ pytest tests/RegressionTests/Stage4
 ```
 
 References are generated only from the existing full-pipeline integration
-tests. Review their S4 products and metadata sidecar before replacing a
-reference; the regression suite never updates them automatically.
+tests.

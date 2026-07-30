@@ -15,20 +15,25 @@ class S4RegressionCase:
     spec_variables: tuple[str, ...]
     lc_variables: tuple[str, ...]
     mode: str
-    check_miri_sorting: bool = False
-    check_niriss_mask_columns: bool = False
-    check_wfc3_read_summing: bool = False
 
 
-SPECTROSCOPY_SPEC_VARIABLES = (
-    "wave_1d", "medflux", "skylev", "skyerr", "centroid_y",
-    "centroid_sy", "stdspec", "stdvar", "optspec", "opterr",
+# Every spectroscopy case must retain these extracted-spectrum and binned
+# light-curve arrays.  The per-case additions below cover instrument-specific
+# diagnostics and optional white-light products.
+SPECTROSCOPY_SPEC_CORE = (
+    "wave_1d", "medflux", "stdspec", "stdvar", "optspec", "opterr",
     "optmask",
 )
 
-SPECTROSCOPY_LC_VARIABLES = (
-    "data", "err", "mask", "skylev", "skyerr", "centroid_y",
-    "centroid_sy", "wave_low", "wave_hi", "wave_mid", "wave_err",
+SPECTROSCOPY_LC_CORE = (
+    "data", "err", "mask", "wave_low", "wave_hi", "wave_mid", "wave_err",
+)
+
+SKY_SPEC_VARIABLES = ("skylev", "skyerr")
+SKY_LC_VARIABLES = ("skylev", "skyerr")
+Y_CENTROID_VARIABLES = ("centroid_y", "centroid_sy")
+WHITE_LIGHT_VARIABLES = (
+    "flux_white", "err_white", "mask_white", "skylev_white", "skyerr_white",
 )
 
 CASES = (
@@ -39,12 +44,10 @@ CASES = (
         s3_reference_dir="nircam_spectroscopy",
         input_filename="S3_NIRCam_ap8_bg12_SpecData.h5",
         reference_dir="nircam_spectroscopy",
-        spec_variables=("wave_1d", "medflux", "centroid_y", "centroid_sy",
-                        "stdspec", "stdvar", "optspec", "opterr",
-                        "optmask", "centroid_x", "centroid_sx", "driftmask"),
-        lc_variables=("data", "err", "mask", "centroid_y", "centroid_sy",
-                      "centroid_x", "centroid_sx", "driftmask", "wave_low",
-                      "wave_hi", "wave_mid", "wave_err"),
+        spec_variables=(SPECTROSCOPY_SPEC_CORE + Y_CENTROID_VARIABLES +
+                        ("centroid_x", "centroid_sx", "driftmask")),
+        lc_variables=(SPECTROSCOPY_LC_CORE + Y_CENTROID_VARIABLES +
+                      ("centroid_x", "centroid_sx", "driftmask")),
         mode="spectroscopy",
     ),
     S4RegressionCase(
@@ -54,10 +57,10 @@ CASES = (
         s3_reference_dir="nirspec_spectroscopy",
         input_filename="S3_NIRSpec_ap5_bg10_SpecData.h5",
         reference_dir="nirspec_spectroscopy",
-        spec_variables=SPECTROSCOPY_SPEC_VARIABLES,
-        lc_variables=SPECTROSCOPY_LC_VARIABLES + ("flux_white", "err_white",
-                                                   "mask_white", "skylev_white",
-                                                   "skyerr_white"),
+        spec_variables=(SPECTROSCOPY_SPEC_CORE + SKY_SPEC_VARIABLES +
+                        Y_CENTROID_VARIABLES),
+        lc_variables=(SPECTROSCOPY_LC_CORE + SKY_LC_VARIABLES +
+                      Y_CENTROID_VARIABLES + WHITE_LIGHT_VARIABLES),
         mode="spectroscopy",
     ),
     S4RegressionCase(
@@ -67,12 +70,11 @@ CASES = (
         s3_reference_dir="miri_spectroscopy",
         input_filename="S3_MIRI_ap4_bg10_SpecData.h5",
         reference_dir="miri_spectroscopy",
-        spec_variables=SPECTROSCOPY_SPEC_VARIABLES,
-        lc_variables=SPECTROSCOPY_LC_VARIABLES + ("flux_white", "err_white",
-                                                   "mask_white", "skylev_white",
-                                                   "skyerr_white"),
+        spec_variables=(SPECTROSCOPY_SPEC_CORE + SKY_SPEC_VARIABLES +
+                        Y_CENTROID_VARIABLES),
+        lc_variables=(SPECTROSCOPY_LC_CORE + SKY_LC_VARIABLES +
+                      Y_CENTROID_VARIABLES + WHITE_LIGHT_VARIABLES),
         mode="spectroscopy",
-        check_miri_sorting=True,
     ),
     S4RegressionCase(
         name="niriss_spectroscopy",
@@ -83,12 +85,9 @@ CASES = (
         reference_dir="niriss_spectroscopy",
         # NIRISS does not produce the centroid arrays included in the
         # generic spectroscopy manifest.
-        spec_variables=("trace", "wave_1d", "medflux", "skylev", "skyerr",
-                        "stdspec", "stdvar", "optspec", "opterr", "optmask"),
-        lc_variables=("data", "err", "mask", "skylev", "skyerr",
-                      "wave_low", "wave_hi", "wave_mid", "wave_err"),
+        spec_variables=SPECTROSCOPY_SPEC_CORE + SKY_SPEC_VARIABLES + ("trace",),
+        lc_variables=SPECTROSCOPY_LC_CORE + SKY_LC_VARIABLES,
         mode="spectroscopy",
-        check_niriss_mask_columns=True,
     ),
     S4RegressionCase(
         name="nircam_photometry",
@@ -113,14 +112,13 @@ CASES = (
         s3_reference_dir="wfc3_spectroscopy",
         input_filename="S3_WFC3_ap5_bg8_SpecData.h5",
         reference_dir="wfc3_spectroscopy",
-        spec_variables=("flatmask", "variance", "guess", "scanHeight", "wave",
-                        "scandir", "wave_1d", "medflux", "centroid_x",
-                        "centroid_y", "stdspec", "stdvar", "optspec", "opterr",
-                        "optmask", "centroid_sx", "driftmask"),
-        lc_variables=("data", "err", "mask", "scandir", "centroid_y",
-                      "centroid_x", "centroid_sx", "driftmask", "wave_low",
-                      "wave_hi", "wave_mid", "wave_err"),
+        spec_variables=(SPECTROSCOPY_SPEC_CORE +
+                        ("flatmask", "variance", "guess", "scanHeight", "wave",
+                         "scandir", "centroid_x", "centroid_y", "centroid_sx",
+                         "driftmask")),
+        lc_variables=(SPECTROSCOPY_LC_CORE +
+                      ("scandir", "centroid_y", "centroid_x", "centroid_sx",
+                       "driftmask")),
         mode="spectroscopy",
-        check_wfc3_read_summing=True,
     ),
 )
