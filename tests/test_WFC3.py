@@ -45,8 +45,6 @@ def test_WFC3(capsys, keep_s3_output):
     reload(s3)
     reload(s4)
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
-    if keep_s3_output:
-        write_s3_reference_metadata(s3_meta)
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
 

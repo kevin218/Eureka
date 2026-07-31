@@ -46,8 +46,6 @@ def test_NIRSpec(capsys, keep_s2_output, keep_s3_output):
 
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path,
                                  s2_meta=s2_meta)
-    if keep_s3_output:
-        write_s3_reference_metadata(s3_meta)
     # Ensure that our custom code to avoid NIRSpec cropping has worked
     assert s3_spec.wave_1d.shape == (511,)
     assert s3_spec.medflux.shape == (31, 511)

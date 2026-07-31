@@ -36,8 +36,6 @@ def test_NIRCamPhotometry(capsys, keep_s3_output):
     reload(s4)
     reload(s5)
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
-    if keep_s3_output:
-        write_s3_reference_metadata(s3_meta)
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
@@ -104,8 +102,6 @@ def test_NIRCamPhotometry_hex(capsys, keep_s3_output):
 
     reload(s3)
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
-    if keep_s3_output:
-        write_s3_reference_metadata(s3_meta)
 
     # run assertions for S3
     meta.outputdir_raw = (f'data{os.sep}Photometry{os.sep}NIRCam{os.sep}'

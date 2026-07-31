@@ -73,8 +73,6 @@ def test_MIRI(capsys, keep_s2_output, keep_s3_output):
 
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path,
                                  s2_meta=s2_meta)
-    if keep_s3_output:
-        write_s3_reference_metadata(s3_meta)
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)

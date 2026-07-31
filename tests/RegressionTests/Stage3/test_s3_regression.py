@@ -1,5 +1,4 @@
 """Science-product regression tests for Eureka Stage 3."""
-import json
 
 import astraeus.xarrayIO as xrio
 import numpy as np
@@ -16,7 +15,7 @@ CENTROID_ATOL = 1e-2 # absolute tolerance for centroid position
 
 def _reference_paths(case):
     reference_dir = REFERENCE_ROOT / case.reference_dir
-    return reference_dir / "SpecData.h5", reference_dir / "metadata.json"
+    return reference_dir / "SpecData.h5"
 
 
 def _assert_array(case, variable, actual, expected):
@@ -44,10 +43,12 @@ def _assert_array(case, variable, actual, expected):
                                    err_msg=f"{case.name}: {variable}")
 
 
-def _assert_mad(case, actual_meta, metadata_path):
-    # Comparison test for MAD value.
-    reference_mad = np.asarray(json.loads(metadata_path.read_text())["mad_s3"])
-    actual_mad = np.asarray(actual_meta.mad_s3)
+def _assert_mad(case, actual_meta, expected):
+    """Compare the Stage 3 MAD stored in the SpecData metadata."""
+    assert "mad_s3" in expected.attrs, \
+        f"{case.name}: missing reference mad_s3"
+    actual_mad = np.atleast_1d(np.asarray(actual_meta.mad_s3))
+    reference_mad = np.atleast_1d(np.asarray(expected.attrs["mad_s3"]))
     assert actual_mad.shape == reference_mad.shape, (
         f"{case.name}: mad_s3 shape changed from {reference_mad.shape} "
         f"to {actual_mad.shape}."
@@ -71,9 +72,8 @@ def _assert_case_semantics(case, actual, expected):
 def test_s3_science_products(case, run_s3):
     """Stage 3 outputs must match their approved instrument/mode baseline."""
     actual, actual_meta = run_s3(case)
-    specdata_path, metadata_path = _reference_paths(case)
+    specdata_path = _reference_paths(case)
     assert specdata_path.is_file(), f"Missing reference: {specdata_path}"
-    assert metadata_path.is_file(), f"Missing reference: {metadata_path}"
 
     expected = xrio.readXR(str(specdata_path), verbose=False)
     for variable in case.variables: # loop over cases defined in cases.py and test
@@ -82,5 +82,5 @@ def test_s3_science_products(case, run_s3):
         _assert_array(case, variable, actual[variable].values,
                       expected[variable].values)
 
-    _assert_mad(case, actual_meta, metadata_path)
+    _assert_mad(case, actual_meta, expected)
     _assert_case_semantics(case, actual, expected)
