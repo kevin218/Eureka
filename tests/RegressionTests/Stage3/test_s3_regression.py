@@ -12,10 +12,37 @@ RTOL = 1e-4 # relative tolerance, used for most arrays in general
 MAD_RTOL = 1e-3 # relative tolerance for MAD value
 CENTROID_ATOL = 1e-2 # absolute tolerance for centroid position
 
+MAX_REPORTED_MISMATCHES = 10 # max number of mismatches explicitly output if array comparison test fails
+
 
 def _reference_paths(case):
     reference_dir = REFERENCE_ROOT / case.reference_dir
     return reference_dir / "SpecData.h5"
+
+
+def _mismatch_details(case, variable, actual, expected):
+    """Return the first mismatched array elements for a failed comparison."""
+    if variable in case.exact_variables:
+        if np.issubdtype(actual.dtype, np.inexact):
+            mismatches = ~np.isclose(actual, expected, rtol=0, atol=0,
+                                     equal_nan=True)
+        else:
+            mismatches = actual != expected
+    elif variable in case.atol_variables:
+        mismatches = ~np.isclose(actual, expected, rtol=0,
+                                 atol=CENTROID_ATOL, equal_nan=True)
+    else:
+        mismatches = ~np.isclose(actual, expected, rtol=RTOL, atol=0,
+                                 equal_nan=True)
+
+    indices = np.argwhere(mismatches)
+    lines = [f"{case.name}: {variable} differs at {len(indices)} elements.",
+             f"First {min(len(indices), MAX_REPORTED_MISMATCHES)} "
+             "mismatches (index: actual, expected):"]
+    for index in indices[:MAX_REPORTED_MISMATCHES]:
+        index = tuple(index)
+        lines.append(f"  {index}: {actual[index]!r}, {expected[index]!r}")
+    return "\n".join(lines)
 
 
 def _assert_array(case, variable, actual, expected):
@@ -25,22 +52,27 @@ def _assert_array(case, variable, actual, expected):
         f"{case.name}: {variable} shape changed from {expected.shape} "
         f"to {actual.shape}."
     )
-    if variable in case.exact_variables:
-        if np.issubdtype(actual.dtype, np.inexact):
-            np.testing.assert_allclose(actual, expected, rtol=0, atol=0,
-                                       equal_nan=True,
-                                       err_msg=f"{case.name}: {variable}")
+    try:
+        if variable in case.exact_variables:
+            if np.issubdtype(actual.dtype, np.inexact):
+                np.testing.assert_allclose(
+                    actual, expected, rtol=0, atol=0, equal_nan=True,
+                    err_msg=f"{case.name}: {variable}")
+            else:
+                np.testing.assert_array_equal(
+                    actual, expected, err_msg=f"{case.name}: {variable}")
+        elif variable in case.atol_variables:
+            np.testing.assert_allclose(
+                actual, expected, rtol=0, atol=CENTROID_ATOL, equal_nan=True,
+                err_msg=f"{case.name}: {variable}")
         else:
-            np.testing.assert_array_equal(actual, expected,
-                                          err_msg=f"{case.name}: {variable}")
-    elif variable in case.atol_variables:
-        np.testing.assert_allclose(actual, expected, rtol=0,
-                                   atol=CENTROID_ATOL, equal_nan=True,
-                                   err_msg=f"{case.name}: {variable}")
-    else:
-        np.testing.assert_allclose(actual, expected, rtol=RTOL, atol=0,
-                                   equal_nan=True,
-                                   err_msg=f"{case.name}: {variable}")
+            np.testing.assert_allclose(
+                actual, expected, rtol=RTOL, atol=0, equal_nan=True,
+                err_msg=f"{case.name}: {variable}")
+    except AssertionError as error:
+        raise AssertionError(
+            f"{error}\n\n{_mismatch_details(case, variable, actual, expected)}"
+        ) from None
 
 
 def _assert_mad(case, actual_meta, expected):
