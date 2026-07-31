@@ -75,11 +75,12 @@ def _assert_array(case, variable, actual, expected):
         ) from None
 
 
-def _assert_mad(case, actual_meta, expected):
+def _assert_mad(case, actual, expected):
     """Compare the Stage 3 MAD stored in the SpecData metadata."""
+    assert "mad_s3" in actual.attrs, f"{case.name}: missing output mad_s3"
     assert "mad_s3" in expected.attrs, \
         f"{case.name}: missing reference mad_s3"
-    actual_mad = np.atleast_1d(np.asarray(actual_meta.mad_s3))
+    actual_mad = np.atleast_1d(np.asarray(actual.attrs["mad_s3"]))
     reference_mad = np.atleast_1d(np.asarray(expected.attrs["mad_s3"]))
     assert actual_mad.shape == reference_mad.shape, (
         f"{case.name}: mad_s3 shape changed from {reference_mad.shape} "
@@ -100,12 +101,33 @@ def _assert_case_semantics(case, actual, expected):
             f"{case.name}: expected time, wavelength, and order dimensions."
         )
 
+
+def _overwrite_reference(case, actual, specdata_path):
+    """Replace one approved reference with the current Stage 3 product."""
+    assert specdata_path.is_file(), (
+        f"{case.name}: refusing to create an untracked reference: "
+        f"{specdata_path}"
+    )
+    reference = actual.copy()
+    temporary_path = specdata_path.with_name(
+        specdata_path.stem + ".tmp" + specdata_path.suffix)
+    success = xrio.writeXR(str(temporary_path), reference, verbose=False)
+    if not success:
+        raise OSError(f"Failed to write updated reference: {specdata_path}")
+    temporary_path.replace(specdata_path)
+    print(f"Updated Stage 3 reference: {specdata_path}")
+
+
 @pytest.mark.parametrize("case", CASES, ids=lambda case: case.name)
-def test_s3_science_products(case, run_s3):
+def test_s3_science_products(case, run_s3, overwrite_ref_files):
     """Stage 3 outputs must match their approved instrument/mode baseline."""
-    actual, actual_meta = run_s3(case)
+    actual, _ = run_s3(case)
     specdata_path = _reference_paths(case)
     assert specdata_path.is_file(), f"Missing reference: {specdata_path}"
+
+    if overwrite_ref_files:
+        _overwrite_reference(case, actual, specdata_path)
+        return
 
     expected = xrio.readXR(str(specdata_path), verbose=False)
     for variable in case.variables: # loop over cases defined in cases.py and test
@@ -114,5 +136,5 @@ def test_s3_science_products(case, run_s3):
         _assert_array(case, variable, actual[variable].values,
                       expected[variable].values)
 
-    _assert_mad(case, actual_meta, expected)
+    _assert_mad(case, actual, expected)
     _assert_case_semantics(case, actual, expected)

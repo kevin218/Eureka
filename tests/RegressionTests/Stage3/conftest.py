@@ -25,6 +25,9 @@ def run_s3(tmp_path, pytestconfig):
         input_meta.topdir = str(repo_root)
         input_meta.inputdir = str(repo_root / case.input_dir)
         input_meta.inputdir_raw = input_meta.inputdir
+        # Regression references are saved SpecData products, so always execute
+        # the production output-writing path in the isolated pytest workspace.
+        input_meta.save_output = True
         outputdir = tmp_path / "stage3"
         outputdir_raw = os.path.relpath(outputdir, repo_root)
         input_meta.outputdir = outputdir_raw
