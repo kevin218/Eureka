@@ -7,12 +7,12 @@ import pytest
 from .cases import CASES
 from .conftest import REFERENCE_ROOT
 
-# Define tolerances for tests
-RTOL = 1e-4 # relative tolerance, used for most arrays in general
-MAD_RTOL = 1e-3 # relative tolerance for MAD value
-CENTROID_ATOL = 1e-2 # absolute tolerance for centroid position
+# Test tolerances.
+RTOL = 1e-4  # Relative tolerance for most arrays.
+MAD_RTOL = 1e-3  # Relative tolerance for MAD values.
+CENTROID_ATOL = 1e-2  # Absolute tolerance for centroid positions.
 
-MAX_REPORTED_MISMATCHES = 10 # max number of mismatches explicitly output if array comparison test fails
+MAX_REPORTED_MISMATCHES = 10
 
 
 def _reference_paths(case):
@@ -46,8 +46,7 @@ def _mismatch_details(case, variable, actual, expected):
 
 
 def _assert_array(case, variable, actual, expected):
-    # Compare variable actual value to expected value. Type of comparison (exact, absolute, relative)
-    # depends on the variable being tested.
+    """Assert an array matches its reference using the case's tolerance."""
     assert actual.shape == expected.shape, (
         f"{case.name}: {variable} shape changed from {expected.shape} "
         f"to {actual.shape}."
@@ -130,9 +129,11 @@ def test_s3_science_products(case, run_s3, overwrite_ref_files):
         return
 
     expected = xrio.readXR(str(specdata_path), verbose=False)
-    for variable in case.variables: # loop over cases defined in cases.py and test
+    for variable in case.variables:
         assert variable in actual, f"{case.name}: missing output {variable}"
-        assert variable in expected, f"{case.name}: missing reference {variable}"
+        assert variable in expected, (
+            f"{case.name}: missing reference {variable}"
+        )
         _assert_array(case, variable, actual[variable].values,
                       expected[variable].values)
 

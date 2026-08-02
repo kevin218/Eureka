@@ -17,7 +17,6 @@ try:
     from eureka.S2_calibrations import s2_calibrate as s2
 except ModuleNotFoundError:
     pass
-from tests.s3_reference import write_s3_reference_metadata
 
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4

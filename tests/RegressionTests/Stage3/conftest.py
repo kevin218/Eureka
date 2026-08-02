@@ -14,7 +14,7 @@ REFERENCE_ROOT = Path(__file__).parent / "references"
 @pytest.fixture
 def run_s3(tmp_path, pytestconfig):
     """Run Stage 3 with production ECF settings and isolated output."""
-    repo_root = Path(pytestconfig.rootpath) # root file path of eureka repository
+    repo_root = Path(pytestconfig.rootpath)  # Eureka repository root
 
     def _run(case):
         input_meta = S3MetaClass(folder=str(repo_root / case.ecf_dir),
