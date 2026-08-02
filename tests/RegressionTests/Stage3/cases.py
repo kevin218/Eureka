@@ -31,8 +31,7 @@ CASES = (
         input_dir="tests/data/JWST-Sim/NIRCam/Stage2",
         reference_dir="nircam_spectroscopy",
         mode="spectroscopy",
-        variables=("optspec", "opterr", "optmask", "wave_1d",
-                   "medflux"),
+        variables=SPECTROSCOPY_VARIABLES,
         exact_variables=("optmask", "wave_1d"),
     ),
     S3RegressionCase(
