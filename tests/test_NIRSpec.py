@@ -95,7 +95,8 @@ def test_NIRSpec(capsys, keep_s2_output, keep_s3_output):
 
     # remove temporary files
     if not keep_s2_output:
-        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage2")
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}"
+                  f"Stage2{os.sep}S2_*")
     if not keep_s3_output:
         os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage4")

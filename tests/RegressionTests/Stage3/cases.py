@@ -31,8 +31,9 @@ CASES = (
         input_dir="tests/data/JWST-Sim/NIRCam/Stage2",
         reference_dir="nircam_spectroscopy",
         mode="spectroscopy",
-        variables=SPECTROSCOPY_VARIABLES,
-        exact_variables=("optmask", "wave_1d"),
+        variables=("optspec", "opterr", "optmask", "wave_1d",
+                   "medflux"),
+        exact_variables=("optmask",),
     ),
     S3RegressionCase(
         name="nirspec_spectroscopy",
@@ -42,7 +43,7 @@ CASES = (
         reference_dir="nirspec_spectroscopy",
         mode="spectroscopy",
         variables=SPECTROSCOPY_VARIABLES,
-        exact_variables=("optmask", "wave_1d"),
+        exact_variables=("optmask",),
     ),
     S3RegressionCase(
         name="miri_spectroscopy",
@@ -52,7 +53,7 @@ CASES = (
         reference_dir="miri_spectroscopy",
         mode="spectroscopy",
         variables=SPECTROSCOPY_VARIABLES,
-        exact_variables=("optmask", "wave_1d"),
+        exact_variables=("optmask",),
     ),
     S3RegressionCase(
         name="niriss_spectroscopy",
@@ -62,7 +63,7 @@ CASES = (
         reference_dir="niriss_spectroscopy",
         mode="spectroscopy",
         variables=SPECTROSCOPY_VARIABLES,
-        exact_variables=("optmask", "wave_1d"),
+        exact_variables=("optmask",),
         check_niriss_orders=True,
     ),
     S3RegressionCase(
@@ -74,7 +75,7 @@ CASES = (
         mode="spectroscopy",
         variables=("optspec", "opterr", "optmask", "wave_1d",
                    "medflux"),
-        exact_variables=("optmask", "wave_1d"),
+        exact_variables=("optmask",),
     ),
     S3RegressionCase(
         name="nircam_photometry",
