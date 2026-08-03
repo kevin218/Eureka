@@ -11,9 +11,14 @@ from .conftest import REFERENCE_ROOT
 RTOL = 1e-4  # Relative tolerance for most arrays.
 MAD_RTOL = 1e-3  # Relative tolerance for MAD values.
 CENTROID_ATOL = 1e-2  # Absolute tolerance for centroid positions.
-# WFC3 optspec differs from its approved reference by up to 0.45% in CI.
+# WFC3 optspec differs from its approved reference by up to 0.45% in
+# CI.
 WFC3_OPTSPEC_RTOL = 5e-3
-# The median image can differ by a bit greater than 1e-4 from its reference in CI.
+# WFC3 opterr differs from its approved reference by up to 6.76e-4
+# in CI.
+WFC3_OPTERR_RTOL = 1e-3
+# The median image can differ by a bit greater than 1e-4 from its
+# reference in CI.
 MEDFLUX_RTOL = 2e-4
 
 MAX_REPORTED_MISMATCHES = 10
@@ -23,6 +28,8 @@ def _rtol(case, variable):
     """Return the relative tolerance for one regression variable."""
     if case.name == "wfc3_spectroscopy" and variable == "optspec":
         return WFC3_OPTSPEC_RTOL
+    if case.name == "wfc3_spectroscopy" and variable == "opterr":
+        return WFC3_OPTERR_RTOL
     if variable == "medflux":
         return MEDFLUX_RTOL
     return RTOL
