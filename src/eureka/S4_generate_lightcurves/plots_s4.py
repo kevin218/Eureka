@@ -537,7 +537,3 @@ def plot_rescaled_phoenix(meta, sld, sld_new):
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
-
-
-
-
