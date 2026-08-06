@@ -1,9 +1,10 @@
 
-import os
 import json
-import numpy as np
-from copy import deepcopy
+import os
 import time as time_pkg
+from copy import deepcopy
+
+import numpy as np
 
 import eureka.S1_detector_processing.s1_process as s1
 import eureka.S2_calibrations.s2_calibrate as s2
@@ -11,12 +12,13 @@ import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4
 from eureka.S1_detector_processing.s1_meta import S1MetaClass
 from eureka.S2_calibrations.s2_meta import S2MetaClass
-from eureka.S3_data_reduction.s3_meta import S3MetaClass
 from eureka.S3_data_reduction import plots_s3
+from eureka.S3_data_reduction.s3_meta import S3MetaClass
 from eureka.S4_generate_lightcurves.s4_meta import S4MetaClass
-from .S1opt_meta import S1optMetaClass
-from . import objective_funcs, optimizers
+
 from ..lib import logedit, util
+from . import objective_funcs, optimizers
+from .S1opt_meta import S1optMetaClass
 
 
 def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):

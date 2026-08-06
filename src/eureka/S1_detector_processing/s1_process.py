@@ -1,17 +1,17 @@
 import os
 import time as time_pkg
-import numpy as np
 from copy import deepcopy
-from astropy.io import fits
 
+import numpy as np
+from astropy.io import fits
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
 
-from .ramp_fitting import Eureka_RampFitStep
-from .superbias import Eureka_SuperBiasStep
-from .s1_meta import S1MetaClass
-
-from ..lib import logedit, util
+from ..lib import logedit
 from ..lib import manageevent as me
+from ..lib import util
+from .ramp_fitting import Eureka_RampFitStep
+from .s1_meta import S1MetaClass
+from .superbias import Eureka_SuperBiasStep
 
 
 def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):

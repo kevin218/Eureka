@@ -1,5 +1,6 @@
-import numpy as np
 import copy
+
+import numpy as np
 from scipy.stats import norm
 
 from ..lib.split_channels import get_trim

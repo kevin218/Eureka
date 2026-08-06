@@ -5,8 +5,8 @@ the optimal extraction of the data.
 """
 
 import numpy as np
-from scipy.special import gamma
 from astropy.modeling.models import Moffat1D
+from scipy.special import gamma
 
 __all__ = ['moffat_2poly_piecewise', 'moffat_1poly_piecewise',
            'gaussian_1poly_piecewise', 'gaussian_2poly_piecewise',

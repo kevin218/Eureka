@@ -12,14 +12,15 @@
 #
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../'))
 sys.path.insert(0, os.path.abspath('../../'))
 sys.path.insert(0, os.path.abspath('../../src/'))
 
-from eureka import __version__
-
 import sphinx_rtd_theme
+
+from eureka import __version__
 
 # -- Project information -----------------------------------------------------
 
@@ -65,6 +66,7 @@ nbsphinx_prolog = """
 html_theme = 'sphinx_rtd_theme'
 
 import sphinx_rtd_theme
+
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 

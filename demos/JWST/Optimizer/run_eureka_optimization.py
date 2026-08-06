@@ -1,4 +1,5 @@
 import os
+
 import eureka.lib.plots
 import eureka.optimizer.S1opt_optimizer as s1opt
 import eureka.optimizer.S3opt_optimizer as s3opt

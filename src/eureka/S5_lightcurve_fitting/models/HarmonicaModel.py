@@ -1,12 +1,13 @@
 import numpy as np
+
 try:
     from harmonica import HarmonicaTransit
 except ImportError:
     print("Could not import harmonica. Functionality may be limited.")
 
-from .BatmanModels import BatmanTransitModel
-from .AstroModel import PlanetParams
 from ...lib.split_channels import split
+from .AstroModel import PlanetParams
+from .BatmanModels import BatmanTransitModel
 
 
 class HarmonicaTransitModel(BatmanTransitModel):

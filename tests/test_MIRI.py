@@ -1,16 +1,17 @@
-import sys
 import os
-from importlib import reload
+import sys
 import time as time_pkg
 from copy import deepcopy
+from importlib import reload
 
 import numpy as np
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
+import eureka.lib.plots
+from eureka.lib.citations import CITATIONS
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
-from eureka.lib.citations import CITATIONS
-import eureka.lib.plots
+
 try:
     from eureka.S1_detector_processing import s1_process as s1
     from eureka.S2_calibrations import s2_calibrate as s2

@@ -1,9 +1,10 @@
-import numpy as np
-from tqdm import tqdm
 import multiprocessing as mp
-import matplotlib.pyplot as plt
 import os
 from copy import deepcopy
+
+import matplotlib.pyplot as plt
+import numpy as np
+from tqdm import tqdm
 
 from ..lib import plots
 from . import plots_s3

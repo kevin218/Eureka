@@ -1,13 +1,12 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import os
-from tqdm import tqdm
 import multiprocessing as mp
+import os
 
+import matplotlib.pyplot as plt
+import numpy as np
 from astropy.stats import sigma_clip
-
-from scipy.signal import lombscargle
 from scipy.optimize import minimize
+from scipy.signal import lombscargle
+from tqdm import tqdm
 
 from ..lib import plots
 from ..lib.smooth import medfilt

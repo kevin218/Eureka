@@ -4,10 +4,9 @@ import sys
 import pytest
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
-from eureka.S4_generate_lightcurves.s4_meta import S4MetaClass
 from eureka.lib import manageevent as me
 from eureka.lib.readECF import MetaClass
-
+from eureka.S4_generate_lightcurves.s4_meta import S4MetaClass
 
 EVENTLABEL = 'testevent'
 

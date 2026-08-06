@@ -1,7 +1,7 @@
 import numpy as np
 
+from ...lib.split_channels import get_trim, split
 from .Model import Model
-from ...lib.split_channels import split, get_trim
 
 
 class HSTRampModel(Model):

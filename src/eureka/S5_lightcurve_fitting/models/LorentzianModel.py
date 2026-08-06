@@ -1,7 +1,7 @@
 import numpy as np
 
-from .Model import Model
 from ...lib.split_channels import split
+from .Model import Model
 
 
 class LorentzianModel(Model):

@@ -64,6 +64,11 @@ namespaces = false
 [tool.setuptools_scm]
 write_to = "src/eureka/version.py"
 
+[tool.isort]
+line_length = 79
+known_first_party = ["eureka"]
+src_paths = ["src"]
+
 [tool.unidep]
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64"]
@@ -74,7 +79,7 @@ dependencies = [
     { conda = "libblas=*=*openblas*" },
     { conda = "liblapack=*=*openblas*" },
 
-    "astropy",
+    "astropy<=7.2.1",  # Upper limit needed to avoid failing tests
     "astroquery",
     "bokeh",
     "ccdproc",
@@ -102,35 +107,34 @@ dependencies = [
     { pip = "fleck" },
     { pip = "george" }, # Needed for GP
     { pip = "planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main" }, # PyPI build currently only supports for python 3.8 -- 3.10
-    { pip = "pastasoss>=1.2.3" }, # Lower limit needed for pkg_resources deprecation
+    { pip = "pastasoss @ git+https://github.com/taylorbell57/pastasoss@0512d0fba3d16a3ae9eaadc466c45f4b551ceabf" },  # Pin needed for pkg_resources deprecation
     { pip = "setuptools_scm>=6.2" }, # Needed when importing from a source tree without generated version.py
-    { pip = "stdatamodels" },
+    { pip = "stdatamodels>=5.0.2" },
     { pip = "svo_filters>=0.5.3" }, # Lower limit needed for pkg_resources deprecation
     { pip = "mc3" }, # Needed for uncertainties in the RMS time-averaging plots in S5
 ]
 
 [tool.unidep.optional_dependencies]
 rwddt = [
-    { pip = "crds==13.1.1" },
+    { pip = "crds>=13.2.7" },
     "flake8",
     { pip = "image_registration>=0.2.10" }, # Lower bound needed to avoid np.float issue
     "ipykernel",
     "ipympl", # Needed for the interactive matplotlib backend
     "ipython",
     "jupyter",
-    { pip = "jwst==1.20.2" },
+    { pip = "jwst==2.0.1" },
     "numpy==1.26.4",
-    { pip = "pastasoss==1.2.3" },
     "pytest<8.0", # Upper limit needed to avoid some conflict between pytest, an asdf package, and something in the pymc3 set of installs
     "pytest-cov",
     "pytest-doctestplus",
-    "scipy==1.15.2",
-    { pip = "stcal==1.15.2" },
-    { pip = "stdatamodels==4.1.0" },
+    "scipy==1.17.1",
+    { pip = "stcal==1.18.0" },
+    { pip = "stdatamodels==5.0.2" },
 ]
 jwst = [
-    { pip = "jwst==1.20.2" }, # Pinned due to CRDS/stcal compatibility requirements
-    { pip = "stcal>=1.15.2" }, # Lower limit needed for updated stcal.ramp_fitting.ramp_fit.ramp_fit arguments
+    { pip = "jwst==2.0.1" }, # Pinned due to CRDS/stcal compatibility requirements
+    { pip = "stcal>=1.18.0" }, # Lower limit implied by jwst 2.0.1
 ]
 hst = [
     { pip = "image_registration>=0.2.10" }, # Lower bound needed to avoid np.float issue
@@ -156,6 +160,7 @@ jupyter = [
     "jupyter>=1.0.0", # Base metapackage
 ]
 dev = [
+    "isort",
     "pre-commit",
     { conda = "python-build", pip = "build" },
     "twine",

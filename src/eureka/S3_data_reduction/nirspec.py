@@ -1,9 +1,10 @@
 # NIRSpec specific rountines go here
+import astraeus.xarrayIO as xrio
 import numpy as np
 from astropy.io import fits
-import astraeus.xarrayIO as xrio
-from . import nircam, sigrej, straighten, plots_s3
+
 from ..lib.util import read_time, supersample
+from . import nircam, plots_s3, sigrej, straighten
 
 __all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg',
            'fit_bg', 'cut_aperture', 'standard_spectrum', 'clean_median_flux',

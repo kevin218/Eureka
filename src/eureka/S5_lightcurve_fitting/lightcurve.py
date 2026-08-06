@@ -1,13 +1,14 @@
-import numpy as np
 import os
-import matplotlib.pyplot as plt
 from copy import copy
 
-from . import models as m
-from . import fitters
-from .utils import COLORS, color_gen
+import matplotlib.pyplot as plt
+import numpy as np
+
 from ..lib import plots, util
 from ..lib.split_channels import get_trim, split
+from . import fitters
+from . import models as m
+from .utils import COLORS, color_gen
 
 
 class LightCurve(m.Model):

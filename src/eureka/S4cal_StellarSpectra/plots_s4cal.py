@@ -1,7 +1,9 @@
-import numpy as np
 import os
+
 import matplotlib.pyplot as plt
-from ..lib import util, plots
+import numpy as np
+
+from ..lib import plots, util
 
 colors = ['xkcd:bright blue', 'xkcd:soft green', 'orange', 'purple']
 

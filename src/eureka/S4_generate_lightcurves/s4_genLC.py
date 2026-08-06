@@ -16,21 +16,21 @@
 
 import os
 import time as time_pkg
-import numpy as np
 from copy import deepcopy
-import scipy.interpolate as spi
+
 import astraeus.xarrayIO as xrio
+import numpy as np
+import scipy.interpolate as spi
 from astropy.convolution import Box1DKernel
 from tqdm import tqdm
 
-from . import plots_s4, drift, generate_LD, wfc3
-from .outliers import get_outliers
-from .s4_meta import S4MetaClass
-from ..lib import logedit
+from ..lib import clipping, logedit
 from ..lib import manageevent as me
 from ..lib import util
-from ..lib import clipping
 from ..version import version
+from . import drift, generate_LD, plots_s4, wfc3
+from .outliers import get_outliers
+from .s4_meta import S4MetaClass
 
 
 def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):

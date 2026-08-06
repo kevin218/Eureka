@@ -4,33 +4,28 @@
 # Copyright (c) Association of Universities for Research in Astronomy (AURA)
 # SPDX-License-Identifier: BSD-3-Clause
 
-import numpy as np
-from functools import partial
+import logging
 import warnings
+from functools import partial
 
-from stcal.ramp_fitting import ramp_fit, utils
+import numpy as np
 import stcal.ramp_fitting.ols_fit
-from stcal.ramp_fitting.ramp_fit import suppress_one_good_group_ramps
-from stcal.ramp_fitting.ols_fit import discard_miri_groups
-
-from stcal.ramp_fitting.likely_fit import LIKELY_MIN_NGROUPS
-
-from jwst.stpipe import Step
 from jwst import datamodels
-
 from jwst.datamodels import dqflags
-
-from jwst.ramp_fitting.ramp_fit_step import get_reference_file_subarrays, \
-    create_image_model, create_integration_model, set_groupdq
-
 from jwst.firstframe.firstframe_step import FirstFrameStep
 from jwst.lastframe.lastframe_step import LastFrameStep
+from jwst.ramp_fitting.ramp_fit_step import (create_image_model,
+                                             create_integration_model,
+                                             get_reference_file_subarrays,
+                                             set_groupdq)
+from jwst.stpipe import Step
+from stcal.ramp_fitting import ramp_fit, utils
+from stcal.ramp_fitting.likely_fit import LIKELY_MIN_NGROUPS
+from stcal.ramp_fitting.ols_fit import discard_miri_groups
+from stcal.ramp_fitting.ramp_fit import suppress_one_good_group_ramps
 
-from . import update_saturation
-from . import group_level
-from . import remove390
+from . import group_level, remove390, update_saturation
 
-import logging
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 

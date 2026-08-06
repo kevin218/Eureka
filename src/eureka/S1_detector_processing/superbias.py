@@ -2,14 +2,17 @@
 # adapted by Kevin Stevenson, Feb 2023
 
 
-from jwst.stpipe import Step
-from jwst import datamodels
-# from jwst.superbias import bias_sub
-from . import bias_sub
 # import numpy as np
 # from functools import partial
 # import warnings
 import logging
+
+from jwst import datamodels
+from jwst.stpipe import Step
+
+# from jwst.superbias import bias_sub
+from . import bias_sub
+
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 

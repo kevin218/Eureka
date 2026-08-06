@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -9,11 +10,14 @@ except ModuleNotFoundError:
     __version__ = get_version(root=f'..{os.sep}..{os.sep}',
                               relative_to=__file__)
 
-from astropy.utils.exceptions import AstropyDeprecationWarning
 import warnings
+
+from astropy.utils.exceptions import AstropyDeprecationWarning
+
 warnings.simplefilter('ignore', category=AstropyDeprecationWarning)
 
 from . import lib
+
 try:
     import jwst
     success = True
@@ -24,11 +28,9 @@ except ModuleNotFoundError:
 if success:
     from . import S1_detector_processing
     from . import S2_calibrations
-from . import S3_data_reduction
-from . import S4_generate_lightcurves
-from . import S4cal_StellarSpectra
-from . import S5_lightcurve_fitting
-from . import S6_planet_spectra
+
+from . import (S3_data_reduction, S4_generate_lightcurves,
+               S4cal_StellarSpectra, S5_lightcurve_fitting, S6_planet_spectra)
 
 __all__ = ["lib", "S3_data_reduction", "S4_generate_lightcurves",
            "S4cal_StellarSpectra", "S5_lightcurve_fitting",

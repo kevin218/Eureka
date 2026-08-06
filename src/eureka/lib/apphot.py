@@ -1,14 +1,16 @@
-import numpy as np
-from shapely.geometry import Polygon, Point
-from shapely.affinity import rotate
 from functools import partial
-from photutils.aperture import (aperture_photometry, CircularAperture,
-                                EllipticalAperture, RectangularAperture,
-                                CircularAnnulus, EllipticalAnnulus,
-                                RectangularAnnulus)
+
+import numpy as np
+from photutils.aperture import (CircularAnnulus, CircularAperture,
+                                EllipticalAnnulus, EllipticalAperture,
+                                RectangularAnnulus, RectangularAperture,
+                                aperture_photometry)
+from shapely.affinity import rotate
+from shapely.geometry import Point, Polygon
+
 from . import disk as di
-from . import meanerr as me
 from . import interp2d as i2d
+from . import meanerr as me
 
 
 def apphot(data, meta, i):
