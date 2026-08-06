@@ -26,7 +26,6 @@ from stcal.ramp_fitting.ramp_fit import suppress_one_good_group_ramps
 from . import group_level, remove390, update_saturation
 from .rscd import Eureka_RscdStep
 
-
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 

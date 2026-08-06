@@ -1,10 +1,8 @@
 import logging
 
-from stdatamodels.jwst import datamodels
-
 from jwst.rscd import rscd_sub
 from jwst.rscd.rscd_step import RscdStep
-
+from stdatamodels.jwst import datamodels
 
 log = logging.getLogger(__name__)
 
