@@ -214,6 +214,13 @@ def optimize(s1opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
         s1_meta.params[key] = value
         setattr(s1_meta, key, value)
 
+    if 'rscd_group_skip' in p:
+        # The rscd_group_skip and rscd_group_skip1 parameters only affect the
+        # fit when skip_rscd is False, so force it off here even if skip_rscd
+        # has not been optimized yet
+        s1_meta.params['skip_rscd'] = False
+        setattr(s1_meta, 'skip_rscd', False)
+
     # Perform parametric sweep
     if "__" in p:
         # Optimize two independent parameters simultaneously
