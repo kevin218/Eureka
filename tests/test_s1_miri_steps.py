@@ -2,8 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from eureka.S1_detector_processing import ramp_fitting
-from eureka.S1_detector_processing import rscd
+from eureka.S1_detector_processing import ramp_fitting, rscd
 from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
 from eureka.S1_detector_processing.rscd import Eureka_RscdStep
 from eureka.S1_detector_processing.s1_meta import S1MetaClass
