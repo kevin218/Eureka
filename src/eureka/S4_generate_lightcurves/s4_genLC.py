@@ -91,14 +91,17 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     meta = me.filter_allapers_inputdir(meta)
 
     # Create directories for Stage 4 outputs
+    # Cache the clean base dir since meta.outputdir_raw gets overwritten
+    # below each time meta.outputdir is set to a per-pair directory
+    base_outputdir_raw = meta.outputdir_raw
     meta.run_s4 = None
     for spec_hw_val, bg_hw_val in me.get_allapers_pairs(meta):
         # Directory structure should not use expanded HW values
         spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
             meta.expand, spec_hw_val, bg_hw_val)
-        meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
-                                         ap=spec_hw_val,
-                                         bg=bg_hw_val)
+        meta.run_s4 = util.makedirectory(
+            meta, 'S4', meta.run_s4, ap=spec_hw_val, bg=bg_hw_val,
+            outputdir_raw=base_outputdir_raw)
 
     allapers_pairs = me.get_allapers_pairs(meta)
     for spec_hw_val in meta.spec_hw_range:
@@ -123,9 +126,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.expand, spec_hw_val, bg_hw_val)
 
             # Get directory for Stage 4 processing outputs
-            meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
-                                                ap=spec_hw_val,
-                                                bg=bg_hw_val)
+            meta.outputdir = util.pathdirectory(
+                meta, 'S4', meta.run_s4, ap=spec_hw_val, bg=bg_hw_val,
+                outputdir_raw=base_outputdir_raw)
 
             # Copy existing S3 log file and resume log
             meta.s4_logname = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
