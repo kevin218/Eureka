@@ -710,8 +710,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                                      ld_coeffs_w[2])
                     lc['spam_nonlin_4para_white'] = (['wavelength', 'spam_4'],
                                                      ld_coeffs_w[3])
-
-
             # Add some variables to HDF5 files to track for testing
             # ``mask_columns`` and the unbinned MAD describe the corrected
             # spectra, while the binned MAD values describe the light curves.

@@ -35,9 +35,9 @@ def run_s4(tmp_path, pytestconfig, monkeypatch):
         # The WFC3 S3 product embeds its HST pmap (1345).  MetaClass restores
         # attributes in file order, where ``inst`` precedes ``pmap``; without
         # a local CRDS cache it consequently asks CRDS for the context before
-        # reaching the saved value.  The scientific Stage 4 calculation does
-        # not use CRDS, so we provide that already-saved context locally and keep
-        # this regression test independent of network/cache state.
+        # reaching the saved value. The scientific Stage 4 calculation does
+        # not use CRDS, so use the saved context locally to keep this test
+        # independent of network/cache state.
         if case.name == "wfc3_spectroscopy":
             monkeypatch.setattr(readECF.crds, "get_context_name",
                                 lambda observatory: "hst_1345.pmap")
