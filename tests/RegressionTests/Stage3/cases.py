@@ -23,6 +23,9 @@ SPECTROSCOPY_VARIABLES = (
     "skylev", "skyerr",
 )
 
+# Vars in `variables` are tested using a relative tolerance
+# Vars in `exact_variables` are tested exactly
+# Vars in `atol_variables` are tested using an absolute tolerance
 CASES = (
     S3RegressionCase(
         name="nircam_spectroscopy",

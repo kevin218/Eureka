@@ -711,6 +711,18 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     lc['spam_nonlin_4para_white'] = (['wavelength', 'spam_4'],
                                                      ld_coeffs_w[3])
 
+
+            # Add some variables to HDF5 files to track for testing
+            # ``mask_columns`` and the unbinned MAD describe the corrected
+            # spectra, while the binned MAD values describe the light curves.
+            spec.attrs['mad_s4'] = float(meta.mad_s4)
+            spec.attrs['mask_columns'] = np.asarray(meta.mask_columns,
+                                                    dtype=int)
+            lc.attrs['mad_s4_binned'] = np.asarray(meta.mad_s4_binned,
+                                                   dtype=float)
+            lc.attrs['mad_s4_binned_bg'] = np.asarray(
+                meta.mad_s4_binned_bg, dtype=float)
+
             log.writelog('Saving results...')
 
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'

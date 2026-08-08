@@ -47,8 +47,6 @@ def test_WFC3(capsys, keep_s3_output, keep_s4_output):
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
-    if keep_s4_output:
-        write_s4_reference_metadata(s4_meta)
 
     # run assertions for S3
     meta.outputdir_raw = f'data{os.sep}WFC3{os.sep}Stage3{os.sep}'

@@ -13,7 +13,6 @@ from eureka.S2_calibrations import s2_calibrate as s2
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
-from tests.s4_reference import write_s4_reference_metadata
 
 
 def test_NIRSpec(capsys, keep_s2_output, keep_s3_output, keep_s4_output):
@@ -52,8 +51,6 @@ def test_NIRSpec(capsys, keep_s2_output, keep_s3_output, keep_s4_output):
 
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
-    if keep_s4_output:
-        write_s4_reference_metadata(s4_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
     # run assertions for S2
