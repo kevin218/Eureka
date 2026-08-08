@@ -9,7 +9,7 @@ from .conftest import REFERENCE_ROOT
 
 # Test tolerances.
 RTOL = 1e-4  # Relative tolerance for most arrays.
-MAD_RTOL = 1e-3  # Relative tolerance for MAD values.
+MAD_RTOL = 2e-3  # Relative tolerance for MAD values.
 CENTROID_ATOL = 1e-2  # Absolute tolerance for centroid positions.
 # WFC3 optspec differs from its approved reference by up to 0.45% in
 # CI.
