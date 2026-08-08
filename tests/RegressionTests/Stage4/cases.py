@@ -19,13 +19,8 @@ class S4RegressionCase:
     atol_variables: tuple[str, ...] = ()
 
 
-# Every spectroscopy case must retain these extracted-spectrum and binned
-# light-curve arrays.  The per-case additions below cover instrument-specific
-# diagnostics and optional white-light products.
-
-# Define groups of variables for spectroscopy and photometry that are commonly outputs of the 
-# same isntrument and hence tested together. Groups aren't perfect but meant to reduce
-# listing the variables repeatedly for each case
+# Define variable groups for spectroscopy and photometry. This reduces repeated
+# lists in each case, though not every instrument produces every group.
 
 
 SPECTROSCOPY_SPEC_CORE = (
@@ -44,9 +39,10 @@ WHITE_LIGHT_VARIABLES = (
     "flux_white", "err_white", "mask_white", "skylev_white", "skyerr_white",
 )
 
-# Vars in `spec_variables` and `lc_variables` are tested using a relative tolerance
-# Vars in `exact_variables` can come from SpecData.h5 or LCData.h5 and are tested exactly
-# Vars in `atol_variables` can come from SpecData.h5 or LCData.h5 and are tested using an absolute tolerance
+# ``spec_variables`` and ``lc_variables`` use relative tolerance by default
+# and the vars come from SpecData.h5 and LCData.h5 respectively
+# ``exact_variables`` may come from either HDF5 file and must match exactly
+# ``atol_variables`` may come from either HDF5 file and use absolute tolerance
 CASES = (
     S4RegressionCase(
         name="nircam_spectroscopy",
