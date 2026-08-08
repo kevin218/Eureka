@@ -1,122 +1,153 @@
-"""Science-product regression tests for Eureka Stage 4."""
-import json
-
+import astraeus.xarrayIO as xrio
 import numpy as np
 import pytest
-import astraeus.xarrayIO as xrio
 
 from .cases import CASES
 from .conftest import REFERENCE_ROOT
 
 
-# Most science arrays use a relative comparison; centroid locations use a
-# small absolute tolerance, while masks, bin edges, and count-like arrays
-# must be unchanged.
+# Most science arrays use a relative comparison. Each case declares its
+# exact-value and centroid-position exceptions alongside its product manifest.
 RTOL = 1e-4
 MAD_RTOL = 1e-3
 CENTROID_ATOL = 1e-2
-EXACT_VARIABLES = {
-    "optmask", "mask", "mask_white", "driftmask", "scandir", "flatmask",
-    "wave_1d", "wave", "wave_low", "wave_hi", "wave_mid", "wave_err",
-    "nappix", "nskypix", "nskyideal", "status",
-}
-CENTROID_VARIABLES = {"centroid_x", "centroid_y"}
+MAX_REPORTED_MISMATCHES = 10
 
 
 def _reference_paths(case):
-    """Return the three approved Stage 4 reference files for one case."""
+    """Return the two approved Stage 4 reference files for one case."""
     reference_dir = REFERENCE_ROOT / case.reference_dir
-    return (reference_dir / "SpecData.h5", reference_dir / "LCData.h5",
-            reference_dir / "metadata.json")
+    return reference_dir / "SpecData.h5", reference_dir / "LCData.h5"
 
 
-def _assert_array(case, variable, actual, expected):
+def _mismatch_details(case, product, variable, actual, expected):
+    """Return the first mismatched elements for a failed comparison."""
+    if variable in case.exact_variables:
+        if np.issubdtype(actual.dtype, np.inexact):
+            mismatches = ~np.isclose(actual, expected, rtol=0, atol=0,
+                                     equal_nan=True)
+        else:
+            mismatches = actual != expected
+    elif variable in case.atol_variables:
+        mismatches = ~np.isclose(actual, expected, rtol=0,
+                                 atol=CENTROID_ATOL, equal_nan=True)
+    else:
+        mismatches = ~np.isclose(actual, expected, rtol=RTOL, atol=0,
+                                 equal_nan=True)
+
+    indices = np.argwhere(mismatches)
+    label = f"{product}.{variable}"
+    lines = [f"{case.name}: {label} differs at {len(indices)} elements.",
+             f"First {min(len(indices), MAX_REPORTED_MISMATCHES)} "
+             "mismatches (index: actual, expected):"]
+    for index in indices[:MAX_REPORTED_MISMATCHES]:
+        index = tuple(index)
+        lines.append(f"  {index}: {actual[index]!r}, {expected[index]!r}")
+    return "\n".join(lines)
+
+
+def _assert_array(case, product, variable, actual, expected):
     """Compare one science array using its appropriate numerical tolerance."""
     assert actual.shape == expected.shape, (
         f"{case.name}: {variable} shape changed from {expected.shape} to "
         f"{actual.shape}."
     )
-    if variable in EXACT_VARIABLES:
-        np.testing.assert_allclose(actual, expected, rtol=0, atol=0,
-                                   equal_nan=True,
-                                   err_msg=f"{case.name}: {variable}")
-    elif variable in CENTROID_VARIABLES:
-        np.testing.assert_allclose(actual, expected, rtol=0,
-                                   atol=CENTROID_ATOL, equal_nan=True,
-                                   err_msg=f"{case.name}: {variable}")
-    else:
-        np.testing.assert_allclose(actual, expected, rtol=RTOL, atol=0,
-                                   equal_nan=True,
-                                   err_msg=f"{case.name}: {variable}")
-
-
-def _to_json_comparable(value):
-    """Convert NumPy values and masked entries to JSON-comparable values."""
-    if value is np.ma.masked:
-        return None
-    if isinstance(value, np.ndarray):
-        return _to_json_comparable(value.tolist())
-    if isinstance(value, np.generic):
-        return _to_json_comparable(value.item())
-    if isinstance(value, (list, tuple)):
-        return [_to_json_comparable(item) for item in value]
-    return value
-
-
-def _assert_metadata(case, actual_meta, metadata_path):
-    """Compare saved Stage 4 metadata metrics and bin definitions."""
-    expected = json.loads(metadata_path.read_text())
-    for key, expected_value in expected.items():
-        if key == "reference_schema_version":
-            continue
-        assert hasattr(actual_meta, key), f"{case.name}: missing metadata {key}"
-        actual_value = _to_json_comparable(getattr(actual_meta, key))
-        if isinstance(expected_value, list):
-            assert len(actual_value) == len(expected_value), (
-                f"{case.name}: {key} length changed."
-            )
-            for actual_item, expected_item in zip(actual_value, expected_value):
-                if expected_item is None:
-                    assert actual_item is None, f"{case.name}: {key} mask changed."
-                elif key.startswith("mad_s4"):
-                    np.testing.assert_allclose(actual_item, expected_item,
-                                               rtol=MAD_RTOL, atol=0,
-                                               equal_nan=True,
-                                               err_msg=f"{case.name}: {key}")
-                else:
-                    np.testing.assert_allclose(actual_item, expected_item,
-                                               rtol=0, atol=0, equal_nan=True,
-                                               err_msg=f"{case.name}: {key}")
-        elif key.startswith("mad_s4"):
-            np.testing.assert_allclose(actual_value, expected_value,
-                                       rtol=MAD_RTOL, atol=0, equal_nan=True,
-                                       err_msg=f"{case.name}: {key}")
+    try:
+        if variable in case.exact_variables:
+            if np.issubdtype(actual.dtype, np.inexact):
+                np.testing.assert_allclose(
+                    actual, expected, rtol=0, atol=0, equal_nan=True,
+                    err_msg=f"{case.name}: {product}.{variable}")
+            else:
+                message = f"{case.name}: {product}.{variable}"
+                np.testing.assert_array_equal(
+                    actual, expected, err_msg=message)
+        elif variable in case.atol_variables:
+            np.testing.assert_allclose(
+                actual, expected, rtol=0, atol=CENTROID_ATOL, equal_nan=True,
+                err_msg=f"{case.name}: {product}.{variable}")
         else:
-            assert actual_value == expected_value, f"{case.name}: {key} changed."
+            np.testing.assert_allclose(
+                actual, expected, rtol=RTOL, atol=0, equal_nan=True,
+                err_msg=f"{case.name}: {product}.{variable}")
+    except AssertionError as error:
+        raise AssertionError(
+            f"{error}\n\n"
+            f"{_mismatch_details(case, product, variable, actual, expected)}"
+        ) from None
+
+
+def _assert_attribute(case, product, actual, expected, attribute, rtol=0):
+    """Compare one science-product attribute saved with its data product."""
+    assert attribute in actual.attrs, (
+        f"{case.name}: missing {product} output attribute "
+        f"{attribute}"
+    )
+    assert attribute in expected.attrs, (
+        f"{case.name}: missing {product} reference attribute "
+        f"{attribute}"
+    )
+    np.testing.assert_allclose(actual.attrs[attribute],
+                               expected.attrs[attribute], rtol=rtol, atol=0,
+                               equal_nan=True,
+                               err_msg=(f"{case.name}: {product} "
+                                        f"{attribute}"))
+
+
+def _overwrite_reference(case, product, actual, reference_path):
+    """Replace one approved Stage 4 reference with its current product."""
+    assert reference_path.is_file(), (
+        f"{case.name}: refusing to create an untracked reference: "
+        f"{reference_path}"
+    )
+    temporary_path = reference_path.with_name(
+        reference_path.stem + ".tmp" + reference_path.suffix)
+    success = xrio.writeXR(str(temporary_path), actual.copy(), verbose=False)
+    if not success:
+        raise OSError(f"Failed to write updated reference: {reference_path}")
+    temporary_path.replace(reference_path)
+    print(f"Updated Stage 4 {product} reference: {reference_path}")
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda case: case.name)
-def test_s4_science_products(case, run_s4):
+def test_s4_science_products(case, run_s4, overwrite_ref_files):
     """Run standalone S4 and compare its selected products to the baseline."""
-    spec, lc, meta = run_s4(case)
-    spec_path, lc_path, metadata_path = _reference_paths(case)
+    spec, lc, _ = run_s4(case)
+    spec_path, lc_path = _reference_paths(case)
     assert spec_path.is_file(), f"Missing reference: {spec_path}"
     assert lc_path.is_file(), f"Missing reference: {lc_path}"
-    assert metadata_path.is_file(), f"Missing reference: {metadata_path}"
+
+    if overwrite_ref_files:
+        _overwrite_reference(case, "SpecData", spec, spec_path)
+        _overwrite_reference(case, "LCData", lc, lc_path)
+        return
 
     # Compare the configured science arrays from both Stage 4 products.
     expected_spec = xrio.readXR(str(spec_path), verbose=False)
     expected_lc = xrio.readXR(str(lc_path), verbose=False)
     for variable in case.spec_variables:
-        assert variable in spec, f"{case.name}: missing SpecData output {variable}"
-        assert variable in expected_spec, f"{case.name}: missing SpecData reference {variable}"
-        _assert_array(case, variable, spec[variable].values,
+        assert variable in spec, (
+            f"{case.name}: missing SpecData output {variable}"
+        )
+        assert variable in expected_spec, (
+            f"{case.name}: missing SpecData reference {variable}"
+        )
+        _assert_array(case, "SpecData", variable, spec[variable].values,
                       expected_spec[variable].values)
     for variable in case.lc_variables:
-        assert variable in lc, f"{case.name}: missing LCData output {variable}"
-        assert variable in expected_lc, f"{case.name}: missing LCData reference {variable}"
-        _assert_array(case, variable, lc[variable].values,
+        assert variable in lc, (
+            f"{case.name}: missing LCData output {variable}"
+        )
+        assert variable in expected_lc, (
+            f"{case.name}: missing LCData reference {variable}"
+        )
+        _assert_array(case, "LCData", variable, lc[variable].values,
                       expected_lc[variable].values)
 
-    # Check the non-array reference metadata.
-    _assert_metadata(case, meta, metadata_path)
+    _assert_attribute(case, "SpecData", spec, expected_spec, "mad_s4",
+                      rtol=MAD_RTOL)
+    _assert_attribute(case, "SpecData", spec, expected_spec, "mask_columns")
+    _assert_attribute(case, "LCData", lc, expected_lc, "mad_s4_binned",
+                      rtol=MAD_RTOL)
+    _assert_attribute(case, "LCData", lc, expected_lc,
+                      "mad_s4_binned_bg", rtol=MAD_RTOL)

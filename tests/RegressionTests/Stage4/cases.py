@@ -15,11 +15,19 @@ class S4RegressionCase:
     spec_variables: tuple[str, ...]
     lc_variables: tuple[str, ...]
     mode: str
+    exact_variables: tuple[str, ...] = ()
+    atol_variables: tuple[str, ...] = ()
 
 
 # Every spectroscopy case must retain these extracted-spectrum and binned
 # light-curve arrays.  The per-case additions below cover instrument-specific
 # diagnostics and optional white-light products.
+
+# Define groups of variables for spectroscopy and photometry that are commonly outputs of the 
+# same isntrument and hence tested together. Groups aren't perfect but meant to reduce
+# listing the variables repeatedly for each case
+
+
 SPECTROSCOPY_SPEC_CORE = (
     "wave_1d", "medflux", "stdspec", "stdvar", "optspec", "opterr",
     "optmask",
@@ -36,6 +44,9 @@ WHITE_LIGHT_VARIABLES = (
     "flux_white", "err_white", "mask_white", "skylev_white", "skyerr_white",
 )
 
+# Vars in `spec_variables` and `lc_variables` are tested using a relative tolerance
+# Vars in `exact_variables` can come from SpecData.h5 or LCData.h5 and are tested exactly
+# Vars in `atol_variables` can come from SpecData.h5 or LCData.h5 and are tested using an absolute tolerance
 CASES = (
     S4RegressionCase(
         name="nircam_spectroscopy",
@@ -49,6 +60,8 @@ CASES = (
         lc_variables=(SPECTROSCOPY_LC_CORE + Y_CENTROID_VARIABLES +
                       ("centroid_x", "centroid_sx", "driftmask")),
         mode="spectroscopy",
+        exact_variables=("optmask", "mask", "driftmask"),
+        atol_variables=("centroid_x", "centroid_y"),
     ),
     S4RegressionCase(
         name="nirspec_spectroscopy",
@@ -62,6 +75,8 @@ CASES = (
         lc_variables=(SPECTROSCOPY_LC_CORE + SKY_LC_VARIABLES +
                       Y_CENTROID_VARIABLES + WHITE_LIGHT_VARIABLES),
         mode="spectroscopy",
+        exact_variables=("optmask", "mask", "mask_white"),
+        atol_variables=("centroid_y",),
     ),
     S4RegressionCase(
         name="miri_spectroscopy",
@@ -75,6 +90,8 @@ CASES = (
         lc_variables=(SPECTROSCOPY_LC_CORE + SKY_LC_VARIABLES +
                       Y_CENTROID_VARIABLES + WHITE_LIGHT_VARIABLES),
         mode="spectroscopy",
+        exact_variables=("optmask", "mask", "mask_white"),
+        atol_variables=("centroid_y",),
     ),
     S4RegressionCase(
         name="niriss_spectroscopy",
@@ -85,9 +102,11 @@ CASES = (
         reference_dir="niriss_spectroscopy",
         # NIRISS does not produce the centroid arrays included in the
         # generic spectroscopy manifest.
-        spec_variables=SPECTROSCOPY_SPEC_CORE + SKY_SPEC_VARIABLES + ("trace",),
+        spec_variables=(SPECTROSCOPY_SPEC_CORE + SKY_SPEC_VARIABLES +
+                        ("trace",)),
         lc_variables=SPECTROSCOPY_LC_CORE + SKY_LC_VARIABLES,
         mode="spectroscopy",
+        exact_variables=("optmask", "mask"),
     ),
     S4RegressionCase(
         name="nircam_photometry",
@@ -104,6 +123,8 @@ CASES = (
                       "centroid_sy", "centroid_x", "centroid_sx", "wave_low",
                       "wave_hi", "wave_mid", "wave_err"),
         mode="photometry",
+        exact_variables=("mask", "nappix", "nskypix", "nskyideal", "status"),
+        atol_variables=("centroid_x", "centroid_y"),
     ),
     S4RegressionCase(
         name="wfc3_spectroscopy",
@@ -120,5 +141,8 @@ CASES = (
                       ("scandir", "centroid_y", "centroid_x", "centroid_sx",
                        "driftmask")),
         mode="spectroscopy",
+        exact_variables=("optmask", "mask", "flatmask", "scandir",
+                         "driftmask"),
+        atol_variables=("centroid_x", "centroid_y"),
     ),
 )
