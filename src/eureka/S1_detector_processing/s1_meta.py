@@ -1,6 +1,7 @@
 # pylint: disable=attribute-defined-outside-init
-from ..lib.readECF import MetaClass
 import warnings
+
+from ..lib.readECF import MetaClass
 
 
 class S1MetaClass(MetaClass):
@@ -276,9 +277,9 @@ class S1MetaClass(MetaClass):
         # NIRISS grouplevel_bg must be False in Stage 1
         self.grouplevel_bg = getattr(self, 'grouplevel_bg', False)
         if self.grouplevel_bg:
-            warnings.warn('grouplevel_bg must be False for Stage 1 NIRISS ' 
-                          'analyses! Standard background subtraction is ' 
-                          'performed in Stage 3 instead. ' 
+            warnings.warn('grouplevel_bg must be False for Stage 1 NIRISS '
+                          'analyses! Standard background subtraction is '
+                          'performed in Stage 3 instead. '
                           ''
                           'Setting grouplevel_bg to False...')
             self.grouplevel_bg = False
