@@ -4,10 +4,9 @@ from shutil import copy2
 
 import pytest
 
+from eureka.lib import readECF
 from eureka.S4_generate_lightcurves import s4_genLC
 from eureka.S4_generate_lightcurves.s4_meta import S4MetaClass
-from eureka.lib import readECF
-
 
 REFERENCE_ROOT = Path(__file__).parent / "references"
 S3_REFERENCE_ROOT = Path(__file__).parents[1] / "Stage3" / "references"

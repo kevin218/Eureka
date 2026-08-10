@@ -5,7 +5,6 @@ import pytest
 from .cases import CASES
 from .conftest import REFERENCE_ROOT
 
-
 # Most science arrays use a relative comparison. Each case declares its
 # exact-value and centroid-position exceptions alongside its product manifest.
 RTOL = 1e-4
