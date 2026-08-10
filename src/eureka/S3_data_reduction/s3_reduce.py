@@ -119,6 +119,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
     # each aperture/annulus pair
+    # Cache the clean base dir since meta.outputdir_raw gets overwritten
+    # below each time meta.outputdir is set to a per-pair directory
+    base_outputdir_raw = meta.outputdir_raw
     meta.run_s3 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
@@ -126,8 +129,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             # Directory structure should not use expanded HW values
             spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
                 meta.expand, spec_hw_val, bg_hw_val)
-            meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+            meta.run_s3 = util.makedirectory(
+                meta, 'S3', meta.run_s3, ap=spec_hw_val, bg=bg_hw_val,
+                outputdir_raw=base_outputdir_raw)
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
@@ -140,9 +144,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             # Directory structure should not use expanded HW values
             spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
                 meta.expand, spec_hw_val, bg_hw_val)
-            meta.outputdir = util.pathdirectory(meta, 'S3', meta.run_s3,
-                                                ap=spec_hw_val,
-                                                bg=bg_hw_val)
+            meta.outputdir = util.pathdirectory(
+                meta, 'S3', meta.run_s3, ap=spec_hw_val, bg=bg_hw_val,
+                outputdir_raw=base_outputdir_raw)
 
             event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val) +
                            '_bg' + str(bg_hw_val))
