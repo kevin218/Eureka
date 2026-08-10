@@ -2,6 +2,7 @@ import copy
 import os
 import sys
 import time as time_pkg
+from functools import partial
 from io import StringIO
 from multiprocessing import Pool
 
@@ -10,10 +11,12 @@ import h5py
 import lmfit
 import numpy as np
 import pandas as pd
+import tqdm as tqdm_module
 import xarray as xr
 from astraeus import xarrayIO as xrio
 from astropy import table
 from dynesty import DynamicNestedSampler, NestedSampler
+from dynesty.utils import print_fn as dynesty_print_fn
 from dynesty.utils import resample_equal
 from scipy.optimize import minimize
 
@@ -913,7 +916,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         log.writelog('  Resuming dynesty run from existing checkpoint: '
                      f'{meta.old_checkpoint_file}')
 
-    run_kwargs = {'print_progress': True}
+    # Use a custom tqdm bar showing only rate and dynesty diagnostics
+    _pbar = tqdm_module.tqdm(bar_format='[{rate_fmt}{postfix}]')
+    run_kwargs = {'print_progress': True,
+                  'print_func': partial(dynesty_print_fn, pbar=_pbar)}
     if meta.dynesty_checkpoint or meta.dynesty_resume:
         run_kwargs['checkpoint_file'] = meta.checkpoint_file
         run_kwargs['checkpoint_every'] = meta.dynesty_checkpoint_every
@@ -1014,6 +1020,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
         # Run the sampler
         sampler.run_nested(dlogz=meta.run_tol, **run_kwargs)
+
+    _pbar.close()
 
     # Get the results from the sampler
     res = sampler.results
