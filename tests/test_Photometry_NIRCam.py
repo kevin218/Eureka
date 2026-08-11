@@ -6,6 +6,7 @@ from importlib import reload
 import numpy as np
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
+
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
 from eureka.S3_data_reduction import s3_reduce as s3
@@ -13,7 +14,7 @@ from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 
 
-def test_NIRCamPhotometry(capsys):
+def test_NIRCamPhotometry(capsys, keep_s3_output):
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
@@ -73,12 +74,13 @@ def test_NIRCamPhotometry(capsys):
     assert np.array_equal(s5_meta.citations, s5_cites)
 
     # remove temporary files
-    os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage3")
+    if not keep_s3_output:
+        os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage3")
     os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage4")
     os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage5")
 
 
-def test_NIRCamPhotometry_hex(capsys):
+def test_NIRCamPhotometry_hex(capsys, keep_s3_output):
     # tests hexagonal photometry aperture
     with capsys.disabled():
         # is able to display any message without failing a test
@@ -112,4 +114,5 @@ def test_NIRCamPhotometry_hex(capsys):
     assert np.array_equal(s3_meta.citations, s3_cites)
 
     # remove temporary files
-    os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage3")
+    if not keep_s3_output:
+        os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage3")

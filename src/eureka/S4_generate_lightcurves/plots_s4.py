@@ -529,8 +529,8 @@ def plot_rescaled_phoenix(meta, sld, sld_new):
     plt.xlim(-0.05, 1.05)
     plt.ylim(-0.05, 1.05)
 
-    plt.ylabel('I($\\mu$)')
-    plt.xlabel('$\\mu$')
+    plt.ylabel(r'I($\mu$)')
+    plt.xlabel(r'$\mu$')
     plt.legend(loc='best')
 
     fname = ('figs'+os.sep+'fig4304_RescaledPhoenix' +

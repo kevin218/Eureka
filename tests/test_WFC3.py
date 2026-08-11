@@ -6,6 +6,7 @@ from importlib import reload
 import numpy as np
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
+
 import eureka.lib.plots
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
@@ -19,7 +20,7 @@ except ModuleNotFoundError:
     imported_image_registration = False
 
 
-def test_WFC3(capsys):
+def test_WFC3(capsys, keep_s3_output):
     if not imported_image_registration:
         raise Exception("HST-relevant packages have not been installed,"
                         " so the WFC3 test is being skipped. You can install "
@@ -68,5 +69,6 @@ def test_WFC3(capsys):
     assert np.array_equal(s4_meta.citations, s4_cites)
 
     # remove temporary files
-    os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage3")
+    if not keep_s3_output:
+        os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage3")
     os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage4")
