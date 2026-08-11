@@ -53,6 +53,27 @@ def test_trim(capsys):
                                   (trim_x1 - trim_x0))
 
 
+def test_add_meta_to_xarray_serializes_range_attrs(tmp_path):
+    meta = SimpleNamespace(params={
+        'sweep_jump_rejection_threshold': range(4, 15),
+        'none_value': None,
+        'bibliography': [['citation one', 'citation two']],
+        'string_array': np.array(['one', 'two']),
+        'scalar_value': 1.5,
+    })
+    data = xrio.makeDataset()
+
+    util.add_meta_to_xarray(meta, data)
+
+    assert data.attrs['sweep_jump_rejection_threshold'] == list(range(4, 15))
+    assert data.attrs['none_value'] == 'None'
+    assert data.attrs['bibliography'] == [
+        'citation one_ENDOFCITATION_citation two']
+    assert data.attrs['string_array'] == ['one', 'two']
+    assert data.attrs['scalar_value'] == 1.5
+    assert xrio.writeXR(str(tmp_path / 'metadata'), data, verbose=False)
+
+
 def test_medstddev(capsys):
     # eureka.lib.util.medstddev.medstddev test
     a = np.array([1, 3, 4, 5, 6, 7, 7])

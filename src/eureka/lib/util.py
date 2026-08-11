@@ -1147,6 +1147,9 @@ def add_meta_to_xarray(meta, data):
         # None values cannot be saved, convert to string
         if attr_value is None:
             attr_value = 'None'
+        # Python ranges cannot be serialized as xarray attributes
+        if isinstance(attr_value, range):
+            attr_value = list(attr_value)
         # Bibliography needs special handling
         if attr == 'bibliography':
             # Can't have different sized lists, must collapse
