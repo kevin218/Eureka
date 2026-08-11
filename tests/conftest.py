@@ -1,4 +1,76 @@
-# conftest.py
+"""Shared pytest configuration for Eureka tests."""
+import sys
+
+import pytest
+
+
+def pytest_addoption(parser):
+    """Register options used by Eureka's integration tests."""
+    parser.addoption(
+        "--keep-s3-output",
+        action="store_true",
+        default=False,
+        help=("Preserve Stage 3 output directories after integration tests. "
+              "Use this only when creating or inspecting regression "
+              "reference data."),
+    )
+    parser.addoption(
+        "--keep-s2-output",
+        action="store_true",
+        default=False,
+        help=("Preserve Stage 2 output directories after integration tests. "
+              "Use this only when preparing fixed Stage 2 inputs for Stage "
+              "3 regression tests."),
+    )
+    parser.addoption(
+        "--overwrite-ref-files",
+        "--overwrite_ref_files",
+        action="store_true",
+        dest="overwrite_ref_files",
+        default=False,
+        help=("Replace the selected regression-test reference files with "
+              "their current outputs after an interactive confirmation."),
+    )
+
+
+@pytest.fixture
+def keep_s3_output(pytestconfig):
+    """Whether a test should retain its generated Stage 3 products."""
+    return pytestconfig.getoption("--keep-s3-output")
+
+
+@pytest.fixture
+def keep_s2_output(pytestconfig):
+    """Whether a test should retain its generated Stage 2 products."""
+    return pytestconfig.getoption("--keep-s2-output")
+
+
+@pytest.fixture(scope="session")
+def overwrite_ref_files(pytestconfig):
+    """Confirm whether selected regression references may be overwritten."""
+    if not pytestconfig.getoption("overwrite_ref_files"):
+        return False
+
+    stdin = sys.__stdin__
+    stderr = sys.__stderr__
+    if not stdin.isatty():
+        raise pytest.UsageError(
+            "--overwrite-ref-files requires an interactive terminal so its "
+            "confirmation prompt cannot be bypassed."
+        )
+
+    stderr.write(
+        "\nWARNING: This run will replace the Git-tracked reference file(s) "
+        "for every selected regression case. Review the resulting Git diff "
+        "before committing.\n"
+        "Type OVERWRITE to continue: "
+    )
+    stderr.flush()
+    if stdin.readline().strip() != "OVERWRITE":
+        raise pytest.UsageError("Reference overwrite cancelled.")
+    return True
+
+
 def pytest_collection_modifyitems(session, config, items):
     """Modifies test items to ensure test functions run in a given order
 

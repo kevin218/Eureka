@@ -6,6 +6,7 @@ from importlib import reload
 import numpy as np
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
+
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
 from eureka.S2_calibrations import s2_calibrate as s2
@@ -14,7 +15,7 @@ from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 
 
-def test_NIRSpec(capsys):
+def test_NIRSpec(capsys, keep_s2_output, keep_s3_output):
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
@@ -93,7 +94,10 @@ def test_NIRSpec(capsys):
     assert np.array_equal(s5_meta.citations, s5_cites)
 
     # remove temporary files
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage2")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3")
+    if not keep_s2_output:
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}"
+                  f"Stage2{os.sep}S2_*")
+    if not keep_s3_output:
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage4")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage5")
