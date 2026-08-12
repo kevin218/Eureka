@@ -27,5 +27,4 @@ pytest -s -q tests/RegressionTests/Stage4 -k nircam_spectroscopy \
 ```
 
 Pytest will display a warning and require you to type `OVERWRITE`. The command
-replaces both tracked HDF5 products for every selected case. Review the resulting
-Git diff before committing.
+replaces both tracked HDF5 products for every selected case, in this case NIRCAM Spectroscopy. You can edit or remove that flag to overwrite a different case or all cases, respectively.
