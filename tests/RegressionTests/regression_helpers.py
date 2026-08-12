@@ -3,7 +3,6 @@
 import astraeus.xarrayIO as xrio
 import numpy as np
 
-
 MAX_REPORTED_MISMATCHES = 10
 
 
