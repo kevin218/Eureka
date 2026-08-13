@@ -1,7 +1,6 @@
 # Stage 4 regression tests
 
-Each regression test case runs only Eureka Stage 4. The Stage 3
-`SpecData.h5` reference files for the corresponding case is used as the input file. We rename this file to a different temporary filename so Eureka can follow its normal standalone Stage 4 metadata-loading path.
+Each regression test case runs only Eureka Stage 4. The Stage 3 `SpecData.h5` reference files for the corresponding case is used as the input file. We rename this file to a different temporary filename so Eureka can follow its normal standalone Stage 4 metadata-loading path.
 
 Each Stage 4 reference directory contains:
 
