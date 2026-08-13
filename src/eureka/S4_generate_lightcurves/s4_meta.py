@@ -120,8 +120,8 @@ class S4MetaClass(MetaClass):
         self.boundary = getattr(self, 'boundary', 'fill')
         self.fill_value = getattr(self, 'fill_value', 'mask')
         # Used in Fig 4106
-        self.mad_sigma = getattr(self, 'mad_sigma', 7)
-        self.mad_box_width = getattr(self, 'mad_box_width', 21)
+        self.maed_sigma = getattr(self, 'maed_sigma', 7)
+        self.maed_box_width = getattr(self, 'maed_box_width', 21)
 
         # HST/WFC3 temporal binning (sum together all reads from one scan)
         self.sum_reads = getattr(self, 'sum_reads', True)

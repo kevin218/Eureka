@@ -392,6 +392,6 @@ def lc_nodriftcorr(spec, meta):
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     '''
-    mad = meta.mad_s3[0]
+    maed = meta.maed_s3[0]
     plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
-                            optmask=spec.optmask, mad=mad)
+                            optmask=spec.optmask, maed=maed)

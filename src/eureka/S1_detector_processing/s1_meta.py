@@ -176,8 +176,8 @@ class S1MetaClass(MetaClass):
             self.bg_y2 = getattr(self, 'bg_y2')
             self.bg_deg = getattr(self, 'bg_deg', 0)
             # Options: std (Standard Deviation),
-            # median (Median Absolute Deviation), or
-            # mean (Mean Absolute Deviation)
+            # median (Median Absolute Element Difference), or
+            # mean (Median Absolute Element Difference)
             self.bg_method = getattr(self, 'bg_method', 'median')
             self.p3thresh = getattr(self, 'p3thresh', 3)
             # Row-by-row BG subtraction (only useful for NIRCam)

@@ -110,8 +110,8 @@ def test_readfiles_accepts_inputdir_without_trailing_separator(tmp_path):
 
 
 def test_optimizer_cleanup_failure_does_not_discard_fitness(monkeypatch):
-    meta = SimpleNamespace(delete_intermediate=True, scaling_MAD_spec=0.01,
-                           scaling_MAD_white=1.0,
+    meta = SimpleNamespace(delete_intermediate=True, scaling_MAED_spec=0.01,
+                           scaling_MAED_white=1.0,
                            opt_param_name='skip_firstframe',
                            eventlabel='test')
     s1_meta = SimpleNamespace(outputdir='Stage1')
@@ -120,8 +120,8 @@ def test_optimizer_cleanup_failure_does_not_discard_fitness(monkeypatch):
     s4_meta = SimpleNamespace(outputdir='Stage4')
 
     def fake_genlc(eventlabel, input_meta, s3_meta):
-        input_meta.mad_s4 = 100.0
-        input_meta.mad_s4_binned = [10.0]
+        input_meta.maed_s4 = 100.0
+        input_meta.maed_s4_binned = [10.0]
         return None, None, input_meta
 
     def failing_rmtree(outputdir):
@@ -148,8 +148,8 @@ def test_optimizer_cleanup_failure_does_not_discard_fitness(monkeypatch):
 
 
 def test_optimizer_cleanup_retries_transient_enotempty(monkeypatch):
-    meta = SimpleNamespace(delete_intermediate=True, scaling_MAD_spec=0.01,
-                           scaling_MAD_white=1.0,
+    meta = SimpleNamespace(delete_intermediate=True, scaling_MAED_spec=0.01,
+                           scaling_MAED_white=1.0,
                            opt_param_name='skip_firstframe',
                            eventlabel='test')
     s1_meta = SimpleNamespace(outputdir='Stage1')
@@ -159,8 +159,8 @@ def test_optimizer_cleanup_retries_transient_enotempty(monkeypatch):
     attempts = {'Stage3': 0}
 
     def fake_genlc(eventlabel, input_meta, s3_meta):
-        input_meta.mad_s4 = 100.0
-        input_meta.mad_s4_binned = [10.0]
+        input_meta.maed_s4 = 100.0
+        input_meta.maed_s4_binned = [10.0]
         return None, None, input_meta
 
     def transient_rmtree(outputdir):

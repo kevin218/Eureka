@@ -307,7 +307,7 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
             ilow = np.nonzero(flat_norm < 1)
             # Make distribution symetric about 1
             dbl = np.concatenate((flat_norm[ilow], 1+(1-flat_norm[ilow])))
-            # MAD
+            # MAED
             std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
             ibadpix = np.nonzero((1 - flat_norm[ilow]) > sigma * std)[0]
             flat_norm[ilow[0][ibadpix], ilow[1][ibadpix]] = 1.
@@ -316,7 +316,7 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
             ihi = np.nonzero(flat_norm > 1)
             # Make distribution symetric about 1
             dbl = np.concatenate((flat_norm[ihi], 2-flat_norm[ihi]))
-            # MAD
+            # MAED
             std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
             ibadpix = np.nonzero((flat_norm[ihi] - 1) > sigma * std)[0]
             flat_norm[ihi[0][ibadpix], ihi[1][ibadpix]] = 1.
@@ -401,7 +401,7 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
         ilow = np.nonzero(flat_norm < 1)
         # Make distribution symetric about 1
         dbl = np.concatenate((flat_norm[ilow], 1+(1-flat_norm[ilow])))
-        # MAD
+        # MAED
         std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
         ibadpix = np.nonzero((1 - flat_norm[ilow]) > sigma * std)[0]
         flat_norm[ilow[0][ibadpix], ilow[1][ibadpix]] = 1.
@@ -410,7 +410,7 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
         ihi = np.nonzero(flat_norm > 1)
         # Make distribution symetric about 1
         dbl = np.concatenate((flat_norm[ihi], 2-flat_norm[ihi]))
-        # MAD
+        # MAED
         std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
         ibadpix = np.nonzero((flat_norm[ihi] - 1) > sigma * std)[0]
         flat_norm[ihi[0][ibadpix], ihi[1][ibadpix]] = 1.

@@ -658,14 +658,14 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
         return normspec
 
 
-def get_mad(meta, log, wave_1d, optspec, optmask=None,
+def get_maed(meta, log, wave_1d, optspec, optmask=None,
             wave_min=None, wave_max=None, scandir=None):
-    """Computes variation on median absolute deviation (MAD) using ediff1d
+    """Computes variation on median absolute element difference (MAED) using ediff1d
     for 2D data.
 
-    The computed MAD is the average MAD along the time axis. In
-    otherwords, the MAD is computed in the time direction for each
-    wavelength, and then the returned value is the average of those MAD
+    The computed MAED is the average MAED along the time axis. In
+    otherwords, the MAED is computed in the time direction for each
+    wavelength, and then the returned value is the average of those MAED
     values.
 
     Parameters
@@ -696,8 +696,8 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
 
     Returns
     -------
-    mad : float
-        Single MAD value in ppm
+    maed : float
+        Single MAED value in ppm
     """
     # Make sure wavelengths are in ascending order. Some instruments have
     # detector pixels outside an order's wavelength solution, represented by
@@ -728,48 +728,48 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
                                   scandir=scandir)
 
     if meta.inst == 'wfc3':
-        # Setup 1D MAD arrays
+        # Setup 1D MAED arrays
         n_wav = normspec.shape[1]
         ediff = np.ma.zeros((2, n_wav))
 
-        # Compute the MAD for each scan direction
+        # Compute the MAED for each scan direction
         for p in range(2):
             iscans = np.atleast_1d(scandir == p).nonzero()[0]
             if len(iscans) > 0:
-                # Compute the MAD
+                # Compute the MAED
                 for m in range(n_wav):
-                    ediff[p, m] = get_mad_1d(normspec[iscans, m])
+                    ediff[p, m] = get_maed_1d(normspec[iscans, m])
 
-                mad = np.ma.mean(ediff[p])
-                log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
-                setattr(meta, f'mad_scandir{p}', mad)
+                maed = np.ma.mean(ediff[p])
+                log.writelog(f"Scandir {p} MAED = {int(np.round(maed))} ppm")
+                setattr(meta, f'maed_scandir{p}', maed)
 
         if np.all(scandir == scandir[0]):
             # Only scanned in one direction, so get rid of the other
             ediff = ediff[scandir[0]]
         else:
-            # Collapse the MAD along the scan direction
+            # Collapse the MAED along the scan direction
             ediff = np.mean(ediff, axis=0)
     else:
-        # Setup 1D MAD array
+        # Setup 1D MAED array
         n_wav = normspec.shape[1]
         ediff = np.ma.zeros(n_wav)
 
-        # Compute the MAD
+        # Compute the MAED
         for m in range(n_wav):
-            ediff[m] = get_mad_1d(normspec[:, m])
+            ediff[m] = get_maed_1d(normspec[:, m])
 
     return np.ma.mean(ediff)
 
 
-def get_mad_1d(data, ind_min=0, ind_max=None):
-    """Computes variation on median absolute deviation (MAD) using ediff1d
+def get_maed_1d(data, ind_min=0, ind_max=None):
+    """Computes variation on median absolute element difference (MAED) using ediff1d
     for 1D data.
 
     Parameters
     ----------
     data : ndarray
-        The array from which to calculate MAD.
+        The array from which to calculate MAED.
     int_min : int
         Minimum index to consider.
     ind_max : int
@@ -777,8 +777,8 @@ def get_mad_1d(data, ind_min=0, ind_max=None):
 
     Returns
     -------
-    mad : float
-        Single MAD value in ppm
+    maed : float
+        Single MAED value in ppm
     """
     return 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(data[ind_min:ind_max])))
 
