@@ -20,7 +20,7 @@ except ModuleNotFoundError:
     imported_image_registration = False
 
 
-def test_WFC3(capsys, keep_s3_output):
+def test_WFC3(capsys, keep_s3_output, keep_s4_output):
     if not imported_image_registration:
         raise Exception("HST-relevant packages have not been installed,"
                         " so the WFC3 test is being skipped. You can install "
@@ -71,4 +71,5 @@ def test_WFC3(capsys, keep_s3_output):
     # remove temporary files
     if not keep_s3_output:
         os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage3")
-    os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage4")
+    if not keep_s4_output:
+        os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage4")

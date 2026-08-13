@@ -24,7 +24,7 @@ from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
 
 
-def test_MIRI(capsys, keep_s2_output, keep_s3_output):
+def test_MIRI(capsys, keep_s2_output, keep_s3_output, keep_s4_output):
     s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
     if not s2_installed:
         with capsys.disabled():
@@ -172,6 +172,7 @@ def test_MIRI(capsys, keep_s2_output, keep_s3_output):
                   f"Stage2{os.sep}S2_*")
     if not keep_s3_output:
         os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage3")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage4")
+    if not keep_s4_output:
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage4")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage5")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage6")

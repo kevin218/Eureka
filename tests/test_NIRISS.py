@@ -13,7 +13,7 @@ from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 
 
-def test_NIRISS(capsys, keep_s3_output):
+def test_NIRISS(capsys, keep_s3_output, keep_s4_output):
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
@@ -63,4 +63,5 @@ def test_NIRISS(capsys, keep_s3_output):
     # remove temporary files
     if not keep_s3_output:
         os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRISS{os.sep}Stage3")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRISS{os.sep}Stage4")
+    if not keep_s4_output:
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRISS{os.sep}Stage4")
