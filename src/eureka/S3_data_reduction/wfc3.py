@@ -1155,6 +1155,6 @@ def lc_nodriftcorr(spec, meta):
         The metadata object.
     '''
     scandir = getattr(spec, 'scandir', None)
-    mad = meta.mad_s3[0]
+    maed = meta.maed_s3[0]
     plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
-                            optmask=spec.optmask, scandir=scandir, mad=mad)
+                            optmask=spec.optmask, scandir=scandir, maed=maed)
