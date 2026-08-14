@@ -268,7 +268,7 @@ The fitness function is a weighted combination of the 2D MAED and the white ligh
 
 scaling_MAED_spec
 ''''''''''''''''
-Scaling factor applied to the pixel-level 2D Median Absolute Difference (MAED) value in the fitness function. Higher values prioritize spectral quality.
+Scaling factor applied to the pixel-level 2D Median Absolute Element Difference (MAED) value in the fitness function. Higher values prioritize spectral quality.
 
 scaling_MAED_white
 '''''''''''''''''
