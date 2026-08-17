@@ -307,8 +307,8 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
             ilow = np.nonzero(flat_norm < 1)
             # Make distribution symetric about 1
             dbl = np.concatenate((flat_norm[ilow], 1+(1-flat_norm[ilow])))
-            # MAED
-            std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
+            # MAD
+            std = scaled_mad_std(dbl)
             ibadpix = np.nonzero((1 - flat_norm[ilow]) > sigma * std)[0]
             flat_norm[ilow[0][ibadpix], ilow[1][ibadpix]] = 1.
             mask_window[ilow[0][ibadpix], ilow[1][ibadpix]] = True
@@ -316,8 +316,8 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
             ihi = np.nonzero(flat_norm > 1)
             # Make distribution symetric about 1
             dbl = np.concatenate((flat_norm[ihi], 2-flat_norm[ihi]))
-            # MAED
-            std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
+            # MAD
+            std = scaled_mad_std(dbl)
             ibadpix = np.nonzero((flat_norm[ihi] - 1) > sigma * std)[0]
             flat_norm[ihi[0][ibadpix], ihi[1][ibadpix]] = 1.
             mask_window[ihi[0][ibadpix], ihi[1][ibadpix]] = True
@@ -401,8 +401,8 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
         ilow = np.nonzero(flat_norm < 1)
         # Make distribution symetric about 1
         dbl = np.concatenate((flat_norm[ilow], 1+(1-flat_norm[ilow])))
-        # MAED
-        std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
+        # MAD
+        std = scaled_mad_std(dbl)
         ibadpix = np.nonzero((1 - flat_norm[ilow]) > sigma * std)[0]
         flat_norm[ilow[0][ibadpix], ilow[1][ibadpix]] = 1.
         mask_window[ilow[0][ibadpix], ilow[1][ibadpix]] = True
@@ -410,8 +410,8 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
         ihi = np.nonzero(flat_norm > 1)
         # Make distribution symetric about 1
         dbl = np.concatenate((flat_norm[ihi], 2-flat_norm[ihi]))
-        # MAED
-        std = 1.4826*np.median(np.abs(dbl - np.median(dbl)))
+        # MAD
+        std = scaled_mad_std(dbl)
         ibadpix = np.nonzero((flat_norm[ihi] - 1) > sigma * std)[0]
         flat_norm[ihi[0][ibadpix], ihi[1][ibadpix]] = 1.
         mask_window[ihi[0][ibadpix], ihi[1][ibadpix]] = True
@@ -461,3 +461,8 @@ def calcDrift2D(im1, im2, n):
     drift2D = imr.chi2_shift(im1, im2, boundary='constant', nthreads=1,
                              zeromean=False, return_error=False)
     return drift2D, n
+
+
+def scaled_mad_std(data):
+    """Estimate standard deviation using the scaled median absolute deviation."""
+    return 1.4826 * np.median(np.abs(data - np.median(data)))
