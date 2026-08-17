@@ -85,11 +85,11 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
 
         # Record initial fitness score
         history["initial_run"] = (
-            meta.scaling_MAD_spec * s4_meta.mad_s4 +
-            meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
+            meta.scaling_MAED_spec * s4_meta.maed_s4 +
+            meta.scaling_MAED_white * s4_meta.maed_s4_binned[0])
         log.writelog(f"Initial fitness value: {history['initial_run']}")
-        log.writelog(f"Initial white MAD: {s4_meta.mad_s4_binned[0]}")
-        log.writelog(f"Initial spec MAD: {s4_meta.mad_s4}\n")
+        log.writelog(f"Initial white MAED: {s4_meta.maed_s4_binned[0]}")
+        log.writelog(f"Initial spec MAED: {s4_meta.maed_s4}\n")
 
     for p in s1opt_meta.params_to_optimize_s1:
         s1opt_meta, log, history, best = optimize(s1opt_meta, log, history,
@@ -124,11 +124,11 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
                                            s3_meta=s3_meta)
         # Record initial fitness score
         history["final_run"] = (
-            s1opt_meta.scaling_MAD_spec * s4_meta.mad_s4 +
-            s1opt_meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
+            s1opt_meta.scaling_MAED_spec * s4_meta.maed_s4 +
+            s1opt_meta.scaling_MAED_white * s4_meta.maed_s4_binned[0])
         log.writelog(f"Final fitness value: {history['final_run']}")
-        log.writelog(f"Final white MAD: {s4_meta.mad_s4_binned[0]}")
-        log.writelog(f"Final spec MAD: {s4_meta.mad_s4}\n")
+        log.writelog(f"Final white MAED: {s4_meta.maed_s4_binned[0]}")
+        log.writelog(f"Final spec MAED: {s4_meta.maed_s4}\n")
 
     if s1opt_meta.isplots_S1opt >= 1:
         plots_s3.fitness_scores(s1opt_meta, history)

@@ -122,8 +122,8 @@ class S1optMetaClass(MetaClass):
         Set Optimizer specific defaults for NIRSpec.
         '''
         # Fitness scaling factors
-        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 0.01)
-        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
+        self.scaling_MAED_spec = getattr(self, 'scaling_MAED_spec', 0.01)
+        self.scaling_MAED_white = getattr(self, 'scaling_MAED_white', 1.0)
 
         full_list = ['jump_rejection_threshold', 'expand_mask', 'bg_deg',
                      'bg_method', 'p3thresh', 'window_len']
@@ -192,8 +192,8 @@ class S1optMetaClass(MetaClass):
         Set Optimizer specific defaults for NIRCam.
         '''
         # Fitness scaling factors
-        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 0.01)
-        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
+        self.scaling_MAED_spec = getattr(self, 'scaling_MAED_spec', 0.01)
+        self.scaling_MAED_white = getattr(self, 'scaling_MAED_white', 1.0)
 
         full_list = ['jump_rejection_threshold', 'expand_mask', 'bg_deg',
                      'bg_method', 'p3thresh', 'window_len']
