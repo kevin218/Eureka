@@ -247,7 +247,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
                     residuals = dataslice - model
                     # Choose method for finding bad pixels
                     if meta.bg_method == 'median':
-                        # Median Absolute Element Difference 
+                        # Median Absolute Element Difference
                         # (slower but more robust)
                         stdres = np.median(np.abs(np.ediff1d(residuals)))
                     elif meta.bg_method == 'mean':
