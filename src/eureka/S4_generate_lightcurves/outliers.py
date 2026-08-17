@@ -58,8 +58,8 @@ def get_outliers(meta, spec):
 
     # Identify only high outliers from residuals
     masked_maed = sigma_clip(residual_maed, sigma_upper=meta.maed_sigma,
-                            sigma_lower=100, maxiters=meta.maxiters,
-                            masked=True, copy=True)
+                             sigma_lower=100, maxiters=meta.maxiters,
+                             masked=True, copy=True)
     masked_dev = sigma_clip(residual_dev, sigma_upper=meta.maed_sigma,
                             sigma_lower=100, maxiters=meta.maxiters,
                             masked=True, copy=True)

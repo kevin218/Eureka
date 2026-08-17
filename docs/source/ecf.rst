@@ -267,11 +267,11 @@ The fitness function is a weighted combination of the 2D MAED and the white ligh
 **Important Warning:** The optimizer is designed as a tool for parameter exploration and fine-tuning, not as a black-box solution. Users must critically investigate all outputs before and after optimization to ensure the final tunings are appropriate and scientifically valid. The fitness metric is inherently imperfect and may lead to undesirable outcomes in complex scenarios, such as observations affected by nearby binary stars or other astrophysical contaminants. Always review the spectra from different parameter values in the sweep to understand their impact, and remember that optimal parameter values can vary significantly between datasets. Thus, re-running the optimizer for each new dataset is recommended.
 
 scaling_MAED_spec
-''''''''''''''''
+'''''''''''''''''
 Scaling factor applied to the pixel-level 2D Median Absolute Element Difference (MAED) value in the fitness function. Higher values prioritize spectral quality.
 
 scaling_MAED_white
-'''''''''''''''''
+''''''''''''''''''
 Scaling factor applied to the white light curve MAED value in the fitness function. Higher values prioritize band-integrated quality.
 
 params_to_optimize_s1
@@ -922,11 +922,11 @@ fill_value
 Only used if sigma_clip=True. Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
 maed_sigma
-'''''''''
+''''''''''
 The number of sigmas an unbinned MAED value must be from the rolling median (using maed_box_width) to be considered an outlier.  Outlier columns are masked.
 
 maed_box_width
-'''''''''''''
+''''''''''''''
 The width of the box-car filter (used to calculated the rolling median) in units of number of wavelength elements. Used in calculating whether wavelength elements are outliers in the unbinned spectrum.
 
 sum_reads

@@ -659,9 +659,9 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
 
 
 def get_maed(meta, log, wave_1d, optspec, optmask=None,
-            wave_min=None, wave_max=None, scandir=None):
-    """Computes variation on median absolute element difference (MAED) using ediff1d
-    for 2D data.
+             wave_min=None, wave_max=None, scandir=None):
+    """Computes variation on median absolute element difference (MAED) 
+    using ediff1d for 2D data.
 
     The computed MAED is the average MAED along the time axis. In
     otherwords, the MAED is computed in the time direction for each
@@ -763,8 +763,8 @@ def get_maed(meta, log, wave_1d, optspec, optmask=None,
 
 
 def get_maed_1d(data, ind_min=0, ind_max=None):
-    """Computes variation on median absolute element difference (MAED) using ediff1d
-    for 1D data.
+    """Computes variation on median absolute element difference (MAED) 
+    using ediff1d for 1D data.
 
     Parameters
     ----------

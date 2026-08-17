@@ -461,11 +461,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if not meta.photometry:
                 # Compute MAED value
                 meta.maed_s4 = util.get_maed(meta, log, spec.wave_1d.values,
-                                           spec.optspec.values,
-                                           spec.optmask.values,
-                                           meta.wave_min, meta.wave_max,
-                                           scandir=getattr(spec, 'scandir',
-                                                           None))
+                                             spec.optspec.values,
+                                             spec.optmask.values,
+                                             meta.wave_min, meta.wave_max,
+                                             scandir=getattr(spec, 'scandir',
+                                                             None))
             else:
                 # Compute MAED value for Photometry
                 normspec = util.normalize_spectrum(
@@ -717,7 +717,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             spec.attrs['mask_columns'] = np.asarray(meta.mask_columns,
                                                     dtype=int)
             lc.attrs['maed_s4_binned'] = np.asarray(meta.maed_s4_binned,
-                                                   dtype=float)
+                                                    dtype=float)
             lc.attrs['maed_s4_binned_bg'] = np.asarray(
                 meta.maed_s4_binned_bg, dtype=float)
 

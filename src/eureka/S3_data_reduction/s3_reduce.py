@@ -659,10 +659,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             scandir = getattr(spec, 'scandir', None)
             if not meta.photometry:
                 if meta.orders is None:
-                    meta.maed_s3 = [util.get_maed(meta, log, spec.wave_1d.values,
-                                                spec.optspec.values,
-                                                spec.optmask.values,
-                                                scandir=scandir)]
+                    meta.maed_s3 = [util.get_maed(meta, log, 
+                                    spec.wave_1d.values,
+                                    spec.optspec.values,
+                                    spec.optmask.values,
+                                    scandir=scandir)]
                 else:
                     meta.maed_s3 = []
                     for j, order in enumerate(meta.orders):
