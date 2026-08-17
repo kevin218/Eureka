@@ -720,7 +720,7 @@ def median_frame(data, meta, m, medflux, order=None):
             plt.plot(data.flux.x.values, trace,
                      "--k", lw=1, label=f"Trace Order {order}")
         else:
-            for order in meta.all_orders:
+            for order in meta.orders:
                 trace = data["trace"].sel(order=order)
                 plt.plot(data.flux.x.values, trace,
                          c="white", lw=2)
