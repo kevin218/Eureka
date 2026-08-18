@@ -64,6 +64,43 @@ namespaces = false
 [tool.setuptools_scm]
 write_to = "src/eureka/version.py"
 
+[tool.ruff]
+line-length = 79
+target-version = "py311"
+preview = true
+force-exclude = true
+extend-exclude = [
+    "docs",
+    "ecfs",
+    "run_eureka*.py",
+]
+
+[tool.ruff.lint]
+# Match the rule families enforced by the former Flake8 configuration.
+select = ["E1", "E2", "E3", "E4", "E5", "E7", "W6", "F"]
+ignore = ["E226", "E722"]
+
+[tool.ruff.lint.per-file-ignores]
+# Package initializers intentionally re-export public names.
+"**/__init__.py" = ["F401"]
+"src/eureka/__init__.py" = ["F401", "E402"]
+# Plot modules suppress a warning before importing plotting dependencies.
+"src/eureka/**/plots*.py" = ["E402"]
+# Variables populated by exec are not visible to static analysis.
+"**/manageevent.py" = ["F841"]
+# Demo launchers intentionally modify sys.path before importing Eureka!.
+"demos/**/run_*.py" = ["E402"]
+# Optional dependencies are guarded during test collection.
+"**/test_*.py" = ["E402"]
+"**/test_WFC3.py" = ["F401", "E402"]
+"**/test_MIRI.py" = ["F401", "E402"]
+# NumPy remains available to users evaluating configuration values.
+"**/readECF.py" = ["F401"]
+# Aligned values document their meaning.
+"**/hst_scan.py" = ["E221", "E241"]
+# BibTeX entries cannot be wrapped without changing their content.
+"src/eureka/lib/citations.py" = ["E501"]
+
 [tool.isort]
 line_length = 79
 known_first_party = ["eureka"]
@@ -131,10 +168,10 @@ docs = [
     { pip = "sphinx-rtd-theme>=1.3.0" }, # Style updates and Sphinx compatibility
 ]
 test = [
-    "flake8",
     "pytest<8.0", # Upper limit due to asdf+pytest incompatibility
     "pytest-cov",
     "pytest-doctestplus",
+    "ruff",
 ]
 jupyter = [
     "ipykernel>=6.0.0", # Needed for modern Jupyter compatibility
