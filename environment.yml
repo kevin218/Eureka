@@ -13,7 +13,6 @@ dependencies:
   - corner
   - dynesty >1.0
   - emcee >3.0.0
-  - flake8
   - h5py >=3.7.0
   - ipykernel >=6.0.0
   - ipympl >=0.9.3
@@ -39,6 +38,7 @@ dependencies:
   - python-build
   - pyyaml
   - requests
+  - ruff
   - scipy >=1.12.0
   - shapely
   - sphinx >=6.0
