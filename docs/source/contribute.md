@@ -46,7 +46,7 @@ issues within their pull request so other team members may help them and be awar
 
 ## Local Hygiene Checks with pre-commit
 
-Eureka! also supports a small set of fast local hygiene checks through `pre-commit`. These hooks are intended for deterministic checks and safe autofixes such as whitespace cleanup, basic file validation, merge-conflict detection, and local `flake8` runs. Heavier validation such as the main test suite, build checks, and other project CI still runs in GitHub Actions.
+Eureka! also supports a small set of fast local hygiene checks through `pre-commit`. These hooks are intended for deterministic checks and safe autofixes such as whitespace cleanup, basic file validation, merge-conflict detection, and Ruff lint fixes. Heavier validation such as the main test suite, build checks, and other project CI still runs in GitHub Actions.
 
 If you are setting up a local development environment with `pip`, install Eureka! with the `dev` optional dependencies so that `pre-commit` and the other developer tools are available:
 
@@ -67,6 +67,12 @@ pre-commit run --all-files
 ```
 
 Some hooks may rewrite files automatically. If that happens, review the changes and restage the updated files before committing them.
+
+Ruff enforces the same Pycodestyle and Pyflakes rule families as Eureka!'s former Flake8 check. Its pre-commit hook applies all available safe fixes automatically. To run Ruff without applying fixes in an environment that includes Eureka!'s `test` dependencies, use:
+
+```bash
+ruff check
+```
 
 ## GitHub Basics
 

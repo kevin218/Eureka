@@ -2,7 +2,6 @@ ci:
   autofix_prs: true
   autoupdate_schedule: monthly
   autoupdate_commit_msg: "[pre-commit.ci] pre-commit autoupdate"
-  skip: [flake8]
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -19,12 +18,13 @@ repos:
       - id: check-added-large-files
       - id: debug-statements
 
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.3
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+
   - repo: https://github.com/pycqa/isort
     rev: 9.0.0b1
     hooks:
       - id: isort
-
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.3.0
-    hooks:
-      - id: flake8
