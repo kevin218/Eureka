@@ -9,17 +9,18 @@ maximum_cores       'half'  # Options are 'none', quarter', 'half','all'
 # Pipeline stages
 skip_emicorr        True    # Skipped by default despite what the jwst readthedocs page says
 skip_saturation     False
-skip_firstframe     False   # Typically best to set False for MIRI TSO, but you should experiment
 skip_lastframe      False   # Typically best to set False for MIRI TSO, but you should experiment
 skip_refpix         False
 skip_linearity      False
-skip_rscd           True    # Skipped by default for MIRI TSO
+skip_rscd           False   # Includes the deprecated firstframe step's functionality
 skip_dark_current   False
 skip_jump           False
 skip_ramp_fitting   False
 
 #Pipeline stages parameters
 jump_rejection_threshold  4.0 # float, default is 4.0, CR sigma rejection threshold. Usually recommend a larger value for TSO data.
+rscd_group_skip1    1         # Initial groups to flag in integration 1; None uses CRDS
+rscd_group_skip     1         # Initial groups to flag in integrations 2+; None uses CRDS
 
 # Custom linearity reference file
 custom_linearity    False
