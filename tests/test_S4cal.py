@@ -11,7 +11,7 @@ from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4cal_StellarSpectra import s4cal_StellarSpec as s4cal
 
 
-def test_S4cal(capsys):
+def test_S4cal(capsys, keep_s3_output):
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
@@ -63,6 +63,8 @@ def test_S4cal(capsys):
     assert os.path.exists(name+os.sep+'figs')
 
     # remove temporary files
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage2")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}"
+              f"Stage2{os.sep}S2_*")
+    if not keep_s3_output:
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage4cal")

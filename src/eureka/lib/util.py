@@ -699,11 +699,16 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     mad : float
         Single MAD value in ppm
     """
-    # Make sure wavelengths are in ascending order
-    if wave_1d[0] > wave_1d[-1]:
+    # Make sure wavelengths are in ascending order. Some instruments have
+    # detector pixels outside an order's wavelength solution, represented by
+    # NaNs at either end of wave_1d, so we handle that possibility as well.
+    finite_wave = np.flatnonzero(np.isfinite(wave_1d))
+    if finite_wave.size == 0:
+        return np.nan
+    if wave_1d[finite_wave[0]] > wave_1d[finite_wave[-1]]:
         wave_1d = wave_1d[::-1]
-        optspec = optspec[::-1]
-        optmask = optmask[::-1]
+        optspec = optspec[:, ::-1]
+        optmask = optmask[:, ::-1]
 
     optspec = np.ma.masked_invalid(optspec)
     optspec = np.ma.masked_where(optmask, optspec)

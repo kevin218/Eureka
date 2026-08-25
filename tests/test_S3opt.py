@@ -35,5 +35,6 @@ def test_S3opt(capsys):
     assert history["final_run"] <= history["initial_run"]
 
     # remove temporary files
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage2")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}"
+              f"Stage2{os.sep}S2_*")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3opt")

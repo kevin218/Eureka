@@ -2,7 +2,7 @@
 import os
 import sys
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 import numpy as np
 import pytest
@@ -178,7 +178,7 @@ def test_dynesty_checkpoint_kwargs_passed_to_run_nested(tmp_path):
     assert meta.checkpoint_file == os.path.join(
         str(tmp_path), 'S5_dynesty_checkpoint_white.save')
     sampler.run_nested.assert_called_once_with(
-        dlogz=0.1, print_progress=True,
+        dlogz=0.1, print_progress=True, print_func=ANY,
         checkpoint_file=os.path.join(str(tmp_path),
                                      'S5_dynesty_checkpoint_white.save'),
         checkpoint_every=123.0)
@@ -205,7 +205,7 @@ def test_dynesty_resume_restores_sampler(tmp_path):
         str(tmp_path), 'S5_dynesty_checkpoint_white.save')
     restore.assert_called_once_with(str(old_checkpoint), pool=None)
     sampler.run_nested.assert_called_once_with(
-        dlogz=0.1, print_progress=True,
+        dlogz=0.1, print_progress=True, print_func=ANY,
         checkpoint_file=os.path.join(str(tmp_path),
                                      'S5_dynesty_checkpoint_white.save'),
         checkpoint_every=600.0, resume=True, maxiter=5, maxcall=6)
