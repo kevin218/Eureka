@@ -1,6 +1,6 @@
 # pylint: disable=attribute-defined-outside-init
-from numbers import Integral
 import warnings
+from numbers import Integral
 
 from ..lib.readECF import MetaClass
 
