@@ -56,11 +56,16 @@ def _canonicalize_parameter(name, value):
         _warn_legacy_mad(name, canonical_name)
 
     # Optimizer settings may contain renamed parameter names in lists/tuples.
-    if isinstance(value, (list, tuple)):
+    # Leave all other list/tuple metadata (which may contain arrays or other
+    # strings) untouched.
+    if (name.startswith('params_to_optimize') and
+            isinstance(value, (list, tuple))):
         canonical_values = []
         for item in value:
             canonical_item = _canonicalize_legacy_mad(item)
-            if canonical_item != item:
+            # Metadata lists may contain NumPy arrays; only compare strings
+            # because array comparisons do not produce a single bool.
+            if isinstance(item, str) and canonical_item != item:
                 _warn_legacy_mad(item, canonical_item)
             canonical_values.append(canonical_item)
         value = type(value)(canonical_values)
