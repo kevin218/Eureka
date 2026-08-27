@@ -9,7 +9,7 @@ from .conftest import REFERENCE_ROOT
 # Most science arrays use a relative comparison. Each case declares its
 # exact-value and centroid-position exceptions alongside its product manifest.
 RTOL = 1e-4
-MAD_RTOL = 1e-3
+MAED_RTOL = 1e-3
 CENTROID_ATOL = 1e-2
 
 
@@ -57,10 +57,10 @@ def test_s4_science_products(case, run_s4, overwrite_ref_files):
                      rtol=RTOL, centroid_atol=CENTROID_ATOL)
 
     # Assertions for HDF5 metadata
-    assert_attribute(case, "SpecData", spec, expected_spec, "mad_s4",
-                     rtol=MAD_RTOL)
+    assert_attribute(case, "SpecData", spec, expected_spec, "maed_s4",
+                     rtol=MAED_RTOL)
     assert_attribute(case, "SpecData", spec, expected_spec, "mask_columns")
-    assert_attribute(case, "LCData", lc, expected_lc, "mad_s4_binned",
-                     rtol=MAD_RTOL)
-    assert_attribute(case, "LCData", lc, expected_lc, "mad_s4_binned_bg",
-                     rtol=MAD_RTOL)
+    assert_attribute(case, "LCData", lc, expected_lc, "maed_s4_binned",
+                     rtol=MAED_RTOL)
+    assert_attribute(case, "LCData", lc, expected_lc, "maed_s4_binned_bg",
+                     rtol=MAED_RTOL)

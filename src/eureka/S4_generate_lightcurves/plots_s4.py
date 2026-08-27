@@ -69,19 +69,19 @@ def binned_lightcurve(meta, log, lc, i, white=False):
                             norm_lcdata[iscans]+0.005*p,
                             norm_lcerr[iscans], fmt='o', color=f'C{p}',
                             mec=f'C{p}', alpha=0.2)
-                mad = util.get_mad_1d(norm_lcdata[iscans])
-                meta.mad_s4_binned.append(mad)
-                log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+                maed = util.get_maed_1d(norm_lcdata[iscans])
+                meta.maed_s4_binned.append(maed)
+                log.writelog(f'    MAED = {np.round(maed).astype(int)} ppm')
                 plt.text(0.05, 0.075+0.05*p,
-                         f"MAD = {np.round(mad).astype(int)} ppm",
+                         f"MAED = {np.round(maed).astype(int)} ppm",
                          transform=ax.transAxes, color=f'C{p}')
     else:
         plt.errorbar(lc.time.values-time_modifier, norm_lcdata, norm_lcerr,
                      fmt='o', color=f'C{i}', mec=f'C{i}', alpha=0.2)
-        mad = util.get_mad_1d(norm_lcdata)
-        meta.mad_s4_binned.append(mad)
-        log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
-        plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
+        maed = util.get_maed_1d(norm_lcdata)
+        meta.maed_s4_binned.append(maed)
+        log.writelog(f'    MAED = {np.round(maed).astype(int)} ppm')
+        plt.text(0.05, 0.1, f"MAED = {np.round(maed).astype(int)} ppm",
                  transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Flux')
     time_units = lc.data.attrs['time_units']
@@ -152,18 +152,18 @@ def binned_background(meta, log, lc, i, white=False):
                             norm_bgdata[iscans]+0.005*p,
                             norm_bgerr[iscans], fmt='o', color=f'C{p}',
                             mec=f'C{p}', alpha=0.2)
-                mad = util.get_mad_1d(norm_bgdata[iscans])
-                meta.mad_s4_binned.append(mad)
-                log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+                maed = util.get_maed_1d(norm_bgdata[iscans])
+                meta.maed_s4_binned.append(maed)
+                log.writelog(f'    MAED = {np.round(maed).astype(int)} ppm')
                 plt.text(0.05, 0.075+0.05*p,
-                         f"MAD = {np.round(mad).astype(int)} ppm",
+                         f"MAED = {np.round(maed).astype(int)} ppm",
                          transform=ax.transAxes, color=f'C{p}')
     else:
         plt.errorbar(lc.time.values-time_modifier, norm_bgdata, norm_bgerr,
                      fmt='o', color=f'C{i}', mec=f'C{i}', alpha=0.2)
-        mad = util.get_mad_1d(norm_bgdata)
-        meta.mad_s4_binned_bg.append(mad)
-        plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
+        maed = util.get_maed_1d(norm_bgdata)
+        meta.maed_s4_binned_bg.append(maed)
+        plt.text(0.05, 0.1, f"MAED = {np.round(maed).astype(int)} ppm",
                  transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Background')
     time_units = lc.data.attrs['time_units']
@@ -318,7 +318,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
 
     plt.minorticks_on()
 
-    plt.title(f"MAD = {np.round(meta.mad_s4).astype(int)} ppm")
+    plt.title(f"MAED = {np.round(meta.maed_s4).astype(int)} ppm")
 
     fname = 'figs'+os.sep+'fig4101_2D_LC'+plots.get_filetype()
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
@@ -331,8 +331,8 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
 
 
 @plots.apply_style
-def mad_outliers(meta, pp):
-    '''Plot spectroscopic MAD values and identify outliers. (Figs 4106)
+def maed_outliers(meta, pp):
+    '''Plot spectroscopic MAED values and identify outliers. (Figs 4106)
     Outliers will be appended to `mask_columns` in the Stage 4 ECF.
 
     Parameters
@@ -345,46 +345,46 @@ def mad_outliers(meta, pp):
     # Unpack dictionary of plotting parameters
     x = pp["x"]
     x_mask = pp["x_mask"]
-    x_mad_outliers = pp["x_mad_outliers"]
+    x_maed_outliers = pp["x_maed_outliers"]
     x_dev_outliers = pp["x_dev_outliers"]
-    mad = pp["mad"]
+    maed = pp["maed"]
     dev = pp["dev"]
-    masked_mad = pp["masked_mad"]
+    masked_maed = pp["masked_maed"]
     masked_dev = pp["masked_dev"]
-    smoothed_mad = pp["smoothed_mad"]
-    residual_mad = pp["residual_mad"]
+    smoothed_maed = pp["smoothed_maed"]
+    residual_maed = pp["residual_maed"]
     smoothed_dev = pp["smoothed_dev"]
     residual_dev = pp["residual_dev"]
 
-    # Plot spectroscopic MAD values
+    # Plot spectroscopic MAED values
     alpha = 0.5
     fig = plt.figure(4106)
     fig.set_size_inches(8, 8, forward=True)
     fig.clf()
     plt.subplot(211)
-    plt.plot(x, mad, '.', color='b', zorder=1,
-             label="Unbinned LC MAD", alpha=alpha)
+    plt.plot(x, maed, '.', color='b', zorder=1,
+             label="Unbinned LC MAED", alpha=alpha)
     plt.plot(x, dev, '.', color='gold', zorder=2,
              label="Deviation from white LC (Scaled)", alpha=alpha)
-    plt.plot(x_mask, smoothed_mad, '-', color='r', lw=2, zorder=5,
-             label="Unbinned LC MAD (Smoothed)")
+    plt.plot(x_mask, smoothed_maed, '-', color='r', lw=2, zorder=5,
+             label="Unbinned LC MAED (Smoothed)")
     plt.plot(x_mask, smoothed_dev, '--', color='0.3', lw=2, zorder=6,
              label="Deviation from white LC (Smoothed)")
-    plt.ylabel('MAD Value (ppm)')
+    plt.ylabel('MAED Value (ppm)')
     plt.legend(loc='best')
     plt.subplot(212)
-    plt.plot(x_mask, residual_mad, '.', color='b', zorder=1,
-             label="Unbinned LC MAD", alpha=alpha)
+    plt.plot(x_mask, residual_maed, '.', color='b', zorder=1,
+             label="Unbinned LC MAED", alpha=alpha)
     plt.plot(x_mask, residual_dev, '.', color='gold', zorder=2,
              label="Deviation from white LC", alpha=alpha)
-    plt.plot(x_mad_outliers, residual_mad[masked_mad.mask], '.', color='C3',
+    plt.plot(x_maed_outliers, residual_maed[masked_maed.mask], '.', color='C3',
              zorder=5)
     plt.plot(x_dev_outliers, residual_dev[masked_dev.mask], '.', color='C3',
-             zorder=5, label=rf"{meta.mad_sigma}$\sigma$ Outliers")
+             zorder=5, label=rf"{meta.maed_sigma}$\sigma$ Outliers")
     plt.legend(loc='best')
     plt.ylabel('Residuals (ppm)')
     plt.xlabel('Detector Column Number')
-    fname = 'figs'+os.sep+'fig4106_MAD_Outliers'+plots.get_filetype()
+    fname = 'figs'+os.sep+'fig4106_MAED_Outliers'+plots.get_filetype()
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)

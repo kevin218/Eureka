@@ -100,7 +100,7 @@ class S3optMetaClass(MetaClass):
                         'p7thresh']
         self.params_to_optimize_s3 = getattr(self, 'params_to_optimize_s3',
                                              full_list_s3)
-        full_list_s4 = ['mad_sigma__mad_box_width', 'sigma__box_width']
+        full_list_s4 = ['maed_sigma__maed_box_width', 'sigma__box_width']
         self.params_to_optimize_s4 = getattr(self, 'params_to_optimize_s4',
                                              full_list_s4)
 
@@ -118,8 +118,8 @@ class S3optMetaClass(MetaClass):
             # Stage 4
             "sweep_sigma": range(3, 8),  # 3 → 7
             "sweep_box_width": range(11, 52, 10),  # 11 → 51, step 10
-            "sweep_mad_sigma": range(4, 8),  # 4 → 7
-            "sweep_mad_box_width": range(11, 52, 10),  # 11 → 51, step 10
+            "sweep_maed_sigma": range(4, 8),  # 4 → 7
+            "sweep_maed_box_width": range(11, 52, 10),  # 11 → 51, step 10
         }
 
         for key, default in defaults.items():
@@ -138,7 +138,7 @@ class S3optMetaClass(MetaClass):
         defaults = {
             "sweep_bg_hw": range(5, 16),
             "sweep_spec_hw": range(2, 10),
-            "sweep_mad_box_width": range(11, 32, 5),
+            "sweep_maed_box_width": range(11, 32, 5),
         }
 
         for key, default in defaults.items():
@@ -165,8 +165,8 @@ class S3optMetaClass(MetaClass):
         Set Optimizer specific defaults for NIRSpec.
         '''
         # Fitness scaling factors
-        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 0.01)
-        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
+        self.scaling_MAED_spec = getattr(self, 'scaling_MAED_spec', 0.01)
+        self.scaling_MAED_white = getattr(self, 'scaling_MAED_white', 1.0)
 
         defaults = {
             "sweep_bg_hw": range(5, 16),
@@ -183,8 +183,8 @@ class S3optMetaClass(MetaClass):
         Set Optimizer specific defaults for NIRISS.
         '''
         # Fitness scaling factors
-        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 10.)
-        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
+        self.scaling_MAED_spec = getattr(self, 'scaling_MAED_spec', 10.)
+        self.scaling_MAED_white = getattr(self, 'scaling_MAED_white', 1.0)
 
         defaults = {
             "sweep_bg_hw": range(15, 20),
@@ -213,7 +213,7 @@ class S3optMetaClass(MetaClass):
         Set Optimizer specific defaults for MIRI Photometry.
         '''
         # Fitness scaling factors
-        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 0.04)
-        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
+        self.scaling_MAED_spec = getattr(self, 'scaling_MAED_spec', 0.04)
+        self.scaling_MAED_white = getattr(self, 'scaling_MAED_white', 1.0)
 
         self.set_photometric_defaults()

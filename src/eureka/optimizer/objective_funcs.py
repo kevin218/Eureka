@@ -19,13 +19,13 @@ def _calculate_fitness(meta, s4_meta):
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
-        The optimizer metadata object. Must include ``scaling_MAD_spec`` and
-        ``scaling_MAD_white``, which set the relative weights applied to the
-        spectral and white-light MAD values.
+        The optimizer metadata object. Must include ``scaling_MAED_spec`` and
+        ``scaling_MAED_white``, which set the relative weights applied to the
+        spectral and white-light MAED values.
     s4_meta : eureka.lib.readECF.MetaClass
         The Stage 4 metadata object returned by ``s4.genlc``. Must include
-        ``mad_s4`` and ``mad_s4_binned``, where ``mad_s4_binned[0]`` is the
-        white-light MAD value.
+        ``maed_s4`` and ``maed_s4_binned``, where ``maed_s4_binned[0]`` is the
+        white-light MAED value.
 
     Returns
     -------
@@ -34,8 +34,8 @@ def _calculate_fitness(meta, s4_meta):
         optimizer result.
     """
     return (
-        meta.scaling_MAD_spec * s4_meta.mad_s4 +
-        meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
+        meta.scaling_MAED_spec * s4_meta.maed_s4 +
+        meta.scaling_MAED_white * s4_meta.maed_s4_binned[0])
 
 
 def _remove_intermediate_outputs(meta, run_stage, s1_meta=None, s2_meta=None,

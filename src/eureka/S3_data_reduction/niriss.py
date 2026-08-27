@@ -20,7 +20,7 @@ __all__ = ['read', 'get_wave', 'straighten_trace', 'flag_ff', 'flag_bg',
 TODO:
     Implement niriss.calibrated_spectra()
     0th-order masking using F277W filter
-    Get 2D MAD calculation working
+    Get 2D MAED calculation working
 '''
 
 
@@ -622,9 +622,9 @@ def lc_nodriftcorr(spec, meta):
         wave_1d = spec.wave_1d.sel(order=order)
         optspec = spec.optspec.sel(order=order)
         optmask = spec.optmask.sel(order=order)
-        mad = meta.mad_s3[k]
+        maed = meta.maed_s3[k]
         plots_s3.lc_nodriftcorr(meta, wave_1d, optspec, optmask=optmask,
-                                mad=mad, order=order)
+                                maed=maed, order=order)
 
 
 def calibrated_spectra(data, meta, log):

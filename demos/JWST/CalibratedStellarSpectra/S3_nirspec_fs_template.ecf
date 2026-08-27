@@ -28,7 +28,7 @@ bg_thresh       [6,6]       # Double-iteration X-sigma threshold for outlier rej
 # Background parameters
 bg_hw           9           # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_deg          None        # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
-bg_method       median      # Options: std (Standard Deviation), median (Median Absolute Deviation), mean (Mean Absolute Deviation)
+bg_method       median      # Options: std (Standard Deviation), median (Median Absolute Element Difference), mean (Mean Absolute Deviation)
 p3thresh        10          # X-sigma threshold for outlier rejection during background subtraction
 
 # Spectral extraction parameters

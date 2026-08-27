@@ -655,19 +655,20 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             # make citations for current stage
             util.make_citations(meta, 3)
 
-            # Compute MAD value
+            # Compute MAED value
             scandir = getattr(spec, 'scandir', None)
             if not meta.photometry:
                 if meta.orders is None:
-                    meta.mad_s3 = [util.get_mad(meta, log, spec.wave_1d.values,
-                                                spec.optspec.values,
-                                                spec.optmask.values,
-                                                scandir=scandir)]
+                    meta.maed_s3 = [util.get_maed(meta, log,
+                                    spec.wave_1d.values,
+                                    spec.optspec.values,
+                                    spec.optmask.values,
+                                    scandir=scandir)]
                 else:
-                    meta.mad_s3 = []
+                    meta.maed_s3 = []
                     for j, order in enumerate(meta.orders):
-                        meta.mad_s3.append(
-                            util.get_mad(
+                        meta.maed_s3.append(
+                            util.get_maed(
                                 meta, log,
                                 spec.wave_1d.sel(order=order).values,
                                 spec.optspec.sel(order=order).values,
@@ -679,13 +680,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 normspec = util.normalize_spectrum(
                     meta, spec.aplev.values,
                     scandir=scandir)
-                meta.mad_s3 = [util.get_mad_1d(normspec)]
-            for i, mad in enumerate(meta.mad_s3):
+                meta.maed_s3 = [util.get_maed_1d(normspec)]
+            for i, maed in enumerate(meta.maed_s3):
                 try:
-                    log.writelog(f"Stage 3 MAD = {mad:.0f} ppm")
+                    log.writelog(f"Stage 3 MAED = {maed:.0f} ppm")
                 except:
-                    log.writelog("Could not compute Stage 3 MAD")
-                    meta.mad_s3[i] = 0
+                    log.writelog("Could not compute Stage 3 MAED")
+                    meta.maed_s3[i] = 0
 
             # Save Dataset object containing time-series of 1D spectra
             if meta.save_output:

@@ -7,7 +7,7 @@ workspace.
 
 Each reference directory contains the following S3 reference data:
 
-- `SpecData.h5`: the approved Stage 3 data product, including `mad_s3` in its
+- `SpecData.h5`: the approved Stage 3 data product, including `maed_s3` in its
   stored metadata attributes.
 
 Run the suite with:

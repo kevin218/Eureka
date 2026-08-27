@@ -342,8 +342,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             lc.wave_mid.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
-            # Use spectroscopic MAD values to identify outliers
-            if not meta.photometry and meta.mad_sigma is not None:
+            # Use spectroscopic MAED values to identify outliers
+            if not meta.photometry and meta.maed_sigma is not None:
                 outliers, pp = get_outliers(meta, spec)
                 if np.any(outliers):
                     # Create unique list of outliers
@@ -355,7 +355,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     log.writelog('No identified outlier columns.',
                                  mute=(not meta.verbose))
                 if meta.isplots_S4 >= 1:
-                    plots_s4.mad_outliers(meta, pp)
+                    plots_s4.maed_outliers(meta, pp)
 
             # Manually mask pixel columns by index number
             for w in meta.mask_columns:
@@ -459,20 +459,20 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 spec, lc, meta = wfc3.sum_reads(spec, lc, meta)
 
             if not meta.photometry:
-                # Compute MAD value
-                meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
-                                           spec.optspec.values,
-                                           spec.optmask.values,
-                                           meta.wave_min, meta.wave_max,
-                                           scandir=getattr(spec, 'scandir',
-                                                           None))
+                # Compute MAED value
+                meta.maed_s4 = util.get_maed(meta, log, spec.wave_1d.values,
+                                             spec.optspec.values,
+                                             spec.optmask.values,
+                                             meta.wave_min, meta.wave_max,
+                                             scandir=getattr(spec, 'scandir',
+                                                             None))
             else:
-                # Compute MAD value for Photometry
+                # Compute MAED value for Photometry
                 normspec = util.normalize_spectrum(
                     meta, spec.aplev.values,
                     scandir=getattr(spec, 'scandir', None))
-                meta.mad_s4 = util.get_mad_1d(normspec)
-            log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
+                meta.maed_s4 = util.get_maed_1d(normspec)
+            log.writelog(f"Stage 4 MAED = {np.round(meta.maed_s4, 2):.2f} ppm")
             if not meta.photometry:
                 if meta.isplots_S4 >= 1:
                     plots_s4.lc_driftcorr(meta, wave_1d, spec.optspec,
@@ -483,8 +483,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             log.writelog("Generating light curves")
 
             # Loop over spectroscopic channels
-            meta.mad_s4_binned = []
-            meta.mad_s4_binned_bg = []
+            meta.maed_s4_binned = []
+            meta.maed_s4_binned_bg = []
             for i in range(meta.nspecchan):
                 if not meta.photometry:
                     log.writelog(f"  Bandpass {i} = "
@@ -711,15 +711,15 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     lc['spam_nonlin_4para_white'] = (['wavelength', 'spam_4'],
                                                      ld_coeffs_w[3])
             # Add some variables to HDF5 files to track for testing
-            # ``mask_columns`` and the unbinned MAD describe the corrected
-            # spectra, while the binned MAD values describe the light curves.
-            spec.attrs['mad_s4'] = float(meta.mad_s4)
+            # ``mask_columns`` and the unbinned MAED describe the corrected
+            # spectra, while the binned MAED values describe the light curves.
+            spec.attrs['maed_s4'] = float(meta.maed_s4)
             spec.attrs['mask_columns'] = np.asarray(meta.mask_columns,
                                                     dtype=int)
-            lc.attrs['mad_s4_binned'] = np.asarray(meta.mad_s4_binned,
-                                                   dtype=float)
-            lc.attrs['mad_s4_binned_bg'] = np.asarray(
-                meta.mad_s4_binned_bg, dtype=float)
+            lc.attrs['maed_s4_binned'] = np.asarray(meta.maed_s4_binned,
+                                                    dtype=float)
+            lc.attrs['maed_s4_binned_bg'] = np.asarray(
+                meta.maed_s4_binned_bg, dtype=float)
 
             log.writelog('Saving results...')
 
