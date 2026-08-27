@@ -464,5 +464,5 @@ def calcDrift2D(im1, im2, n):
 
 
 def scaled_mad_std(data):
-    """Estimate standard deviation using the scaled median absolute deviation."""
+    """Estimate standard deviation using scaled median absolute deviation."""
     return 1.4826 * np.median(np.abs(data - np.median(data)))
