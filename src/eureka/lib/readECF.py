@@ -13,7 +13,7 @@ from ..version import version
 warned = False
 
 
-# ECF parameter names that were renamed from MAD to MAED.  
+# ECF parameter names that were renamed from MAD to MAED.
 # Allows legacy ECF files to be handled by every pipeline stage.
 LEGACY_MAD_PARAMETERS = {
     'mad_s3': 'maed_s3',
@@ -125,7 +125,7 @@ class MetaClass:
         if kwargs is not None:
             # Kwargs can come from saved products or callers. In
             # particular, metadata loaded from an older product may still use
-            # the legacy MAD names, so normalize every name to the 
+            # the legacy MAD names, so normalize every name to the
             # newer MAED before storing it.
             canonical_kwargs = {}
             for param, value in kwargs.items():
