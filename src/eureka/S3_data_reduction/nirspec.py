@@ -42,6 +42,7 @@ def read(filename, data, meta, log):
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
     meta.filter = data.attrs['mhdr']['GRATING']
+    meta.nirspec_filter = data.attrs['mhdr']['FILTER']
 
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
