@@ -962,6 +962,14 @@ exotic_ld_file
 ''''''''''''''
 Used by exotic-ld as throughput input file. If none, exotic-ld uses throughput from ancillary files. Make sure that wavelength is given in Angstrom!
 
+nirspec_filter
+''''''''''''''
+The NIRSpec blocking filter, ``F070LP`` or ``F100LP``, used to select the
+ExoTiC-LD throughput file for G140H and G140M. Stage 3 records this from the
+FITS ``FILTER`` keyword. When using older Stage 3 outputs, set this parameter
+in the Stage 4 ECF to match the original FITS header. It is not required when
+using a custom throughput file.
+
 rescale_phoenix
 '''''''''''''''
 If True and when exotic_ld_grid = phoenix, Eureka! rescales the PHOENIX mu/intensity profiles using the critical-mu transformation described in Section 2.2 of Espinoza & Jordan (2015, https://academic.oup.com/mnras/article/450/2/1879/985166), then interpolates them onto a uniform mu grid before computing limb-darkening coefficients. If False, the original PHOENIX profiles are used.
