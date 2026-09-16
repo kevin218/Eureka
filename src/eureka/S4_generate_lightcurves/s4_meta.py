@@ -68,6 +68,7 @@ class S4MetaClass(MetaClass):
         # Make sure the inst and filt attributes are at least initialized
         self.inst = getattr(self, 'inst', None)
         self.filter = getattr(self, 'filter', None)
+        self.nirspec_filter = getattr(self, 'nirspec_filter', None)
 
         # Make sure the S3 expand parameter is defined
         # (to allow resuming from old analyses)

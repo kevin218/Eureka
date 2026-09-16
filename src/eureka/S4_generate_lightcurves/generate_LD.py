@@ -54,6 +54,21 @@ def exotic_ld(meta, spec, log, white=False):
         filter = meta.filter
         if filter.lower() == 'prism':
             filter = 'prism'
+        elif filter.upper() in ('G140H', 'G140M'):
+            # meta.filter holds GRATING for NIRSpec, not the FITS FILTER.
+            nirspec_filter = meta.nirspec_filter
+            if nirspec_filter is None:
+                raise ValueError('NIRSpec G140 limb darkening requires the '
+                                 'FITS FILTER keyword. Set nirspec_filter to '
+                                 'F070LP or F100LP in the Stage 4 ECF.')
+            suffix = {'F070LP': 'f070', 'F100LP': 'f100'}
+            nirspec_filter = nirspec_filter.strip().upper()
+            if nirspec_filter not in suffix:
+                raise ValueError('Unsupported NIRSpec G140 FILTER '
+                                 f'{nirspec_filter} is not one of '
+                                 f'{list(suffix.keys())}.')
+            meta.nirspec_filter = nirspec_filter
+            filter = filter.upper() + '-' + suffix[nirspec_filter]
         mode = 'JWST_NIRSpec_' + filter
     elif meta.inst == 'niriss':
         mode = 'JWST_NIRISS_SOSSo' + str(meta.s4_order)
@@ -140,7 +155,7 @@ def exotic_ld(meta, spec, log, white=False):
 
     if mode != 'custom':
         # Figure out if we need to extrapolate the throughput, since the
-        # ExoTiC-LD throughput files don't go close enought to the edges of
+        # ExoTiC-LD throughput files don't go close enough to the edges of
         # some filters
         throughput_wavelengths, throughput = sld._read_sensitivity_data(mode)
         throughput_edges = throughput_wavelengths[[0, -1]]
@@ -165,8 +180,32 @@ def exotic_ld(meta, spec, log, white=False):
             custom_throughput = np.append(throughput, throughput_poly)
             old_mode = mode
             mode = 'custom'
-        elif (mode == 'JWST_NIRSpec_G395H' and
-                wavelength_range[0][0] > throughput_edges[0]/1e4):
+        elif (mode.startswith(('JWST_NIRSpec_G140', 'JWST_NIRSpec_G235')) and
+                wavelength_range[:, 0].min() < throughput_edges[0]):
+            log.writelog("WARNING: Extrapolating ExoTiC-LD throughput file to "
+                         "get closer to the blue edge of the filter.")
+
+            # Fit the first 0.05 microns for G140, or 0.30 microns for G235
+            # to average over its local blue-edge plateau and ripples.
+            # Anchor at the first throughput to keep the join continuous.
+            # A low-order fit avoids high-order polynomial excursions.
+            fit_width = 3000 if mode.startswith('JWST_NIRSpec_G235') else 500
+            nfit = max(2, np.searchsorted(
+                throughput_wavelengths, throughput_edges[0] + fit_width))
+            delta_wave = (throughput_wavelengths[:nfit] -
+                          throughput_edges[0])
+            slope = np.dot(delta_wave, throughput[:nfit] - throughput[0])
+            slope /= np.dot(delta_wave, delta_wave)
+            wav_poly = np.linspace(wavelength_range[:, 0].min(),
+                                   throughput_edges[0], 1000, endpoint=False)
+            throughput_poly = np.maximum(
+                throughput[0] + slope*(wav_poly - throughput_edges[0]), 0)
+            custom_wavelengths = np.append(wav_poly, throughput_wavelengths)
+            custom_throughput = np.append(throughput_poly, throughput)
+            old_mode = mode
+            mode = 'custom'
+        elif (mode.startswith('JWST_NIRSpec_G395') and
+                wavelength_range[:, 0].min() < throughput_edges[0]):
             # Extrapolate throughput to the blue edge of the filter if needed
             log.writelog("WARNING: Extrapolating ExoTiC-LD throughput file to "
                          "get closer to the blue edge of the filter.")
@@ -176,7 +215,8 @@ def exotic_ld(meta, spec, log, white=False):
                                     throughput_wavelengths < 30000)
             poly = np.polyfit(throughput_wavelengths[ind_use],
                               throughput[ind_use], deg=7)
-            wav_poly = np.linspace(2.733*1e4, throughput_wavelengths[0], 10000)
+            wav_poly = np.linspace(2.733*1e4, throughput_wavelengths[0],
+                                   10000, endpoint=False)
             throughput_poly = np.polyval(poly, wav_poly) - 0.015
             # Make sure the throughput is always > 0
             throughput_poly[throughput_poly < 0] = 0
