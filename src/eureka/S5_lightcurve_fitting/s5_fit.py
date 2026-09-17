@@ -78,13 +78,16 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
         chanrng = meta.nspecchan
 
     # Create directories for Stage 5 outputs
+    # Cache the clean base dir since meta.outputdir_raw gets overwritten
+    # below each time meta.outputdir is set to a per-pair directory
+    base_outputdir_raw = meta.outputdir_raw
     meta.run_s5 = None
     for spec_hw_val, bg_hw_val in me.get_allapers_pairs(meta):
         spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
             meta.expand, spec_hw_val, bg_hw_val)
-        meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
-                                         ap=spec_hw_val,
-                                         bg=bg_hw_val)
+        meta.run_s5 = util.makedirectory(
+            meta, 'S5', meta.run_s5, ap=spec_hw_val, bg=bg_hw_val,
+            outputdir_raw=base_outputdir_raw)
 
     allapers_pairs = me.get_allapers_pairs(meta)
     for spec_hw_val in meta.spec_hw_range:
@@ -153,9 +156,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
                 meta.expand, spec_hw_val, bg_hw_val)
             # Get the directory for Stage 5 processing outputs
-            meta.outputdir = util.pathdirectory(meta, 'S5', meta.run_s5,
-                                                ap=spec_hw_val,
-                                                bg=bg_hw_val)
+            meta.outputdir = util.pathdirectory(
+                meta, 'S5', meta.run_s5, ap=spec_hw_val, bg=bg_hw_val,
+                outputdir_raw=base_outputdir_raw)
 
             # Copy existing S4 log file and resume log
             meta.s5_logname = meta.outputdir + 'S5_' + meta.eventlabel + ".log"

@@ -323,7 +323,7 @@ def check_nans(data, mask, log, name='', mute=True):
     return mask
 
 
-def makedirectory(meta, stage, counter=None, **kwargs):
+def makedirectory(meta, stage, counter=None, outputdir_raw=None, **kwargs):
     """Creates a directory for the current stage.
 
     Parameters
@@ -335,6 +335,13 @@ def makedirectory(meta, stage, counter=None, **kwargs):
     counter : int; optional
         The run number if you want to force a particular run number.
         Defaults to None which automatically finds the run number.
+    outputdir_raw : str; optional
+        The stage's base output directory relative to topdir. Defaults to
+        None, in which case meta.outputdir_raw is used. Callers looping over
+        multiple aperture/annulus pairs on the same meta object should pass
+        this explicitly, since meta.outputdir_raw gets overwritten as a side
+        effect of assigning meta.outputdir to the per-pair directory returned
+        by this function on a previous iteration.
     **kwargs : dict
         Additional key,value pairs to add to the folder name
         (e.g. {'ap': 4, 'bg': 10}).
@@ -344,9 +351,12 @@ def makedirectory(meta, stage, counter=None, **kwargs):
     run : int
         The run number
     """
+    if outputdir_raw is None:
+        outputdir_raw = meta.outputdir_raw
+
     # This code allows the input and output files to be stored outside
     # of the Eureka! folder
-    rootdir = os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))
+    rootdir = os.path.join(meta.topdir, *outputdir_raw.split(os.sep))
     if rootdir[-1] != os.sep:
         rootdir += os.sep
 
@@ -390,7 +400,8 @@ def makedirectory(meta, stage, counter=None, **kwargs):
     return counter
 
 
-def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
+def pathdirectory(meta, stage, run, old_datetime=None, outputdir_raw=None,
+                  **kwargs):
     """Finds the directory for the requested stage, run, and datetime
     (or old_datetime).
 
@@ -405,6 +416,13 @@ def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
     old_datetime : str; optional
         The date that a previous run was made (for looking up old data).
         Defaults to None in which case meta.datetime is used instead.
+    outputdir_raw : str; optional
+        The stage's base output directory relative to topdir. Defaults to
+        None, in which case meta.outputdir_raw is used. Callers looping over
+        multiple aperture/annulus pairs on the same meta object should pass
+        this explicitly, since meta.outputdir_raw gets overwritten as a side
+        effect of assigning meta.outputdir to the per-pair directory returned
+        by this function on a previous iteration.
     **kwargs : dict
         Additional key,value pairs to add to the folder name
         (e.g. {'ap': 4, 'bg': 10}).
@@ -419,9 +437,12 @@ def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
     else:
         datetime = meta.datetime
 
+    if outputdir_raw is None:
+        outputdir_raw = meta.outputdir_raw
+
     # This code allows the input and output files to be stored outside
     # of the Eureka! folder
-    rootdir = os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))
+    rootdir = os.path.join(meta.topdir, *outputdir_raw.split(os.sep))
     if rootdir[-1] != os.sep:
         rootdir += os.sep
 
