@@ -176,7 +176,7 @@ class S1MetaClass(MetaClass):
             self.bg_y2 = getattr(self, 'bg_y2')
             self.bg_deg = getattr(self, 'bg_deg', 0)
             # Options: std (Standard Deviation),
-            # median (Median Absolute Deviation), or
+            # median (Median Absolute Element Difference), or
             # mean (Mean Absolute Deviation)
             self.bg_method = getattr(self, 'bg_method', 'median')
             self.p3thresh = getattr(self, 'p3thresh', 3)

@@ -1,6 +1,7 @@
 import os
 import shlex
 import time as time_pkg
+import warnings
 
 import crds
 # Required in case user passes in a numpy object (e.g. np.inf)
@@ -10,6 +11,66 @@ from ..version import version
 
 # A boolean to track if a Eureka! version mis-match warning has been issued
 warned = False
+
+
+# ECF parameter names that were renamed from MAD to MAED.
+# Allows legacy ECF files to be handled by every pipeline stage.
+LEGACY_MAD_PARAMETERS = {
+    'mad_s3': 'maed_s3',
+    'mad_s4': 'maed_s4',
+    'mad_s4_binned': 'maed_s4_binned',
+    'mad_s4_binned_bg': 'maed_s4_binned_bg',
+    'mad_sigma': 'maed_sigma',
+    'mad_box_width': 'maed_box_width',
+    'scaling_MAD_spec': 'scaling_MAED_spec',
+    'scaling_MAD_white': 'scaling_MAED_white',
+    'sweep_mad_sigma': 'sweep_maed_sigma',
+    'sweep_mad_box_width': 'sweep_maed_box_width',
+}
+
+
+def _canonicalize_legacy_mad(value):
+    """Translate renamed MAED parameter names inside ECF string values."""
+    if not isinstance(value, str):
+        return value
+
+    for old_name, new_name in LEGACY_MAD_PARAMETERS.items():
+        value = value.replace(old_name, new_name)
+    return value
+
+
+def _warn_legacy_mad(old_name, new_name):
+    """Warn when an ECF uses a parameter renamed from MAD to MAED."""
+    warnings.warn(
+        f"ECF variable '{old_name}' is deprecated and will be removed in a "
+        f"future version. Please replace it with '{new_name}'.",
+        FutureWarning,
+        stacklevel=3,
+    )
+
+
+def _canonicalize_parameter(name, value):
+    """Translate a legacy parameter name and any nested optimizer names."""
+    canonical_name = LEGACY_MAD_PARAMETERS.get(name, name)
+    if canonical_name != name:
+        _warn_legacy_mad(name, canonical_name)
+
+    # Optimizer settings may contain renamed parameter names in lists/tuples.
+    # Leave all other list/tuple metadata (which may contain arrays or other
+    # strings) untouched.
+    if (name.startswith('params_to_optimize') and
+            isinstance(value, (list, tuple))):
+        canonical_values = []
+        for item in value:
+            canonical_item = _canonicalize_legacy_mad(item)
+            # Metadata lists may contain NumPy arrays; only compare strings
+            # because array comparisons do not produce a single bool.
+            if isinstance(item, str) and canonical_item != item:
+                _warn_legacy_mad(item, canonical_item)
+            canonical_values.append(canonical_item)
+        value = type(value)(canonical_values)
+
+    return canonical_name, value
 
 
 class MetaClass:
@@ -67,11 +128,24 @@ class MetaClass:
         self.data_format = getattr(self, 'data_format', 'eureka')
 
         if kwargs is not None:
-            # Add any kwargs to the parameter dict
-            self.params.update(kwargs)
-
-            # Store each as an attribute
+            # Kwargs can come from saved products or callers. In
+            # particular, metadata loaded from an older product may still use
+            # the legacy MAD names, so normalize every name to the
+            # newer MAED before storing it.
+            canonical_kwargs = {}
             for param, value in kwargs.items():
+                canonical_param, canonical_value = _canonicalize_parameter(
+                    param, value)
+                # Keep only one spelling of a parameter. If both old and new
+                # names are supplied, the explicitly supplied new name wins.
+                if (canonical_param not in canonical_kwargs or
+                        param == canonical_param):
+                    canonical_kwargs[canonical_param] = canonical_value
+            self.params.update(canonical_kwargs)
+
+            # Store the canonical parameters as attributes for stage code to
+            # access (e.g., meta.maed_s3 rather than meta.mad_s3).
+            for param, value in canonical_kwargs.items():
                 setattr(self, param, value)
 
     def __str__(self):
@@ -249,7 +323,12 @@ class MetaClass:
             except:
                 # FINDME: Need to catch only the expected exception
                 pass
-            self.params[name] = val
+            canonical_name, val = _canonicalize_parameter(name, val)
+
+            # If both spellings are present, the new spelling takes precedence
+            # regardless of their order in the ECF.
+            if canonical_name not in self.params or name == canonical_name:
+                self.params[canonical_name] = val
 
         # Need to define these now otherwise the following loop will complain
         # about changing dictionary size
