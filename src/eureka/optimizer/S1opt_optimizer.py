@@ -21,6 +21,23 @@ from . import objective_funcs, optimizers
 from .S1opt_meta import S1optMetaClass
 
 
+def _convert_to_native_types(value):
+    """Recursively convert numpy types to YAML-serializable Python types."""
+    if isinstance(value, dict):
+        return {k: _convert_to_native_types(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_convert_to_native_types(v) for v in value]
+    if isinstance(value, tuple):
+        return [_convert_to_native_types(v) for v in value]
+    if isinstance(value, np.ndarray):
+        return _convert_to_native_types(value.tolist())
+    if isinstance(value, (np.integer, np.floating)):
+        return value.item()
+    if isinstance(value, (np.bool_,)):
+        return bool(value)
+    return value
+
+
 def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     """
     Eureka! optimization wrapper for Stage 1.
@@ -99,7 +116,7 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     # Save the best dictionary to a JSON file
     with open(os.path.join(s1opt_meta.outputdir, "best_params.json"),
               "w") as f:
-        json.dump(best, f)
+        json.dump(_convert_to_native_types(best), f)
 
     # Define and create optimized ECF file path
     opt_path = os.path.join(s1opt_meta.outputdir, "opt_ECFs")

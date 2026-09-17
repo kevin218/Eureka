@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from types import SimpleNamespace
@@ -11,7 +12,7 @@ from astropy.io import fits
 from eureka.lib import util
 from eureka.lib.medstddev import medstddev
 from eureka.lib.readECF import MetaClass
-from eureka.optimizer import objective_funcs
+from eureka.optimizer import S1opt_optimizer, objective_funcs
 
 
 def test_trim(capsys):
@@ -51,6 +52,44 @@ def test_trim(capsys):
     # Let's check if the dimensions agree
     assert res_dat.flux.shape == (nt, (trim_y1 - trim_y0),
                                   (trim_x1 - trim_x0))
+
+
+def test_add_meta_to_xarray_serializes_range_attrs(tmp_path):
+    meta = SimpleNamespace(params={
+        'sweep_jump_rejection_threshold': range(4, 15),
+        'none_value': None,
+        'bibliography': [['citation one', 'citation two']],
+        'string_array': np.array(['one', 'two']),
+        'scalar_value': 1.5,
+    })
+    data = xrio.makeDataset()
+
+    util.add_meta_to_xarray(meta, data)
+
+    assert data.attrs['sweep_jump_rejection_threshold'] == list(range(4, 15))
+    assert data.attrs['none_value'] == 'None'
+    assert data.attrs['bibliography'] == [
+        'citation one_ENDOFCITATION_citation two']
+    assert data.attrs['string_array'] == ['one', 'two']
+    assert data.attrs['scalar_value'] == 1.5
+    assert xrio.writeXR(str(tmp_path / 'metadata'), data, verbose=False)
+
+
+def test_s1opt_best_params_are_json_serializable():
+    best = {
+        'sweep_jump_rejection_threshold': np.int64(4),
+        'nested_values': [np.float64(1.5), np.bool_(True)],
+        'array_values': np.array([np.int32(2), np.int32(3)]),
+    }
+
+    converted = S1opt_optimizer._convert_to_native_types(best)
+
+    assert converted == {
+        'sweep_jump_rejection_threshold': 4,
+        'nested_values': [1.5, True],
+        'array_values': [2, 3],
+    }
+    assert json.loads(json.dumps(converted)) == converted
 
 
 def test_medstddev(capsys):
