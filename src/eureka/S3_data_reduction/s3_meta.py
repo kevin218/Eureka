@@ -302,7 +302,8 @@ class S3MetaClass(MetaClass):
         self.orders = getattr(self, 'orders', [1, 2])
         self.all_orders = getattr(self, 'all_orders', [1, 2])
         self.record_ypos = getattr(self, 'record_ypos', False)
-        self.trace_offset = getattr(self, 'trace_offset', None)
+        self.trace_yoffset = getattr(self, 'trace_yoffset', None)
+        self.trace_xoffset = getattr(self, 'trace_xoffset', None)
         self.xwindow = getattr(self, 'xwindow', [6, 2043])
         self.ywindow = getattr(self, 'ywindow', [0, -1])
 
