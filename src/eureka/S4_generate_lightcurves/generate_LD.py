@@ -1,6 +1,7 @@
-from exotic_ld import StellarLimbDarkening
 import numpy as np
 import pandas as pd
+from exotic_ld import StellarLimbDarkening
+from scipy.interpolate import interp1d
 
 from . import plots_s4
 
@@ -53,6 +54,21 @@ def exotic_ld(meta, spec, log, white=False):
         filter = meta.filter
         if filter.lower() == 'prism':
             filter = 'prism'
+        elif filter.upper() in ('G140H', 'G140M'):
+            # meta.filter holds GRATING for NIRSpec, not the FITS FILTER.
+            nirspec_filter = meta.nirspec_filter
+            if nirspec_filter is None:
+                raise ValueError('NIRSpec G140 limb darkening requires the '
+                                 'FITS FILTER keyword. Set nirspec_filter to '
+                                 'F070LP or F100LP in the Stage 4 ECF.')
+            suffix = {'F070LP': 'f070', 'F100LP': 'f100'}
+            nirspec_filter = nirspec_filter.strip().upper()
+            if nirspec_filter not in suffix:
+                raise ValueError('Unsupported NIRSpec G140 FILTER '
+                                 f'{nirspec_filter} is not one of '
+                                 f'{list(suffix.keys())}.')
+            meta.nirspec_filter = nirspec_filter
+            filter = filter.upper() + '-' + suffix[nirspec_filter]
         mode = 'JWST_NIRSpec_' + filter
     elif meta.inst == 'niriss':
         mode = 'JWST_NIRISS_SOSSo' + str(meta.s4_order)
@@ -98,13 +114,48 @@ def exotic_ld(meta, spec, log, white=False):
                                    custom_wavelengths=s_wvs,
                                    custom_mus=s_mus,
                                    custom_stellar_model=custom_si)
+
     else:
         sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
                                    meta.exotic_ld_grid, meta.exotic_ld_direc)
 
+    # Now if Phoenix, rescale the mu grid
+    if meta.exotic_ld_grid == 'phoenix' and meta.rescale_phoenix:
+        log.writelog('Rescaling Phoenix model', mute=(not meta.verbose))
+        # Only rescale the wavelengths needed for the requested bandpass.
+        valid = ((sld.stellar_wavelengths >= wavelength_range[0][0]) &
+                 (sld.stellar_wavelengths <= wavelength_range[-1][-1]))
+        if not np.any(valid):
+            raise ValueError("No PHOENIX wavelengths overlap the requested "
+                             "band for rescaling.")
+
+        rescaled_intensities = []
+        for wi in np.where(valid)[0]:
+            interp_mus, interp_I_mu, _ = phoenix_rescaled(
+                sld.mus, sld.stellar_intensities[wi, :]
+            )
+            rescaled_intensities.append(interp_I_mu)
+
+        wvs_new = sld.stellar_wavelengths[valid]
+        mus_new = np.flip(interp_mus)
+        sis_new = np.flip(np.asarray(rescaled_intensities), axis=1)
+        sld_new = StellarLimbDarkening(ld_data_path=meta.exotic_ld_direc,
+                                       ld_model="custom",
+                                       custom_wavelengths=wvs_new,
+                                       custom_mus=mus_new,
+                                       custom_stellar_model=sis_new)
+        if meta.isplots_S4 >= 3:
+            sld._integrate_I_mu([meta.wave_min*1e4, meta.wave_max*1e4],
+                                mode, None, None)
+            sld_new._integrate_I_mu([meta.wave_min*1e4, meta.wave_max*1e4],
+                                    mode, None, None)
+            plots_s4.plot_rescaled_phoenix(meta, sld, sld_new)
+
+        sld = sld_new
+
     if mode != 'custom':
         # Figure out if we need to extrapolate the throughput, since the
-        # ExoTiC-LD throughput files don't go close enought to the edges of
+        # ExoTiC-LD throughput files don't go close enough to the edges of
         # some filters
         throughput_wavelengths, throughput = sld._read_sensitivity_data(mode)
         throughput_edges = throughput_wavelengths[[0, -1]]
@@ -129,8 +180,32 @@ def exotic_ld(meta, spec, log, white=False):
             custom_throughput = np.append(throughput, throughput_poly)
             old_mode = mode
             mode = 'custom'
-        elif (mode == 'JWST_NIRSpec_G395H' and
-                wavelength_range[0][0] > throughput_edges[0]/1e4):
+        elif (mode.startswith(('JWST_NIRSpec_G140', 'JWST_NIRSpec_G235')) and
+                wavelength_range[:, 0].min() < throughput_edges[0]):
+            log.writelog("WARNING: Extrapolating ExoTiC-LD throughput file to "
+                         "get closer to the blue edge of the filter.")
+
+            # Fit the first 0.05 microns for G140, or 0.30 microns for G235
+            # to average over its local blue-edge plateau and ripples.
+            # Anchor at the first throughput to keep the join continuous.
+            # A low-order fit avoids high-order polynomial excursions.
+            fit_width = 3000 if mode.startswith('JWST_NIRSpec_G235') else 500
+            nfit = max(2, np.searchsorted(
+                throughput_wavelengths, throughput_edges[0] + fit_width))
+            delta_wave = (throughput_wavelengths[:nfit] -
+                          throughput_edges[0])
+            slope = np.dot(delta_wave, throughput[:nfit] - throughput[0])
+            slope /= np.dot(delta_wave, delta_wave)
+            wav_poly = np.linspace(wavelength_range[:, 0].min(),
+                                   throughput_edges[0], 1000, endpoint=False)
+            throughput_poly = np.maximum(
+                throughput[0] + slope*(wav_poly - throughput_edges[0]), 0)
+            custom_wavelengths = np.append(wav_poly, throughput_wavelengths)
+            custom_throughput = np.append(throughput_poly, throughput)
+            old_mode = mode
+            mode = 'custom'
+        elif (mode.startswith('JWST_NIRSpec_G395') and
+                wavelength_range[:, 0].min() < throughput_edges[0]):
             # Extrapolate throughput to the blue edge of the filter if needed
             log.writelog("WARNING: Extrapolating ExoTiC-LD throughput file to "
                          "get closer to the blue edge of the filter.")
@@ -140,7 +215,8 @@ def exotic_ld(meta, spec, log, white=False):
                                     throughput_wavelengths < 30000)
             poly = np.polyfit(throughput_wavelengths[ind_use],
                               throughput[ind_use], deg=7)
-            wav_poly = np.linspace(2.733*1e4, throughput_wavelengths[0], 10000)
+            wav_poly = np.linspace(2.733*1e4, throughput_wavelengths[0],
+                                   10000, endpoint=False)
             throughput_poly = np.polyval(poly, wav_poly) - 0.015
             # Make sure the throughput is always > 0
             throughput_poly[throughput_poly < 0] = 0
@@ -241,3 +317,84 @@ def spam_ld(meta, white=False):
     # Replace relevant item with actual values
     ld_list[num_ld_coef-1] = ld_coeffs
     return ld_list
+
+
+def phoenix_rescaled(mus, I_mu, n_interp=50, edge_buffer=4):
+    """Rescale the Phoenix spherical-model mu grid before fitting.
+
+    Phoenix intensity profiles contain very sharp, low-mu limb points that can
+    make the original grid difficult to fit with a limb-darkening law. This
+    function applies the common spherical-grid rescaling
+
+        mu_scaled = (mu - mu_cri) / (1 - mu_cri)
+
+    where ``mu_cri`` is selected just inside the largest intensity-gradient
+    point, then interpolates the rescaled profile onto a fixed 0..1 mu grid.
+
+    Parameters
+    ----------
+    mus : array-like
+        Original mu values from the Phoenix model grid.
+    I_mu : array-like
+        Intensity values corresponding to ``mus``.
+    n_interp : int, optional
+        Number of points to use when interpolating onto the rescaled 0..1 mu
+        grid. Defaults to 50.
+    edge_buffer : int, optional
+        Number of points to move back from the largest intensity-gradient index
+        when selecting the critical mu value. Defaults to 4.
+
+    Returns
+    -------
+    interp_mus : ndarray
+        Interpolated mu values on the uniform 0..1 grid.
+    interp_I_mu : ndarray
+        Interpolated intensities evaluated at ``interp_mus``.
+    mu_cri : float
+        The critical mu value used for the rescaling transformation.
+    """
+    mus = np.asarray(mus, dtype=float)
+    I_mu = np.asarray(I_mu, dtype=float)
+
+    finite = np.isfinite(mus) & np.isfinite(I_mu)
+    mus = mus[finite]
+    I_mu = I_mu[finite]
+    if mus.size < 4:
+        raise ValueError(
+            "Need at least four finite Phoenix mu points to rescale the grid."
+        )
+
+    dy_dx = np.gradient(I_mu, mus)
+    max_derivative_index = int(np.nanargmax(dy_dx))
+    mu_cri_index = max(max_derivative_index - edge_buffer, 0)
+    mu_cri = mus[mu_cri_index]
+    if (not np.isfinite(mu_cri)) or np.isclose(mu_cri, 1.0):
+        raise ValueError(
+            "Could not identify a valid Phoenix critical mu for rescaling."
+        )
+
+    mu_scaled = (mus - mu_cri) / (1.0 - mu_cri)
+    good = (np.isfinite(mu_scaled) & np.isfinite(I_mu) &
+            (mu_scaled > 0.0) & (mu_scaled <= 1.0 + 1e-12))
+    if np.sum(good) < 4:
+        raise ValueError(
+            "Too few Phoenix mu points remain after rescaling; try reducing "
+            "PHOENIX_EDGE_BUFFER."
+        )
+
+    x = mu_scaled[good]
+    y = I_mu[good]
+    order = np.argsort(x)
+    x = x[order]
+    y = y[order]
+    x, unique = np.unique(x, return_index=True)
+    y = y[unique]
+
+    interp_kind = 'cubic' if x.size >= 4 else 'linear'
+    intensity_interp = interp1d(x, y, kind=interp_kind,
+                                fill_value='extrapolate',
+                                bounds_error=False)
+    interp_mus = np.linspace(0.0, 1.0, n_interp)
+    interp_I_mu = intensity_interp(interp_mus)
+
+    return interp_mus, interp_I_mu, mu_cri

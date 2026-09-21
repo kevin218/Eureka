@@ -1,14 +1,16 @@
-import numpy as np
 import inspect
+
+import numpy as np
+
 try:
     import batman
 except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
-from . import Model
-from .AstroModel import PlanetParams, correct_light_travel_time, get_ecl_midpt
-from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
+from ..limb_darkening_fit import ld_profile
+from .AstroModel import PlanetParams, correct_light_travel_time, get_ecl_midpt
+from .Model import Model
 
 
 class BatmanTransitModel(Model):

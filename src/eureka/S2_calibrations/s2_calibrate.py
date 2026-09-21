@@ -1,20 +1,21 @@
-import os
 import inspect
+import os
 import time as time_pkg
 from copy import deepcopy
-import numpy as np
-import matplotlib.pyplot as plt
-from astropy.io import fits
 from functools import partial
-from jwst import datamodels
-from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
-from jwst.pipeline.calwebb_image2 import Image2Pipeline
-from jwst.assign_wcs import nirspec as nrs
 
-from .s2_meta import S2MetaClass
-from ..lib import logedit, util
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy.io import fits
+from jwst import datamodels
+from jwst.assign_wcs import nirspec as nrs
+from jwst.pipeline.calwebb_image2 import Image2Pipeline
+from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
+
+from ..lib import logedit
 from ..lib import manageevent as me
-from ..lib import plots
+from ..lib import plots, util
+from .s2_meta import S2MetaClass
 
 _orig_nrs_wcs_set_input = nrs.nrs_wcs_set_input
 

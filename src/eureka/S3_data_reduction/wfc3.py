@@ -1,18 +1,20 @@
 
 # WFC3 specific rountines go here
-import os
-import numpy as np
 import multiprocessing as mp
-from astropy.io import fits
+import os
+
+import astraeus.xarrayIO as xrio
+import numpy as np
 import scipy.interpolate as spi
 import scipy.ndimage as spni
-import astraeus.xarrayIO as xrio
+from astropy.io import fits
 from tqdm import tqdm
 
-from . import sigrej, source_pos, background, plots_s3, nircam
-from . import hst_scan as hst
-from . import bright2flux as b2f
 from ..lib import suntimecorr, utc_tt, util
+from . import background
+from . import bright2flux as b2f
+from . import hst_scan as hst
+from . import nircam, plots_s3, sigrej, source_pos
 
 
 def preparation_step(meta, log):
@@ -1153,6 +1155,6 @@ def lc_nodriftcorr(spec, meta):
         The metadata object.
     '''
     scandir = getattr(spec, 'scandir', None)
-    mad = meta.mad_s3[0]
+    maed = meta.maed_s3[0]
     plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
-                            optmask=spec.optmask, scandir=scandir, mad=mad)
+                            optmask=spec.optmask, scandir=scandir, maed=maed)

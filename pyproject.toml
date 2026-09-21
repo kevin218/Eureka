@@ -64,6 +64,11 @@ namespaces = false
 [tool.setuptools_scm]
 write_to = "src/eureka/version.py"
 
+[tool.isort]
+line_length = 79
+known_first_party = ["eureka"]
+src_paths = ["src"]
+
 [tool.unidep]
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64"]
@@ -74,7 +79,7 @@ dependencies = [
     { conda = "libblas=*=*openblas*" },
     { conda = "liblapack=*=*openblas*" },
 
-    "astropy",
+    "astropy<=7.2.1",  # Upper limit needed to avoid failing tests
     "astroquery",
     "bokeh",
     "ccdproc",
@@ -104,15 +109,15 @@ dependencies = [
     { pip = "planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main" }, # PyPI build currently only supports for python 3.8 -- 3.10
     { pip = "pastasoss>=1.2.3" }, # Lower limit needed for pkg_resources deprecation
     { pip = "setuptools_scm>=6.2" }, # Needed when importing from a source tree without generated version.py
-    { pip = "stdatamodels" },
+    { pip = "stdatamodels>=5.0.2" },
     { pip = "svo_filters>=0.5.3" }, # Lower limit needed for pkg_resources deprecation
     { pip = "mc3" }, # Needed for uncertainties in the RMS time-averaging plots in S5
 ]
 
 [tool.unidep.optional_dependencies]
 jwst = [
-    { pip = "jwst==1.20.2" }, # Pinned due to CRDS/stcal compatibility requirements
-    { pip = "stcal>=1.15.2" }, # Lower limit needed for updated stcal.ramp_fitting.ramp_fit.ramp_fit arguments
+    { pip = "jwst==2.0.1" }, # Pinned due to CRDS/stcal compatibility requirements
+    { pip = "stcal>=1.18.0" }, # Lower limit implied by jwst 2.0.1
 ]
 hst = [
     { pip = "image_registration>=0.2.10" }, # Lower bound needed to avoid np.float issue
@@ -138,6 +143,7 @@ jupyter = [
     "jupyter>=1.0.0", # Base metapackage
 ]
 dev = [
+    "isort",
     "pre-commit",
     { conda = "python-build", pip = "build" },
     "twine",

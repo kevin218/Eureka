@@ -1,9 +1,10 @@
 
-import os
 import json
-import numpy as np
-from copy import deepcopy
+import os
 import time as time_pkg
+from copy import deepcopy
+
+import numpy as np
 
 import eureka.S1_detector_processing.s1_process as s1
 import eureka.S2_calibrations.s2_calibrate as s2
@@ -11,12 +12,30 @@ import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4
 from eureka.S1_detector_processing.s1_meta import S1MetaClass
 from eureka.S2_calibrations.s2_meta import S2MetaClass
-from eureka.S3_data_reduction.s3_meta import S3MetaClass
 from eureka.S3_data_reduction import plots_s3
+from eureka.S3_data_reduction.s3_meta import S3MetaClass
 from eureka.S4_generate_lightcurves.s4_meta import S4MetaClass
-from .S1opt_meta import S1optMetaClass
-from . import objective_funcs, optimizers
+
 from ..lib import logedit, util
+from . import objective_funcs, optimizers
+from .S1opt_meta import S1optMetaClass
+
+
+def _convert_to_native_types(value):
+    """Recursively convert numpy types to YAML-serializable Python types."""
+    if isinstance(value, dict):
+        return {k: _convert_to_native_types(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_convert_to_native_types(v) for v in value]
+    if isinstance(value, tuple):
+        return [_convert_to_native_types(v) for v in value]
+    if isinstance(value, np.ndarray):
+        return _convert_to_native_types(value.tolist())
+    if isinstance(value, (np.integer, np.floating)):
+        return value.item()
+    if isinstance(value, (np.bool_,)):
+        return bool(value)
+    return value
 
 
 def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
@@ -83,11 +102,11 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
 
         # Record initial fitness score
         history["initial_run"] = (
-            meta.scaling_MAD_spec * s4_meta.mad_s4 +
-            meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
+            meta.scaling_MAED_spec * s4_meta.maed_s4 +
+            meta.scaling_MAED_white * s4_meta.maed_s4_binned[0])
         log.writelog(f"Initial fitness value: {history['initial_run']}")
-        log.writelog(f"Initial white MAD: {s4_meta.mad_s4_binned[0]}")
-        log.writelog(f"Initial spec MAD: {s4_meta.mad_s4}\n")
+        log.writelog(f"Initial white MAED: {s4_meta.maed_s4_binned[0]}")
+        log.writelog(f"Initial spec MAED: {s4_meta.maed_s4}\n")
 
     for p in s1opt_meta.params_to_optimize_s1:
         s1opt_meta, log, history, best = optimize(s1opt_meta, log, history,
@@ -97,7 +116,7 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     # Save the best dictionary to a JSON file
     with open(os.path.join(s1opt_meta.outputdir, "best_params.json"),
               "w") as f:
-        json.dump(best, f)
+        json.dump(_convert_to_native_types(best), f)
 
     # Define and create optimized ECF file path
     opt_path = os.path.join(s1opt_meta.outputdir, "opt_ECFs")
@@ -122,11 +141,11 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
                                            s3_meta=s3_meta)
         # Record initial fitness score
         history["final_run"] = (
-            s1opt_meta.scaling_MAD_spec * s4_meta.mad_s4 +
-            s1opt_meta.scaling_MAD_white * s4_meta.mad_s4_binned[0])
+            s1opt_meta.scaling_MAED_spec * s4_meta.maed_s4 +
+            s1opt_meta.scaling_MAED_white * s4_meta.maed_s4_binned[0])
         log.writelog(f"Final fitness value: {history['final_run']}")
-        log.writelog(f"Final white MAD: {s4_meta.mad_s4_binned[0]}")
-        log.writelog(f"Final spec MAD: {s4_meta.mad_s4}\n")
+        log.writelog(f"Final white MAED: {s4_meta.maed_s4_binned[0]}")
+        log.writelog(f"Final spec MAED: {s4_meta.maed_s4}\n")
 
     if s1opt_meta.isplots_S1opt >= 1:
         plots_s3.fitness_scores(s1opt_meta, history)

@@ -1,8 +1,8 @@
 import numpy as np
 
-from .Model import Model
-from ...lib.split_channels import split, get_trim
 from ...lib import astropytable
+from ...lib.split_channels import get_trim, split
+from .Model import Model
 
 
 class CommonModeModel(Model):

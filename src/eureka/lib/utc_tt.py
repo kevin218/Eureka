@@ -1,8 +1,9 @@
-import numpy as np
-import urllib
 import os
 import re
 import time
+import urllib
+
+import numpy as np
 
 
 def leapdates(rundir, log):

@@ -132,7 +132,7 @@ Boolean, an experimental step which removes the 390 Hz periodic noise in MIRI/LR
 
 grouplevel_bg
 '''''''''''''
-Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting.
+Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting. NOTE: NIRISS users should always set this to `False`, as group-level background subtraction is not supported for NIRISS. Standard background subtraction is performed in Stage 3.
 
 ncpu
 ''''
@@ -262,17 +262,17 @@ Stages 1/3/4 Optimizer
 ----------------------
 This tool allows users to optimize the parameter values of Stages 1, 3, and 4 by performing a parametric sweep over a specified set of parameter values and evaluating the resulting spectra with a user-defined weighting of the fitness function.  The optimizer starts with an intial run of a stage using the default parameter values, performs a sweep over the specified parameter values, and then completes a final run with the best parameter values from the sweep.
 
-The fitness function is a weighted combination of the 2D MAD and the white light curve MAD.  The optimizer will generate a plot showing how the fitness function improves with each parameter sweep.  In the rare event that the final fitness value is worse than the initial value, users should consider trying smaller step sizes or a different set of parameter values that include the default parameter values.
+The fitness function is a weighted combination of the 2D MAED and the white light curve MAED.  The optimizer will generate a plot showing how the fitness function improves with each parameter sweep.  In the rare event that the final fitness value is worse than the initial value, users should consider trying smaller step sizes or a different set of parameter values that include the default parameter values.
 
 **Important Warning:** The optimizer is designed as a tool for parameter exploration and fine-tuning, not as a black-box solution. Users must critically investigate all outputs before and after optimization to ensure the final tunings are appropriate and scientifically valid. The fitness metric is inherently imperfect and may lead to undesirable outcomes in complex scenarios, such as observations affected by nearby binary stars or other astrophysical contaminants. Always review the spectra from different parameter values in the sweep to understand their impact, and remember that optimal parameter values can vary significantly between datasets. Thus, re-running the optimizer for each new dataset is recommended.
 
-scaling_MAD_spec
-''''''''''''''''
-Scaling factor applied to the pixel-level 2D Median Absolute Difference (MAD) value in the fitness function. Higher values prioritize spectral quality.
-
-scaling_MAD_white
+scaling_MAED_spec
 '''''''''''''''''
-Scaling factor applied to the white light curve MAD value in the fitness function. Higher values prioritize band-integrated quality.
+Scaling factor applied to the pixel-level 2D Median Absolute Element Difference (MAED) value in the fitness function. Higher values prioritize spectral quality.
+
+scaling_MAED_white
+''''''''''''''''''
+Scaling factor applied to the white light curve MAED value in the fitness function. Higher values prioritize band-integrated quality.
 
 params_to_optimize_s1
 ''''''''''''''''''''''
@@ -292,11 +292,11 @@ List of parameters to optimize in Stage 3. Commenting out this line will use all
 
 params_to_optimize_s4
 '''''''''''''''''''''
-List of parameters to optimize in Stage 4. Single parameter options: mad_sigma, mad_box_width, sigma, box_width. Double parameter options: mad_sigma__mad_box_width, sigma__box_width. Recommended parameters:
+List of parameters to optimize in Stage 4. Single parameter options: maed_sigma, maed_box_width, sigma, box_width. Double parameter options: maed_sigma__maed_box_width, sigma__box_width. Recommended parameters:
 
 .. code-block:: python
 
-    params_to_optimize_s4 = ['mad_sigma__mad_box_width', 'sigma__box_width']
+    params_to_optimize_s4 = ['maed_sigma__maed_box_width', 'sigma__box_width']
 
 sweep_<parameter_name>
 ''''''''''''''''''''''
@@ -614,13 +614,13 @@ Possible values:
 
 - ``bg_deg = None``: No backgound subtraction will be performed.
 - ``bg_deg < 0``: The median flux value in the background area will be calculated and subtracted from the entire 2D Frame for this paticular integration.
-- ``bg_deg => 0``: A polynomial of degree `bg_deg` will be fitted to every background column (background at a specific wavelength). If the background data has an outlier (or several) which is (are) greater than 5  * (Mean Absolute Deviation), this value will be not considered as part of the background. Step-by-step:
+- ``bg_deg => 0``: A polynomial of degree `bg_deg` will be fitted to every background column (background at a specific wavelength). If the background data has an outlier (or several) which is (are) greater than 5  * (Median Absolute Element Difference), this value will be not considered as part of the background. Step-by-step:
 
 1. Take background pixels of first column
 2. Fit a polynomial of degree  ``bg_deg`` to the background pixels.
 3. Calculate the residuals (flux(bg_pixels) - polynomial_bg_deg(bg_pixels))
-4. Calculate the MAD (Mean Absolute Deviation) of the greatest background outlier.
-5. If MAD of the greatest background outlier is greater than 5, remove this background pixel from the background value calculation. Repeat from Step 2. and repeat as long as there is no 5*MAD outlier in the background column.
+4. Calculate the MAED (Median Absolute Element Difference) of the greatest background outlier.
+5. If MAED of the greatest background outlier is greater than 5, remove this background pixel from the background value calculation. Repeat from Step 2. and repeat as long as there is no 5*MAED outlier in the background column.
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
 
 bg_method
@@ -921,12 +921,12 @@ fill_value
 ''''''''''
 Only used if sigma_clip=True. Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
-mad_sigma
-'''''''''
-The number of sigmas an unbinned MAD value must be from the rolling median (using mad_box_width) to be considered an outlier.  Outlier columns are masked.
+maed_sigma
+''''''''''
+The number of sigmas an unbinned MAED value must be from the rolling median (using maed_box_width) to be considered an outlier.  Outlier columns are masked.
 
-mad_box_width
-'''''''''''''
+maed_box_width
+''''''''''''''
 The width of the box-car filter (used to calculated the rolling median) in units of number of wavelength elements. Used in calculating whether wavelength elements are outliers in the unbinned spectrum.
 
 sum_reads
@@ -955,12 +955,24 @@ Used by exotic-ld if compute_ld=True. The fully qualified path to the directory 
 
 exotic_ld_grid
 ''''''''''''''
-Used by exotic-ld if compute_ld=True. You can choose from "kurucz" (or "1D"), "stagger" (or "3D"), "mps1", or "mps2" model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
+Used by exotic-ld if compute_ld=True. You can choose from "phoenix", "kurucz" (or "1D"), "stagger" (or "3D"), "mps1", or "mps2" model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
 You can also use "custom" for a custom stellar intensity grid specified through the ``custom_si_grid`` parameter.
 
 exotic_ld_file
 ''''''''''''''
 Used by exotic-ld as throughput input file. If none, exotic-ld uses throughput from ancillary files. Make sure that wavelength is given in Angstrom!
+
+nirspec_filter
+''''''''''''''
+The NIRSpec blocking filter, ``F070LP`` or ``F100LP``, used to select the
+ExoTiC-LD throughput file for G140H and G140M. Stage 3 records this from the
+FITS ``FILTER`` keyword. When using older Stage 3 outputs, set this parameter
+in the Stage 4 ECF to match the original FITS header. It is not required when
+using a custom throughput file.
+
+rescale_phoenix
+'''''''''''''''
+If True and when exotic_ld_grid = phoenix, Eureka! rescales the PHOENIX mu/intensity profiles using the critical-mu transformation described in Section 2.2 of Espinoza & Jordan (2015, https://academic.oup.com/mnras/article/450/2/1879/985166), then interpolates them onto a uniform mu grid before computing limb-darkening coefficients. If False, the original PHOENIX profiles are used.
 
 custom_si_grid
 ''''''''''''''
@@ -1313,6 +1325,36 @@ The sampling method to use. Options are: ``['auto', 'unif', 'rwalk', 'rstagger',
 run_tol
 ^^^^^^^
 Float. The convergence tolerance for the dynesty run. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
+
+dynesty_checkpoint
+^^^^^^^^^^^^^^^^^^
+Boolean. If ``True``, dynesty will periodically write checkpoint files while running. These files are intended for resuming interrupted long runs and should generally be resumed with the same dynesty version.
+
+dynesty_resume
+^^^^^^^^^^^^^^
+Boolean. If ``True``, dynesty will resume from an existing checkpoint file instead of starting a fresh sampler. Set ``old_dynesty_checkpoint`` to the previous checkpoint file or to the parent folder that contains Eureka's standardized checkpoint file. The checkpoint should generally come from the same dynesty version.
+
+dynesty_checkpoint_every
+^^^^^^^^^^^^^^^^^^^^^^^^
+Float or integer. Number of seconds between dynesty checkpoint writes. Defaults to ``600``.
+
+old_dynesty_checkpoint
+^^^^^^^^^^^^^^^^^^^^^^
+String or ``None``. Previous dynesty checkpoint file or parent folder, relative to ``topdir``, used when ``dynesty_resume`` is ``True``. If this points to a folder, Eureka will look inside that folder for the standardized fitter/channel-specific checkpoint filename.
+
+dynesty_maxiter
+^^^^^^^^^^^^^^^
+Integer or ``None``. Optional maximum number of dynesty iterations to run. Defaults to ``None``.
+
+dynesty_maxcall
+^^^^^^^^^^^^^^^
+Integer or ``None``. Optional maximum number of likelihood calls for dynesty. Defaults to ``None``.
+
+For normal science runs, it is strongly recommended leaving both ``dynesty_maxiter`` and ``dynesty_maxcall``
+set to ``None`` so dynesty can run until its convergence criterion is satisfied. These parameters are
+hard stop limits, and setting either one too low can stop the sampler before convergence, producing unreliable
+posterior samples and evidence estimates. Finite values are mainly useful for debugging, smoke tests, benchmarking,
+CI tests, or intentionally running only a partial fit.
 
 
 Dynamic Nested Sampling Parameters

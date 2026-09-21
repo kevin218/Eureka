@@ -1,16 +1,16 @@
 
-import numpy as np
-from copy import deepcopy
-import pandas as pd
-from astropy import units, constants
 import os
-import time as time_pkg
-from copy import copy
-from glob import glob
-from tqdm import tqdm
 import re
-from matplotlib.pyplot import rcParams
+import time as time_pkg
+from copy import copy, deepcopy
+from glob import glob
+
+import numpy as np
+import pandas as pd
 from astraeus import xarrayIO as xrio
+from astropy import constants, units
+from matplotlib.pyplot import rcParams
+from tqdm import tqdm
 
 try:
     from harmonica import HarmonicaTransit
@@ -18,11 +18,12 @@ except ModuleNotFoundError:
     # Harmonica hasn't been installed
     pass
 
-from .s6_meta import S6MetaClass
-from . import plots_s6 as plots
+from ..lib import astropytable, logedit
 from ..lib import manageevent as me
-from ..lib import util, logedit, astropytable
+from ..lib import util
 from ..version import version
+from . import plots_s6 as plots
+from .s6_meta import S6MetaClass
 
 
 def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
@@ -88,14 +89,17 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
         meta.bg_hw_range = [meta.bg_hw, ]
 
     # Create directories for Stage 6 outputs
+    # Cache the clean base dir since meta.outputdir_raw gets overwritten
+    # below each time meta.outputdir is set to a per-pair directory
+    base_outputdir_raw = meta.outputdir_raw
     meta.run_s6 = None
     for spec_hw_val, bg_hw_val in me.get_allapers_pairs(meta):
         # Directory structure should not use expanded HW values
         spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
             meta.expand, spec_hw_val, bg_hw_val)
-        meta.run_s6 = util.makedirectory(meta, 'S6', meta.run_s6,
-                                         ap=spec_hw_val,
-                                         bg=bg_hw_val)
+        meta.run_s6 = util.makedirectory(
+            meta, 'S6', meta.run_s6, ap=spec_hw_val, bg=bg_hw_val,
+            outputdir_raw=base_outputdir_raw)
 
     allapers_pairs = me.get_allapers_pairs(meta)
     for spec_hw_val in meta.spec_hw_range:
@@ -119,9 +123,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
             spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
                 meta.expand, spec_hw_val, bg_hw_val)
             # Get the directory for Stage 6 processing outputs
-            meta.outputdir = util.pathdirectory(meta, 'S6', meta.run_s6,
-                                                ap=spec_hw_val,
-                                                bg=bg_hw_val)
+            meta.outputdir = util.pathdirectory(
+                meta, 'S6', meta.run_s6, ap=spec_hw_val, bg=bg_hw_val,
+                outputdir_raw=base_outputdir_raw)
 
             # Copy existing S5 log file and resume log
             meta.s6_logname = meta.outputdir+'S6_'+meta.eventlabel+'.log'

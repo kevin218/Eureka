@@ -24,23 +24,21 @@
 
 import os
 import time as time_pkg
-import numpy as np
 from copy import deepcopy
+
 import astraeus.xarrayIO as xrio
-from tqdm import tqdm
+import numpy as np
 import psutil
 from stdatamodels.jwst.datamodels import CubeModel
+from tqdm import tqdm
 
-from . import optspex
-from . import plots_s3, source_pos
-from . import background as bg
-from . import bright2flux as b2f
-
-from .s3_meta import S3MetaClass
-from ..lib import logedit
+from ..lib import apphot, centerdriver, logedit
 from ..lib import manageevent as me
 from ..lib import util
-from ..lib import centerdriver, apphot
+from . import background as bg
+from . import bright2flux as b2f
+from . import optspex, plots_s3, source_pos
+from .s3_meta import S3MetaClass
 
 
 def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
@@ -121,6 +119,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
     # each aperture/annulus pair
+    # Cache the clean base dir since meta.outputdir_raw gets overwritten
+    # below each time meta.outputdir is set to a per-pair directory
+    base_outputdir_raw = meta.outputdir_raw
     meta.run_s3 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
@@ -128,8 +129,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             # Directory structure should not use expanded HW values
             spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
                 meta.expand, spec_hw_val, bg_hw_val)
-            meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+            meta.run_s3 = util.makedirectory(
+                meta, 'S3', meta.run_s3, ap=spec_hw_val, bg=bg_hw_val,
+                outputdir_raw=base_outputdir_raw)
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
@@ -142,9 +144,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             # Directory structure should not use expanded HW values
             spec_hw_val, bg_hw_val = util.get_unexpanded_hws(
                 meta.expand, spec_hw_val, bg_hw_val)
-            meta.outputdir = util.pathdirectory(meta, 'S3', meta.run_s3,
-                                                ap=spec_hw_val,
-                                                bg=bg_hw_val)
+            meta.outputdir = util.pathdirectory(
+                meta, 'S3', meta.run_s3, ap=spec_hw_val, bg=bg_hw_val,
+                outputdir_raw=base_outputdir_raw)
 
             event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val) +
                            '_bg' + str(bg_hw_val))
@@ -657,19 +659,20 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             # make citations for current stage
             util.make_citations(meta, 3)
 
-            # Compute MAD value
+            # Compute MAED value
             scandir = getattr(spec, 'scandir', None)
             if not meta.photometry:
                 if meta.orders is None:
-                    meta.mad_s3 = [util.get_mad(meta, log, spec.wave_1d.values,
-                                                spec.optspec.values,
-                                                spec.optmask.values,
-                                                scandir=scandir)]
+                    meta.maed_s3 = [util.get_maed(meta, log,
+                                    spec.wave_1d.values,
+                                    spec.optspec.values,
+                                    spec.optmask.values,
+                                    scandir=scandir)]
                 else:
-                    meta.mad_s3 = []
+                    meta.maed_s3 = []
                     for j, order in enumerate(meta.orders):
-                        meta.mad_s3.append(
-                            util.get_mad(
+                        meta.maed_s3.append(
+                            util.get_maed(
                                 meta, log,
                                 spec.wave_1d.sel(order=order).values,
                                 spec.optspec.sel(order=order).values,
@@ -681,13 +684,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 normspec = util.normalize_spectrum(
                     meta, spec.aplev.values,
                     scandir=scandir)
-                meta.mad_s3 = [util.get_mad_1d(normspec)]
-            for i, mad in enumerate(meta.mad_s3):
+                meta.maed_s3 = [util.get_maed_1d(normspec)]
+            for i, maed in enumerate(meta.maed_s3):
                 try:
-                    log.writelog(f"Stage 3 MAD = {mad:.0f} ppm")
+                    log.writelog(f"Stage 3 MAED = {maed:.0f} ppm")
                 except:
-                    log.writelog("Could not compute Stage 3 MAD")
-                    meta.mad_s3[i] = 0
+                    log.writelog("Could not compute Stage 3 MAED")
+                    meta.maed_s3[i] = 0
 
             # Save Dataset object containing time-series of 1D spectra
             if meta.save_output:

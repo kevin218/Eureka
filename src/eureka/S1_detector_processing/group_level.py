@@ -1,10 +1,9 @@
+import astraeus.xarrayIO as xrio
 import numpy as np
-
-import scipy.signal as sgn
 import scipy.ndimage as spn
+import scipy.signal as sgn
 
 from ..S3_data_reduction import background as bkg
-import astraeus.xarrayIO as xrio
 
 
 def GLBS(input_model, log, meta):

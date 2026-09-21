@@ -51,10 +51,16 @@ run_nwalkers    200
 run_nburn       500     # How many of run_nsteps should be discarded as burn-in steps
 
 # dynesty fitter
-run_nlive       'min'    # Must be > ndim * (ndim + 1) // 2
-run_bound       'multi'
-run_sample      'auto'
-run_tol         0.01
+run_nlive               'min'    # Must be > ndim * (ndim + 1) // 2
+run_bound               'multi'
+run_sample              'auto'
+run_tol                  0.01
+dynesty_checkpoint       False # Enables periodic dynesty checkpoint files for long runs
+dynesty_resume           False    # Resumes dynesty from an existing checkpoint file
+dynesty_checkpoint_every 600 # Seconds between dynesty checkpoint writes
+old_dynesty_checkpoint   None # Previous dynesty checkpoint file or parent folder relative to topdir; used when dynesty_resume is True
+dynesty_maxiter          None     # Optional maximum number of dynesty iterations
+dynesty_maxcall          None     # Optional maximum number of dynesty likelihood calls
 
 # dynamic dynesty fitter (in addition to the dynesty fitter parameters)
 run_dynamic     False   # If False, use only dynesty static fitter; if True, use dynamic dynesty fitter

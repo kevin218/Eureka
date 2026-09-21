@@ -1,15 +1,18 @@
-import numpy as np
-import sys
+import json
 import os
+import sys
 from types import SimpleNamespace
 
+import numpy as np
+
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
-from eureka.lib import util
-from eureka.lib.readECF import MetaClass
-from eureka.lib.medstddev import medstddev
-from eureka.optimizer import objective_funcs
-from astropy.io import fits
 import astraeus.xarrayIO as xrio
+from astropy.io import fits
+
+from eureka.lib import util
+from eureka.lib.medstddev import medstddev
+from eureka.lib.readECF import MetaClass
+from eureka.optimizer import S1opt_optimizer, objective_funcs
 
 
 def test_trim(capsys):
@@ -49,6 +52,44 @@ def test_trim(capsys):
     # Let's check if the dimensions agree
     assert res_dat.flux.shape == (nt, (trim_y1 - trim_y0),
                                   (trim_x1 - trim_x0))
+
+
+def test_add_meta_to_xarray_serializes_range_attrs(tmp_path):
+    meta = SimpleNamespace(params={
+        'sweep_jump_rejection_threshold': range(4, 15),
+        'none_value': None,
+        'bibliography': [['citation one', 'citation two']],
+        'string_array': np.array(['one', 'two']),
+        'scalar_value': 1.5,
+    })
+    data = xrio.makeDataset()
+
+    util.add_meta_to_xarray(meta, data)
+
+    assert data.attrs['sweep_jump_rejection_threshold'] == list(range(4, 15))
+    assert data.attrs['none_value'] == 'None'
+    assert data.attrs['bibliography'] == [
+        'citation one_ENDOFCITATION_citation two']
+    assert data.attrs['string_array'] == ['one', 'two']
+    assert data.attrs['scalar_value'] == 1.5
+    assert xrio.writeXR(str(tmp_path / 'metadata'), data, verbose=False)
+
+
+def test_s1opt_best_params_are_json_serializable():
+    best = {
+        'sweep_jump_rejection_threshold': np.int64(4),
+        'nested_values': [np.float64(1.5), np.bool_(True)],
+        'array_values': np.array([np.int32(2), np.int32(3)]),
+    }
+
+    converted = S1opt_optimizer._convert_to_native_types(best)
+
+    assert converted == {
+        'sweep_jump_rejection_threshold': 4,
+        'nested_values': [1.5, True],
+        'array_values': [2, 3],
+    }
+    assert json.loads(json.dumps(converted)) == converted
 
 
 def test_medstddev(capsys):
@@ -108,8 +149,8 @@ def test_readfiles_accepts_inputdir_without_trailing_separator(tmp_path):
 
 
 def test_optimizer_cleanup_failure_does_not_discard_fitness(monkeypatch):
-    meta = SimpleNamespace(delete_intermediate=True, scaling_MAD_spec=0.01,
-                           scaling_MAD_white=1.0,
+    meta = SimpleNamespace(delete_intermediate=True, scaling_MAED_spec=0.01,
+                           scaling_MAED_white=1.0,
                            opt_param_name='skip_firstframe',
                            eventlabel='test')
     s1_meta = SimpleNamespace(outputdir='Stage1')
@@ -118,8 +159,8 @@ def test_optimizer_cleanup_failure_does_not_discard_fitness(monkeypatch):
     s4_meta = SimpleNamespace(outputdir='Stage4')
 
     def fake_genlc(eventlabel, input_meta, s3_meta):
-        input_meta.mad_s4 = 100.0
-        input_meta.mad_s4_binned = [10.0]
+        input_meta.maed_s4 = 100.0
+        input_meta.maed_s4_binned = [10.0]
         return None, None, input_meta
 
     def failing_rmtree(outputdir):
@@ -146,8 +187,8 @@ def test_optimizer_cleanup_failure_does_not_discard_fitness(monkeypatch):
 
 
 def test_optimizer_cleanup_retries_transient_enotempty(monkeypatch):
-    meta = SimpleNamespace(delete_intermediate=True, scaling_MAD_spec=0.01,
-                           scaling_MAD_white=1.0,
+    meta = SimpleNamespace(delete_intermediate=True, scaling_MAED_spec=0.01,
+                           scaling_MAED_white=1.0,
                            opt_param_name='skip_firstframe',
                            eventlabel='test')
     s1_meta = SimpleNamespace(outputdir='Stage1')
@@ -157,8 +198,8 @@ def test_optimizer_cleanup_retries_transient_enotempty(monkeypatch):
     attempts = {'Stage3': 0}
 
     def fake_genlc(eventlabel, input_meta, s3_meta):
-        input_meta.mad_s4 = 100.0
-        input_meta.mad_s4_binned = [10.0]
+        input_meta.maed_s4 = 100.0
+        input_meta.maed_s4_binned = [10.0]
         return None, None, input_meta
 
     def transient_rmtree(outputdir):

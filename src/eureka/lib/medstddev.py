@@ -1,5 +1,6 @@
-import numpy as np
 import warnings
+
+import numpy as np
 
 
 def medstddev(data, mask=None, medi=False, axis=0):

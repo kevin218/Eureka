@@ -1,13 +1,14 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import copy
 import os
 
-from ..utils import COLORS
+import matplotlib.pyplot as plt
+import numpy as np
+
+from ...lib import plots
 from ...lib.readEPF import Parameters
 from ...lib.split_channels import split
-from ...lib import plots
 from ...lib.util import resolve_param_key
+from ..utils import COLORS
 
 
 class Model:

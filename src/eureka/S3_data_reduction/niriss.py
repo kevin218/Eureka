@@ -1,15 +1,16 @@
 # NIRISS specific rountines go here
+import astraeus.xarrayIO as xrio
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table
-import astraeus.xarrayIO as xrio
 from jwst.photom.photom import find_row
-from . import nircam, sigrej, optspex, plots_s3
-from ..lib.util import read_time, supersample
 from pastasoss import get_soss_traces, rotate
-from .straighten import roll_columns
+
+from ..lib.util import read_time, supersample
+from . import nircam, optspex, plots_s3, sigrej
 from .background import fitbg
 from .bright2flux import retrieve_ancil
+from .straighten import roll_columns
 
 __all__ = ['read', 'get_wave', 'straighten_trace', 'flag_ff', 'flag_bg',
            'clean_median_flux', 'fit_bg', 'cut_aperture', 'standard_spectrum',
@@ -19,7 +20,7 @@ __all__ = ['read', 'get_wave', 'straighten_trace', 'flag_ff', 'flag_bg',
 TODO:
     Implement niriss.calibrated_spectra()
     0th-order masking using F277W filter
-    Get 2D MAD calculation working
+    Get 2D MAED calculation working
 '''
 
 
@@ -621,9 +622,9 @@ def lc_nodriftcorr(spec, meta):
         wave_1d = spec.wave_1d.sel(order=order)
         optspec = spec.optspec.sel(order=order)
         optmask = spec.optmask.sel(order=order)
-        mad = meta.mad_s3[k]
+        maed = meta.maed_s3[k]
         plots_s3.lc_nodriftcorr(meta, wave_1d, optspec, optmask=optmask,
-                                mad=mad, order=order)
+                                maed=maed, order=order)
 
 
 def calibrated_spectra(data, meta, log):

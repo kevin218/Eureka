@@ -1,8 +1,9 @@
 import os
-import matplotlib
-from matplotlib import rcdefaults, rcParams, font_manager
-from matplotlib import style as mpl_style
 from functools import wraps
+
+import matplotlib
+from matplotlib import font_manager, rcdefaults, rcParams
+from matplotlib import style as mpl_style
 
 # Global configuration dictionary (used by decorator and set_rc)
 _current_style = {

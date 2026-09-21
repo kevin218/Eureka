@@ -1,11 +1,12 @@
 
-import numpy as np
+import os
 import re
 import shutil
-import os
-from astroquery.mast import Observations
+
 import astropy.io.fits as pf
+import numpy as np
 from astropy.io import ascii
+from astroquery.mast import Observations
 
 
 def columnNames():

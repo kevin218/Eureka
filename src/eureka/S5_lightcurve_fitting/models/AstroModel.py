@@ -1,12 +1,13 @@
-import numpy as np
-import astropy.constants as const
-from copy import copy
 import inspect
+from copy import copy
 
-from .Model import Model
-from .KeplerOrbit import KeplerOrbit
-from ..limb_darkening_fit import ld_profile
+import astropy.constants as const
+import numpy as np
+
 from ...lib.split_channels import split
+from ..limb_darkening_fit import ld_profile
+from .KeplerOrbit import KeplerOrbit
+from .Model import Model
 
 
 class PlanetParams():

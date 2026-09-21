@@ -1,4 +1,5 @@
 from functools import partial
+
 try:
     import catwoman
 except ImportError:
