@@ -132,8 +132,9 @@ dmypy.json
 *.DS_Store
 *.swp
 
-# ecf files
+# ecf files except for the one tracked for regression testing S5
 *.ecf
+!tests/NIRCam_ecfs/S5_NIRCam_regression.ecf
 
 # epf files
 *.epf
