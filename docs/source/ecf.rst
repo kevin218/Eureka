@@ -1145,6 +1145,12 @@ Fitting routines to run for Stage 5 lightcurve fitting.
 For standard numpy functions, this can be one or more of the following: [lsq, emcee, dynesty].
 For theano-based differentiable functions, this can be one or more of the following: [exoplanet, nuts] where exoplanet uses a gradient based optimization method and nuts uses the No U-Turn Sampling method implemented in PyMC3.
 
+random_seed
+'''''''''''
+Optional integer seed for reproducible ``emcee`` and ``dynesty`` runs. Leave
+undefined or set it to ``None`` for the normal nondeterministic behavior.
+Primarily useful for regression testing.
+
 run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
