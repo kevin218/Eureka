@@ -29,7 +29,11 @@ def run_s5(tmp_path, pytestconfig):
         """Run ``case`` with temporary copies of its two S4 references."""
         input_dir = tmp_path / "stage4-input"
         input_dir.mkdir()
-        reference_dir = S4_REFERENCE_ROOT / case.name
+        # Sampler cases reuse the same fixed Stage 4 input as their matching
+        # LSQ instrument/mode case, while their S5 reference directory keeps
+        # a distinct name for the selected fitter.
+        s4_case = case.s4_reference_case or case.name
+        reference_dir = S4_REFERENCE_ROOT / s4_case
         specdata_path = input_dir / "SpecData.h5"
         lcdata_path = input_dir / "LCData.h5"
 

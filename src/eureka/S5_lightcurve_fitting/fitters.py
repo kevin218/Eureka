@@ -316,6 +316,24 @@ def demcfitter(lc, model, meta, log, **kwargs):
     return best_model
 
 
+def _emcee_rng(meta):
+    """Return the optional persistent random state for emcee fitting."""
+    if getattr(meta, 'random_seed', None) is None:
+        return None
+    if not hasattr(meta, '_emcee_rng'):
+        meta._emcee_rng = np.random.RandomState(meta.random_seed)
+    return meta._emcee_rng
+
+
+def _dynesty_rng(meta):
+    """Return the optional persistent random generator for dynesty fitting."""
+    if getattr(meta, 'random_seed', None) is None:
+        return None
+    if not hasattr(meta, '_dynesty_rng'):
+        meta._dynesty_rng = np.random.default_rng(meta.random_seed)
+    return meta._dynesty_rng
+
+
 def emceefitter(lc, model, meta, log, **kwargs):
     """Perform sampling using emcee.
 
@@ -345,11 +363,12 @@ def emceefitter(lc, model, meta, log, **kwargs):
         freepars = load_old_fitparams(lc, meta, log, freenames, 'emcee')
     ndim = len(freenames)
 
+    rng = _emcee_rng(meta)
     if meta.old_chain is not None:
         pos, nwalkers = start_from_oldchain_emcee(lc, meta, log, ndim,
                                                   freenames, freepars,
                                                   prior1, prior2,
-                                                  priortype)
+                                                  priortype, rng=rng)
     else:
         if meta.lsq_first:
             # Only call lsq fitter first if asked
@@ -363,7 +382,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
             lsq_sol = None
         pos, nwalkers = initialize_emcee_walkers(meta, log, ndim, lsq_sol,
                                                  freepars, prior1, prior2,
-                                                 priortype)
+                                                 priortype, rng=rng)
 
     start_lnprob = lnprob(np.median(pos, axis=0), lc, model, prior1, prior2,
                           priortype, freenames)
@@ -400,6 +419,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                     args=(lc, model, prior1, prior2,
                                           priortype, freenames),
                                     pool=pool)
+    if rng is not None:
+        sampler.random_state = rng.get_state()
     log.writelog('Running emcee burn-in and production steps...')
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
     # log.writelog('Running emcee burn-in...')
@@ -549,7 +570,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
 
 def start_from_oldchain_emcee(lc, meta, log, ndim, freenames, freepars,
-                              prior1, prior2, priortype):
+                              prior1, prior2, priortype, rng=None):
     """Restart emcee using the ending point of an old chain.
 
     Parameters
@@ -678,7 +699,8 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames, freepars,
 
         meta.run_nwalkers = nwalkers
         temp_pos, nwalkers = initialize_emcee_walkers(
-            meta, log, ndim, None, freepars, prior1, prior2, priortype)
+            meta, log, ndim, None, freepars, prior1, prior2, priortype,
+            rng=rng)
 
         new_pos = np.zeros((nwalkers, len(freenames)))
         for i, key in enumerate(freenames):
@@ -697,7 +719,7 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames, freepars,
 
 
 def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
-                             prior2, priortype):
+                             prior2, priortype, rng=None):
     """Initialize emcee walker starting positions
 
     Parameters
@@ -718,6 +740,8 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
         The list of prior2 values.
     priortype : list
         The types of each prior (to determine meaning of prior1 and prior2).
+    rng : numpy.random.RandomState; optional
+        Random state used to draw reproducible starting positions.
 
     Returns
     -------
@@ -787,7 +811,8 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
                                     np.exp(prior1[lu][ind_min_LU]))/2.
 
     # Generate the walker positions
-    pos = np.array([freepars + step_size*np.random.randn(ndim)
+    normal = np.random.randn if rng is None else rng.randn
+    pos = np.array([freepars + step_size*normal(ndim)
                     for i in range(nwalkers)])
 
     # Make sure the walker positions obey the priors
@@ -822,7 +847,7 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
             remove_zeroth = False
             new_nwalkers = nwalkers-len(pos)
         pos = np.append(pos, np.array([freepars +
-                                       step_size*np.random.randn(ndim)
+                                       step_size*normal(ndim)
                                        for i in range(new_nwalkers)
                                        ]).reshape(-1, ndim), axis=0)
         if remove_zeroth:
@@ -986,10 +1011,15 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
             sampler = DynamicNestedSampler.restore(meta.old_checkpoint_file,
                                                    pool=pool)
         else:
+            sampler_kwargs = dict(
+                pool=pool, queue_size=queue_size, bound=bound,
+                sample=sample, logl_args=l_args,
+                ptform_args=[prior1, prior2, priortype])
+            rng = _dynesty_rng(meta)
+            if rng is not None:
+                sampler_kwargs['rstate'] = rng
             sampler = DynamicNestedSampler(
-                ln_like, ptform, ndims, pool=pool,
-                queue_size=queue_size, bound=bound, sample=sample,
-                logl_args=l_args, ptform_args=[prior1, prior2, priortype])
+                ln_like, ptform, ndims, **sampler_kwargs)
 
         # Handle 'auto' for meta.run_nlive_batch
         nlive_batch = meta.run_nlive_batch
@@ -1013,10 +1043,14 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
             sampler = NestedSampler.restore(meta.old_checkpoint_file,
                                             pool=pool)
         else:
-            sampler = NestedSampler(
-                ln_like, ptform, ndims, nlive=nlive, pool=pool,
-                queue_size=queue_size, bound=bound, sample=sample,
-                logl_args=l_args, ptform_args=[prior1, prior2, priortype])
+            sampler_kwargs = dict(
+                nlive=nlive, pool=pool, queue_size=queue_size,
+                bound=bound, sample=sample, logl_args=l_args,
+                ptform_args=[prior1, prior2, priortype])
+            rng = _dynesty_rng(meta)
+            if rng is not None:
+                sampler_kwargs['rstate'] = rng
+            sampler = NestedSampler(ln_like, ptform, ndims, **sampler_kwargs)
 
         # Run the sampler
         sampler.run_nested(dlogz=meta.run_tol, **run_kwargs)
@@ -1043,7 +1077,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # Extract posterior samples
     weights = np.exp(res.logwt - res.logz[-1])
-    samples = resample_equal(res.samples, weights)
+    samples = resample_equal(res.samples, weights, rstate=_dynesty_rng(meta))
     log.writelog('Number of posterior samples is {}'.format(len(samples)),
                  mute=(not meta.verbose))
 
