@@ -1,7 +1,6 @@
 """Definitions of the approved Stage 5 regression cases."""
 from dataclasses import dataclass, field
 
-
 TABLE_CORE_COLUMNS = ("time", "wavelength", "bin_width", "lcdata", "lcerr")
 TABLE_FINAL_COLUMNS = ("model", "residuals")
 
