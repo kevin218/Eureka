@@ -9,7 +9,6 @@ from astropy.table import Table
 from .cases import CASES
 from .conftest import REFERENCE_ROOT
 
-FITPARAM_RTOL = 1e-5
 TABLE_AXIS_RTOL = 1e-9
 TABLE_VALUE_RTOL = 1e-4
 
@@ -29,7 +28,7 @@ def _actual_paths(case, meta):
 
 
 def _assert_expected_outputs(case, meta, actual_fitparams, actual_table):
-    """Assert that S5 wrote exactly the configured LSQ science products."""
+    """Assert that S5 wrote the configured final and auxiliary products."""
     output_dir = Path(meta.outputdir)
     assert actual_fitparams.is_file(), (
         f"{case.name}: missing fitparams output {actual_fitparams.name}"
@@ -43,7 +42,9 @@ def _assert_expected_outputs(case, meta, actual_fitparams, actual_table):
     table_outputs = sorted(
         path.name for path in output_dir.glob("S5_*Table_Save*.txt")
     )
-    assert fitparam_outputs == [case.fitparams_filename], (
+    expected_fitparams = sorted((case.fitparams_filename,) +
+                                case.auxiliary_fitparams_filenames)
+    assert fitparam_outputs == expected_fitparams, (
         f"{case.name}: unexpected fitter fitparams outputs"
     )
     assert table_outputs == [case.table_filename], (
@@ -51,43 +52,50 @@ def _assert_expected_outputs(case, meta, actual_fitparams, actual_table):
     )
 
 
-def _read_fitparams(path):
-    """Read and validate the two-column LSQ fit-parameter CSV schema."""
+def _read_fitparams(path, columns):
+    """Read one final fitter summary CSV using its configured schema."""
     table = Table.read(path, format="ascii.csv")
-    assert table.colnames == ["Parameter", "Mean"], (
-        f"{path}: unexpected LSQ fitparams schema {table.colnames}"
+    assert tuple(table.colnames) == columns, (
+        f"{path}: unexpected fitparams schema {table.colnames}"
     )
     return table
 
 
-def _parameter_values(table):
-    """Return finite LSQ means keyed by their unique parameter names."""
+def _parameter_values(table, columns):
+    """Return finite fitter-summary values keyed by unique parameter names."""
     names = list(table["Parameter"])
     assert len(names) == len(set(names)), "fitparams contains duplicate names"
-    values = np.asarray(table["Mean"], dtype=float)
-    assert np.all(np.isfinite(values)), "fitparams contains non-finite means"
-    return dict(zip(names, values, strict=True))
+    values = {}
+    for column in columns[1:]:
+        summary = np.asarray(table[column], dtype=float)
+        assert np.all(np.isfinite(summary)), (
+            f"fitparams contains non-finite {column} values"
+        )
+        values[column] = dict(zip(names, summary, strict=True))
+    return values
 
 
 def _assert_fitparams(case, actual_path, reference_path):
-    """Compare one case's fitted parameter names and LSQ means."""
-    actual = _read_fitparams(actual_path)
-    expected = _read_fitparams(reference_path)
-    actual_values = _parameter_values(actual)
-    expected_values = _parameter_values(expected)
-    assert set(actual_values) == case.free_parameters, (
+    """Compare final named fitter summaries for one regression case."""
+    actual = _read_fitparams(actual_path, case.fitparams_columns)
+    expected = _read_fitparams(reference_path, case.fitparams_columns)
+    actual_values = _parameter_values(actual, case.fitparams_columns)
+    expected_values = _parameter_values(expected, case.fitparams_columns)
+    assert set(actual_values["Mean"]) == case.free_parameters, (
         f"{case.name}: fitted parameter names differ from the case manifest"
     )
-    assert set(expected_values) == case.free_parameters, (
+    assert set(expected_values["Mean"]) == case.free_parameters, (
         f"{case.name}: reference parameter names differ from the case manifest"
     )
 
-    for name in case.free_parameters:
-        np.testing.assert_allclose(
-            actual_values[name], expected_values[name], rtol=FITPARAM_RTOL,
-            atol=case.parameter_atol.get(name, 0),
-            err_msg=f"{case.name}: fitparams.{name}",
-        )
+    for column in case.fitparams_columns[1:]:
+        for name in case.free_parameters:
+            np.testing.assert_allclose(
+                actual_values[column][name], expected_values[column][name],
+                rtol=case.fitparams_rtol,
+                atol=case.parameter_atol.get(name, 0),
+                err_msg=f"{case.name}: fitparams.{column}.{name}",
+            )
 
 
 def _read_table(path):
