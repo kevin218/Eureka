@@ -2,9 +2,9 @@
 from pathlib import Path
 from shutil import copy2
 
-from astropy.table import Table
 import numpy as np
 import pytest
+from astropy.table import Table
 
 from .cases import CASES
 from .conftest import REFERENCE_ROOT
