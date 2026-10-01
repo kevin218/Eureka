@@ -145,11 +145,11 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for MIRI photometry.
         '''
-        # rscd_group_skip1/rscd_group_skip only affect the fit when
-        # skip_rscd is False, so they are optimized first (with skip_rscd
-        # forced to False) and skip_rscd is optimized afterward.
+        # Optimize the shared group count with RSCD enabled, then skip_rscd.
+        # The first integration inherits this count unless overridden;
+        # rscd_group_skip1 can be included in an explicitly requested sweep.
         full_list = ['jump_rejection_threshold', 'skip_lastframe',
-                     'rscd_group_skip1', 'rscd_group_skip', 'skip_rscd']
+                     'rscd_group_skip', 'skip_rscd']
         self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
                                              full_list)
 
@@ -175,11 +175,11 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for MIRI.
         '''
-        # rscd_group_skip1/rscd_group_skip only affect the fit when
-        # skip_rscd is False, so they are optimized first (with skip_rscd
-        # forced to False) and skip_rscd is optimized afterward.
+        # Optimize the shared group count with RSCD enabled, then skip_rscd.
+        # The first integration inherits this count unless overridden;
+        # rscd_group_skip1 can be included in an explicitly requested sweep.
         full_list = ['jump_rejection_threshold', 'skip_lastframe',
-                     'rscd_group_skip1', 'rscd_group_skip', 'skip_rscd']
+                     'rscd_group_skip', 'skip_rscd']
         self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
                                              full_list)
 

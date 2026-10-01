@@ -236,6 +236,8 @@ class S1MetaClass(MetaClass):
         self.skip_lastframe = getattr(self, 'skip_lastframe', True)
         self.skip_reset = getattr(self, 'skip_reset', False)
         self.skip_rscd = getattr(self, 'skip_rscd', True)
+        # Keep None until the RSCD step resolves the effective group_skip,
+        # so inheritance follows optimizer sweeps and CRDS reference values.
         self.rscd_group_skip1 = getattr(self, 'rscd_group_skip1', None)
         self.rscd_group_skip = getattr(self, 'rscd_group_skip', None)
 

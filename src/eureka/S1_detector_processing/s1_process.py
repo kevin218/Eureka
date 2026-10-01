@@ -140,6 +140,12 @@ class EurekaS1Pipeline(Detector1Pipeline):
     This wrapper class allows non-standard changes to Stage 1 for Eureka!.
     '''
 
+    step_defs = {
+        **Detector1Pipeline.step_defs,
+        'rscd': Eureka_RscdStep,
+        'ramp_fit': Eureka_RampFitStep,
+    }
+
     def run_eurekaS1(self, filename, meta, log):
         '''Reduces uncal files from STScI into rateints files.
 
@@ -190,8 +196,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
         elif meta.inst in ['miri']:
             self._configure_miri_steps(meta)
 
-        # Define ramp fitting procedure
-        self.ramp_fit = Eureka_RampFitStep()
+        # Configure the custom ramp fitting step constructed by the pipeline
         self.ramp_fit.algorithm = meta.ramp_fit_algorithm
         self.ramp_fit.maximum_cores = meta.maximum_cores
         self.ramp_fit.skip = meta.skip_ramp_fitting
@@ -224,7 +229,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
 
         The deprecated firstframe step is disabled because its functionality
         is included in the JWST RSCD step. Eureka!'s RSCD group-count
-        overrides are transferred to the replacement step. When 390 Hz noise
+        overrides are transferred to the configured step. When 390 Hz noise
         removal is requested, lastframe and RSCD are deferred until the custom
         correction has used the unflagged ramp data.
 
@@ -245,7 +250,6 @@ class EurekaS1Pipeline(Detector1Pipeline):
         if hasattr(self, 'firstframe'):
             self.firstframe.skip = True
 
-        self.rscd = Eureka_RscdStep()
         self.rscd.group_skip1 = meta.rscd_group_skip1
         self.rscd.group_skip = meta.rscd_group_skip
 

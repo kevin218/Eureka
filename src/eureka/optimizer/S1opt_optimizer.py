@@ -38,6 +38,43 @@ def _convert_to_native_types(value):
     return value
 
 
+def _ordered_rscd_sweeps(meta):
+    """Evaluate RSCD group counts before deciding whether to skip the step.
+
+    Joint count/skip requests are split into a count sweep with RSCD enabled
+    and a later skip sweep. Explicit joint sweep ranges are retained.
+    Unrelated sweeps keep their relative order.
+    """
+    group_parameters = {'rscd_group_skip1', 'rscd_group_skip'}
+    requested = meta.params_to_optimize_s1
+    if not any(group_parameters.intersection(p.split('__'))
+               for p in requested):
+        return [(p, meta) for p in requested]
+
+    sweeps = []
+    skip_sweeps = []
+    for p in requested:
+        names = p.split('__')
+        if ('skip_rscd' in names and
+                group_parameters.intersection(names)):
+            sweep_meta = deepcopy(meta)
+            if hasattr(meta, 'sweep_' + p):
+                ranges = getattr(meta, 'sweep_' + p)
+                if len(ranges) != len(names):
+                    raise ValueError(f'Expected {len(names)} sweep ranges '
+                                     f'for {p}, got {len(ranges)}.')
+                for name, values in zip(names, ranges):
+                    setattr(sweep_meta, 'sweep_' + name, values)
+            counts = '__'.join(name for name in names if name != 'skip_rscd')
+            sweeps.append((counts, sweep_meta))
+            skip_sweeps.append(('skip_rscd', sweep_meta))
+        elif 'skip_rscd' in names:
+            skip_sweeps.append((p, meta))
+        else:
+            sweeps.append((p, meta))
+    return sweeps + skip_sweeps
+
+
 def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     """
     Eureka! optimization wrapper for Stage 1.
@@ -108,10 +145,14 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
         log.writelog(f"Initial white MAED: {s4_meta.maed_s4_binned[0]}")
         log.writelog(f"Initial spec MAED: {s4_meta.maed_s4}\n")
 
-    for p in s1opt_meta.params_to_optimize_s1:
-        s1opt_meta, log, history, best = optimize(s1opt_meta, log, history,
-                                                  best, p, eventlabel,
-                                                  ecf_path, 1)
+    sweeps = _ordered_rscd_sweeps(s1opt_meta)
+    ordered_parameters = [p for p, _ in sweeps]
+    if ordered_parameters != list(s1opt_meta.params_to_optimize_s1):
+        log.writelog('Optimizing RSCD group counts before skip_rscd; '
+                     f'sweep order: {ordered_parameters}')
+    for p, sweep_meta in sweeps:
+        _, log, history, best = optimize(sweep_meta, log, history,
+                                         best, p, eventlabel, ecf_path, 1)
 
     # Save the best dictionary to a JSON file
     with open(os.path.join(s1opt_meta.outputdir, "best_params.json"),
@@ -126,9 +167,20 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     # Update S1 ECF file with optimized parameters
     s1_meta, s2_meta, s3_meta, s4_meta = initialize_meta(
         s1opt_meta, eventlabel, ecf_path=None)
+    ecf_parameters = set()
+    for line in s1_meta.lines:
+        tokens = line.split('#', 1)[0].split()
+        if tokens:
+            ecf_parameters.add(tokens[0])
     for key, value in best.items():
         s1_meta.params[key] = value
         setattr(s1_meta, key, value)
+        # Defaults selected by the optimizer may be absent from a legacy ECF.
+        # Include them so the saved ECF reproduces the final run.
+        if key not in ecf_parameters:
+            if s1_meta.lines and not s1_meta.lines[-1].endswith('\n'):
+                s1_meta.lines[-1] += '\n'
+            s1_meta.lines.append(f'{key} {value}\n')
 
     # Write optimized ECF files
     s1_meta.write(opt_path)
@@ -193,6 +245,19 @@ def optimize(s1opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     best : dict
         The best parameter values found so far.
     """
+    param_names = p.split('__')
+    enable_rscd = any(name in {'rscd_group_skip1', 'rscd_group_skip'}
+                      for name in param_names)
+    if enable_rscd and 'skip_rscd' in param_names:
+        # Keep direct optimize() calls consistent with the wrapper's ordering.
+        meta = deepcopy(s1opt_meta)
+        meta.params_to_optimize_s1 = [p]
+        for parameter, sweep_meta in _ordered_rscd_sweeps(meta):
+            _, log, history, best = optimize(
+                sweep_meta, log, history, best, parameter, eventlabel,
+                ecf_path, stage)
+        return s1opt_meta, log, history, best
+
     # Setup Meta objects
     meta = deepcopy(s1opt_meta)
     meta.opt_param_name = p
@@ -231,10 +296,9 @@ def optimize(s1opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
         s1_meta.params[key] = value
         setattr(s1_meta, key, value)
 
-    if 'rscd_group_skip' in p:
-        # The rscd_group_skip and rscd_group_skip1 parameters only affect the
-        # fit when skip_rscd is False, so force it off here even if skip_rscd
-        # has not been optimized yet
+    if enable_rscd:
+        # Always optimize group counts with RSCD enabled. The skip decision
+        # is evaluated afterward using the selected group counts.
         s1_meta.params['skip_rscd'] = False
         setattr(s1_meta, 'skip_rscd', False)
 
@@ -253,12 +317,20 @@ def optimize(s1opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     # Check that optimization was successful
     if best_param_value is not None:
         # Save results in "best" dictionary
-        param_names = p.split("__")
         if (type(best_param_value) is not list and
                 type(best_param_value) is not np.ndarray):
             best_param_value = [best_param_value]
         for i, param in enumerate(param_names):
             best[param] = best_param_value[i]
+
+        if enable_rscd:
+            # This is a group-count sweep, evaluated with skip_rscd=False.
+            # Record that enabled state provisionally so intermediate sweeps
+            # use the same configuration. The later skip_rscd sweep writes
+            # its chosen value in the loop above and has enable_rscd=False,
+            # so this block does not overwrite that choice. If no skip_rscd
+            # sweep is requested, retain False in the saved ECF/final run.
+            best['skip_rscd'] = False
 
         # Print results of parametric sweep
         log.writelog(f"Best parameter value(s): {best_param_value}")
