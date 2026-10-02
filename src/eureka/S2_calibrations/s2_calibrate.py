@@ -302,6 +302,9 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         self.barshadow.skip = meta.skip_barshadow
         self.wfss_contam.skip = meta.skip_wfss_contam
         self.photom.skip = meta.skip_photom
+        if hasattr(self, 'pixel_replace'):
+            # Allowing backwards compatibility with older jwst versions
+            self.pixel_replace.skip = meta.skip_pixel_replace
         self.residual_fringe.skip = meta.skip_residual_fringe
         self.resample_spec.skip = meta.skip_resample
         self.cube_build.skip = meta.skip_cube_build
