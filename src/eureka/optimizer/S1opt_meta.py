@@ -145,15 +145,19 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for MIRI photometry.
         '''
-        full_list = ['jump_rejection_threshold', 'skip_firstframe',
-                     'skip_lastframe', 'skip_rscd']
+        # Optimize the shared group count with RSCD enabled, then skip_rscd.
+        # The first integration inherits this count unless overridden;
+        # rscd_group_skip1 can be included in an explicitly requested sweep.
+        full_list = ['jump_rejection_threshold', 'skip_lastframe',
+                     'rscd_group_skip', 'skip_rscd']
         self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
                                              full_list)
 
         defaults = {
-            "sweep_skip_firstframe": [True, False],
             "sweep_skip_lastframe": [True, False],
-            "sweep_skip_rscd": [True, False],
+            "sweep_rscd_group_skip1": range(0, 6),
+            "sweep_rscd_group_skip": range(0, 6),
+            "sweep_skip_rscd": [False, True],
         }
 
         for key, default in defaults.items():
@@ -171,15 +175,19 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for MIRI.
         '''
-        full_list = ['jump_rejection_threshold', 'skip_firstframe',
-                     'skip_lastframe', 'skip_rscd']
+        # Optimize the shared group count with RSCD enabled, then skip_rscd.
+        # The first integration inherits this count unless overridden;
+        # rscd_group_skip1 can be included in an explicitly requested sweep.
+        full_list = ['jump_rejection_threshold', 'skip_lastframe',
+                     'rscd_group_skip', 'skip_rscd']
         self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
                                              full_list)
 
         defaults = {
-            "sweep_skip_firstframe": [True, False],
             "sweep_skip_lastframe": [True, False],
-            "sweep_skip_rscd": [True, False],
+            "sweep_rscd_group_skip1": range(0, 6),
+            "sweep_rscd_group_skip": range(0, 6),
+            "sweep_skip_rscd": [False, True],
         }
 
         for key, default in defaults.items():
