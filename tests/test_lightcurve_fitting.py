@@ -36,6 +36,43 @@ class testingMetaClass(S5MetaClass):
         self.whitep = False
         self.set_defaults()
 
+
+def test_s5_random_seed_defaults_to_none_and_accepts_integers():
+    """Test that the optional S5 sampler seed has a validated default."""
+    meta = testingMetaClass()
+    assert meta.random_seed is None
+
+    meta.random_seed = 12345
+    meta.set_defaults()
+    assert meta.random_seed == 12345
+
+
+def test_s5_random_seed_rejects_non_integer_values():
+    """Test that S5 rejects invalid sampler seed values."""
+    meta = testingMetaClass()
+    meta.random_seed = 1.5
+
+    with pytest.raises(TypeError, match='random_seed'):
+        meta.set_defaults()
+
+
+def test_seeded_emcee_walker_initialization_is_reproducible():
+    """Test that identical emcee random states make identical walkers."""
+    meta = SimpleNamespace(run_nwalkers=4, verbose=False)
+    log = SimpleNamespace(writelog=Mock())
+    kwargs = dict(
+        meta=meta, log=log, ndim=1, lsq_sol=None,
+        freepars=np.array([0.5]), prior1=np.array([0.0]),
+        prior2=np.array([1.0]), priortype=np.array(['U']),
+    )
+    first, _ = fitters.initialize_emcee_walkers(
+        **kwargs, rng=np.random.RandomState(12345))
+    second, _ = fitters.initialize_emcee_walkers(
+        **kwargs, rng=np.random.RandomState(12345))
+
+    np.testing.assert_array_equal(first, second)
+
+
 # Tests for the parameters.py module
 
 
@@ -182,6 +219,21 @@ def test_dynesty_checkpoint_kwargs_passed_to_run_nested(tmp_path):
         checkpoint_file=os.path.join(str(tmp_path),
                                      'S5_dynesty_checkpoint_white.save'),
         checkpoint_every=123.0)
+
+
+def test_dynesty_receives_seeded_random_generator(tmp_path):
+    """Test that an S5 seed is supplied to a new dynesty sampler."""
+    lc = _make_dynesty_lc(white=True)
+    meta = _make_dynesty_meta(tmp_path, random_seed=12345)
+    model = _make_dynesty_model()
+    sampler = _make_dynesty_sampler()
+
+    with patch.object(fitters, 'NestedSampler', return_value=sampler) as cls:
+        _run_mocked_dynesty(lc, model, meta)
+
+    rng = cls.call_args.kwargs['rstate']
+    assert isinstance(rng, np.random.Generator)
+    assert rng.bit_generator.seed_seq.entropy == 12345
 
 
 def test_dynesty_resume_restores_sampler(tmp_path):
