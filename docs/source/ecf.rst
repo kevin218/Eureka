@@ -63,6 +63,32 @@ If True, skip the named step.
 .. note::
    Note that some instruments and observing modes might skip a step either way! See the `calwebb_detector1 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
 
+For MIRI data, ``skip_rscd`` also controls the first-group flagging that was
+previously performed by the now-deprecated ``firstframe`` step. Legacy ECFs
+that run ``firstframe`` but skip the old RSCD step are mapped to one-group
+flagging in every integration.
+
+rscd_group_skip1
+''''''''''''''''
+For MIRI data, the number of initial groups that the RSCD step should flag in
+the first integration. The default is ``None``, which uses the effective
+``rscd_group_skip`` value, including when that value comes from CRDS. Set this
+to a nonnegative integer, including ``0``, to override the shared count for
+the first integration.
+
+rscd_group_skip
+'''''''''''''''
+For MIRI data, the number of initial groups that the RSCD step should flag in
+the second and subsequent integrations. The default is ``None``, which uses
+the ``group_skip`` value from the CRDS RSCD reference file. Set this to a
+nonnegative integer to override the reference-file value.
+
+These values are passed through the JWST pipeline's dynamic RSCD handling, so
+the number of flagged groups can still be reduced for short ramps or pixels
+that saturate quickly. Setting both parameters to 1 reproduces the group count
+used by the deprecated ``firstframe`` step. These parameters are only used
+when ``skip_rscd`` is ``False``.
+
 emicorr_algorithm
 '''''''''''''''''
 A string that specifies the ``jwst`` EMI-correction algorithm to use if ``skip_emicorr`` is set to ``False``. The options are ``'joint'`` (default), which should work well for all observations (even with few groups per integration),
@@ -276,11 +302,33 @@ Scaling factor applied to the white light curve MAED value in the fitness functi
 
 params_to_optimize_s1
 ''''''''''''''''''''''
-List of parameters to optimize in Stage 1. Commenting out this line will use all single parameters.  Single parameter options: jump_rejection_threshold, expand_mask, bg_deg, bg_method, p3thresh, window_len. Double parameter options: any combination of the above, joined by two underscores (e.g., expand_mask__p3thresh). Example:
+List of parameters to optimize in Stage 1. Commenting out this line uses the
+instrument-specific default parameters. Single parameter options:
+``jump_rejection_threshold``, ``expand_mask``, ``bg_deg``, ``bg_method``,
+``p3thresh``, ``window_len``, ``skip_*``, ``rscd_group_skip1``,
+``rscd_group_skip``. Double parameter options: any combination of the above,
+joined by two underscores (e.g., ``expand_mask__p3thresh``).
+
+For MIRI photometry and spectroscopy, the default list is
+``['jump_rejection_threshold', 'skip_lastframe', 'rscd_group_skip',
+'skip_rscd']``. The first integration inherits ``rscd_group_skip`` unless
+``rscd_group_skip1`` is explicitly set; optimizing ``rscd_group_skip1``
+requires including it in the parameter list.
+
+RSCD group counts only affect the fit when ``skip_rscd`` is ``False``.
+Count sweeps always use ``skip_rscd=False``. If ``skip_rscd`` is requested,
+its sweep runs after all group-count sweeps, using the optimized counts to
+compare whether enabling RSCD improves the result. This order also applies
+to custom parameter lists. Joint count/skip requests are split into a count
+sweep followed by a skip sweep, retaining their requested sweep ranges.
+A successful count sweep records ``skip_rscd=False`` in the selected
+configuration so later sweeps, the saved ECF, and the final run retain the
+evaluated setting unless the later skip sweep chooses to disable it.
+Example:
 
 .. code-block:: python
 
-   params_to_optimize = ['jump_rejection_threshold', 'expand_mask', 'p3thresh']
+   params_to_optimize_s1 = ['jump_rejection_threshold', 'expand_mask', 'p3thresh']
 
 params_to_optimize_s3
 '''''''''''''''''''''
