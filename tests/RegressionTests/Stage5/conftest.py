@@ -17,7 +17,7 @@ S4_REFERENCE_ROOT = Path(__file__).parents[1] / "Stage4" / "references"
 
 @pytest.fixture
 def run_s5(tmp_path, pytestconfig):
-    """Return a callable that runs one S5 case using the 
+    """Return a callable that runs one S5 case using the
     corresponding S4 outputs.
 
     The returned S5 metadata identifies the temporary
