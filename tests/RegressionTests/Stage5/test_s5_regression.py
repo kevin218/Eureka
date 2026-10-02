@@ -123,7 +123,8 @@ def _assert_table(case, actual_path, reference_path):
         rtol = TABLE_AXIS_RTOL if column in axis_columns else TABLE_VALUE_RTOL
         np.testing.assert_allclose(
             np.asarray(actual[column], dtype=float),
-            np.asarray(expected[column], dtype=float), rtol=rtol, atol=0,
+            np.asarray(expected[column], dtype=float), rtol=rtol,
+            atol=case.table_atol.get(column, 0),
             equal_nan=True, err_msg=f"{case.name}: Table_Save.{column}",
         )
 

@@ -26,6 +26,7 @@ class S5RegressionCase:
     fitparams_columns: tuple[str, ...] = LSQ_FITPARAM_COLUMNS
     fitparams_rtol: float = 1e-5
     parameter_atol: dict[str, float] = field(default_factory=dict)
+    table_atol: dict[str, float] = field(default_factory=dict)
 
     @property
     def table_columns(self):
@@ -50,6 +51,9 @@ CASES = (
         )),
         component_columns=("polynomial", "GP", "astrophysical model"),
         parameter_atol={"t0": 1e-6, "inc": 1e-6},
+        # GP predictions approach zero, where relative error is not a useful
+        # measure of cross-platform floating-point roundoff.
+        table_atol={"GP": 1e-14},
     ),
     S5RegressionCase(
         name="nircam_photometry",
@@ -116,6 +120,7 @@ CASES = (
         fitparams_columns=SAMPLER_FITPARAM_COLUMNS,
         fitparams_rtol=1e-4,
         parameter_atol={"t0": 1e-6, "inc": 1e-6},
+        table_atol={"GP": 1e-14},
     ),
     S5RegressionCase(
         name="miri_dynesty",
