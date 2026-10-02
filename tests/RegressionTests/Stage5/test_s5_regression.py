@@ -88,14 +88,31 @@ def _assert_fitparams(case, actual_path, reference_path):
         f"{case.name}: reference parameter names differ from the case manifest"
     )
 
+    mismatches = []
     for column in case.fitparams_columns[1:]:
-        for name in case.free_parameters:
-            np.testing.assert_allclose(
-                actual_values[column][name], expected_values[column][name],
-                rtol=case.fitparams_rtol,
-                atol=case.parameter_atol.get(name, 0),
-                err_msg=f"{case.name}: fitparams.{column}.{name}",
-            )
+        for name in sorted(case.free_parameters):
+            actual_value = actual_values[column][name]
+            expected_value = expected_values[column][name]
+            atol = case.parameter_atol.get(name, 0)
+            if not np.isclose(actual_value, expected_value,
+                              rtol=case.fitparams_rtol, atol=atol):
+                absolute_difference = abs(actual_value - expected_value)
+                if expected_value == 0:
+                    relative_difference = np.inf
+                else:
+                    relative_difference = absolute_difference / abs(
+                        expected_value)
+                mismatches.append(
+                    f"{case.name}: fitparams.{column}.{name}: "
+                    f"actual={actual_value:.16g}, "
+                    f"reference={expected_value:.16g}, "
+                    f"abs_diff={absolute_difference:.6g}, "
+                    f"rel_diff={relative_difference:.6g} "
+                    f"(rtol={case.fitparams_rtol:g}, atol={atol:g})"
+                )
+
+    assert not mismatches, "Fit-parameter mismatches:\n" + "\n".join(
+        mismatches)
 
 
 def _read_table(path):
