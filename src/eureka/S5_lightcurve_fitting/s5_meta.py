@@ -135,13 +135,6 @@ class S5MetaClass(MetaClass):
         # General fitter, fitparams CSV file to resume from
         self.old_fitparams = getattr(self, 'old_fitparams', None)
 
-        # Optional reproducibility control for stochastic fitters. A seed is
-        # intentionally opt-in so existing science runs remain unchanged.
-        self.random_seed = getattr(self, 'random_seed', None)
-        if self.random_seed is not None and not isinstance(
-                self.random_seed, (int, np.integer)):
-            raise TypeError('random_seed must be an integer or None.')
-
         # lsq inputs
         self.lsq_method = getattr(self, 'lsq_method', 'Powell')
         self.lsq_tol = getattr(self, 'lsq_tol', 1e-7)

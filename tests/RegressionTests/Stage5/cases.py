@@ -3,10 +3,6 @@ from dataclasses import dataclass, field
 
 TABLE_CORE_COLUMNS = ("time", "wavelength", "bin_width", "lcdata", "lcerr")
 TABLE_FINAL_COLUMNS = ("model", "residuals")
-LSQ_FITPARAM_COLUMNS = ("Parameter", "Mean")
-SAMPLER_FITPARAM_COLUMNS = (
-    "Parameter", "Mean", "-1sigma", "+1sigma", "16th", "50th", "84th",
-)
 
 
 @dataclass(frozen=True)
@@ -21,10 +17,6 @@ class S5RegressionCase:
     table_filename: str
     free_parameters: frozenset[str]
     component_columns: tuple[str, ...]
-    s4_reference_case: str | None = None
-    auxiliary_fitparams_filenames: tuple[str, ...] = ()
-    fitparams_columns: tuple[str, ...] = LSQ_FITPARAM_COLUMNS
-    fitparams_rtol: float = 1e-5
     parameter_atol: dict[str, float] = field(default_factory=dict)
     table_atol: dict[str, float] = field(default_factory=dict)
 
@@ -101,44 +93,6 @@ CASES = (
         component_columns=(
             "polynomial", "exp. ramp", "astrophysical model",
         ),
-        parameter_atol={"cos1_off": 1e-6},
-    ),
-    S5RegressionCase(
-        name="nircam_emcee",
-        eventlabel="NIRCam",
-        ecf_dir="tests/NIRCam_ecfs",
-        ecf_filename="S5_NIRCam_emcee_regression.ecf",
-        fitparams_filename="S5_emcee_fitparams_ch0.csv",
-        table_filename="S5_NIRCam_ap8_bg12_Table_Save_ch0.txt",
-        free_parameters=frozenset((
-            "rp", "per", "t0", "inc", "ars", "c0", "A", "m",
-            "scatter_mult",
-        )),
-        component_columns=("polynomial", "GP", "astrophysical model"),
-        s4_reference_case="nircam_spectroscopy",
-        auxiliary_fitparams_filenames=("S5_emcee_lsq_fitparams_ch0.csv",),
-        fitparams_columns=SAMPLER_FITPARAM_COLUMNS,
-        fitparams_rtol=1e-4,
-        parameter_atol={"t0": 1e-6, "inc": 1e-6},
-        table_atol={"GP": 1e-14},
-    ),
-    S5RegressionCase(
-        name="miri_dynesty",
-        eventlabel="MIRI",
-        ecf_dir="tests/MIRI_ecfs/POET",
-        ecf_filename="S5_MIRI_dynesty_regression.ecf",
-        fitparams_filename="S5_dynesty_fitparams_ch0.csv",
-        table_filename="S5_MIRI_ap4_bg10_Table_Save_ch0.txt",
-        free_parameters=frozenset((
-            "rprs", "fpfs", "cos1_amp", "cos1_off", "c0", "r0",
-            "r1", "scatter_mult",
-        )),
-        component_columns=(
-            "polynomial", "exp. ramp", "astrophysical model",
-        ),
-        s4_reference_case="miri_spectroscopy",
-        fitparams_columns=SAMPLER_FITPARAM_COLUMNS,
-        fitparams_rtol=1e-4,
         parameter_atol={"cos1_off": 1e-6},
     ),
 )
