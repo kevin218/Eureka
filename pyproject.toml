@@ -129,6 +129,7 @@ dependencies = [
     "numpy>=1.25,<3.0", # Current tested py311 floor is NumPy >=1.25
     "pandas",
     "photutils",
+    "psutil", # Needed to determine available memory in Stage 3
     "pyyaml",
     "requests",
     "scipy>=1.12.0", # Lower limit needed for stcal.ramp_fitting.likely_fit
