@@ -112,15 +112,17 @@ def test_xoffset_uses_reference_pupil_position_and_pivots(
 
 def test_xoffset_keeps_columns_aligned_when_rotation_trims(reference_model):
     model, _ = reference_model
-    data, meta, log = trace_inputs(yoffset=211., xoffset=2., pwcpos=245.8)
+    data, meta, log = trace_inputs(yoffset=210.95, xoffset=2., pwcpos=245.8)
 
     result = niriss.get_wave(data, meta, log)
 
     # Order 1 extends above row 255 after the user correction; order 2 is
     # entirely outside the detector. Trimmed wavelengths must remain NaN.
+    # Put the boundary between columns so polynomial fitting roundoff
+    # cannot change whether a point exactly at row 255 is retained.
     valid = np.arange(4, 43)
     np.testing.assert_allclose(result.trace.sel(order=1)[valid],
-                               251. + 0.1 * (valid - 2.))
+                               250.95 + 0.1 * (valid - 2.))
     np.testing.assert_allclose(result.wave_1d.sel(order=1)[valid],
                                3. - 0.01 * (valid - 2.))
     assert np.isnan(result.wave_1d.sel(order=1)[43:]).all()
