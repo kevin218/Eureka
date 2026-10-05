@@ -17,8 +17,7 @@ S4_REFERENCE_ROOT = Path(__file__).parents[1] / "Stage4" / "references"
 
 @pytest.fixture
 def run_s5(tmp_path, pytestconfig):
-    """Return a callable that runs one S5 case using the
-    corresponding S4 outputs.
+    """Return a callable that runs one S5 case using the corresponding S4 outputs.
 
     The returned S5 metadata identifies the temporary
     output directory, which the regression test then compares with the Stage 5
@@ -30,11 +29,7 @@ def run_s5(tmp_path, pytestconfig):
         """Run ``case`` with temporary copies of its two S4 references."""
         input_dir = tmp_path / "stage4-input"
         input_dir.mkdir()
-        # Sampler cases reuse the same fixed Stage 4 input as their matching
-        # LSQ instrument/mode case, while their S5 reference directory keeps
-        # a distinct name for the selected fitter.
-        s4_case = case.s4_reference_case or case.name
-        reference_dir = S4_REFERENCE_ROOT / s4_case
+        reference_dir = S4_REFERENCE_ROOT / case.name
         specdata_path = input_dir / "SpecData.h5"
         lcdata_path = input_dir / "LCData.h5"
 
