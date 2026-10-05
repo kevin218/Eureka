@@ -141,7 +141,7 @@ dependencies = [
     { pip = "catwoman>=1.0.16" }, # Lower limit needed to avoid installation bug
     { pip = "celerite2" }, # Needed for GP
     { pip = "crds" },
-    { pip = "exotic-ld @ git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8" }, # Pin needed for pkg_resources deprecation
+    { pip = "exotic-ld @ git+https://github.com/Exo-TiC/ExoTiC-LD.git@8dad8db" }, # Pin needed for pkg_resources deprecation
     { pip = "fleck" },
     { pip = "george" }, # Needed for GP
     { pip = "planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main" }, # PyPI build currently only supports for python 3.8 -- 3.10
