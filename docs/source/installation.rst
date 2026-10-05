@@ -133,7 +133,9 @@ CRDS Environment Variables
 
 If you install the ``jwst`` dependency group, you must also set CRDS
 environment variables so the JWST Calibration Pipeline can download the
-reference files it needs. For users not on the internal STScI network, set the
+reference files it needs. NIRISS Stage 3 also uses CRDS to retrieve the
+PASTASOSS reference file for trace positions and wavelengths. For users
+not on the internal STScI network, set the
 following variables in your ``~/.zshrc`` (for zsh users), ``~/.bashrc`` or
 ``~/.bash_profile`` (for bash users), or another shell initialization file.
 Choose a cache location appropriate for your system, such as
