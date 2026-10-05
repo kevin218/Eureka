@@ -129,6 +129,7 @@ dependencies = [
     "numpy>=1.25,<3.0", # Current tested py311 floor is NumPy >=1.25
     "pandas",
     "photutils",
+    "psutil", # Needed to determine available memory in Stage 3
     "pyyaml",
     "requests",
     "scipy>=1.12.0", # Lower limit needed for stcal.ramp_fitting.likely_fit
@@ -140,10 +141,9 @@ dependencies = [
     { pip = "catwoman>=1.0.16" }, # Lower limit needed to avoid installation bug
     { pip = "celerite2" }, # Needed for GP
     { pip = "crds" },
-    { pip = "exotic-ld @ git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8" }, # Pin needed for pkg_resources deprecation
+    { pip = "exotic-ld @ git+https://github.com/Exo-TiC/ExoTiC-LD.git@8dad8db" }, # Pin needed for pkg_resources deprecation
     { pip = "fleck" },
     { pip = "george" }, # Needed for GP
-    { pip = "pastasoss>=1.2.4" }, # Lower limit needed for numpy>=2
     { pip = "planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main" }, # PyPI build currently only supports for python 3.8 -- 3.10
     { pip = "setuptools_scm>=6.2" }, # Needed when importing from a source tree without generated version.py
     { pip = "stdatamodels>=5.0.2" },

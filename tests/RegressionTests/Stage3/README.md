@@ -10,6 +10,11 @@ Each reference directory contains the following S3 reference data:
 - `SpecData.h5`: the approved Stage 3 data product, including `maed_s3` in its
   stored metadata attributes.
 
+The NIRISS reference uses JWST 2.0.1's PASTASOSS implementation with the CRDS
+reference `jwst_niriss_pastasoss_0003.asdf`. Its order-2 wavelength solution
+changes which detector columns lie within the 0.60–1.05 micron extraction
+interval compared with the stand-alone PASTASOSS package.
+
 Run the suite with:
 
 ```bash

@@ -3,8 +3,8 @@ import astraeus.xarrayIO as xrio
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table
+from jwst.extract_1d.soss_extract import pastasoss
 from jwst.photom.photom import find_row
-from pastasoss import get_soss_traces, rotate
 
 from ..lib.util import read_time, supersample
 from . import nircam, optspex, plots_s3, sigrej
@@ -135,15 +135,6 @@ def get_wave(data, meta, log):
     # Report actual pupil position
     pwcpos = data.attrs['mhdr']['PWCPOS']
 
-    # Keep track of base pupil position for custom offset correction
-    base_pwcpos = 245.76
-
-    # Keep track of PASTASOSS trace rotation pivots
-    pivots = [
-        [1887, 54],
-        [1667, 200]
-    ]
-
     log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
                  mute=(not meta.verbose))
 
@@ -162,77 +153,74 @@ def get_wave(data, meta, log):
                        np.zeros((data.x.shape[0], norders))*np.nan)
     data['wave_1d'].attrs['wave_units'] = 'microns'
 
-    for order in meta.all_orders:
-        # Get trace for the given order and pupil position
-        if trace_xoffset > 0:
-            # Need to translate trace position before rotating
-            trace = get_soss_traces(pwcpos=base_pwcpos,
-                                    order=str(order), interp=True)
-        else:
-            trace = get_soss_traces(pwcpos=pwcpos,
-                                    order=str(order), interp=True)
-        if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96' and \
-                meta.trace_yoffset is None:
-            # PASTASOSS doesn't account for different substrip starting rows;
-            # therefore, set trace offset to best guess (-12 pixels).
-            meta.trace_yoffset = -12
-        if meta.trace_yoffset is not None:
-            # Shift trace
-            trace.y += meta.trace_yoffset
+    subarray = data.attrs['mhdr']['SUBARRAY']
+    # Fetch one CRDS reference for all orders and close it after use.
+    with pastasoss.retrieve_default_pastasoss_model() as refmodel:
+        base_pwcpos = refmodel.meta.pwcpos_cmd
+        reference_traces = {trace.spectral_order: trace
+                            for trace in refmodel.traces}
+        for order in meta.all_orders:
+            if order not in reference_traces:
+                raise ValueError(
+                    f'Order {order} is not available in the PASTASOSS '
+                    'reference file.')
 
-            # Shift pivot for potential x offset operations
-            pivots[order-1][1] += meta.trace_yoffset
+            # Validate the observed pupil position, even when an X offset
+            # requires starting the correction from the nominal trace.
+            _, trace_x, trace_y, wavelength = pastasoss.get_soss_traces(
+                pwcpos=pwcpos, order=order, subarray=subarray,
+                refmodel=refmodel)
+            if trace_xoffset > 0:
+                _, trace_x, trace_y, wavelength = pastasoss.get_soss_traces(
+                    pwcpos=base_pwcpos, order=order, subarray=subarray,
+                    refmodel=refmodel)
 
-            subarray = data.attrs['mhdr']['SUBARRAY']
-            log.writelog(f"  Shifting trace by {meta.trace_yoffset} pixels "
-                         f"for {subarray} and Order {order}.",
-                         mute=(not meta.verbose))
-        if trace_xoffset > 0:
-            # Shift trace before pupil wheel rotation correction
-            # starting from nominal pupil wheel position
-            base_x = trace.x
-            base_y = trace.y
-            base_wav = trace.wavelength
+            if meta.trace_yoffset is not None:
+                # JWST already handles the SUBSTRIP96 offset. Apply only
+                # the additional correction requested by the user.
+                trace_y += meta.trace_yoffset
+                log.writelog(
+                    f"  Shifting trace by {meta.trace_yoffset} pixels "
+                    f"for {subarray} and Order {order}.",
+                    mute=(not meta.verbose))
 
-            # Get pivot in wavelength space
-            pivot = pivots[order-1]
-            pivot_wav = np.copy(pivot).astype(float)
-            ind = np.argmin(np.abs(base_x - pivot[0]))
-            pivot_wav[0] = base_wav[ind]
+            if trace_xoffset > 0:
+                reference_trace = reference_traces[order]
+                pivot = np.array([reference_trace.pivot_x,
+                                  reference_trace.pivot_y], dtype=float)
+                if meta.trace_yoffset is not None:
+                    pivot[1] += meta.trace_yoffset
+                ind = np.argmin(np.abs(trace_x - pivot[0]))
+                pivot[0] = wavelength[ind]
 
-            # If using a custom X-direction offset,
-            # shift X dimension by xoffset pixels
-            shift_x = base_x - trace_xoffset
+                shift_x = trace_x - trace_xoffset
 
-            # Extrapolate trace to longer wavelengths
-            # by fitting an 8th order polynomial
-            fitdeg = 8
+                # Extrapolate the trace and wavelength to the offset
+                # columns, retaining the existing 8th-order correction.
+                fitdeg = 8
+                y_interp = np.polynomial.polynomial.Polynomial.fit(
+                    trace_x, trace_y, fitdeg,
+                    domain=[shift_x[0], shift_x[-1]])(shift_x)
+                wav_interp = np.polynomial.polynomial.Polynomial.fit(
+                    trace_x, wavelength, fitdeg,
+                    domain=[shift_x[0], shift_x[-1]])(shift_x)
 
-            y_interp = np.polynomial.polynomial.Polynomial.fit(
-                base_x, base_y, fitdeg,
-                domain=[shift_x[0], shift_x[-1]])(shift_x)
+                # JWST's rotation helper interpolates onto the original
+                # wavelengths and may trim points above the detector.
+                wavelength, trace_y = pastasoss._rotate(
+                    wav_interp, y_interp, pwcpos - base_pwcpos, pivot)
+                trace_x = trace_x[np.isin(wav_interp, wavelength)]
 
-            wav_interp = np.polynomial.polynomial.Polynomial.fit(
-                base_x, base_wav, fitdeg,
-                domain=[shift_x[0], shift_x[-1]])(shift_x)
+                log.writelog(
+                    f"  Shifting trace by {trace_xoffset} pixels "
+                    f"in X direction for {subarray} and Order {order}.",
+                    mute=(not meta.verbose))
 
-            # Rotate trace only after translating to new offset wavelengths
-            rotate_wav, rotate_y = rotate(wav_interp, y_interp,
-                                          pwcpos - base_pwcpos, pivot_wav)
-
-            trace.y = rotate_y
-            trace.wavelength = rotate_wav
-
-            subarray = data.attrs['mhdr']['SUBARRAY']
-            log.writelog(f"  Shifting trace by {trace_xoffset} pixels "
-                         f"in X direction for {subarray} and Order {order}.",
-                         mute=(not meta.verbose))
-
-        # Assign trace and wavelength for given order
-        ind1 = np.nonzero(np.in1d(trace.x, data.x.values))[0]
-        ind2 = np.nonzero(np.in1d(data.x.values, trace.x))[0]
-        data['trace'].sel(order=order)[ind2] = trace.y[ind1]
-        data['wave_1d'].sel(order=order)[ind2] = trace.wavelength[ind1]
+            # Assign trace and wavelength for the given order.
+            ind1 = np.nonzero(np.isin(trace_x, data.x.values))[0]
+            ind2 = np.nonzero(np.isin(data.x.values, trace_x))[0]
+            data['trace'].sel(order=order)[ind2] = trace_y[ind1]
+            data['wave_1d'].sel(order=order)[ind2] = wavelength[ind1]
 
     return data
 
