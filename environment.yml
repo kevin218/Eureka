@@ -31,6 +31,7 @@ dependencies:
   - photutils
   - pip
   - pre-commit
+  - psutil
   - pytest <8.0
   - pytest-cov
   - pytest-doctestplus
