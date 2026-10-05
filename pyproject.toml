@@ -64,6 +64,43 @@ namespaces = false
 [tool.setuptools_scm]
 write_to = "src/eureka/version.py"
 
+[tool.ruff]
+line-length = 79
+target-version = "py311"
+preview = true
+force-exclude = true
+extend-exclude = [
+    "docs",
+    "ecfs",
+    "run_eureka*.py",
+]
+
+[tool.ruff.lint]
+# Match the rule families enforced by the former Flake8 configuration.
+select = ["E1", "E2", "E3", "E4", "E5", "E7", "W6", "F"]
+ignore = ["E226", "E722"]
+
+[tool.ruff.lint.per-file-ignores]
+# Package initializers intentionally re-export public names.
+"**/__init__.py" = ["F401"]
+"src/eureka/__init__.py" = ["F401", "E402"]
+# Plot modules suppress a warning before importing plotting dependencies.
+"src/eureka/**/plots*.py" = ["E402"]
+# Variables populated by exec are not visible to static analysis.
+"**/manageevent.py" = ["F841"]
+# Demo launchers intentionally modify sys.path before importing Eureka!.
+"demos/**/run_*.py" = ["E402"]
+# Optional dependencies are guarded during test collection.
+"**/test_*.py" = ["E402"]
+"**/test_WFC3.py" = ["F401", "E402"]
+"**/test_MIRI.py" = ["F401", "E402"]
+# NumPy remains available to users evaluating configuration values.
+"**/readECF.py" = ["F401"]
+# Aligned values document their meaning.
+"**/hst_scan.py" = ["E221", "E241"]
+# BibTeX entries cannot be wrapped without changing their content.
+"src/eureka/lib/citations.py" = ["E501"]
+
 [tool.isort]
 line_length = 79
 known_first_party = ["eureka"]
@@ -92,8 +129,8 @@ dependencies = [
     "numpy>=1.25,<3.0", # Current tested py311 floor is NumPy >=1.25
     "pandas",
     "photutils",
-    "requests",
     "pyyaml",
+    "requests",
     "scipy>=1.12.0", # Lower limit needed for stcal.ramp_fitting.likely_fit
     "shapely",
     "tqdm",
@@ -106,8 +143,8 @@ dependencies = [
     { pip = "exotic-ld @ git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8" }, # Pin needed for pkg_resources deprecation
     { pip = "fleck" },
     { pip = "george" }, # Needed for GP
+    { pip = "pastasoss>=1.2.4" }, # Lower limit needed for numpy>=2
     { pip = "planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main" }, # PyPI build currently only supports for python 3.8 -- 3.10
-    { pip = "pastasoss @ git+https://github.com/taylorbell57/pastasoss@0512d0f" }, # GitHub pin needed to allow numpy>=2
     { pip = "setuptools_scm>=6.2" }, # Needed when importing from a source tree without generated version.py
     { pip = "stdatamodels>=5.0.2" },
     { pip = "svo_filters>=0.5.3" }, # Lower limit needed for pkg_resources deprecation
@@ -131,10 +168,10 @@ docs = [
     { pip = "sphinx-rtd-theme>=1.3.0" }, # Style updates and Sphinx compatibility
 ]
 test = [
-    "flake8",
     "pytest<8.0", # Upper limit due to asdf+pytest incompatibility
     "pytest-cov",
     "pytest-doctestplus",
+    "ruff",
 ]
 jupyter = [
     "ipykernel>=6.0.0", # Needed for modern Jupyter compatibility
