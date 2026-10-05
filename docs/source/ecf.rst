@@ -571,7 +571,14 @@ Only used for NIRISS. List of spectral orders to be reduced.
 
 trace_yoffset
 '''''''''''''
-Only used for NIRISS. PASTASOSS v1.2 doesn't correctly compute the trace position for SUBSTRIP96 mode; therefore, we have to apply a manual offset in the cross-dispersion direction.  The default is -12 pixels for SUBSTRIP96 and should be good to within a pixel or two.  If you see in Fig. 3304 that the spectrum is not quite centered, you should adjust the ``trace_yoffset`` accordingly.
+Only used for NIRISS. An optional additional shift in the cross-dispersion
+direction, in pixels. The default is None (no additional shift). Eureka! uses
+the PASTASOSS implementation in ``jwst`` with a reference file retrieved from
+CRDS, which already accounts for SUBSTRIP96 if needed. If you see in Fig. 3304
+that the spectrum is not quite centered, adjust ``trace_yoffset`` accordingly.
+Existing SUBSTRIP96 configurations that specified -12 pixels to compensate for
+the stand-alone PASTASOSS implementation should remove that setting or retune
+it as an additional correction to the JWST trace.
 
 src_ypos
 ''''''''

@@ -143,7 +143,6 @@ dependencies = [
     { pip = "exotic-ld @ git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8" }, # Pin needed for pkg_resources deprecation
     { pip = "fleck" },
     { pip = "george" }, # Needed for GP
-    { pip = "pastasoss>=1.2.4" }, # Lower limit needed for numpy>=2
     { pip = "planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main" }, # PyPI build currently only supports for python 3.8 -- 3.10
     { pip = "setuptools_scm>=6.2" }, # Needed when importing from a source tree without generated version.py
     { pip = "stdatamodels>=5.0.2" },
