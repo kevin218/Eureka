@@ -8,40 +8,39 @@
 # is supported.
 #
 # Notes:
-# - The current tested py311 floor includes NumPy >=1.26 and currently resolves
-#   below NumPy 2.
-# - image_registration stays pinned via the hst extra's current Git commit in
-#   pyproject.toml rather than being constrained to a published release here.
+# - JWST 3.0.0 requires NumPy >=2; this recipe uses NumPy 2.0.2.
+# - fleck uses the NumPy-compatible VCS dependency in pyproject.toml rather than
+#   a conflicting published-release constraint here.
+# - image_registration follows the hst extra's requirement in pyproject.toml.
 
-astropy==6.1.0
+astropy==7.2.0
 dynesty==2.1.4
 emcee==3.1.6
 h5py==3.12.1
 lmfit==1.3.1
 matplotlib==3.9.0
-numpy==1.26.4
+numpy==2.0.2
 pandas==2.2.3
 pastasoss==1.2.4
-photutils==2.1.0
+photutils==3.0.0
 requests==2.32.2
-scipy==1.14.1
+scipy==1.15.3
 shapely==2.1.1
 tqdm==4.66.3
 
 astraeus-io==1.0
-batman-package==2.5.2
+batman-package==2.5.3
 catwoman==1.0.16
 celerite2==0.3.2
-crds==12.0.3
-fleck==1.1.3
+crds==12.0.4
 george==0.4.2
 mc3==3.2.1
 setuptools-scm==8.3.0
-stdatamodels==5.0.2
+stdatamodels==6.0.0
 svo_filters==0.5.3
 
-jwst==2.0.1
-stcal==1.18.0
+jwst==3.0.0
+stcal==1.19.1
 asdf-astropy==0.10.1
 
 pytest==7.4.4
