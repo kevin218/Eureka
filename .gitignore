@@ -132,9 +132,10 @@ dmypy.json
 *.DS_Store
 *.swp
 
-# ecf files except for the one tracked for regression testing S5
+# ecf files except for the ones tracked for Stage 5 regression testing
 *.ecf
 !tests/NIRCam_ecfs/S5_NIRCam_regression.ecf
+!tests/MIRI_ecfs/POET/S5_MIRI_regression.ecf
 
 # epf files
 *.epf

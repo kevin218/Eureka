@@ -36,6 +36,12 @@ def run_s5(tmp_path, pytestconfig):
         # Copy the original reference files
         copy2(reference_dir / "SpecData.h5", specdata_path)
         copy2(reference_dir / "LCData.h5", lcdata_path)
+        if case.initial_fitparams_dir is not None:
+            seed_dir = tmp_path / case.initial_fitparams_dir
+            seed_dir.mkdir()
+            copy2(REFERENCE_ROOT / case.name / "initial_fitparams" /
+                  case.fitparams_filename,
+                  seed_dir / case.fitparams_filename)
 
         # ``loadevent`` knows how to reconstruct a metadata object from a
         # SpecData file's xarray attributes. Those inherited attributes include

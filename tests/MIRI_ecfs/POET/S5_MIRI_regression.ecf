@@ -1,0 +1,43 @@
+# Eureka! Control File for the Stage 5 MIRI regression test
+
+ncpu            1
+
+allapers        False
+rescale_err     False
+fit_par         ./s5_POET.epf
+verbose         True
+fit_method      [lsq]
+run_myfuncs     [poet_tr,poet_ecl,poet_pc,expramp,polynomial]
+
+manual_clip     None
+
+use_generate_ld  None
+ld_file          None
+ld_file_white    None
+
+# Use the approved MIRI LSQ result as a fixed regression-test starting point.
+# The Stage 5 fixture copies this directory beneath its temporary topdir.
+old_fitparams   miri-lsq-initial-fit
+
+# Powell needs more than its default 8,000 function evaluations for this
+# coupled phase-curve, ramp, baseline, and noise fit.
+lsq_method      'Powell'
+lsq_tol         1e-7
+lsq_maxiter     500
+
+run_nlive       64
+run_bound       'multi'
+run_sample      'auto'
+run_tol         10
+
+interp          False
+
+isplots_S5      5
+testing_S5      False
+testing_model   False
+hide_plots      True
+
+topdir          ../tests
+
+inputdir        /data/JWST-Sim/MIRI/Stage4/
+outputdir       /data/JWST-Sim/MIRI/Stage5/
