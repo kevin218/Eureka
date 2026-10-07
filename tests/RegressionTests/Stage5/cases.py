@@ -17,6 +17,7 @@ class S5RegressionCase:
     table_filename: str
     free_parameters: frozenset[str]
     component_columns: tuple[str, ...]
+    initial_fitparams_dir: str | None = None
     parameter_atol: dict[str, float] = field(default_factory=dict)
     table_atol: dict[str, float] = field(default_factory=dict)
 
@@ -83,7 +84,7 @@ CASES = (
         name="miri_spectroscopy",
         eventlabel="MIRI",
         ecf_dir="tests/MIRI_ecfs/POET",
-        ecf_filename="S5_MIRI.ecf",
+        ecf_filename="S5_MIRI_regression.ecf",
         fitparams_filename="S5_lsq_fitparams_ch0.csv",
         table_filename="S5_MIRI_ap4_bg10_Table_Save_ch0.txt",
         free_parameters=frozenset((
@@ -93,6 +94,7 @@ CASES = (
         component_columns=(
             "polynomial", "exp. ramp", "astrophysical model",
         ),
+        initial_fitparams_dir="miri-lsq-initial-fit",
         # Powell converges slightly short of these bounded phase-curve
         # parameters on some numerical stacks. Both remain near their EPF
         # upper bounds of 1 and 20 degrees, respectively.
