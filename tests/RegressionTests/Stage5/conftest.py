@@ -78,9 +78,8 @@ def run_s5(tmp_path, pytestconfig):
         s4_meta.folder = str(repo_root / case.ecf_dir)
         Path(s4_meta.s4_logname).touch()
 
-        # Read the case's real S5 ECF, but override only test-environment
-        # concerns: all paths are under pytest's workspace and plotting is off
-        # because figures are intentionally outside this regression contract.
+        # Load the case's normal S5 ECF. Then redirect file paths to pytest's
+        # temporary workspace and disable plots, without changing the fitting setup.
         input_meta = S5MetaClass(folder=str(repo_root / case.ecf_dir),
                                  file=case.ecf_filename)
         input_meta.topdir = str(tmp_path)
