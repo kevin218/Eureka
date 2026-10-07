@@ -1,6 +1,8 @@
 """Definitions of the approved Stage 5 regression cases."""
 from dataclasses import dataclass, field
 
+# Define standard columns expected in every S5
+# Table_Save file
 TABLE_CORE_COLUMNS = ("time", "wavelength", "bin_width", "lcdata", "lcerr")
 TABLE_FINAL_COLUMNS = ("model", "residuals")
 
@@ -18,7 +20,9 @@ class S5RegressionCase:
     free_parameters: frozenset[str]
     component_columns: tuple[str, ...]
     initial_fitparams_dir: str | None = None
+    # absolute tolerances for parameters in fitted parameter csv
     parameter_atol: dict[str, float] = field(default_factory=dict)
+    # absolute tolerance for named columns in the Table_Save file
     table_atol: dict[str, float] = field(default_factory=dict)
 
     @property
@@ -45,7 +49,8 @@ CASES = (
         component_columns=("polynomial", "GP", "astrophysical model"),
         parameter_atol={"t0": 1e-6, "inc": 1e-6},
         # GP predictions approach zero, where relative error is not a useful
-        # measure of cross-platform floating-point roundoff.
+        # measure of cross-platform floating-point roundoff. So use absolute
+        # error in this case.
         table_atol={"GP": 1e-14},
     ),
     S5RegressionCase(
@@ -95,9 +100,8 @@ CASES = (
             "polynomial", "exp. ramp", "astrophysical model",
         ),
         initial_fitparams_dir="miri-lsq-initial-fit",
-        # Powell converges slightly short of these bounded phase-curve
-        # parameters on some numerical stacks. Both remain near their EPF
-        # upper bounds of 1 and 20 degrees, respectively.
-        parameter_atol={"cos1_amp": 2e-5, "cos1_off": 3e-3},
+        # The approved cosine amplitude is effectively zero, so relative
+        # tolerance alone is not meaningful for floating-point residue.
+        parameter_atol={"cos1_amp": 1e-8},
     ),
 )

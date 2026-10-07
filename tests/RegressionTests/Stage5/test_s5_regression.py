@@ -10,8 +10,8 @@ from .cases import CASES
 from .conftest import REFERENCE_ROOT
 
 FITPARAM_RTOL = 1e-5
-TABLE_AXIS_RTOL = 1e-9
-TABLE_VALUE_RTOL = 1e-4
+TABLE_AXIS_RTOL = 1e-9 # used for things like time, wavelength, etc.
+TABLE_VALUE_RTOL = 1e-4 # used for things like lcdata, lcerr, etc.
 
 
 def _reference_paths(case):

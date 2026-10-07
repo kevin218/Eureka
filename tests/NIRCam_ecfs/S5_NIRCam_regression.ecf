@@ -1,4 +1,4 @@
-# Eureka! Control File for the deterministic NIRCam Stage 5 regression case.
+# Eureka! Control File for the NIRCam Stage 5 regression test.
 #
 # This preserves the standard NIRCam spectroscopy model configuration while
 # running only LSQ. The regression fixture supplies isolated input/output

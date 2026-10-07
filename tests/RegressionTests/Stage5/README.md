@@ -24,7 +24,7 @@ The test checks expected output tags/files and schemas exactly. It compares
 parameter values by name, uses per-parameter absolute tolerances where scale
 requires them, compares time/wavelength axes near-exactly, and compares the
 remaining science values with relative tolerance. Figures, sampler products,
-and transient fitting objects are not regression targets.
+and transient fitting objects are not tested.
 
 Run the suite with:
 
