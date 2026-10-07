@@ -79,7 +79,8 @@ def run_s5(tmp_path, pytestconfig):
         Path(s4_meta.s4_logname).touch()
 
         # Load the case's normal S5 ECF. Then redirect file paths to pytest's
-        # temporary workspace and disable plots, without changing the fitting setup.
+        # temporary workspace and disable plots, without changing the fitting
+        # setup.
         input_meta = S5MetaClass(folder=str(repo_root / case.ecf_dir),
                                  file=case.ecf_filename)
         input_meta.topdir = str(tmp_path)
