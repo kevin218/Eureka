@@ -109,9 +109,9 @@ The `jwst` extra requires NumPy >=2 through JWST 3.0.0, so the current tested
 oldest-practical recipe uses NumPy 2.0.2. The core metadata floor does not imply
 that the same NumPy version can be used with every optional dependency group.
 
-NumPy is currently constrained to <2.4 because fleck still relies on
-array-to-scalar conversion removed in NumPy 2.4. This cap should be revisited
-once fleck supports that change.
+NumPy has no package-wide upper bound. The maintained fleck fork extracts
+scalar spot coordinates explicitly and supports NumPy 2.4 in both transit
+modes and plotting.
 
 ## CI expectations
 

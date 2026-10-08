@@ -126,7 +126,7 @@ dependencies = [
     "h5py>=3.7.0", # Lower limit needed to avoid issues with JWST I/O routines
     "lmfit",
     "matplotlib>=3.6", # Lower limit needed for set_layout_engine()
-    "numpy>=1.25,<2.4", # fleck relies on array-to-scalar conversion removed in 2.4
+    "numpy>=1.25",
     "pandas",
     "photutils",
     "pyyaml",
@@ -141,7 +141,7 @@ dependencies = [
     { pip = "celerite2" }, # Needed for GP
     { pip = "crds" },
     { pip = "exotic-ld @ git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8" }, # Pin needed for pkg_resources deprecation
-    { pip = "fleck @ git+https://github.com/taylorbell57/fleck.git@numpy_v2" }, # Pin needed to allow numpy>=2
+    { pip = "fleck @ git+https://github.com/taylorbell57/fleck.git@numpy_v2" }, # NumPy 2 compatibility fixes
     { pip = "george" }, # Needed for GP
     { pip = "pastasoss>=1.2.4" }, # Lower limit needed for numpy>=2
     { pip = "planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main" }, # PyPI build currently only supports for python 3.8 -- 3.10
