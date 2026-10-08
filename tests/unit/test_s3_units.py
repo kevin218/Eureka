@@ -11,8 +11,8 @@ os.environ.setdefault('MPLCONFIGDIR', '/tmp')
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..', 'src')))
 from eureka.lib import util
-from eureka.S3_data_reduction import (background, bright2flux, optspex, sigrej,
-                                      source_pos, straighten)
+from eureka.S3_data_reduction import (background, bright2flux, nircam, optspex,
+                                      sigrej, source_pos, straighten)
 
 
 class _Log:
@@ -155,6 +155,33 @@ def test_sigrej_default_mask_flags_nonfinite_values():
     np.testing.assert_array_equal(mask, [[False, False],
                                          [True, False],
                                          [False, True]])
+
+
+def test_nircam_flag_ff_preserves_mask_metadata_and_flags_temporal_outlier():
+    """Full-frame rejection must keep the labeled mask usable by Stage 3."""
+    flux = np.ones((8, 2, 2))
+    flux[-1, 0, 0] = 100
+    mask = np.zeros_like(flux, dtype=bool)
+    mask[0, 1, 1] = True
+    data = xr.Dataset(
+        {'flux': (('time', 'y', 'x'), flux),
+         'mask': (('time', 'y', 'x'), mask.copy(), {'purpose': 'bad pixels'})},
+        coords={'time': np.arange(8), 'y': [10, 11], 'x': [20, 21]},
+    )
+    original_mask = data.mask.copy(deep=True)
+    meta = SimpleNamespace(bg_thresh=[2], verbose=False)
+    log = _Log()
+
+    result = nircam.flag_ff(data, meta, log)
+
+    expected_mask = mask.copy()
+    expected_mask[-1, 0, 0] = True
+    np.testing.assert_array_equal(result.mask.values, expected_mask)
+    assert result.mask.dims == original_mask.dims
+    assert result.mask.attrs == original_mask.attrs
+    xr.testing.assert_identical(result.mask.coords, original_mask.coords)
+    np.testing.assert_array_equal(result.flux.values, flux)
+    assert log.messages[-1] == '    Flagged 3.125000% of pixels as bad.'
 
 
 def test_fitbg_recovers_linear_background_while_ignoring_source_region():
