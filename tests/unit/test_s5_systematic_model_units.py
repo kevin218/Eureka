@@ -8,8 +8,9 @@ import pytest
 os.environ.setdefault('MPLCONFIGDIR', '/tmp')
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..', 'src')))
-from eureka.S5_lightcurve_fitting import models
 from tests.unit.s5_model_helpers import _params
+
+from eureka.S5_lightcurve_fitting import models
 
 
 def test_exp_ramp_model_matches_double_exponential_formula():

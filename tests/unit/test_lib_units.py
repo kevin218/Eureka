@@ -9,13 +9,11 @@ from astropy.utils.exceptions import AstropyUserWarning
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..', 'src')))
-from eureka.S5_lightcurve_fitting import models
-from eureka.lib import (
-    clipping, gaussian, imageedit, interp2d, meanerr, naninterp1d, readECF,
-    smooth, sort_nicely, util,
-)
+from eureka.lib import (clipping, gaussian, imageedit, interp2d, meanerr,
+                        naninterp1d, readECF, smooth, sort_nicely, util)
 from eureka.lib.readEPF import Parameters
 from eureka.lib.split_channels import get_trim, split
+from eureka.S5_lightcurve_fitting import models
 
 
 class _Log:
@@ -151,11 +149,12 @@ def test_normalize_spectrum_preserves_masks_and_scales_errors():
                                   expected_norm.mask)
 
 
-def test_get_mad_1d_uses_median_absolute_first_difference_in_ppm():
-    """MAD estimates use first differences and return ppm-scale values."""
+def test_get_maed_1d_uses_median_absolute_first_difference_in_ppm():
+    """MAED estimates use first differences and return ppm-scale values."""
     data = np.ma.array([1.0, 1.1, 1.4, 1.45, 1.95])
 
-    assert util.get_mad_1d(data, ind_min=1, ind_max=5) == pytest.approx(300000)
+    assert util.get_maed_1d(data, ind_min=1, ind_max=5) == pytest.approx(
+        300000)
 
 
 def test_smooth_flat_window_matches_manual_convolution_result_length():

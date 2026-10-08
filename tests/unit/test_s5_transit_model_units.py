@@ -9,13 +9,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..', 'src')))
 from types import SimpleNamespace
 
+from tests.unit.s5_model_helpers import (_params, _transit_model,
+                                         _transit_params)
+
 from eureka.S5_lightcurve_fitting import models
-from eureka.S5_lightcurve_fitting.models.AstroModel import (
-    PlanetParams, get_ecl_midpt,
-)
-from tests.unit.s5_model_helpers import (
-    _params, _transit_model, _transit_params,
-)
+from eureka.S5_lightcurve_fitting.models.AstroModel import (PlanetParams,
+                                                            get_ecl_midpt)
 
 
 def test_batman_transit_model_zero_radius_is_unity():

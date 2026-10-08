@@ -10,10 +10,9 @@ from scipy.constants import arcsec
 os.environ.setdefault('MPLCONFIGDIR', '/tmp')
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..', 'src')))
-from eureka.S3_data_reduction import (
-    background, bright2flux, optspex, sigrej, source_pos, straighten,
-)
 from eureka.lib import util
+from eureka.S3_data_reduction import (background, bright2flux, optspex, sigrej,
+                                      source_pos, straighten)
 
 
 class _Log:

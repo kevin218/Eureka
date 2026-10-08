@@ -7,14 +7,12 @@ import pytest
 os.environ.setdefault('MPLCONFIGDIR', '/tmp')
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..', 'src')))
+from tests.unit.s5_model_helpers import _ConstantModel, _FakeGPModel, _params
+
 from eureka.S5_lightcurve_fitting import models
 from eureka.S5_lightcurve_fitting.models.AstroModel import (
-    PlanetParams, correct_light_travel_time,
-)
+    PlanetParams, correct_light_travel_time)
 from eureka.S5_lightcurve_fitting.models.KeplerOrbit import KeplerOrbit
-from tests.unit.s5_model_helpers import (
-    _ConstantModel, _FakeGPModel, _params,
-)
 
 
 def test_model_validates_channel_metadata_lengths():

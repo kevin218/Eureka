@@ -72,7 +72,7 @@ def test_spec1d_measures_integer_spectral_drifts_and_sign_convention():
 
 
 def test_get_outliers_flags_noisy_spectral_column_and_returns_plot_payload():
-    """Verify MAD-based S4 column flagging on a synthetic noisy light curve."""
+    """Verify MAED-based S4 column flagging on a synthetic noisy curve."""
     nints = 20
     nwave = 15
     wave = np.linspace(1.0, 2.0, nwave)
@@ -92,19 +92,19 @@ def test_get_outliers_flags_noisy_spectral_column_and_returns_plot_payload():
         wave_min=wave[0],
         wave_max=wave[-1],
         inst='nircam',
-        mad_box_width=5,
-        mad_sigma=3,
+        maed_box_width=5,
+        maed_sigma=3,
         maxiters=3,
     )
 
     flagged, pp = outliers.get_outliers(meta, spec)
 
     np.testing.assert_array_equal(flagged, [noisy_col])
-    assert pp['mad'][noisy_col] > 1e5
-    assert pp['x_mad_outliers'].tolist() == [noisy_col]
+    assert pp['maed'][noisy_col] > 1e5
+    assert pp['x_maed_outliers'].tolist() == [noisy_col]
     assert set(pp) == {
-        'x', 'x_mask', 'x_mad_outliers', 'x_dev_outliers', 'mad', 'dev',
-        'masked_mad', 'masked_dev', 'smoothed_mad', 'residual_mad',
+        'x', 'x_mask', 'x_maed_outliers', 'x_dev_outliers', 'maed', 'dev',
+        'masked_maed', 'masked_dev', 'smoothed_maed', 'residual_maed',
         'smoothed_dev', 'residual_dev'
     }
 

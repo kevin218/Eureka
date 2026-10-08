@@ -1,7 +1,7 @@
 import numpy as np
 
-from eureka.S5_lightcurve_fitting import models
 from eureka.lib.readEPF import Parameters
+from eureka.S5_lightcurve_fitting import models
 
 
 def _params(**values):

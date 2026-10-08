@@ -10,10 +10,10 @@ from astropy.table import Table as AstropyTable
 os.environ.setdefault('MPLCONFIGDIR', '/tmp')
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..', 'src')))
-from eureka.S5_lightcurve_fitting import fitters, likelihood, s5_fit, utils
-from eureka.S5_lightcurve_fitting.lightcurve import LightCurve
-from eureka.S5_lightcurve_fitting import models
 from eureka.lib.readEPF import Parameters
+from eureka.S5_lightcurve_fitting import (fitters, likelihood, models, s5_fit,
+                                          utils)
+from eureka.S5_lightcurve_fitting.lightcurve import LightCurve
 
 
 class _Log:
