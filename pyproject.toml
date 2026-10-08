@@ -126,7 +126,7 @@ dependencies = [
     "h5py>=3.7.0", # Lower limit needed to avoid issues with JWST I/O routines
     "lmfit",
     "matplotlib>=3.6", # Lower limit needed for set_layout_engine()
-    "numpy>=1.25,<3.0", # Current tested py311 floor is NumPy >=1.25
+    "numpy>=1.25,<2.4", # fleck relies on array-to-scalar conversion removed in 2.4
     "pandas",
     "photutils",
     "pyyaml",
@@ -141,7 +141,7 @@ dependencies = [
     { pip = "celerite2" }, # Needed for GP
     { pip = "crds" },
     { pip = "exotic-ld @ git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8" }, # Pin needed for pkg_resources deprecation
-    { pip = "fleck" },
+    { pip = "fleck @ git+https://github.com/taylorbell57/fleck.git@numpy_v2" }, # Pin needed to allow numpy>=2
     { pip = "george" }, # Needed for GP
     { pip = "pastasoss>=1.2.4" }, # Lower limit needed for numpy>=2
     { pip = "planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main" }, # PyPI build currently only supports for python 3.8 -- 3.10
@@ -153,8 +153,8 @@ dependencies = [
 
 [tool.unidep.optional_dependencies]
 jwst = [
-    { pip = "jwst==2.0.1" }, # Pinned due to CRDS/stcal compatibility requirements
-    { pip = "stcal>=1.18.0" }, # Lower limit implied by jwst 2.0.1
+    { pip = "jwst==3.0.0" }, # Pinned due to CRDS/stcal compatibility requirements
+    { pip = "stcal>=1.19.1" }, # Lower limit implied by jwst 3.0.0
 ]
 hst = [
     { pip = "image_registration>=0.2.10" }, # Lower bound needed to avoid np.float issue

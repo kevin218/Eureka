@@ -168,12 +168,12 @@ class BatmanEclipseModel(Model):
         ltt_par3 = np.array(['ecc', 'w'])
         ltt_par4 = np.array(['ecosw', 'esinw'])
         # Check if able to do ltt correction
-        ltt_params_present = (np.all(np.in1d(ltt_params, self.paramtitles))
+        ltt_params_present = (np.all(np.isin(ltt_params, self.paramtitles))
                               and 'Rs' in self.parameters.dict.keys()
-                              and np.any(np.in1d(ltt_par2, self.paramtitles))
-                              and np.any([np.all(np.in1d(ltt_par3,
+                              and np.any(np.isin(ltt_par2, self.paramtitles))
+                              and np.any([np.all(np.isin(ltt_par3,
                                                          self.paramtitles)),
-                                          np.all(np.in1d(ltt_par4,
+                                          np.all(np.isin(ltt_par4,
                                                          self.paramtitles))]))
         if self.compute_ltt and not ltt_params_present:
             missing_params = ltt_params[~np.any(ltt_params.reshape(-1, 1) ==

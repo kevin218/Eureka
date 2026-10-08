@@ -229,8 +229,8 @@ def get_wave(data, meta, log):
                          mute=(not meta.verbose))
 
         # Assign trace and wavelength for given order
-        ind1 = np.nonzero(np.in1d(trace.x, data.x.values))[0]
-        ind2 = np.nonzero(np.in1d(data.x.values, trace.x))[0]
+        ind1 = np.nonzero(np.isin(trace.x, data.x.values))[0]
+        ind2 = np.nonzero(np.isin(data.x.values, trace.x))[0]
         data['trace'].sel(order=order)[ind2] = trace.y[ind1]
         data['wave_1d'].sel(order=order)[ind2] = trace.wavelength[ind1]
 
