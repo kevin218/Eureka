@@ -1,0 +1,36 @@
+# Eureka! Control File for the NIRCam Stage 5 regression test.
+#
+# This preserves the standard NIRCam spectroscopy model configuration while
+# running only LSQ. The regression fixture supplies isolated input/output
+# directories and disables plotting at runtime.
+
+ncpu            1
+allapers        True
+fit_par         ./S5_fit_par.epf
+verbose         True
+fit_method      [lsq]
+run_myfuncs     [batman_tr, polynomial, GP]
+
+manual_clip     [[None,1],]
+
+use_generate_ld None
+ld_file         None
+ld_file_white   None
+
+lsq_method      'Powell'
+lsq_tol         1e-6
+
+kernel_inputs   ['time']
+kernel_class    ['Matern32']
+GP_package      'celerite'
+
+interp          True
+
+isplots_S5      5
+testing_S5      False
+testing_model   False
+hide_plots      True
+
+topdir          ../tests
+inputdir        /data/JWST-Sim/NIRCam/Stage4/
+outputdir       /data/JWST-Sim/NIRCam/Stage5/
