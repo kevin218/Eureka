@@ -1,12 +1,11 @@
 """Science-product regression tests for Eureka Stage 5."""
 from pathlib import Path
-from shutil import copy2
 
 import numpy as np
 import pytest
 from astropy.table import Table
 
-from ..regression_helpers import assert_array
+from ..regression_helpers import assert_array, overwrite_file_reference
 from .cases import CASES
 from .conftest import REFERENCE_ROOT
 
@@ -102,14 +101,6 @@ def _assert_table(case, actual_path, reference_path):
                      product=actual_path.name, rtol=rtol)
 
 
-def _overwrite_references(actual_paths, reference_paths):
-    """Replace selected approved native S5 products with current outputs."""
-    for actual_path, reference_path in zip(actual_paths, reference_paths,
-                                           strict=True):
-        reference_path.parent.mkdir(parents=True, exist_ok=True)
-        copy2(actual_path, reference_path)
-
-
 @pytest.mark.parametrize("case", CASES, ids=lambda case: case.name)
 def test_s5_science_products(case, run_s5, overwrite_ref_files):
     """Stage 5 outputs must match their approved linear-LSQ baseline."""
@@ -121,7 +112,10 @@ def test_s5_science_products(case, run_s5, overwrite_ref_files):
     all_references = reference_fitparams + reference_tables
 
     if overwrite_ref_files:
-        _overwrite_references(all_actual, all_references)
+        for actual_path, reference_path in zip(all_actual, all_references,
+                                               strict=True):
+            overwrite_file_reference(case, actual_path.name, actual_path,
+                                     reference_path, stage=5)
         return
 
     for path in all_references:
