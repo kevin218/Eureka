@@ -28,7 +28,7 @@ dependencies:
   - numpy >=1.25,<2.4
   - numpydoc >=1.5
   - pandas
-  - photutils
+  - photutils <3.1
   - pip
   - pre-commit
   - pytest <8.0
