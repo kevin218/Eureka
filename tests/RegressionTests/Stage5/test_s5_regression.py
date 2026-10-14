@@ -6,149 +6,129 @@ import numpy as np
 import pytest
 from astropy.table import Table
 
+from ..regression_helpers import assert_array
 from .cases import CASES
 from .conftest import REFERENCE_ROOT
 
 FITPARAM_RTOL = 1e-5
-TABLE_AXIS_RTOL = 1e-9  # used for things like time, wavelength, etc.
-TABLE_VALUE_RTOL = 1e-4  # used for things like lcdata, lcerr, etc.
+TABLE_AXIS_RTOL = 1e-9
+TABLE_VALUE_RTOL = 1e-4
 
 
 def _reference_paths(case):
-    """Return the path to the golden reference S5 files for one case."""
+    """Return golden fit-parameter and Table_Save paths for one case."""
     reference_dir = REFERENCE_ROOT / case.name
-    return (reference_dir / case.fitparams_filename,
-            reference_dir / case.table_filename)
+    fitparams = tuple(
+        reference_dir / name for name in case.fitparams_filenames
+    )
+    tables = tuple(reference_dir / name for name in case.table_filenames)
+    return fitparams, tables
 
 
 def _actual_paths(case, meta):
-    """Return the path to the files created by this regression test case."""
+    """Return the paths written by one Stage 5 regression run."""
     output_dir = Path(meta.outputdir)
-    return (output_dir / case.fitparams_filename,
-            output_dir / case.table_filename)
+    fitparams = tuple(output_dir / name for name in case.fitparams_filenames)
+    tables = tuple(output_dir / name for name in case.table_filenames)
+    return fitparams, tables
 
 
-def _assert_expected_outputs(case, meta, actual_fitparams, actual_table):
+def _assert_expected_outputs(case, meta, actual_fitparams, actual_tables):
     """Assert that S5 wrote exactly the configured LSQ science products."""
+    for path in actual_fitparams + actual_tables:
+        assert path.is_file(), f"{case.name}: missing output {path.name}"
+
     output_dir = Path(meta.outputdir)
-    assert actual_fitparams.is_file(), (
-        f"{case.name}: missing fitparams output {actual_fitparams.name}"
-    )
-    assert actual_table.is_file(), (
-        f"{case.name}: missing Table_Save output {actual_table.name}"
-    )
     fitparam_outputs = sorted(
         path.name for path in output_dir.glob("S5_*fitparams*.csv")
     )
     table_outputs = sorted(
         path.name for path in output_dir.glob("S5_*Table_Save*.txt")
     )
-    assert fitparam_outputs == [case.fitparams_filename], (
+    assert fitparam_outputs == sorted(case.fitparams_filenames), (
         f"{case.name}: unexpected fitter fitparams outputs"
     )
-    assert table_outputs == [case.table_filename], (
+    assert table_outputs == sorted(case.table_filenames), (
         f"{case.name}: unexpected Table_Save outputs"
     )
 
 
-def _read_fitparams(path):
-    """Read and validate the two-column LSQ fit-parameter CSV schema."""
+def _parameter_values(path):
+    """Return finite LSQ means keyed by their unique parameter names."""
     table = Table.read(path, format="ascii.csv")
     assert table.colnames == ["Parameter", "Mean"], (
         f"{path}: unexpected LSQ fitparams schema {table.colnames}"
     )
-    return table
-
-
-def _parameter_values(table):
-    """Return finite LSQ means keyed by their unique parameter names."""
     names = list(table["Parameter"])
-    assert len(names) == len(set(names)), "fitparams contains duplicate names"
+    assert len(names) == len(set(names)), f"{path}: duplicate parameter names"
     values = np.asarray(table["Mean"], dtype=float)
-    assert np.all(np.isfinite(values)), "fitparams contains non-finite means"
+    assert np.all(np.isfinite(values)), f"{path}: non-finite parameter means"
     return dict(zip(names, values, strict=True))
 
 
 def _assert_fitparams(case, actual_path, reference_path):
-    """Compare one case's fitted parameter names and LSQ means."""
-    actual = _read_fitparams(actual_path)
-    expected = _read_fitparams(reference_path)
-    actual_values = _parameter_values(actual)
-    expected_values = _parameter_values(expected)
+    """Compare one channel's fitted parameter names and LSQ means."""
+    actual_values = _parameter_values(actual_path)
+    expected_values = _parameter_values(reference_path)
     assert set(actual_values) == case.free_parameters, (
         f"{case.name}: fitted parameter names differ from the case manifest"
     )
     assert set(expected_values) == case.free_parameters, (
         f"{case.name}: reference parameter names differ from the case manifest"
     )
-
-    for name in case.free_parameters:
-        np.testing.assert_allclose(
-            actual_values[name], expected_values[name], rtol=FITPARAM_RTOL,
-            atol=case.parameter_atol.get(name, 0),
-            err_msg=f"{case.name}: fitparams.{name}",
-        )
-
-
-def _read_table(path):
-    """Read one native S5 Table_Save ECSV file."""
-    return Table.read(path, format="ascii.ecsv")
+    for name in sorted(case.free_parameters):
+        assert_array(case, f"fitparams.{name}",
+                     np.asarray(actual_values[name]),
+                     np.asarray(expected_values[name]),
+                     product=actual_path.name, rtol=FITPARAM_RTOL)
 
 
 def _assert_table(case, actual_path, reference_path):
-    """Compare one case's saved light-curve table and model components."""
-    actual = _read_table(actual_path)
-    expected = _read_table(reference_path)
+    """Compare one channel's saved light curve and model components."""
+    actual = Table.read(actual_path, format="ascii.ecsv")
+    expected = Table.read(reference_path, format="ascii.ecsv")
     assert tuple(actual.colnames) == case.table_columns, (
         f"{case.name}: unexpected Table_Save schema {actual.colnames}"
     )
     assert tuple(expected.colnames) == case.table_columns, (
         f"{case.name}: reference Table_Save schema {expected.colnames}"
     )
-    assert len(actual) == len(expected), (
-        f"{case.name}: Table_Save row count changed from {len(expected)} "
-        f"to {len(actual)}"
-    )
-
-    axis_columns = {"time", "wavelength", "bin_width"}
     for column in case.table_columns:
-        rtol = TABLE_AXIS_RTOL if column in axis_columns else TABLE_VALUE_RTOL
-        np.testing.assert_allclose(
-            np.asarray(actual[column], dtype=float),
-            np.asarray(expected[column], dtype=float), rtol=rtol,
-            atol=case.table_atol.get(column, 0),
-            equal_nan=True, err_msg=f"{case.name}: Table_Save.{column}",
-        )
+        rtol = TABLE_AXIS_RTOL if column in {
+            "time", "wavelength", "bin_width",
+        } else TABLE_VALUE_RTOL
+        assert_array(case, column, np.asarray(actual[column], dtype=float),
+                     np.asarray(expected[column], dtype=float),
+                     product=actual_path.name, rtol=rtol)
 
 
-def _overwrite_references(case, actual_fitparams, actual_table,
-                          reference_fitparams, reference_table):
-    """Replace one selected case's approved native S5 products."""
-    reference_fitparams.parent.mkdir(parents=True, exist_ok=True)
-    copy2(actual_fitparams, reference_fitparams)
-    copy2(actual_table, reference_table)
-    print(f"Updated Stage 5 references for {case.name}: "
-          f"{reference_fitparams.parent}")
+def _overwrite_references(actual_paths, reference_paths):
+    """Replace selected approved native S5 products with current outputs."""
+    for actual_path, reference_path in zip(actual_paths, reference_paths,
+                                           strict=True):
+        reference_path.parent.mkdir(parents=True, exist_ok=True)
+        copy2(actual_path, reference_path)
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda case: case.name)
 def test_s5_science_products(case, run_s5, overwrite_ref_files):
-    """Stage 5 outputs must match their approved instrument/mode baseline."""
+    """Stage 5 outputs must match their approved linear-LSQ baseline."""
     meta = run_s5(case)
-    actual_fitparams, actual_table = _actual_paths(case, meta)
-    _assert_expected_outputs(case, meta, actual_fitparams, actual_table)
-    reference_fitparams, reference_table = _reference_paths(case)
+    actual_fitparams, actual_tables = _actual_paths(case, meta)
+    _assert_expected_outputs(case, meta, actual_fitparams, actual_tables)
+    reference_fitparams, reference_tables = _reference_paths(case)
+    all_actual = actual_fitparams + actual_tables
+    all_references = reference_fitparams + reference_tables
 
     if overwrite_ref_files:
-        _overwrite_references(case, actual_fitparams, actual_table,
-                              reference_fitparams, reference_table)
+        _overwrite_references(all_actual, all_references)
         return
 
-    assert reference_fitparams.is_file(), (
-        f"{case.name}: missing reference {reference_fitparams}"
-    )
-    assert reference_table.is_file(), (
-        f"{case.name}: missing reference {reference_table}"
-    )
-    _assert_fitparams(case, actual_fitparams, reference_fitparams)
-    _assert_table(case, actual_table, reference_table)
+    for path in all_references:
+        assert path.is_file(), f"{case.name}: missing reference {path}"
+    for actual_path, reference_path in zip(actual_fitparams,
+                                           reference_fitparams, strict=True):
+        _assert_fitparams(case, actual_path, reference_path)
+    for actual_path, reference_path in zip(actual_tables, reference_tables,
+                                           strict=True):
+        _assert_table(case, actual_path, reference_path)

@@ -29,20 +29,13 @@ def run_s5(tmp_path, pytestconfig):
         """Run ``case`` with temporary copies of its two S4 references."""
         input_dir = tmp_path / "stage4-input"
         input_dir.mkdir()
-        reference_dir = S4_REFERENCE_ROOT / case.name
+        reference_dir = S4_REFERENCE_ROOT / case.s4_reference_case
         specdata_path = input_dir / "SpecData.h5"
         lcdata_path = input_dir / "LCData.h5"
 
         # Copy the original reference files
         copy2(reference_dir / "SpecData.h5", specdata_path)
         copy2(reference_dir / "LCData.h5", lcdata_path)
-        if case.initial_fitparams_dir is not None:
-            seed_dir = tmp_path / case.initial_fitparams_dir
-            seed_dir.mkdir()
-            copy2(REFERENCE_ROOT / case.name / "initial_fitparams" /
-                  case.fitparams_filename,
-                  seed_dir / case.fitparams_filename)
-
         # ``loadevent`` knows how to reconstruct a metadata object from a
         # SpecData file's xarray attributes. Those inherited attributes include
         # the event label, data format, aperture/background values, and expand
@@ -73,8 +66,7 @@ def run_s5(tmp_path, pytestconfig):
         s4_meta.filename_S4_LCData = str(lcdata_path)
         s4_meta.s4_logname = str(input_dir / f"S4_{case.eventlabel}.log")
         # ``mergeevents`` retains the predecessor ``folder`` while S5 resolves
-        # its EPF. Point it at the selected S5 ECF, which matters for MIRI's
-        # POET configuration nested below the standard MIRI ECF directory.
+        # its EPF. Point it at this regression configuration's ECF directory.
         s4_meta.folder = str(repo_root / case.ecf_dir)
         Path(s4_meta.s4_logname).touch()
 
