@@ -183,6 +183,46 @@ def test_poet_transit_model_matches_batman_for_eccentric_orbits(ecc, w):
 
 @pytest.mark.parametrize('ecc,w', [
     (0.0, 90.0),
+    (0.05, 45.0),
+    (0.35, 90.0),
+    (0.6, 0.0),
+    (0.6, 180.0),
+    (0.6, -60.0),
+])
+@pytest.mark.parametrize('transittype', ['primary', 'secondary'])
+def test_poet_full_orbits_exclude_opposite_conjunction(ecc, w, transittype):
+    """Reject the opposite conjunction, even outside the quarter phases."""
+    params = _params(limb_dark='uniform', rp=0.08, fp=0.01, per=3.0,
+                     t0=0.17, inc=88.5, a=12.0, ecc=ecc, w=w)
+    kwargs = dict(parameters=params, paramtitles=list(params.dict.keys()),
+                  longparamlist=[list(params.dict.keys())], num_planets=1,
+                  ld_from_S4=False, ld_from_file=False, compute_ltt=False,
+                  log=SimpleNamespace(writelog=lambda *args, **kwargs: None))
+    ref_model = models.BatmanTransitModel(**kwargs)
+    t_secondary = get_ecl_midpt(PlanetParams(ref_model))
+    time = np.unique(np.r_[np.linspace(-3.0, 6.0, 6001),
+                           params.t0.value, t_secondary])
+
+    if transittype == 'primary':
+        poet = models.PoetTransitModel(**kwargs)
+        batman = models.BatmanTransitModel(**kwargs)
+    else:
+        poet = models.PoetEclipseModel(**kwargs)
+        batman = models.BatmanEclipseModel(**kwargs)
+    poet.time = batman.time = time
+    poet_lc = poet.eval()
+
+    np.testing.assert_allclose(poet_lc, batman.eval(), atol=5e-8, rtol=0)
+    if transittype == 'primary':
+        assert poet_lc[time == t_secondary] == pytest.approx(1.)
+        assert poet_lc[time == params.t0.value] < 1.
+    else:
+        assert poet_lc[time == params.t0.value] == pytest.approx(0.01)
+        assert poet_lc[time == t_secondary] == pytest.approx(0.)
+
+
+@pytest.mark.parametrize('ecc,w', [
+    (0.0, 90.0),
     (0.03, 45.0),
     (0.05, 135.0),
     (0.08, -60.0),

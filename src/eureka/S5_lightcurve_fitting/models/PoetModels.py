@@ -200,6 +200,15 @@ class TransitModel():
                 1-(np.sin(inc)*np.sin(true_anom+omega))**2
             )
 
+            # Only occult on the appropriate side of the star. True anomaly
+            # accounts for the eccentricity-dependent timing of each half.
+            line_of_sight = np.sin(inc)*np.sin(true_anom+omega)
+            if self.transittype == 'primary':
+                mask = line_of_sight <= 0
+            else:
+                mask = line_of_sight >= 0
+            self.z[mask] = np.inf
+
     def light_curve(self, params):
         """
         Calculate a model light curve.
