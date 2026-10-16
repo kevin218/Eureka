@@ -876,7 +876,10 @@ def interp_masked(data, meta, log):
     Returns
     -------
     data : Xarray Dataset
-        The updated Dataset object with requested pixels masked.
+        The updated Dataset object with masked pixels replaced by
+        interpolated values. The original mask is left unchanged, and a new
+        boolean ``interp_mask`` variable is added which is True for each
+        masked pixel that was successfully replaced by interpolation.
     """
     nx = data.flux.values.shape[2]
     ny = data.flux.values.shape[1]
@@ -924,6 +927,11 @@ def interp_masked(data, meta, log):
             iterfn = tqdm(iterfn, desc=message)
         for job in iterfn:
             job.get()
+
+    # Record which masked pixels now hold valid interpolated values so that
+    # photometry routines can include them in the source aperture
+    data['interp_mask'] = (data.mask.dims,
+                           data.mask.values & np.isfinite(data.flux.values))
 
     return data
 

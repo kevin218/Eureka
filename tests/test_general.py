@@ -9,7 +9,7 @@ sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 import astraeus.xarrayIO as xrio
 from astropy.io import fits
 
-from eureka.lib import util
+from eureka.lib import apphot, clipping, util
 from eureka.lib.medstddev import medstddev
 from eureka.lib.readECF import MetaClass
 from eureka.optimizer import S1opt_optimizer, objective_funcs
@@ -310,3 +310,81 @@ def test_remove_output_directory_rmdirs_after_final_wait(monkeypatch):
 
     assert removed
     assert calls == {'rmtree': 1, 'rmdir': 2}
+
+
+def test_rolling_median_ignores_masked_values_and_handles_boundaries():
+    data = np.ma.masked_array([1., 2., 100., np.nan, 5., 6., 7.],
+                              mask=[0, 0, 1, 0, 0, 0, 0])
+
+    # Masked and NaN values are ignored inside each window
+    np.testing.assert_allclose(
+        clipping.rolling_median(data, 3, boundary=None),
+        [1.5, 1.5, 2., 5., 5.5, 6., 6.5])
+    # Edge handling follows the documented boundary options
+    np.testing.assert_allclose(
+        clipping.rolling_median(data, 3, boundary='extend')[[0, -1]], [1, 7])
+    np.testing.assert_allclose(
+        clipping.rolling_median(data, 3, boundary='wrap')[[0, -1]], [2, 6])
+    np.testing.assert_allclose(
+        clipping.rolling_median(data, 3, boundary='fill',
+                                fill_value=0.)[[0, -1]], [1, 6])
+    # Even widths are rounded up to the next odd width
+    np.testing.assert_allclose(clipping.rolling_median(data, 2),
+                               clipping.rolling_median(data, 3))
+
+
+def test_clip_outliers_restores_neighbours_of_strong_outlier():
+    # A single strong outlier used to bias the box-car moving mean, causing
+    # good neighbouring points to be permanently clipped as well
+    log = SimpleNamespace(writelog=lambda *args, **kwargs: None)
+    rng = np.random.default_rng(42)
+    data = 1 + rng.normal(0, 6e-4, 2000)
+    data[1000] -= 0.13
+    mask = np.zeros(data.size, dtype=bool)
+    mask[10] = True
+
+    _, outliers, noutliers = clipping.clip_outliers(
+        data, log, 15., mask=mask, sigma=6, box_width=33, maxiters=20,
+        boundary='fill', fill_value='mask')
+
+    # Only the true outlier is clipped, and input-masked points remain masked
+    assert np.array_equal(np.where(outliers)[0], [10, 1000])
+    assert noutliers == 2
+
+
+def test_photutils_apphot_uses_interpolated_pixels():
+    # Interpolated bad pixels should still count towards the source flux
+    # rather than simply being dropped from the source aperture
+    ny, nx, nt = 40, 40, 2
+    yy, xx = np.mgrid[0:ny, 0:nx]
+    star = 1e4*np.exp(-((xx-20.3)**2 + (yy-19.6)**2)/(2*1.8**2)) + 50.
+    flux = np.repeat(star[None], nt, axis=0)
+    mask = np.zeros(flux.shape, dtype=bool)
+    mask[1, 19:21, 19:21] = True
+    flux[mask] = np.nan
+    err = np.sqrt(np.abs(flux))
+
+    time = np.arange(nt, dtype=float)
+    data = xrio.makeDataset()
+    for name, arr in [('flux', flux), ('err', err), ('mask', mask)]:
+        data[name] = xrio.makeFluxLikeDA(arr, time, 'electrons', 'BMJD',
+                                         name=name)
+    data = util.phot_arrays(data)
+    data.centroid_x.values[:] = 20.3
+    data.centroid_y.values[:] = 19.6
+
+    meta = SimpleNamespace(moving_centroid=False, photap=6, photap_b=None,
+                           aperture_shape='circle', skyin=9, skyout=15,
+                           aperture_edge='exact', skip_apphot_bg=False,
+                           interp_method='cubic', ncpu=1, verbose=False)
+    log = SimpleNamespace(writelog=lambda *args, **kwargs: None)
+
+    data = util.interp_masked(data, meta, log)
+    assert np.array_equal(data.interp_mask.values, mask)
+    for i in range(nt):
+        data = apphot.photutils_apphot(data, meta, i)
+
+    assert data.nappix.values[1] == data.nappix.values[0]
+    assert np.all(np.isfinite(data.aperr.values))
+    np.testing.assert_allclose(data.aplev.values[1], data.aplev.values[0],
+                               rtol=0.02)
