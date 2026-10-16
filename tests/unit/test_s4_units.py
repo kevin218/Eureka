@@ -134,6 +134,90 @@ def test_compute_wavelength_bins_builds_native_bins_and_pixel_bins():
     assert pixel.nspecchan == 1
 
 
+@pytest.mark.parametrize('shift,expected_low,expected_hi,expected_wave', [
+    pytest.param(0, [2.5, 5.5], [5.5, 8.5], [4.0, 7.0], id='unshifted'),
+    pytest.param(1, [3.5, 6.5], [6.5, 9.5], [5.0, 8.0], id='shift-right'),
+    pytest.param(-1, [1.5, 4.5], [4.5, 7.5], [3.0, 6.0], id='shift-left'),
+])
+def test_compute_wavelength_bins_shifts_both_pixel_range_endpoints(
+        shift, expected_low, expected_hi, expected_wave):
+    """A pixel shift moves the whole bandpass, including the final bin."""
+    wave = np.arange(1.0, 13.0)
+    meta = SimpleNamespace(wave_input=None, nspecchan=None, npixelbins=3,
+                           npixelshift=shift, wave_min=3.0, wave_max=8.0,
+                           wave_low=None, wave_hi=None)
+
+    result = s4_genLC.compute_wavelength_bins(meta, wave, _Log())
+
+    np.testing.assert_allclose(result.wave_low, expected_low)
+    np.testing.assert_allclose(result.wave_hi, expected_hi)
+    np.testing.assert_allclose(result.wave, expected_wave)
+    assert result.nspecchan == 2
+
+
+@pytest.mark.parametrize('wave_max', [9.0, 10.0])
+def test_compute_wavelength_bins_discards_partial_final_pixel_bin(wave_max):
+    """Retain complete pixel bins when one or two selected samples remain."""
+    wave = np.arange(1.0, 13.0)
+    meta = SimpleNamespace(wave_input=None, nspecchan=None, npixelbins=3,
+                           npixelshift=0, wave_min=3.0, wave_max=wave_max,
+                           wave_low=None, wave_hi=None)
+
+    result = s4_genLC.compute_wavelength_bins(meta, wave, _Log())
+
+    # Keep samples 3--8 in two bins; the trailing samples 9/10 are excluded.
+    np.testing.assert_allclose(result.wave_low, [2.5, 5.5])
+    np.testing.assert_allclose(result.wave_hi, [5.5, 8.5])
+    np.testing.assert_allclose(result.wave, [4.0, 7.0])
+    assert result.nspecchan == 2
+
+
+@pytest.mark.parametrize('wave', [[], [1.0]], ids=['empty', 'single-sample'])
+def test_compute_wavelength_bins_rejects_undersized_native_grid(wave):
+    """Reject native grids without a neighboring wavelength for bin widths."""
+    meta = SimpleNamespace(wave_input=None, nspecchan=None, npixelbins=None,
+                           wave_min=1.0, wave_max=1.4,
+                           wave_low=None, wave_hi=None)
+
+    with pytest.raises(ValueError, match='at least two wavelength samples'):
+        s4_genLC.compute_wavelength_bins(meta, np.array(wave), _Log())
+
+
+@pytest.mark.parametrize('wave_min,expected_wave,expected_low,expected_hi', [
+    pytest.param(1.0, [1.0, 1.4], [0.8, 1.2], [1.2, 1.6], id='both-samples'),
+    pytest.param(1.4, [1.4], [1.2], [1.6], id='one-selected-sample'),
+])
+def test_compute_wavelength_bins_uses_two_sample_native_grid(
+        wave_min, expected_wave, expected_low, expected_hi):
+    """Use both input samples for widths even when only one is selected."""
+    meta = SimpleNamespace(wave_input=None, nspecchan=None, npixelbins=None,
+                           wave_min=wave_min, wave_max=1.4,
+                           wave_low=None, wave_hi=None)
+
+    result = s4_genLC.compute_wavelength_bins(
+        meta, np.array([1.0, 1.4]), _Log()
+    )
+
+    np.testing.assert_allclose(result.wave, expected_wave)
+    np.testing.assert_allclose(result.wave_low, expected_low)
+    np.testing.assert_allclose(result.wave_hi, expected_hi)
+    assert result.nspecchan == len(expected_wave)
+
+
+def test_compute_wavelength_bins_allows_single_sample_with_explicit_edges():
+    """Explicit edges define widths independently of input sample count."""
+    meta = SimpleNamespace(wave_input=None, nspecchan=1, npixelbins=None,
+                           wave_min=1.0, wave_max=1.0,
+                           wave_low=[0.9], wave_hi=[1.1])
+
+    result = s4_genLC.compute_wavelength_bins(meta, np.array([1.0]), _Log())
+
+    np.testing.assert_allclose(result.wave, [1.0])
+    np.testing.assert_allclose(result.wave_low, [0.9])
+    np.testing.assert_allclose(result.wave_hi, [1.1])
+    assert result.nspecchan == 1
+
+
 def test_compute_wavelength_bins_respects_explicit_edges_and_warnings():
     """Explicit S4 wavelength edges should override mismatched nspecchan."""
     log = _Log()

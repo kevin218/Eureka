@@ -686,6 +686,9 @@ def compute_wavelength_bins(meta, wave_1d, log):
                      f'width {meta.npixelbins} pixels each.', mute=mute)
     elif meta.nspecchan is None:
         # User wants unbinned spectra
+        if len(wave_1d) < 2:
+            raise ValueError('Native wavelength bins require at least two '
+                             'wavelength samples to infer bin widths.')
         dwav = np.ediff1d(wave_1d)/2
         # Approximate the first neg_dwav as the same as the second
         neg_dwav = np.append(dwav[0], dwav)
