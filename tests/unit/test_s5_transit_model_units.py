@@ -426,10 +426,15 @@ def test_fleck_invalid_spot_geometry_returns_penalty():
     (0.08, -60.0),
     (0.35, 45.0),
 ])
-def test_catwoman_transit_model_matches_batman_for_equal_radii(ecc, w):
-    """Equal-radius Catwoman should match batman for eccentric orbits."""
+@pytest.mark.parametrize('rp', [
+    pytest.param(0.08, id='transit'),
+    pytest.param(-0.08, id='inverse-transit'),
+])
+def test_catwoman_matches_batman_for_equal_radius_magnitudes(ecc, w, rp):
+    """Equal radius magnitudes match batman for either primary-radius sign."""
     time = np.linspace(-0.12, 0.12, 121)
     params = _transit_params(ecc=ecc, w=w)
+    params.rp.value = rp
     params.rp2 = 0.08, 'free'
     params.phi = 90.0, 'free'
     batman_lc = _transit_model(models.BatmanTransitModel, params, time)
@@ -441,8 +446,45 @@ def test_catwoman_transit_model_matches_batman_for_equal_radii(ecc, w):
 
     assert np.all(np.isfinite(catwoman_lc))
     np.testing.assert_allclose(catwoman_lc[[0, -1]], [1.0, 1.0])
-    assert np.min(catwoman_lc) < 1.0
+    if rp < 0:
+        assert np.max(catwoman_lc) > 1.0
+    else:
+        assert np.min(catwoman_lc) < 1.0
     np.testing.assert_allclose(catwoman_lc, batman_lc, atol=1e-7, rtol=0)
+    assert params.rp.value == rp
+
+
+@pytest.mark.parametrize('ecc,w', [(0.0, 90.0), (0.05, 135.0)])
+@pytest.mark.parametrize('phi', [-45.0, 45.0])
+def test_catwoman_unequal_radii_preserve_inverse_transit_on_repeated_evals(
+        ecc, w, phi):
+    """A negative primary radius inverts the full asymmetric light curve."""
+    time = np.linspace(-0.12, 0.12, 121)
+    params = _transit_params(ecc=ecc, w=w)
+    params.rp2 = 0.12, 'free'
+    params.phi = phi, 'free'
+    model = models.CatwomanTransitModel(
+        parameters=params, paramtitles=list(params.dict.keys()),
+        longparamlist=[list(params.dict.keys())],
+        num_planets=1, ld_from_S4=False, ld_from_file=False,
+        max_err=0.001, fac=0.001
+    )
+    model.time = time
+    transit = model.eval()
+
+    params.rp.value = -0.08
+    inverse = model.eval()
+
+    assert np.all(np.isfinite(inverse))
+    assert np.max(inverse) > 1.0
+    np.testing.assert_allclose(inverse[[0, -1]], [1.0, 1.0])
+    np.testing.assert_allclose(inverse, 2.0-transit, atol=1e-7, rtol=0)
+    np.testing.assert_allclose(model.eval(), inverse, atol=1e-12, rtol=0)
+    assert params.rp.value == -0.08
+    assert params.rp2.value == 0.12
+
+    params.rp.value = 0.08
+    np.testing.assert_allclose(model.eval(), transit, atol=1e-12, rtol=0)
 
 
 @pytest.mark.parametrize('parameter,value', [
