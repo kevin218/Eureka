@@ -307,24 +307,62 @@ def test_fleck_invalid_spot_geometry_returns_penalty():
     np.testing.assert_allclose(result, np.full(time.shape, 1e6))
 
 
-def test_catwoman_transit_model_matches_batman_for_circular_equal_radii():
-    """Equal-radius Catwoman planets should match circular batman transits."""
-    time = np.linspace(-0.12, 0.12, 61)
-    params = _transit_params(ecc=0.0, w=90.0)
+@pytest.mark.parametrize('ecc,w', [
+    (0.0, 90.0),
+    (0.03, 45.0),
+    (0.05, 135.0),
+    (0.08, -60.0),
+    (0.35, 45.0),
+])
+def test_catwoman_transit_model_matches_batman_for_equal_radii(ecc, w):
+    """Equal-radius Catwoman should match batman for eccentric orbits."""
+    time = np.linspace(-0.12, 0.12, 121)
+    params = _transit_params(ecc=ecc, w=w)
     params.rp2 = 0.08, 'free'
     params.phi = 90.0, 'free'
     batman_lc = _transit_model(models.BatmanTransitModel, params, time)
-    catwoman = models.CatwomanTransitModel(
-        parameters=params, paramtitles=list(params.dict.keys()),
+    catwoman_lc = _transit_model(
+        models.CatwomanTransitModel, params, time,
         longparamlist=[list(params.dict.keys())],
-        num_planets=1, ld_from_S4=False, ld_from_file=False,
         max_err=0.001, fac=0.001
     )
-    catwoman.time = time
 
-    catwoman_lc = catwoman.eval()
-
+    assert np.all(np.isfinite(catwoman_lc))
+    np.testing.assert_allclose(catwoman_lc[[0, -1]], [1.0, 1.0])
+    assert np.min(catwoman_lc) < 1.0
     np.testing.assert_allclose(catwoman_lc, batman_lc, atol=1e-7, rtol=0)
+
+
+@pytest.mark.parametrize('parameter,value', [
+    pytest.param('per', 0.0, id='zero-period'),
+    pytest.param('per', -1.0, id='negative-period'),
+    pytest.param('inc', 0.0, id='zero-inclination'),
+    pytest.param('inc', 95.0, id='inclination-above-90'),
+    pytest.param('a', 1.0, id='axis-at-stellar-radius'),
+    pytest.param('a', 0.5, id='axis-inside-star'),
+])
+def test_catwoman_invalid_geometry_returns_penalty(
+        monkeypatch, parameter, value):
+    """Reject invalid sampler proposals before calling the Catwoman backend."""
+    time = np.linspace(-0.02, 0.02, 5)
+    params = _transit_params()
+    params.rp2 = 0.08, 'free'
+    params.phi = 90.0, 'free'
+    getattr(params, parameter).value = value
+
+    def unexpected_backend(*args, **kwargs):
+        pytest.fail('Invalid geometry reached the Catwoman backend')
+
+    monkeypatch.setattr('catwoman.TransitModel', unexpected_backend)
+
+    result = _transit_model(
+        models.CatwomanTransitModel, params, time,
+        longparamlist=[list(params.dict.keys())],
+        max_err=0.001, fac=0.001
+    )
+
+    assert not np.any(np.ma.getmaskarray(result))
+    np.testing.assert_array_equal(result, np.full(time.shape, 1e6))
 
 
 def test_catwoman_transit_model_requires_second_radius_parameter():
@@ -332,9 +370,8 @@ def test_catwoman_transit_model_requires_second_radius_parameter():
     params = _transit_params(ecc=0.0, w=90.0)
 
     with pytest.raises(AssertionError, match='rp2'):
-        models.CatwomanTransitModel(
-            parameters=params, paramtitles=list(params.dict.keys()),
+        _transit_model(
+            models.CatwomanTransitModel, params, np.array([0.0]),
             longparamlist=[list(params.dict.keys())],
-            num_planets=1, ld_from_S4=False, ld_from_file=False,
             max_err=0.001, fac=0.001
         )

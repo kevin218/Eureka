@@ -19,10 +19,10 @@ def _transit_params(ecc=0.0, w=90.0):
     return params
 
 
-def _transit_model(model_class, params, time):
+def _transit_model(model_class, params, time, **kwargs):
     model = model_class(
         parameters=params, paramtitles=list(params.dict.keys()),
-        num_planets=1, ld_from_S4=False, ld_from_file=False
+        num_planets=1, ld_from_S4=False, ld_from_file=False, **kwargs
     )
     model.time = time
     return model.eval()
