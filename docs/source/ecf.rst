@@ -726,7 +726,7 @@ Current options: 'None', 'correct'. Using 'None' will not use any curvature corr
 
 interp_method
 '''''''''''''
-Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
+Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic. When using phot_method = poet or photutils, interpolated pixels are included in the source aperture sum (but do not contribute to the aperture uncertainty), while only good pixels are used in the background annulus.
 
 oneoverf_corr
 '''''''''''''
