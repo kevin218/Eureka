@@ -1,11 +1,78 @@
+import warnings
+
 import numpy as np
 from astropy.convolution import Box1DKernel, convolve
 from astropy.modeling.fitting import LevMarLSQFitter
 from astropy.modeling.models import Gaussian1D, custom_model
 from astropy.stats import sigma_clip
+from numpy.lib.stride_tricks import sliding_window_view
+from scipy.ndimage import median_filter
 from scipy.special import erf
 
-__all__ = ['clip_outliers', 'gauss_removal']
+__all__ = ['clip_outliers', 'rolling_median', 'gauss_removal']
+
+
+def rolling_median(data, box_width, boundary='fill', fill_value=None):
+    '''Compute a rolling median that ignores masked and non-finite values.
+
+    Parameters
+    ----------
+    data : ndarray or np.ma.MaskedArray (1D)
+        The input time series. Masked and non-finite values are ignored.
+    box_width : int
+        The width of the rolling window in units of number of data points.
+        Even widths are rounded up to the next odd number so that the window
+        is centred on each point.
+    boundary : str or None; optional
+        How to handle the edges of the time series. 'fill' pads the edges with
+        fill_value, 'wrap' uses a periodic boundary, 'extend' repeats the
+        first/last data points, and None uses only the available data points
+        near the edges. Defaults to 'fill'.
+    fill_value : float; optional
+        The value used to pad the edges when boundary=='fill'. Defaults to
+        None, in which case the median of the valid data is used.
+
+    Returns
+    -------
+    ndarray (1D)
+        The rolling median, which is NaN wherever a window contains no valid
+        data points.
+    '''
+    values = np.ma.filled(np.ma.masked_invalid(data).astype(float), np.nan)
+    half = int(box_width)//2
+
+    if boundary == 'fill':
+        if fill_value is None:
+            fill_value = np.nanmedian(values)
+        padded = np.pad(values, half, mode='constant',
+                        constant_values=fill_value)
+    elif boundary == 'wrap':
+        padded = np.pad(values, half, mode='wrap')
+    elif boundary == 'extend':
+        padded = np.pad(values, half, mode='edge')
+    elif boundary is None:
+        padded = np.pad(values, half, mode='constant',
+                        constant_values=np.nan)
+    else:
+        raise ValueError(f'Unknown boundary "{boundary}". Options are '
+                         '"fill", "wrap", "extend", or None.')
+
+    windows = sliding_window_view(padded, 2*half+1)
+    # Fast path: scipy's median filter is exact for windows without NaNs.
+    # Only windows that contain masked/NaN values need np.nanmedian
+    isnan = np.isnan(padded)
+    smoothed = median_filter(np.where(isnan, 0., padded), size=2*half+1,
+                             mode='nearest')[half:padded.size-half]
+    nan_cumsum = np.concatenate([[0], np.cumsum(isnan)])
+    has_nan = (nan_cumsum[2*half+1:] - nan_cumsum[:-(2*half+1)]) > 0
+    if np.any(has_nan):
+        with warnings.catch_warnings():
+            # All-NaN windows (e.g. long masked regions) intentionally give
+            # NaN
+            warnings.simplefilter('ignore', RuntimeWarning)
+            smoothed[has_nan] = np.nanmedian(windows[has_nan], axis=1)
+
+    return smoothed
 
 
 def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
@@ -33,17 +100,20 @@ def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
         values will be masked. Defaults to None in which case only the invalid
         values of data will be masked.
     sigma : float; optional
-        The number of sigmas a point must be from the rolling mean to be
+        The number of sigmas a point must be from the rolling median to be
         considered an outlier. Defaults to 10.
     box_width : int; optional
-        The width of the box-car filter (used to calculated the rolling
-        median) in units of number of data points. Defaults to 5.
+        The width of the window used to calculate the rolling median in
+        units of number of data points (even widths are rounded up to the
+        next odd number). Defaults to 5.
     maxiters : int; optional
         The number of iterations of sigma clipping that should be performed.
         Defaults to 5.
-    boundary : str; optional
-        The boundary argument to pass to astropy.convolution.convolve. Defaults
-        to 'extend'.
+    boundary : str or None; optional
+        How to handle the edges when computing the rolling median: 'fill'
+        pads with the median of all data points, 'wrap' uses a periodic
+        boundary, 'extend' repeats the first/last data points, and None uses
+        only the available data points. Defaults to 'extend'.
     fill_value : str or float; optional
         Either the string 'mask' to mask the outlier values, 'boxcar' to
         replace data with the mean from the box-car filter, or a constant
@@ -67,19 +137,27 @@ def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
 
     kernel = Box1DKernel(box_width)
 
-    outliers = np.zeros_like(data, dtype=bool)
+    outliers = np.zeros(data.shape, dtype=bool)
     new_clipped = True
     i = 0
     while i < maxiters and new_clipped:
         i += 1
 
-        # Compute the moving mean
-        bound_val = np.ma.median(data)  # Only used if boundary=='fill'
-        smoothed_data = convolve(data, kernel, boundary=boundary,
-                                 fill_value=bound_val)
-        # Compare data to the moving mean (to remove astrophysical signals)
+        # Compute the rolling median using only the points not currently
+        # flagged as outliers. Unlike a moving mean, a rolling median is not
+        # dragged by a strong outlier, so its good neighbours are not clipped
+        clean_data = np.ma.masked_where(outliers, data)
+        bound_val = np.ma.median(clean_data)  # Only used if boundary=='fill'
+        smoothed_data = rolling_median(clean_data, box_width,
+                                       boundary=boundary,
+                                       fill_value=bound_val)
+        # Compare all data to the rolling median (to remove astrophysical
+        # signals). Re-evaluating previously flagged points allows any points
+        # flagged in an earlier iteration to be restored if they are no
+        # longer outliers
         residuals = data-smoothed_data
-        # Sigma clip residuals to find bad points in data
+        # Sigma clip residuals to find bad points in data. As before, the
+        # returned outliers also include any input-masked points
         residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters,
                                cenfunc=np.ma.median)
         new_outliers = np.ma.getmaskarray(residuals)
@@ -87,7 +165,6 @@ def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
             new_clipped = False
         else:
             outliers = new_outliers
-            data = np.ma.masked_where(outliers, data)
 
     if i == maxiters:
         log.writelog('WARNING: maxiters has been reached during clip_outliers '

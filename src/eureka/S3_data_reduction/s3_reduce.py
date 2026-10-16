@@ -617,6 +617,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 del (data['err'], data['dq'], data['v0'],
                      data['mask'], data.attrs['intstart'],
                      data.attrs['intend'])
+                if 'interp_mask' in data:
+                    del data['interp_mask']
                 if not meta.photometry:
                     del (data['flux'], data['bg'])
                     if meta.inst != 'niriss':
