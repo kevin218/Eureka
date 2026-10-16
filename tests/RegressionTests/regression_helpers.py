@@ -12,7 +12,7 @@ def _label(product, variable):
 
 
 def _mismatch_details(case, product, variable, actual, expected, rtol,
-                      centroid_atol):
+                      centroid_atol, atol):
     """Return the first mismatched array elements for a failed comparison."""
     if variable in case.exact_variables:
         if np.issubdtype(actual.dtype, np.inexact):
@@ -24,7 +24,7 @@ def _mismatch_details(case, product, variable, actual, expected, rtol,
         mismatches = ~np.isclose(actual, expected, rtol=0,
                                  atol=centroid_atol, equal_nan=True)
     else:
-        mismatches = ~np.isclose(actual, expected, rtol=rtol, atol=0,
+        mismatches = ~np.isclose(actual, expected, rtol=rtol, atol=atol,
                                  equal_nan=True)
 
     indices = np.argwhere(mismatches)
@@ -39,7 +39,7 @@ def _mismatch_details(case, product, variable, actual, expected, rtol,
 
 
 def assert_array(case, variable, actual, expected, *, product=None,
-                 rtol=1e-4, centroid_atol=1e-2):
+                 rtol=1e-4, atol=0, centroid_atol=1e-2):
     """Compare a science array using the case's configured tolerance."""
     label = _label(product, variable)
     assert actual.shape == expected.shape, (
@@ -62,11 +62,11 @@ def assert_array(case, variable, actual, expected, *, product=None,
                 err_msg=f"{case.name}: {label}")
         else:
             np.testing.assert_allclose(
-                actual, expected, rtol=rtol, atol=0, equal_nan=True,
+                actual, expected, rtol=rtol, atol=atol, equal_nan=True,
                 err_msg=f"{case.name}: {label}")
     except AssertionError as error:
         details = _mismatch_details(case, product, variable, actual, expected,
-                                    rtol, centroid_atol)
+                                    rtol, centroid_atol, atol)
         raise AssertionError(
             f"{error}\n\n{details}"
         ) from None

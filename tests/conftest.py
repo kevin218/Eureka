@@ -1,7 +1,17 @@
 """Shared pytest configuration for Eureka tests."""
+import os
 import sys
+import tempfile
+from pathlib import Path
 
 import pytest
+
+# Import this checkout before regression fixtures and test modules load.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+
+# Set this before test modules and regression fixtures import Matplotlib.
+# Respect an explicit configuration directory supplied by the caller.
+os.environ.setdefault('MPLCONFIGDIR', tempfile.gettempdir())
 
 
 def pytest_addoption(parser):
@@ -85,6 +95,11 @@ def keep_s4_output(pytestconfig):
     return pytestconfig.getoption("--keep-s4-output")
 
 
+def is_unit_test(item):
+    """Return True for tests stored under tests/unit."""
+    return 'unit' in Path(str(item.fspath)).parts
+
+
 def pytest_collection_modifyitems(session, config, items):
     """Modifies test items to ensure test functions run in a given order
 
@@ -108,10 +123,14 @@ def pytest_collection_modifyitems(session, config, items):
                       "test_MIRI", "test_NIRCam", "test_NIRSpec",
                       "test_NIRCamPhotometry", "test_NIRCamPhotometry_hex",
                       "test_WFC3"]
-    item_names = [item.name for item in items]
-    function_mapping = {item.name: item for item in items
+    unit_items = [item for item in items if is_unit_test(item)]
+    unit_items.sort(key=lambda item: (str(item.fspath), item.name))
+    non_unit_items = [item for item in items if not is_unit_test(item)]
+
+    item_names = [item.name for item in non_unit_items]
+    function_mapping = {item.name: item for item in non_unit_items
                         if item.name in function_order}
-    extra_functions = [item for item in items
+    extra_functions = [item for item in non_unit_items
                        if item.name not in function_order]
 
     sorted_items = []
@@ -120,4 +139,4 @@ def pytest_collection_modifyitems(session, config, items):
             sorted_items.append(function_mapping[func_])
     sorted_items.extend(extra_functions)
 
-    items[:] = sorted_items
+    items[:] = unit_items + sorted_items

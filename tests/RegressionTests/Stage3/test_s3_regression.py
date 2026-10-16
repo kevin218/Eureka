@@ -22,6 +22,10 @@ WFC3_OPTERR_RTOL = 1e-3
 # The median image can differ by a bit greater than 1e-4 from its
 # reference in CI.
 MEDFLUX_RTOL = 2e-4
+# Background subtraction leaves near-zero float32 NIRISS median pixels.
+# Retain the relative tolerance and allow a small absolute rounding
+# floor only for this case and variable.
+NIRISS_MEDFLUX_ATOL = 2e-5
 
 
 def _rtol(case, variable):
@@ -33,6 +37,13 @@ def _rtol(case, variable):
     if variable == "medflux":
         return MEDFLUX_RTOL
     return RTOL
+
+
+def _atol(case, variable):
+    """Return the absolute rounding floor for one regression variable."""
+    if case.name == "niriss_spectroscopy" and variable == "medflux":
+        return NIRISS_MEDFLUX_ATOL
+    return 0
 
 
 def _reference_paths(case):
@@ -70,6 +81,7 @@ def test_s3_science_products(case, run_s3, overwrite_ref_files):
         )
         assert_array(case, variable, actual[variable].values,
                      expected[variable].values, rtol=_rtol(case, variable),
+                     atol=_atol(case, variable),
                      centroid_atol=CENTROID_ATOL)
 
     # Assertions for HDF5 metadata
