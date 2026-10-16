@@ -311,23 +311,50 @@ def test_initialize_emcee_walkers_stays_within_uniform_and_log_priors():
     assert np.all(pos[:, 1] > 0)
 
 
-def test_initialize_emcee_walkers_moves_boundary_start_to_midpoint():
-    """Walker initialization should recover when LSQ lands on a bound."""
-    np.random.seed(4321)
-    meta = SimpleNamespace(run_nwalkers=8, verbose=False)
-    freepars = np.array([1.0])
-    prior1 = np.array([0.0])
-    prior2 = np.array([1.0])
-    priortype = np.array(['U'])
+@pytest.mark.parametrize('uniform_start, log_uniform_start', [
+    pytest.param(-2.0, 2.0, id='both-lower'),
+    pytest.param(4.0, 32.0, id='both-upper'),
+    pytest.param(-2.0, 32.0, id='uniform-lower-log-upper'),
+    pytest.param(4.0, 2.0, id='uniform-upper-log-lower'),
+])
+@pytest.mark.parametrize('order', [
+    pytest.param([0, 1, 2, 3, 4], id='interleaved'),
+    pytest.param([4, 2, 0, 3, 1], id='reordered'),
+])
+def test_initialize_emcee_walkers_moves_boundary_start_to_midpoint(
+        monkeypatch, uniform_start, log_uniform_start, order):
+    """Recover boundary starts without changing unrelated starting values."""
+    rng = np.random.RandomState(4321)
+    monkeypatch.setattr(fitters.np.random, 'randn', rng.randn)
+    meta = SimpleNamespace(run_nwalkers=12, verbose=False)
+    # Interior U/LU values and a normal prior expose parameter-indexing errors.
+    freepars = np.array([7.0, uniform_start, log_uniform_start,
+                         3.0, 4.0])[order]
+    prior1 = np.array([7.0, -2.0, np.log(2.0), -1.0, np.log(1.0)])[order]
+    prior2 = np.array([0.2, 4.0, np.log(32.0), 5.0, np.log(8.0)])[order]
+    priortype = np.array(['N', 'U', 'LU', 'U', 'LU'])[order]
+    initial = freepars.copy()
+    unchanged = np.array([True, False, False, True, True])[order]
+    # LU stores log bounds but uses their arithmetic midpoint in linear space.
+    expected = np.array([7.0, 1.0, 17.0, 3.0, 4.0])[order]
 
     pos, nwalkers = fitters.initialize_emcee_walkers(
-        meta, _Log(), ndim=1, lsq_sol=None, freepars=freepars,
+        meta, _Log(), ndim=5, lsq_sol=None, freepars=freepars,
         prior1=prior1, prior2=prior2, priortype=priortype
     )
 
-    assert nwalkers == 8
-    assert freepars[0] == pytest.approx(0.5)
-    assert np.all((pos[:, 0] >= 0.0) & (pos[:, 0] <= 1.0))
+    assert nwalkers == meta.run_nwalkers
+    assert pos.shape == (nwalkers, 5)
+    assert np.all(np.isfinite(pos))
+    np.testing.assert_allclose(freepars, expected)
+    np.testing.assert_array_equal(freepars[unchanged], initial[unchanged])
+    uniform = priortype == 'U'
+    log_uniform = priortype == 'LU'
+    assert np.all(pos[:, uniform] >= prior1[uniform])
+    assert np.all(pos[:, uniform] <= prior2[uniform])
+    assert np.all(pos[:, log_uniform] > 0)
+    assert np.all(np.log(pos[:, log_uniform]) >= prior1[log_uniform])
+    assert np.all(np.log(pos[:, log_uniform]) <= prior2[log_uniform])
 
 
 def test_save_fit_writes_fitparams_and_stage5_table(monkeypatch, tmp_path):
