@@ -46,6 +46,52 @@ def test_batman_transit_model_invalid_geometry_returns_penalty():
     np.testing.assert_allclose(result, [1e6, 1e6])
 
 
+@pytest.mark.parametrize('model_class', [
+    pytest.param(models.BatmanTransitModel, id='batman'),
+    pytest.param(models.CatwomanTransitModel, id='catwoman'),
+    pytest.param(models.HarmonicaTransitModel, id='harmonica'),
+])
+@pytest.mark.parametrize('orbital_parameters', [
+    pytest.param({'ecc': -0.1, 'w': 45.0}, id='negative-eccentricity'),
+    pytest.param({'ecc': 1.0, 'w': 45.0}, id='parabolic-orbit'),
+    pytest.param({'ecc': 1.2, 'w': 45.0}, id='hyperbolic-orbit'),
+    pytest.param({'ecc': np.nan, 'w': 45.0}, id='nan-eccentricity'),
+    pytest.param({'ecc': np.inf, 'w': 45.0}, id='infinite-eccentricity'),
+    pytest.param({'ecosw': 0.6, 'esinw': 0.8}, id='parabolic-components'),
+    pytest.param({'ecosw': 0.8, 'esinw': 0.8}, id='hyperbolic-components'),
+    pytest.param({'ecosw': -0.8, 'esinw': -0.8},
+                 id='negative-hyperbolic-components'),
+])
+def test_transit_models_reject_nonelliptical_orbits(
+        monkeypatch, model_class, orbital_parameters):
+    """Reject invalid eccentricities before invoking any transit backend."""
+    time = np.linspace(-0.02, 0.02, 5)
+    params = _params(limb_dark='quadratic', u1=0.1, u2=0.2, rp=0.08,
+                     per=3.0, t0=0.0, inc=88.5, a=12.0,
+                     **orbital_parameters)
+    kwargs = {}
+    if model_class is models.CatwomanTransitModel:
+        params.rp2 = 0.08, 'free'
+        params.phi = 90.0, 'free'
+        kwargs = dict(longparamlist=[list(params.dict.keys())],
+                      max_err=0.001, fac=0.001)
+    model = model_class(
+        parameters=params, paramtitles=list(params.dict.keys()),
+        num_planets=1, ld_from_S4=False, ld_from_file=False, **kwargs
+    )
+    model.time = time
+
+    def unexpected_backend(*args, **kwargs):
+        pytest.fail('Invalid eccentricity reached the transit backend')
+
+    monkeypatch.setattr(model, 'transit_model', unexpected_backend)
+
+    result = model.eval()
+
+    assert not np.any(np.ma.getmaskarray(result))
+    np.testing.assert_array_equal(result, np.full(time.shape, 1e6))
+
+
 def test_batman_eclipse_model_zero_planet_flux_is_zero():
     params = _params(limb_dark='uniform', rp=0.1, fp=0.0, per=2.0, t0=0.0,
                      t_secondary=1.0, inc=89.0, a=10.0, ecc=0.0, w=90.0)
@@ -254,6 +300,72 @@ def test_harmonica_transit_model_matches_batman_for_eccentric_orbits(ecc, w):
     harmonica_lc = _transit_model(models.HarmonicaTransitModel, params, time)
 
     np.testing.assert_allclose(harmonica_lc, batman_lc, atol=2e-6, rtol=0)
+
+
+@pytest.mark.parametrize('parameter,value', [
+    pytest.param('per', 0.0, id='zero-period'),
+    pytest.param('per', -1.0, id='negative-period'),
+    pytest.param('inc', 0.0, id='zero-inclination'),
+    pytest.param('inc', 95.0, id='inclination-above-90'),
+    pytest.param('a', 1.0, id='axis-at-stellar-radius'),
+    pytest.param('a', 0.5, id='axis-inside-star'),
+    pytest.param('ecosw', -1.1, id='ecosw-below-minus-one'),
+    pytest.param('ecosw', 1.1, id='ecosw-above-one'),
+    pytest.param('esinw', -1.1, id='esinw-below-minus-one'),
+    pytest.param('esinw', 1.1, id='esinw-above-one'),
+])
+def test_harmonica_invalid_geometry_returns_penalty(
+        monkeypatch, parameter, value):
+    """Guard each invalid geometry category before calling Harmonica."""
+    time = np.linspace(-0.02, 0.02, 5)
+    orbital_parameters = {'ecc': 0.0, 'w': 90.0}
+    if parameter in ('ecosw', 'esinw'):
+        orbital_parameters = {'ecosw': 0.0, 'esinw': 0.0}
+    params = _params(limb_dark='quadratic', u1=0.1, u2=0.2, rp=0.08,
+                     per=3.0, t0=0.0, inc=88.5, a=12.0,
+                     **orbital_parameters)
+    getattr(params, parameter).value = value
+    model = models.HarmonicaTransitModel(
+        parameters=params, paramtitles=list(params.dict.keys()),
+        num_planets=1, ld_from_S4=False, ld_from_file=False
+    )
+    model.time = time
+
+    def unexpected_backend(*args, **kwargs):
+        pytest.fail('Invalid geometry reached the Harmonica backend')
+
+    monkeypatch.setattr(model, 'transit_model', unexpected_backend)
+
+    result = model.eval()
+
+    assert not np.any(np.ma.getmaskarray(result))
+    np.testing.assert_array_equal(result, np.full(time.shape, 1e6))
+
+
+@pytest.mark.parametrize('q1', [0.0, -0.1])
+def test_harmonica_nonpositive_kipping_q1_returns_penalty(monkeypatch, q1):
+    """Nonpositive Kipping q1 should return the standard fitting penalty."""
+    time = np.linspace(-0.02, 0.02, 5)
+    params = _transit_params()
+    params.limb_dark.value = 'kipping2013'
+    params.u1.value = q1
+    model = models.HarmonicaTransitModel(
+        parameters=params, paramtitles=list(params.dict.keys()),
+        num_planets=1, ld_from_S4=False, ld_from_file=False
+    )
+    model.time = time
+
+    def unexpected_backend(*args, **kwargs):
+        pytest.fail('Invalid limb darkening reached the Harmonica backend')
+
+    monkeypatch.setattr(model, 'transit_model', unexpected_backend)
+
+    # PlanetParams transforms q1 before the model checks its original value.
+    with np.errstate(invalid='ignore'):
+        result = model.eval()
+
+    assert not np.any(np.ma.getmaskarray(result))
+    np.testing.assert_array_equal(result, np.full(time.shape, 1e6))
 
 
 def test_harmonica_transmission_coefficients_change_transit_shape():
