@@ -1,27 +1,17 @@
 import os
-import sys
 import warnings
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 from astropy.utils.exceptions import AstropyUserWarning
+from tests.unit.helpers import RecordingLog
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                '..', '..', 'src')))
 from eureka.lib import (clipping, gaussian, imageedit, interp2d, meanerr,
                         naninterp1d, readECF, smooth, sort_nicely, util)
 from eureka.lib.readEPF import Parameters
 from eureka.lib.split_channels import get_trim, split
 from eureka.S5_lightcurve_fitting import models
-
-
-class _Log:
-    def __init__(self):
-        self.messages = []
-
-    def writelog(self, message, **kwargs):
-        self.messages.append(message)
 
 
 def test_gaussian_1d_matches_analytic_pdf_and_background():
@@ -210,7 +200,7 @@ def test_clip_outliers_masks_or_replaces_known_time_series_outlier():
     """Outlier clipping should flag spikes and replacement modes."""
     data = np.ones(21)
     data[10] = 10.0
-    log = _Log()
+    log = RecordingLog()
 
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', AstropyUserWarning)
@@ -229,8 +219,8 @@ def test_clip_outliers_masks_or_replaces_known_time_series_outlier():
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', AstropyUserWarning)
         filled, outliers, noutliers = clipping.clip_outliers(
-            data, _Log(), wavelength=2.0, sigma=2, box_width=3, maxiters=3,
-            fill_value=-99
+            data, RecordingLog(), wavelength=2.0, sigma=2, box_width=3,
+            maxiters=3, fill_value=-99
         )
     assert noutliers == 3
     assert not np.ma.is_masked(filled[3])

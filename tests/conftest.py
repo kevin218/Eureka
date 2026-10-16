@@ -1,8 +1,17 @@
 """Shared pytest configuration for Eureka tests."""
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
+
+# Import this checkout before regression fixtures and test modules load.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+
+# Set this before test modules and regression fixtures import Matplotlib.
+# Respect an explicit configuration directory supplied by the caller.
+os.environ.setdefault('MPLCONFIGDIR', tempfile.gettempdir())
 
 
 def pytest_addoption(parser):

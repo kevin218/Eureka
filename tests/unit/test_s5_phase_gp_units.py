@@ -1,11 +1,4 @@
-import os
-import sys
-
 import numpy as np
-
-os.environ.setdefault('MPLCONFIGDIR', '/tmp')
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                '..', '..', 'src')))
 from tests.unit.s5_model_helpers import _params
 
 from eureka.S5_lightcurve_fitting import models

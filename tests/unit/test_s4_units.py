@@ -1,23 +1,11 @@
-import os
-import sys
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 from astropy.convolution import Box1DKernel, convolve
+from tests.unit.helpers import RecordingLog
 
-os.environ.setdefault('MPLCONFIGDIR', '/tmp')
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                '..', '..', 'src')))
 from eureka.S4_generate_lightcurves import drift, outliers, s4_genLC
-
-
-class _Log:
-    def __init__(self):
-        self.messages = []
-
-    def writelog(self, message, **kwargs):
-        self.messages.append(message)
 
 
 class _Values:
@@ -26,12 +14,6 @@ class _Values:
 
     def __getitem__(self, key):
         return self.values[key]
-
-
-def _trace_image(center=7.3, sigma=1.2, ny=15, nx=6, background=0.1):
-    y = np.arange(ny, dtype=float)
-    profile = background + np.exp(-0.5*((y-center)/sigma)**2)
-    return np.repeat(profile[:, None], nx, axis=1)
 
 
 def test_highpassfilt_matches_boxcar_convolution_with_extend_boundary():
@@ -64,7 +46,9 @@ def test_spec1d_measures_integer_spectral_drifts_and_sign_convention():
         drift_hw=6,
     )
 
-    drift1d, driftwidth, driftmask = drift.spec1D(spectra, meta, _Log())
+    drift1d, driftwidth, driftmask = drift.spec1D(
+        spectra, meta, RecordingLog()
+    )
 
     np.testing.assert_allclose(drift1d, input_shifts, atol=5e-3)
     assert np.all(driftwidth > 0)
@@ -116,7 +100,9 @@ def test_compute_wavelength_bins_builds_native_bins_and_pixel_bins():
                                   npixelbins=None, wave_min=1.1,
                                   wave_max=1.3, wave_low=None, wave_hi=None)
 
-    native = s4_genLC.compute_wavelength_bins(native_meta, wave, _Log())
+    native = s4_genLC.compute_wavelength_bins(
+        native_meta, wave, RecordingLog()
+    )
 
     np.testing.assert_allclose(native.wave, [1.1, 1.2, 1.3])
     np.testing.assert_allclose(native.wave_low, [1.05, 1.15, 1.25])
@@ -126,7 +112,7 @@ def test_compute_wavelength_bins_builds_native_bins_and_pixel_bins():
     pixel_meta = SimpleNamespace(wave_input=None, nspecchan=None,
                                  npixelbins=2, npixelshift=0, wave_min=1.0,
                                  wave_max=1.4, wave_low=None, wave_hi=None)
-    pixel = s4_genLC.compute_wavelength_bins(pixel_meta, wave, _Log())
+    pixel = s4_genLC.compute_wavelength_bins(pixel_meta, wave, RecordingLog())
 
     np.testing.assert_allclose(pixel.wave_low, [0.95])
     np.testing.assert_allclose(pixel.wave_hi, [1.15])
@@ -147,7 +133,7 @@ def test_compute_wavelength_bins_shifts_both_pixel_range_endpoints(
                            npixelshift=shift, wave_min=3.0, wave_max=8.0,
                            wave_low=None, wave_hi=None)
 
-    result = s4_genLC.compute_wavelength_bins(meta, wave, _Log())
+    result = s4_genLC.compute_wavelength_bins(meta, wave, RecordingLog())
 
     np.testing.assert_allclose(result.wave_low, expected_low)
     np.testing.assert_allclose(result.wave_hi, expected_hi)
@@ -163,7 +149,7 @@ def test_compute_wavelength_bins_discards_partial_final_pixel_bin(wave_max):
                            npixelshift=0, wave_min=3.0, wave_max=wave_max,
                            wave_low=None, wave_hi=None)
 
-    result = s4_genLC.compute_wavelength_bins(meta, wave, _Log())
+    result = s4_genLC.compute_wavelength_bins(meta, wave, RecordingLog())
 
     # Keep samples 3--8 in two bins; the trailing samples 9/10 are excluded.
     np.testing.assert_allclose(result.wave_low, [2.5, 5.5])
@@ -180,7 +166,7 @@ def test_compute_wavelength_bins_rejects_undersized_native_grid(wave):
                            wave_low=None, wave_hi=None)
 
     with pytest.raises(ValueError, match='at least two wavelength samples'):
-        s4_genLC.compute_wavelength_bins(meta, np.array(wave), _Log())
+        s4_genLC.compute_wavelength_bins(meta, np.array(wave), RecordingLog())
 
 
 @pytest.mark.parametrize('wave_min,expected_wave,expected_low,expected_hi', [
@@ -195,7 +181,7 @@ def test_compute_wavelength_bins_uses_two_sample_native_grid(
                            wave_low=None, wave_hi=None)
 
     result = s4_genLC.compute_wavelength_bins(
-        meta, np.array([1.0, 1.4]), _Log()
+        meta, np.array([1.0, 1.4]), RecordingLog()
     )
 
     np.testing.assert_allclose(result.wave, expected_wave)
@@ -210,7 +196,9 @@ def test_compute_wavelength_bins_allows_single_sample_with_explicit_edges():
                            wave_min=1.0, wave_max=1.0,
                            wave_low=[0.9], wave_hi=[1.1])
 
-    result = s4_genLC.compute_wavelength_bins(meta, np.array([1.0]), _Log())
+    result = s4_genLC.compute_wavelength_bins(
+        meta, np.array([1.0]), RecordingLog()
+    )
 
     np.testing.assert_allclose(result.wave, [1.0])
     np.testing.assert_allclose(result.wave_low, [0.9])
@@ -220,7 +208,7 @@ def test_compute_wavelength_bins_allows_single_sample_with_explicit_edges():
 
 def test_compute_wavelength_bins_respects_explicit_edges_and_warnings():
     """Explicit S4 wavelength edges should override mismatched nspecchan."""
-    log = _Log()
+    log = RecordingLog()
     meta = SimpleNamespace(wave_input=None, nspecchan=3, npixelbins=None,
                            wave_min=1.0, wave_max=1.4,
                            wave_low=[1.0, 1.2], wave_hi=[1.2, 1.4])
@@ -238,7 +226,7 @@ def test_compute_wavelength_bins_reads_edges_from_input_file(tmp_path):
     """S4 wavelength bins should support two-column edge files."""
     wave_file = tmp_path/'wave_bins.txt'
     np.savetxt(wave_file, np.array([[1.0, 1.2], [1.2, 1.5]]))
-    log = _Log()
+    log = RecordingLog()
     meta = SimpleNamespace(wave_input=str(wave_file), nspecchan=None,
                            npixelbins=None, wave_min=1.0, wave_max=1.5,
                            wave_low=None, wave_hi=None)
@@ -261,7 +249,9 @@ def test_compute_wavelength_bins_raises_when_pixel_range_is_missing():
                            wave_low=None, wave_hi=None)
 
     with pytest.raises(ValueError, match='No wavelengths'):
-        s4_genLC.compute_wavelength_bins(meta, np.array([1.0, 1.1]), _Log())
+        s4_genLC.compute_wavelength_bins(
+            meta, np.array([1.0, 1.1]), RecordingLog()
+        )
 
 
 def test_compute_spectral_lightcurve_averages_masked_columns_and_errors():

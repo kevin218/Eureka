@@ -1,34 +1,14 @@
-import os
-import sys
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 import xarray as xr
 from scipy.constants import arcsec
+from tests.unit.helpers import RecordingLog
 
-os.environ.setdefault('MPLCONFIGDIR', '/tmp')
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                '..', '..', 'src')))
 from eureka.lib import util
 from eureka.S3_data_reduction import (background, bright2flux, nircam, optspex,
                                       sigrej, source_pos, straighten)
-
-
-class _Log:
-    def __init__(self):
-        self.messages = []
-
-    def writelog(self, message, **kwargs):
-        self.messages.append(message)
-
-
-class _Values:
-    def __init__(self, values):
-        self.values = np.asarray(values)
-
-    def __getitem__(self, key):
-        return self.values[key]
 
 
 def _trace_image(center=7.3, sigma=1.2, ny=15, nx=6, background=0.1):
@@ -109,7 +89,7 @@ def test_source_pos_wrapper_records_centroids_for_all_integrations():
                            ncpu=1, int_start=0, n_int=2, verbose=False)
 
     data, _, _ = source_pos.source_pos_wrapper(
-        data, meta, _Log(), m=0, integ=None
+        data, meta, RecordingLog(), m=0, integ=None
     )
 
     np.testing.assert_allclose(data.centroid_y.values, [6.2, 8.1], atol=0.02)
@@ -170,7 +150,7 @@ def test_nircam_flag_ff_preserves_mask_metadata_and_flags_temporal_outlier():
     )
     original_mask = data.mask.copy(deep=True)
     meta = SimpleNamespace(bg_thresh=[2], verbose=False)
-    log = _Log()
+    log = RecordingLog()
 
     result = nircam.flag_ff(data, meta, log)
 
@@ -251,7 +231,7 @@ def test_bgsubtraction_skip_adds_zero_background_without_changing_flux():
     data['flux'].attrs['flux_units'] = 'electrons'
     meta = SimpleNamespace(bg_deg=None, skip_bg=False, verbose=False)
 
-    result = background.BGsubtraction(data, meta, _Log(), m=0)
+    result = background.BGsubtraction(data, meta, RecordingLog(), m=0)
 
     np.testing.assert_allclose(result.flux.values, flux)
     np.testing.assert_allclose(result.bg.values, np.zeros_like(flux))
@@ -325,7 +305,7 @@ def test_get_clean_interpolates_masked_pixels_and_removes_median_outlier():
     mederr = np.ones((2, 5))
     meta = SimpleNamespace(window_len=3, median_thresh=2)
 
-    clean = optspex.get_clean(data, meta, _Log(), medflux, mederr)
+    clean = optspex.get_clean(data, meta, RecordingLog(), medflux, mederr)
 
     np.testing.assert_allclose(clean, [[1, 2, 3, 4, 5],
                                        [10, 11, 12, 13, 14]])
@@ -397,7 +377,7 @@ def test_dn2electrons_scales_flux_error_and_variance_with_scalar_gain():
     )
     meta = SimpleNamespace(gain=4.0, gainfile=None)
 
-    result = bright2flux.dn2electrons(data, meta, _Log())
+    result = bright2flux.dn2electrons(data, meta, RecordingLog())
 
     np.testing.assert_allclose(result.flux.values, np.full((2, 2), 4.0))
     np.testing.assert_allclose(result.err.values, np.full((2, 2), 8.0))
@@ -419,7 +399,7 @@ def test_dn2electrons_applies_supersampled_array_gain_window():
     meta = SimpleNamespace(gain=[[2.0, 3.0], [4.0, 5.0]], gainfile=None,
                            expand=1, ywindow=[0, 2], xwindow=[0, 2])
 
-    result = bright2flux.dn2electrons(data, meta, _Log())
+    result = bright2flux.dn2electrons(data, meta, RecordingLog())
 
     gain = np.array([[2.0, 3.0], [4.0, 5.0]])
     np.testing.assert_allclose(result.flux.values, gain)

@@ -1,27 +1,15 @@
-import os
-import sys
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 from astropy.table import Table
 from astropy.table import Table as AstropyTable
+from tests.unit.helpers import RecordingLog
 
-os.environ.setdefault('MPLCONFIGDIR', '/tmp')
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                '..', '..', 'src')))
 from eureka.lib.readEPF import Parameters
 from eureka.S5_lightcurve_fitting import (fitters, likelihood, models, s5_fit,
                                           utils)
 from eureka.S5_lightcurve_fitting.lightcurve import LightCurve
-
-
-class _Log:
-    def __init__(self):
-        self.messages = []
-
-    def writelog(self, message, **kwargs):
-        self.messages.append(message)
 
 
 class _FlatModel(models.Model):
@@ -165,7 +153,7 @@ def test_compute_reduced_chi_squared_uses_unmasked_points_and_logs():
                          unc_fit=np.array([0.1, 0.2, 0.3]))
     model = SimpleNamespace(eval=lambda incl_GP=False:
                             np.ma.array([1.0, 1.0, 1.0]))
-    log = _Log()
+    log = RecordingLog()
     meta = SimpleNamespace(verbose=True)
 
     result = likelihood.computeRedChiSq(lc, log, model, meta, ['c0'])
@@ -253,7 +241,7 @@ def test_lightcurve_initialization_validates_shapes_and_scatter_mult():
     """LightCurve construction validates shapes and pre-inflates errors."""
     params = _params(scatter_mult=(2.0, 'free'),
                      scatter_mult_ch1=(3.0, 'free'))
-    log = _Log()
+    log = RecordingLog()
 
     lc = LightCurve(time=np.arange(5), flux=np.ones(5), channel=0,
                     nchannel=2, log=log, longparamlist=[[], []],
@@ -273,8 +261,8 @@ def test_lightcurve_initialization_validates_shapes_and_scatter_mult():
 def test_lightcurve_fit_selects_fitter_and_rejects_unknown(monkeypatch):
     """Fit dispatch should call requested and reject invalid fitters."""
     lc = LightCurve(time=np.arange(2), flux=np.ones(2), channel=0, nchannel=1,
-                    log=_Log(), longparamlist=[[]], parameters=Parameters(),
-                    freenames=[], unc=np.ones(2))
+                    log=RecordingLog(), longparamlist=[[]],
+                    parameters=Parameters(), freenames=[], unc=np.ones(2))
     model = SimpleNamespace()
     meta = SimpleNamespace()
     fit_result = SimpleNamespace(name='fit-result')
@@ -282,11 +270,11 @@ def test_lightcurve_fit_selects_fitter_and_rejects_unknown(monkeypatch):
     monkeypatch.setattr(fitters, 'lsqfitter',
                         lambda *args, **kwargs: fit_result)
 
-    lc.fit(model, meta, _Log(), fitter='lsq')
+    lc.fit(model, meta, RecordingLog(), fitter='lsq')
     assert lc.results[0].name == 'fit-result'
 
     with pytest.raises(ValueError, match='not a valid fitter'):
-        lc.fit(model, meta, _Log(), fitter='bogus')
+        lc.fit(model, meta, RecordingLog(), fitter='bogus')
 
 
 def test_initialize_emcee_walkers_stays_within_uniform_and_log_priors():
@@ -299,7 +287,7 @@ def test_initialize_emcee_walkers_stays_within_uniform_and_log_priors():
     priortype = np.array(['U', 'LU', 'N'])
 
     pos, nwalkers = fitters.initialize_emcee_walkers(
-        meta, _Log(), ndim=3, lsq_sol=None, freepars=freepars.copy(),
+        meta, RecordingLog(), ndim=3, lsq_sol=None, freepars=freepars.copy(),
         prior1=prior1, prior2=prior2, priortype=priortype
     )
 
@@ -339,7 +327,7 @@ def test_initialize_emcee_walkers_moves_boundary_start_to_midpoint(
     expected = np.array([7.0, 1.0, 17.0, 3.0, 4.0])[order]
 
     pos, nwalkers = fitters.initialize_emcee_walkers(
-        meta, _Log(), ndim=5, lsq_sol=None, freepars=freepars,
+        meta, RecordingLog(), ndim=5, lsq_sol=None, freepars=freepars,
         prior1=prior1, prior2=prior2, priortype=priortype
     )
 
