@@ -209,8 +209,6 @@ def test_clip_outliers_masks_or_replaces_known_time_series_outlier():
             fill_value='mask'
         )
 
-    # The rolling median is not dragged by the spike, so its neighbours
-    # should not be clipped
     assert noutliers == 1
     expected_outliers = np.zeros(21, dtype=bool)
     expected_outliers[10] = True
@@ -225,10 +223,11 @@ def test_clip_outliers_masks_or_replaces_known_time_series_outlier():
             maxiters=3, fill_value=-99
         )
     assert noutliers == 1
-    assert not np.ma.is_masked(filled[3])
-    assert filled[9] == 1
-    assert filled[10] == -99
-    assert filled[11] == 1
+    np.testing.assert_array_equal(outliers, expected_outliers)
+    assert not np.any(np.ma.getmaskarray(filled))
+    expected_filled = data.copy()
+    expected_filled[10] = -99
+    np.testing.assert_array_equal(filled, expected_filled)
 
 
 def test_trimimage_pads_out_of_bounds_pixels_and_carries_mask_uncertainty():
