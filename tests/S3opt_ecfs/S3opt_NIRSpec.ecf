@@ -4,8 +4,8 @@
 
 # Fitness Scaling
 # Use these settings to override the default fitness scaling factors.
-scaling_MAD_spec    0.01            # Optimizer scaling for 2D MAD value
-scaling_MAD_white   1.0             # Optimizer scaling for WLC MAD value
+scaling_MAED_spec    0.01            # Optimizer scaling for 2D MAED value
+scaling_MAED_white   1.0             # Optimizer scaling for WLC MAED value
 
 # List of single parameter options to optimize in Stage 3:
 #   dqmask, bg_thresh, bg_hw, bg_deg, bg_method, p3thresh, spec_hw, median_thresh, window_len, p7thresh
@@ -14,8 +14,8 @@ scaling_MAD_white   1.0             # Optimizer scaling for WLC MAD value
 params_to_optimize_s3  ['spec_hw__bg_hw', 'bg_thresh']
 
 # List of single parameter options to optimize in Stage 4:
-#   mad_sigma, mad_box_width, sigma, box_width
-params_to_optimize_s4  ['mad_sigma', 'sigma__box_width']
+#   maed_sigma, maed_box_width, sigma, box_width
+params_to_optimize_s4  ['maed_sigma', 'sigma__box_width']
 
 # Range for parameter values to optimize
 # Only specify if overriding the default ranges in S3opt_meta.py
@@ -23,7 +23,7 @@ params_to_optimize_s4  ['mad_sigma', 'sigma__box_width']
 # For double parameters, use format: sweep_<parameter1>__<parameter2> = [range(min1, max1+1), range(min2, max2+1)]
 sweep_spec_hw__bg_hw      [range(4,6), range(4,7)]
 sweep_bg_thresh            np.arange(4,5.5,0.5)
-sweep_mad_sigma            range(6,8)
+sweep_maed_sigma            range(6,8)
 sweep_sigma__box_width     [range(3,7,2), range(7,16,6)]
 
 # Diagnostics

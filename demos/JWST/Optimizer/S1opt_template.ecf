@@ -6,8 +6,8 @@
 
 # Fitness Scaling
 # Use these settings to override the default fitness scaling factors.
-scaling_MAD_spec    0.01            # Optimizer scaling for 2D MAD value
-scaling_MAD_white   1.0             # Optimizer scaling for WLC MAD value
+scaling_MAED_spec    0.01            # Optimizer scaling for 2D MAED value
+scaling_MAED_white   1.0             # Optimizer scaling for WLC MAED value
 
 # List of parameters to optimize in Stage 1
 # Commenting out this line will use all single parameters listed below.

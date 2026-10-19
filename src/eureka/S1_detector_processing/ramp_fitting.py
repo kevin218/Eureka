@@ -12,19 +12,16 @@ import numpy as np
 import stcal.ramp_fitting.ols_fit
 from jwst import datamodels
 from jwst.datamodels import dqflags
-from jwst.lastframe.lastframe_step import LastFrameStep
-from jwst.ramp_fitting.ramp_fit_step import (create_image_model,
+from jwst.ramp_fitting.ramp_fit_step import (RampFitStep, create_image_model,
                                              create_integration_model,
                                              get_reference_file_subarrays,
                                              set_groupdq)
-from jwst.stpipe import Step
 from stcal.ramp_fitting import ramp_fit, utils
 from stcal.ramp_fitting.likely_fit import LIKELY_MIN_NGROUPS
 from stcal.ramp_fitting.ols_fit import discard_miri_groups
 from stcal.ramp_fitting.ramp_fit import suppress_one_good_group_ramps
 
 from . import group_level, remove390, update_saturation
-from .rscd import Eureka_RscdStep
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -92,7 +89,7 @@ except Exception:
                                      * ramp_data.frame_time / 2)
 
 
-class Eureka_RampFitStep(Step):
+class Eureka_RampFitStep(RampFitStep):
     """This step is an alternative to the pipeline rampfitstep to determine
     the count rate for each pixel.
     """
@@ -335,19 +332,20 @@ class Eureka_RampFitStep(Step):
         The correction order matches the normal MIRI Detector1 pipeline:
         lastframe is applied before RSCD. Both steps honor their Stage 1 skip
         settings, and RSCD receives Eureka!'s first- and later-integration
-        group-count overrides.
+        group-count overrides. The configured pipeline steps are reused to
+        preserve their context and reference overrides. Their deferred skip
+        flags are restored even if a correction fails.
         """
-        if not self.s1_meta.skip_lastframe:
-            self.lastframe = LastFrameStep()
-            self.lastframe.skip = False
-            input_model = self.lastframe.run(input_model)
-
-        if not self.s1_meta.skip_rscd:
-            self.rscd = Eureka_RscdStep()
-            self.rscd.group_skip1 = self.s1_meta.rscd_group_skip1
-            self.rscd.group_skip = self.s1_meta.rscd_group_skip
-            self.rscd.skip = False
-            input_model = self.rscd.run(input_model)
+        for name in ['lastframe', 'rscd']:
+            if getattr(self.s1_meta, 'skip_' + name):
+                continue
+            step = getattr(self.parent, name)
+            deferred_skip = step.skip
+            try:
+                step.skip = False
+                input_model = step.run(input_model)
+            finally:
+                step.skip = deferred_skip
 
         return input_model
 

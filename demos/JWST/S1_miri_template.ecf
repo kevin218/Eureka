@@ -19,7 +19,7 @@ skip_ramp_fitting   False
 
 #Pipeline stages parameters
 jump_rejection_threshold  4.0 # float, default is 4.0, CR sigma rejection threshold. Usually recommend a larger value for TSO data.
-rscd_group_skip1    1         # Initial groups to flag in integration 1; None uses CRDS
+rscd_group_skip1    None      # Initial groups to flag in integration 1; None uses rscd_group_skip
 rscd_group_skip     1         # Initial groups to flag in integrations 2+; None uses CRDS
 
 # Custom linearity reference file
@@ -40,7 +40,7 @@ ncpu                8
 bg_y1               6
 bg_y2               26
 bg_deg              0
-bg_method           median  # Options: std (Standard Deviation), median (Median Absolute Deviation), mean (Mean Absolute Deviation)
+bg_method           median  # Options: std (Standard Deviation), median (Median Absolute Element Difference), mean (Mean Absolute Deviation)
 p3thresh            5
 
 # Diagnostics

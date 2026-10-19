@@ -14,15 +14,15 @@ class Eureka_RscdStep(RscdStep):
 
     This step extends :class:`jwst.rscd.rscd_step.RscdStep` by allowing
     Eureka! control files to override the number of initial groups flagged in
-    the first integration and in subsequent integrations independently. An
-    override of ``None`` retains the corresponding value from the CRDS RSCD
-    reference file.
+    the first integration and in subsequent integrations independently. By
+    default the first integration uses the same count as later integrations,
+    whose count is read from the CRDS RSCD reference file if not overridden.
 
     Attributes
     ----------
     group_skip1 : int or None
         Number of initial groups to flag in the first integration. If None,
-        use ``group_skip1`` from the CRDS RSCD reference file.
+        use the effective ``group_skip`` value, including its CRDS fallback.
     group_skip : int or None
         Number of initial groups to flag in the second and subsequent
         integrations. If None, use ``group_skip`` from the CRDS RSCD
@@ -78,8 +78,8 @@ class Eureka_RscdStep(RscdStep):
         if group_skip is not None and group_skip < 0:
             raise ValueError("group_skip must be nonnegative or None")
 
-        # Read CRDS values only when at least one count was not overridden.
-        if group_skip1 is None or group_skip is None:
+        # Resolve the later-integration count before applying inheritance.
+        if group_skip is None:
             rscd_name = self.get_reference_file(result, "rscd")
             log.info("Using RSCD reference file %s", rscd_name)
 
@@ -100,14 +100,10 @@ class Eureka_RscdStep(RscdStep):
                 result.meta.cal_step.rscd = "SKIPPED"
                 return result
 
-            if group_skip1 is None:
-                group_skip1 = parameters["skip_int1"]
-                if group_skip1 < 0:
-                    log.warning("RSCD reference file is deprecated and has "
-                                "no first-integration value; using 1")
-                    group_skip1 = 1
-            if group_skip is None:
-                group_skip = parameters["skip_int2p"]
+            group_skip = parameters["skip_int2p"]
+
+        if group_skip1 is None:
+            group_skip1 = group_skip
 
         log.info("# groups to flag in integration 1: %s", group_skip1)
         log.info("# groups to flag in integrations 2 and higher: %s",

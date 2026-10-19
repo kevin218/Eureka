@@ -71,9 +71,10 @@ flagging in every integration.
 rscd_group_skip1
 ''''''''''''''''
 For MIRI data, the number of initial groups that the RSCD step should flag in
-the first integration. The default is ``None``, which uses the ``group_skip1``
-value from the CRDS RSCD reference file. Set this to a nonnegative integer to
-override the reference-file value.
+the first integration. The default is ``None``, which uses the effective
+``rscd_group_skip`` value, including when that value comes from CRDS. Set this
+to a nonnegative integer, including ``0``, to override the shared count for
+the first integration.
 
 rscd_group_skip
 '''''''''''''''
@@ -287,25 +288,47 @@ Stages 1/3/4 Optimizer
 ----------------------
 This tool allows users to optimize the parameter values of Stages 1, 3, and 4 by performing a parametric sweep over a specified set of parameter values and evaluating the resulting spectra with a user-defined weighting of the fitness function.  The optimizer starts with an intial run of a stage using the default parameter values, performs a sweep over the specified parameter values, and then completes a final run with the best parameter values from the sweep.
 
-The fitness function is a weighted combination of the 2D MAD and the white light curve MAD.  The optimizer will generate a plot showing how the fitness function improves with each parameter sweep.  In the rare event that the final fitness value is worse than the initial value, users should consider trying smaller step sizes or a different set of parameter values that include the default parameter values.
+The fitness function is a weighted combination of the 2D MAED and the white light curve MAED.  The optimizer will generate a plot showing how the fitness function improves with each parameter sweep.  In the rare event that the final fitness value is worse than the initial value, users should consider trying smaller step sizes or a different set of parameter values that include the default parameter values.
 
 **Important Warning:** The optimizer is designed as a tool for parameter exploration and fine-tuning, not as a black-box solution. Users must critically investigate all outputs before and after optimization to ensure the final tunings are appropriate and scientifically valid. The fitness metric is inherently imperfect and may lead to undesirable outcomes in complex scenarios, such as observations affected by nearby binary stars or other astrophysical contaminants. Always review the spectra from different parameter values in the sweep to understand their impact, and remember that optimal parameter values can vary significantly between datasets. Thus, re-running the optimizer for each new dataset is recommended.
 
-scaling_MAD_spec
-''''''''''''''''
-Scaling factor applied to the pixel-level 2D Median Absolute Difference (MAD) value in the fitness function. Higher values prioritize spectral quality.
-
-scaling_MAD_white
+scaling_MAED_spec
 '''''''''''''''''
-Scaling factor applied to the white light curve MAD value in the fitness function. Higher values prioritize band-integrated quality.
+Scaling factor applied to the pixel-level 2D Median Absolute Element Difference (MAED) value in the fitness function. Higher values prioritize spectral quality.
+
+scaling_MAED_white
+''''''''''''''''''
+Scaling factor applied to the white light curve MAED value in the fitness function. Higher values prioritize band-integrated quality.
 
 params_to_optimize_s1
 ''''''''''''''''''''''
-List of parameters to optimize in Stage 1. Commenting out this line will use all single parameters.  Single parameter options: jump_rejection_threshold, expand_mask, bg_deg, bg_method, p3thresh, window_len, skip_*, rscd_group_skip1, rscd_group_skip. Double parameter options: any combination of the above, joined by two underscores (e.g., expand_mask__p3thresh). Special cases: rscd_group_skip1/rscd_group_skip only affect the fit when skip_rscd is False, so they are optimized before skip_rscd (with skip_rscd forced to False during their optimization). Example:
+List of parameters to optimize in Stage 1. Commenting out this line uses the
+instrument-specific default parameters. Single parameter options:
+``jump_rejection_threshold``, ``expand_mask``, ``bg_deg``, ``bg_method``,
+``p3thresh``, ``window_len``, ``skip_*``, ``rscd_group_skip1``,
+``rscd_group_skip``. Double parameter options: any combination of the above,
+joined by two underscores (e.g., ``expand_mask__p3thresh``).
+
+For MIRI photometry and spectroscopy, the default list is
+``['jump_rejection_threshold', 'skip_lastframe', 'rscd_group_skip',
+'skip_rscd']``. The first integration inherits ``rscd_group_skip`` unless
+``rscd_group_skip1`` is explicitly set; optimizing ``rscd_group_skip1``
+requires including it in the parameter list.
+
+RSCD group counts only affect the fit when ``skip_rscd`` is ``False``.
+Count sweeps always use ``skip_rscd=False``. If ``skip_rscd`` is requested,
+its sweep runs after all group-count sweeps, using the optimized counts to
+compare whether enabling RSCD improves the result. This order also applies
+to custom parameter lists. Joint count/skip requests are split into a count
+sweep followed by a skip sweep, retaining their requested sweep ranges.
+A successful count sweep records ``skip_rscd=False`` in the selected
+configuration so later sweeps, the saved ECF, and the final run retain the
+evaluated setting unless the later skip sweep chooses to disable it.
+Example:
 
 .. code-block:: python
 
-   params_to_optimize = ['jump_rejection_threshold', 'expand_mask', 'p3thresh']
+   params_to_optimize_s1 = ['jump_rejection_threshold', 'expand_mask', 'p3thresh']
 
 params_to_optimize_s3
 '''''''''''''''''''''
@@ -317,11 +340,11 @@ List of parameters to optimize in Stage 3. Commenting out this line will use all
 
 params_to_optimize_s4
 '''''''''''''''''''''
-List of parameters to optimize in Stage 4. Single parameter options: mad_sigma, mad_box_width, sigma, box_width. Double parameter options: mad_sigma__mad_box_width, sigma__box_width. Recommended parameters:
+List of parameters to optimize in Stage 4. Single parameter options: maed_sigma, maed_box_width, sigma, box_width. Double parameter options: maed_sigma__maed_box_width, sigma__box_width. Recommended parameters:
 
 .. code-block:: python
 
-    params_to_optimize_s4 = ['mad_sigma__mad_box_width', 'sigma__box_width']
+    params_to_optimize_s4 = ['maed_sigma__maed_box_width', 'sigma__box_width']
 
 sweep_<parameter_name>
 ''''''''''''''''''''''
@@ -639,13 +662,13 @@ Possible values:
 
 - ``bg_deg = None``: No backgound subtraction will be performed.
 - ``bg_deg < 0``: The median flux value in the background area will be calculated and subtracted from the entire 2D Frame for this paticular integration.
-- ``bg_deg => 0``: A polynomial of degree `bg_deg` will be fitted to every background column (background at a specific wavelength). If the background data has an outlier (or several) which is (are) greater than 5  * (Mean Absolute Deviation), this value will be not considered as part of the background. Step-by-step:
+- ``bg_deg => 0``: A polynomial of degree `bg_deg` will be fitted to every background column (background at a specific wavelength). If the background data has an outlier (or several) which is (are) greater than 5  * (Median Absolute Element Difference), this value will be not considered as part of the background. Step-by-step:
 
 1. Take background pixels of first column
 2. Fit a polynomial of degree  ``bg_deg`` to the background pixels.
 3. Calculate the residuals (flux(bg_pixels) - polynomial_bg_deg(bg_pixels))
-4. Calculate the MAD (Mean Absolute Deviation) of the greatest background outlier.
-5. If MAD of the greatest background outlier is greater than 5, remove this background pixel from the background value calculation. Repeat from Step 2. and repeat as long as there is no 5*MAD outlier in the background column.
+4. Calculate the MAED (Median Absolute Element Difference) of the greatest background outlier.
+5. If MAED of the greatest background outlier is greater than 5, remove this background pixel from the background value calculation. Repeat from Step 2. and repeat as long as there is no 5*MAED outlier in the background column.
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
 
 bg_method
@@ -946,12 +969,12 @@ fill_value
 ''''''''''
 Only used if sigma_clip=True. Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
-mad_sigma
-'''''''''
-The number of sigmas an unbinned MAD value must be from the rolling median (using mad_box_width) to be considered an outlier.  Outlier columns are masked.
+maed_sigma
+''''''''''
+The number of sigmas an unbinned MAED value must be from the rolling median (using maed_box_width) to be considered an outlier.  Outlier columns are masked.
 
-mad_box_width
-'''''''''''''
+maed_box_width
+''''''''''''''
 The width of the box-car filter (used to calculated the rolling median) in units of number of wavelength elements. Used in calculating whether wavelength elements are outliers in the unbinned spectrum.
 
 sum_reads
@@ -986,6 +1009,14 @@ You can also use "custom" for a custom stellar intensity grid specified through 
 exotic_ld_file
 ''''''''''''''
 Used by exotic-ld as throughput input file. If none, exotic-ld uses throughput from ancillary files. Make sure that wavelength is given in Angstrom!
+
+nirspec_filter
+''''''''''''''
+The NIRSpec blocking filter, ``F070LP`` or ``F100LP``, used to select the
+ExoTiC-LD throughput file for G140H and G140M. Stage 3 records this from the
+FITS ``FILTER`` keyword. When using older Stage 3 outputs, set this parameter
+in the Stage 4 ECF to match the original FITS header. It is not required when
+using a custom throughput file.
 
 rescale_phoenix
 '''''''''''''''

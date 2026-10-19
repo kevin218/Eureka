@@ -68,6 +68,7 @@ class S4MetaClass(MetaClass):
         # Make sure the inst and filt attributes are at least initialized
         self.inst = getattr(self, 'inst', None)
         self.filter = getattr(self, 'filter', None)
+        self.nirspec_filter = getattr(self, 'nirspec_filter', None)
 
         # Make sure the S3 expand parameter is defined
         # (to allow resuming from old analyses)
@@ -120,8 +121,8 @@ class S4MetaClass(MetaClass):
         self.boundary = getattr(self, 'boundary', 'fill')
         self.fill_value = getattr(self, 'fill_value', 'mask')
         # Used in Fig 4106
-        self.mad_sigma = getattr(self, 'mad_sigma', 7)
-        self.mad_box_width = getattr(self, 'mad_box_width', 21)
+        self.maed_sigma = getattr(self, 'maed_sigma', 7)
+        self.maed_box_width = getattr(self, 'maed_box_width', 21)
 
         # HST/WFC3 temporal binning (sum together all reads from one scan)
         self.sum_reads = getattr(self, 'sum_reads', True)

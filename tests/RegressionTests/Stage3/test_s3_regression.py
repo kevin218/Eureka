@@ -11,7 +11,7 @@ from .conftest import REFERENCE_ROOT
 
 # Test tolerances.
 RTOL = 1e-4  # Relative tolerance for most arrays.
-MAD_RTOL = 2e-3  # Relative tolerance for MAD values.
+MAED_RTOL = 2e-3  # Relative tolerance for MAED values.
 CENTROID_ATOL = 1e-2  # Absolute tolerance for centroid positions.
 # WFC3 optspec differs from its approved reference by up to 0.45% in
 # CI.
@@ -73,6 +73,6 @@ def test_s3_science_products(case, run_s3, overwrite_ref_files):
                      centroid_atol=CENTROID_ATOL)
 
     # Assertions for HDF5 metadata
-    assert_attribute(case, "SpecData", actual, expected, "mad_s3",
-                     rtol=MAD_RTOL, atleast_1d=True)
+    assert_attribute(case, "SpecData", actual, expected, "maed_s3",
+                     rtol=MAED_RTOL, atleast_1d=True)
     _assert_case_semantics(case, actual, expected)

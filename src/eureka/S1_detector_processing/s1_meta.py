@@ -177,7 +177,7 @@ class S1MetaClass(MetaClass):
             self.bg_y2 = getattr(self, 'bg_y2')
             self.bg_deg = getattr(self, 'bg_deg', 0)
             # Options: std (Standard Deviation),
-            # median (Median Absolute Deviation), or
+            # median (Median Absolute Element Difference), or
             # mean (Mean Absolute Deviation)
             self.bg_method = getattr(self, 'bg_method', 'median')
             self.p3thresh = getattr(self, 'p3thresh', 3)
@@ -236,6 +236,8 @@ class S1MetaClass(MetaClass):
         self.skip_lastframe = getattr(self, 'skip_lastframe', True)
         self.skip_reset = getattr(self, 'skip_reset', False)
         self.skip_rscd = getattr(self, 'skip_rscd', True)
+        # Keep None until the RSCD step resolves the effective group_skip,
+        # so inheritance follows optimizer sweeps and CRDS reference values.
         self.rscd_group_skip1 = getattr(self, 'rscd_group_skip1', None)
         self.rscd_group_skip = getattr(self, 'rscd_group_skip', None)
 

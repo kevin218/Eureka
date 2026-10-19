@@ -23,7 +23,7 @@ skip_gain_scale             False
 
 #Pipeline stages parameters
 jump_rejection_threshold    4.0   # float, default is 4.0, CR sigma rejection threshold
-rscd_group_skip1            None  # Initial groups to flag in integration 1; None uses CRDS
+rscd_group_skip1            None  # Initial groups to flag in integration 1; None uses rscd_group_skip
 rscd_group_skip             None  # Initial groups to flag in integrations 2+; None uses CRDS
 
 # Project directory

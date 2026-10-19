@@ -1,19 +1,16 @@
 import os
 import sys
 import time as time_pkg
-from copy import deepcopy
 from importlib import reload
 
 import numpy as np
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
-import eureka.lib.plots
-from eureka.lib.citations import CITATIONS
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
 
 try:
-    from eureka.S1_detector_processing import s1_process as s1
+    # from eureka.S1_detector_processing import s1_process as s1
     from eureka.S2_calibrations import s2_calibrate as s2
 except ModuleNotFoundError:
     pass
@@ -82,7 +79,10 @@ def test_MIRI(capsys, keep_s2_output, keep_s3_output, keep_s4_output):
     # run assertions for S2
     if s2_installed:
         # Only run S1-2 stuff if jwst package has been installed
-        # meta.outputdir_raw=f'{os.sep}data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage1{os.sep}'
+        # meta.outputdir_raw = (
+        #     f'{os.sep}data{os.sep}JWST-Sim{os.sep}MIRI'
+        #     f'{os.sep}Stage1{os.sep}'
+        # )
         # name = pathdirectory(meta, 'S1', s1_meta.run_s1,
         #                      old_datetime=s1_meta.datetime)
         # assert os.path.exists(name)

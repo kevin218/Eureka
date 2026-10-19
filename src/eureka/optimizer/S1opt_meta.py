@@ -122,8 +122,8 @@ class S1optMetaClass(MetaClass):
         Set Optimizer specific defaults for NIRSpec.
         '''
         # Fitness scaling factors
-        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 0.01)
-        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
+        self.scaling_MAED_spec = getattr(self, 'scaling_MAED_spec', 0.01)
+        self.scaling_MAED_white = getattr(self, 'scaling_MAED_white', 1.0)
 
         full_list = ['jump_rejection_threshold', 'expand_mask', 'bg_deg',
                      'bg_method', 'p3thresh', 'window_len']
@@ -145,11 +145,11 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for MIRI photometry.
         '''
-        # rscd_group_skip1/rscd_group_skip only affect the fit when
-        # skip_rscd is False, so they are optimized first (with skip_rscd
-        # forced to False) and skip_rscd is optimized afterward.
+        # Optimize the shared group count with RSCD enabled, then skip_rscd.
+        # The first integration inherits this count unless overridden;
+        # rscd_group_skip1 can be included in an explicitly requested sweep.
         full_list = ['jump_rejection_threshold', 'skip_lastframe',
-                     'rscd_group_skip1', 'rscd_group_skip', 'skip_rscd']
+                     'rscd_group_skip', 'skip_rscd']
         self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
                                              full_list)
 
@@ -175,11 +175,11 @@ class S1optMetaClass(MetaClass):
         '''
         Set Optimizer specific defaults for MIRI.
         '''
-        # rscd_group_skip1/rscd_group_skip only affect the fit when
-        # skip_rscd is False, so they are optimized first (with skip_rscd
-        # forced to False) and skip_rscd is optimized afterward.
+        # Optimize the shared group count with RSCD enabled, then skip_rscd.
+        # The first integration inherits this count unless overridden;
+        # rscd_group_skip1 can be included in an explicitly requested sweep.
         full_list = ['jump_rejection_threshold', 'skip_lastframe',
-                     'rscd_group_skip1', 'rscd_group_skip', 'skip_rscd']
+                     'rscd_group_skip', 'skip_rscd']
         self.params_to_optimize_s1 = getattr(self, 'params_to_optimize_s1',
                                              full_list)
 
@@ -200,8 +200,8 @@ class S1optMetaClass(MetaClass):
         Set Optimizer specific defaults for NIRCam.
         '''
         # Fitness scaling factors
-        self.scaling_MAD_spec = getattr(self, 'scaling_MAD_spec', 0.01)
-        self.scaling_MAD_white = getattr(self, 'scaling_MAD_white', 1.0)
+        self.scaling_MAED_spec = getattr(self, 'scaling_MAED_spec', 0.01)
+        self.scaling_MAED_white = getattr(self, 'scaling_MAED_white', 1.0)
 
         full_list = ['jump_rejection_threshold', 'expand_mask', 'bg_deg',
                      'bg_method', 'p3thresh', 'window_len']

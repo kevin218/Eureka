@@ -22,7 +22,7 @@ from .source_pos import gauss
 
 @plots.apply_style
 def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
-                   mad=None, order=None):
+                   maed=None, order=None):
     '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
 
     Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
@@ -45,7 +45,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
         For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
         Defaults to None which is fine for JWST data, but must be provided
         for HST data (can be all zero values if not spatial scanning mode).
-    mad : float; optional
+    maed : float; optional
         Median absolution deviation. Default is None.
     order : int; optional
         Spectral order. Default is None
@@ -123,9 +123,9 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
 
     ax1.minorticks_on()
     ax2.minorticks_on()
-    if mad is not None:
-        ax1.set_title(f"MAD = {mad:.0f} ppm")
-        ax2.set_title(f"MAD = {mad:.0f} ppm")
+    if maed is not None:
+        ax1.set_title(f"MAED = {maed:.0f} ppm")
+        ax2.set_title(f"MAED = {maed:.0f} ppm")
     fig1.colorbar(im1, ax=ax1, label='Normalized Flux')
     fig2.colorbar(im2, ax=ax2, label='Normalized Flux')
 

@@ -7,9 +7,9 @@ Each Stage 4 reference directory contains:
 - `SpecData.h5`: the approved corrected spectrum;
 - `LCData.h5`: the approved binned light curves.
 
-`SpecData.h5` also stores the unbinned Stage 4 MAD and applied detector-column
+`SpecData.h5` also stores the unbinned Stage 4 MAED and applied detector-column
 mask. `LCData.h5` stores the binned science products, their wavelength-bin
-coordinates, and the binned MAD metrics.
+coordinates, and the binned MAED metrics.
 
 Run the suite with:
 
