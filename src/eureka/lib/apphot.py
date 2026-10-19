@@ -554,6 +554,21 @@ def photutils_apphot(data, meta, i):
     flux = np.ma.masked_where(mask, data.flux.values[i])
     derr = np.ma.masked_where(mask, data.err.values[i])
 
+    # Masked pixels that were replaced by util.interp_masked must still be
+    # summed in the source aperture, otherwise their flux is simply lost.
+    # As in apphot, their uncertainty is unknown, so they do not contribute
+    # to the aperture uncertainty. The sky annulus still uses only good
+    # pixels.
+    if 'interp_mask' in data:
+        interp = data.interp_mask.values[i]
+    else:
+        interp = np.zeros_like(mask)
+    ap_mask = mask & ~interp
+    ap_good_pixels = (~ap_mask).astype(float)
+    ap_flux = np.ma.masked_where(ap_mask, data.flux.values[i])
+    ap_derr = np.ma.masked_where(ap_mask,
+                                 np.where(interp, 0., data.err.values[i]))
+
     # Setup the object aperture and the sky annulus
     if meta.aperture_shape == 'circle':
         obj_aper = CircularAperture(position, meta.photap)
@@ -589,12 +604,12 @@ def photutils_apphot(data, meta, i):
         nskyideal = aperture_photometry(np.ones_like(good_pixels), sky_annul,
                                         method=meta.aperture_edge
                                         )['aperture_sum'].data[0]
-    nappix = aperture_photometry(good_pixels, obj_aper,
+    nappix = aperture_photometry(ap_good_pixels, obj_aper,
                                  method=meta.aperture_edge
                                  )['aperture_sum'].data[0]
 
     # Compute the total source flux
-    aptable = aperture_photometry(flux, obj_aper, derr, mask,
+    aptable = aperture_photometry(ap_flux, obj_aper, ap_derr, ap_mask,
                                   method=meta.aperture_edge)
     aplev = aptable['aperture_sum'].data[0]
     aperr = aptable['aperture_sum_err'].data[0]
