@@ -209,12 +209,12 @@ def test_clip_outliers_masks_or_replaces_known_time_series_outlier():
             fill_value='mask'
         )
 
-    assert noutliers == 3
+    assert noutliers == 1
     expected_outliers = np.zeros(21, dtype=bool)
-    expected_outliers[9:12] = True
+    expected_outliers[10] = True
     np.testing.assert_array_equal(outliers, expected_outliers)
     np.testing.assert_array_equal(np.ma.getmaskarray(clipped), outliers)
-    assert 'Identified 3 outliers' in log.messages[0]
+    assert 'Identified 1 outliers' in log.messages[0]
 
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', AstropyUserWarning)
@@ -222,9 +222,12 @@ def test_clip_outliers_masks_or_replaces_known_time_series_outlier():
             data, RecordingLog(), wavelength=2.0, sigma=2, box_width=3,
             maxiters=3, fill_value=-99
         )
-    assert noutliers == 3
-    assert not np.ma.is_masked(filled[3])
-    assert filled[10] == -99
+    assert noutliers == 1
+    np.testing.assert_array_equal(outliers, expected_outliers)
+    assert not np.any(np.ma.getmaskarray(filled))
+    expected_filled = data.copy()
+    expected_filled[10] = -99
+    np.testing.assert_array_equal(filled, expected_filled)
 
 
 def test_trimimage_pads_out_of_bounds_pixels_and_carries_mask_uncertainty():
