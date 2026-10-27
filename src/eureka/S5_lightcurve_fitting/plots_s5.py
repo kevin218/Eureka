@@ -1,6 +1,6 @@
 import os
-from copy import deepcopy
 import warnings
+from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +20,6 @@ try:
 except ModuleNotFoundError:
     # Harmonica hasn't been installed
     pass
-import warnings
 
 warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
                                           'this call because figure with num')
