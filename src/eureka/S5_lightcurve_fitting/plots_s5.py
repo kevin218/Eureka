@@ -1,6 +1,6 @@
 import os
-import sys
 from copy import deepcopy
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,7 +9,7 @@ from matplotlib import rcParams
 try:
     from mc3.stats import time_avg
 except ModuleNotFoundError:
-    print("Could not import MC3. No RMS time-averaging plots will be made.")
+    time_avg = None
 import astropy.units as unit
 import corner
 import fleck
@@ -327,12 +327,14 @@ def plot_rms(lc, model, meta, fitter):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
+    if time_avg is None:
+        warnings.warn("Could not import MC3. No RMS time-averaging plots will "
+                      "be made.")
+        return
+
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
-        if 'mc3.stats' not in sys.modules:
-            # If MC3 failed to load, exit for loop
-            break
         flux = deepcopy(lc.flux)
         model_lc = deepcopy(model_eval)
 

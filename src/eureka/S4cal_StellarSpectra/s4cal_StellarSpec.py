@@ -93,7 +93,8 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         meta.filename_S3_SpecData.split(os.path.sep)[-1])
     log.writelog(f"Loading S3 save file:\n{specData_savefile}",
                  mute=(not meta.verbose))
-    spec = xrio.readXR(specData_savefile)
+    with xrio.readXR(specData_savefile) as spec:
+        spec.load()
 
     # Select specific spectral order
     if meta.s4_order is not None:
@@ -254,4 +255,5 @@ def medianCalSpec(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     if meta.isplots_S4cal >= 2:
         plot_stellarSpec(meta, ds)
 
+    log.closelog()
     return meta, spec, ds

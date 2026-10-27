@@ -45,11 +45,11 @@ def run_s5(tmp_path, pytestconfig):
         # S4 adds its final spectral-bin definitions to LCData rather than to
         # SpecData metadata. Supply the values S5 expects on its predecessor
         # metadata object directly from the fixed LCData reference.
-        lc = xrio.readXR(str(lcdata_path), verbose=False)
-        s4_meta.nspecchan = lc.sizes["wavelength"]
-        s4_meta.wave_low = lc.wave_low.values
-        s4_meta.wave_hi = lc.wave_hi.values
-        s4_meta.n_int = lc.sizes["time"]
+        with xrio.readXR(str(lcdata_path), verbose=False) as lc:
+            s4_meta.nspecchan = lc.sizes["wavelength"]
+            s4_meta.wave_low = lc.wave_low.values
+            s4_meta.wave_hi = lc.wave_hi.values
+            s4_meta.n_int = lc.sizes["time"]
 
         # SpecData stores these as scalar attributes, while S5 iterates over
         # aperture/background ranges. Normalizing them to one-element arrays
@@ -81,7 +81,12 @@ def run_s5(tmp_path, pytestconfig):
         input_meta.isplots_S5 = 0
         input_meta.hide_plots = True
 
-        return s5_fit.fitlc(case.eventlabel, s4_meta=s4_meta,
-                            input_meta=input_meta)
+        result = s5_fit.fitlc(case.eventlabel, s4_meta=s4_meta,
+                              input_meta=input_meta)
+        # Fitting must not leave the source light curve locked on Windows.
+        moved_path = lcdata_path.with_suffix('.closed.h5')
+        lcdata_path.rename(moved_path)
+        moved_path.rename(lcdata_path)
+        return result
 
     return _run

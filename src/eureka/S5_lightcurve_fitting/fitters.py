@@ -91,8 +91,9 @@ def _get_old_dynesty_checkpoint_file(meta, lc, fittername):
         raise ValueError('old_dynesty_checkpoint must be set when '
                          'dynesty_resume is True.')
 
-    old_checkpoint = os.path.join(meta.topdir,
-                                  *old_checkpoint.split(os.sep))
+    old_checkpoint = old_checkpoint.replace('\\', os.sep).replace('/', os.sep)
+    old_checkpoint = os.path.normpath(os.path.join(
+        meta.topdir, *old_checkpoint.split(os.sep)))
     if os.path.isdir(old_checkpoint):
         filename = os.path.basename(
             _get_dynesty_checkpoint_file(meta, lc, fittername))

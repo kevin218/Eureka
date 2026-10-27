@@ -108,7 +108,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 meta.bg_hw = bg_hw_val
 
             filename_S4_hold = meta.filename_S4_LCData.split(os.sep)[-1]
-            lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
+            # Fitting uses in-memory arrays and must release the input file.
+            with xrio.readXR(meta.inputdir+os.sep+filename_S4_hold) as lc:
+                lc.load()
 
             # Get the number of integrations in this lightcurve so
             # that we know how to split the flattened arrays
@@ -139,7 +141,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
                     # Use the latest file found
                     path = max(path, key=os.path.getmtime)
-                    lc_hold = xrio.readXR(path)
+                    with xrio.readXR(path) as lc_hold:
+                        lc_hold.load()
                     meta.wave_low = np.append(meta.wave_low,
                                               lc_hold.wave_low.values)
                     meta.wave_hi = np.append(meta.wave_hi,

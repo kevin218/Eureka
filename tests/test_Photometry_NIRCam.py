@@ -5,6 +5,8 @@ from importlib import reload
 
 import numpy as np
 
+from .cleanup import remove_test_outputs
+
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 
 from eureka.lib.readECF import MetaClass
@@ -74,11 +76,14 @@ def test_NIRCamPhotometry(capsys, keep_s3_output, keep_s4_output):
     assert np.array_equal(s5_meta.citations, s5_cites)
 
     # remove temporary files
+    s3_spec.close()
+    s4_spec.close()
+    s4_lc.close()
     if not keep_s3_output:
-        os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage3")
+        remove_test_outputs('data/Photometry/NIRCam/Stage3')
     if not keep_s4_output:
-        os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage4")
-    os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage5")
+        remove_test_outputs('data/Photometry/NIRCam/Stage4')
+    remove_test_outputs('data/Photometry/NIRCam/Stage5')
 
 
 def test_NIRCamPhotometry_hex(capsys, keep_s3_output):
@@ -115,5 +120,6 @@ def test_NIRCamPhotometry_hex(capsys, keep_s3_output):
     assert np.array_equal(s3_meta.citations, s3_cites)
 
     # remove temporary files
+    s3_spec.close()
     if not keep_s3_output:
-        os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage3")
+        remove_test_outputs('data/Photometry/NIRCam/Stage3')

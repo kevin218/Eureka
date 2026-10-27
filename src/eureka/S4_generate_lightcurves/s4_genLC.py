@@ -143,12 +143,15 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             log.writelog('Copying S4 control file', mute=(not meta.verbose))
             meta.copy_ecf()
 
-            specData_savefile = (
-                meta.inputdir +
-                meta.filename_S3_SpecData.split(os.path.sep)[-1])
+            # Saved metadata may contain a path from a different OS.
+            specData_filename = os.path.basename(
+                meta.filename_S3_SpecData.replace('\\', '/'))
+            specData_savefile = os.path.join(meta.inputdir, specData_filename)
             log.writelog(f"Loading S3 save file:\n{specData_savefile}",
                          mute=(not meta.verbose))
-            spec = xrio.readXR(specData_savefile)
+            # Load before slicing so derived datasets cannot retain file locks.
+            with xrio.readXR(specData_savefile) as spec:
+                spec.load()
 
             # Assign a mask for custom datasets, masking any NaN values
             if hasattr(spec, 'optspec') and not hasattr(spec, 'optmask'):

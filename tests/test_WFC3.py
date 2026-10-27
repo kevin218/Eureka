@@ -5,6 +5,8 @@ from importlib import reload
 
 import numpy as np
 
+from .cleanup import remove_test_outputs
+
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 
 import eureka.lib.plots
@@ -69,7 +71,10 @@ def test_WFC3(capsys, keep_s3_output, keep_s4_output):
     assert np.array_equal(s4_meta.citations, s4_cites)
 
     # remove temporary files
+    s3_spec.close()
+    s4_spec.close()
+    s4_lc.close()
     if not keep_s3_output:
-        os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage3")
+        remove_test_outputs('data/WFC3/Stage3')
     if not keep_s4_output:
-        os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage4")
+        remove_test_outputs('data/WFC3/Stage4')
