@@ -13,6 +13,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 # Respect an explicit configuration directory supplied by the caller.
 os.environ.setdefault('MPLCONFIGDIR', tempfile.gettempdir())
 
+# Import Matplotlib only after MPLCONFIGDIR is set, then render test figures
+# without requiring a GUI or a working Tk installation.
+import matplotlib  # noqa: E402
+
+matplotlib.use("Agg")
+
 
 def pytest_addoption(parser):
     """Register options used by Eureka's integration tests."""
