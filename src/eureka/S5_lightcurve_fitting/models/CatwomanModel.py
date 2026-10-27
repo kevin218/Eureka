@@ -1,3 +1,4 @@
+from copy import copy
 from functools import partial
 
 try:
@@ -25,7 +26,7 @@ class CatwomanTransitModel(BatmanTransitModel):
         super().__init__(**kwargs)
         self.name = 'catwoman transit'
         # Define transit model to be used
-        self.transit_model = partial(catwoman.TransitModel,
+        self.transit_model = partial(self._make_transit_model,
                                      max_err=kwargs['max_err'],
                                      fac=kwargs['fac'])
 
@@ -33,3 +34,10 @@ class CatwomanTransitModel(BatmanTransitModel):
                 and 'rprs2' not in self.longparamlist[0]):
             raise AssertionError('You must include an rp2 parameter in your '
                                  'EPF when using catwoman.')
+
+    @staticmethod
+    def _make_transit_model(params, time, **kwargs):
+        """Initialize Catwoman with a separate parameter object."""
+        # The constructor makes negative rp positive, but light_curve needs
+        # the original sign to produce an inverse transit.
+        return catwoman.TransitModel(copy(params), time, **kwargs)

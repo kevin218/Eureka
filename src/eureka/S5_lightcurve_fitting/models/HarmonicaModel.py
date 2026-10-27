@@ -74,7 +74,8 @@ class HarmonicaTransitModel(BatmanTransitModel):
                 # Enforce physicality to avoid crashes from Harmonica by
                 # returning something that should be a horrible fit
                 if (not ((0 < pl_params.per) and (0 < pl_params.inc <= 90) and
-                         (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
+                         (1 < pl_params.a) and (0 <= pl_params.ecc < 1) and
+                         (-1 <= pl_params.ecosw <= 1) and
                          (-1 <= pl_params.esinw <= 1))
                     or (self.parameters.limb_dark.value == 'kipping2013' and
                         pl_params.u_original[0] <= 0)):
@@ -90,7 +91,7 @@ class HarmonicaTransitModel(BatmanTransitModel):
                              a=pl_params.a,
                              inc=pl_params.inc * np.pi / 180.,
                              ecc=pl_params.ecc,
-                             omega=pl_params.w)
+                             omega=pl_params.w * np.pi / 180.)
                 ht.set_stellar_limb_darkening(
                     pl_params.u, limb_dark_law=pl_params.limb_dark)
                 ht.set_planet_transmission_string(pl_params.ab)
