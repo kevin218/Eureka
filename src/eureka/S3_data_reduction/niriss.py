@@ -48,20 +48,20 @@ def read(filename, data, meta, log):
         The current log.
 
     '''
-    hdulist = fits.open(filename)
+    # Returned arrays must remain usable without locking the source FITS file.
+    with fits.open(filename, memmap=False) as hdulist:
+        # Load master and science headers
+        data.attrs['filename'] = filename
+        data.attrs['mhdr'] = hdulist[0].header
+        data.attrs['shdr'] = hdulist['SCI', 1].header
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
+        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
 
-    # Load master and science headers
-    data.attrs['filename'] = filename
-    data.attrs['mhdr'] = hdulist[0].header
-    data.attrs['shdr'] = hdulist['SCI', 1].header
-    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
-    data.attrs['intend'] = data.attrs['mhdr']['INTEND']
-
-    sci = hdulist['SCI', 1].data
-    err = hdulist['ERR', 1].data
-    dq = hdulist['DQ', 1].data
-    v0 = hdulist['VAR_RNOISE', 1].data
-    int_times = hdulist['INT_TIMES', 1].data
+        sci = hdulist['SCI', 1].data
+        err = hdulist['ERR', 1].data
+        dq = hdulist['DQ', 1].data
+        v0 = hdulist['VAR_RNOISE', 1].data
+        int_times = hdulist['INT_TIMES', 1].data
 
     # Increase pixel resolution along cross-dispersion direction
     if meta.expand > 1:

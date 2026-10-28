@@ -2,6 +2,7 @@
 import os
 import re
 import time as time_pkg
+from contextlib import nullcontext
 from copy import copy, deepcopy
 from glob import glob
 
@@ -16,7 +17,7 @@ try:
     from harmonica import HarmonicaTransit
 except ModuleNotFoundError:
     # Harmonica hasn't been installed
-    pass
+    HarmonicaTransit = None
 
 from ..lib import astropytable, logedit
 from ..lib import manageevent as me
@@ -771,11 +772,10 @@ def load_s5_saves(meta, log, fit_methods, n_samples=1):
 
             # Load HDF5 files
             full_fname = meta.inputdir+fname+'.h5'
-            ds = xrio.readXR(full_fname, verbose=False)
-            if ds is None:
-                sample = np.zeros(n_samples)
-            else:
-                if meta.y_param in list(ds._variables):
+            dataset = xrio.readXR(full_fname, verbose=False)
+            # readXR returns None when a channel's file cannot be read.
+            with (nullcontext() if dataset is None else dataset) as ds:
+                if ds is not None and meta.y_param in ds.variables:
                     sample = ds[meta.y_param].values
                     if ch == 0:
                         n_samples = len(sample)
@@ -815,6 +815,10 @@ def compute_strings(meta, log, fit_methods, limb):
     meta : eureka.lib.readECF.MetaClass
         The updated meta data object.
     """
+    if HarmonicaTransit is None:
+        raise ImportError("Could not import harmonica. Make sure it is "
+                          "installed.")
+
     # Save meta.y_param
     y_param = meta.y_param
 

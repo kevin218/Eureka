@@ -414,7 +414,8 @@ def read(filename, data, meta, log):
         The current log.
     '''
     # Determine image size and filter/grism
-    with fits.open(filename) as hdulist:
+    # Returned arrays must remain usable without locking the source FITS file.
+    with fits.open(filename, memmap=False) as hdulist:
         data.attrs['filename'] = filename
         data.attrs['mhdr'] = hdulist[0].header
         data.attrs['shdr'] = hdulist[1].header

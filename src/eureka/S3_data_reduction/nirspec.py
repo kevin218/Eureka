@@ -35,20 +35,21 @@ def read(filename, data, meta, log):
         The current log.
 
     '''
-    hdulist = fits.open(filename)
+    # Returned arrays must remain usable without locking the source FITS file.
+    with fits.open(filename, memmap=False) as hdulist:
+        # Load master and science headers
+        data.attrs['filename'] = filename
+        data.attrs['mhdr'] = hdulist[0].header
+        data.attrs['shdr'] = hdulist['SCI', 1].header
+        meta.filter = data.attrs['mhdr']['GRATING']
+        meta.nirspec_filter = data.attrs['mhdr']['FILTER']
 
-    # Load master and science headers
-    data.attrs['filename'] = filename
-    data.attrs['mhdr'] = hdulist[0].header
-    data.attrs['shdr'] = hdulist['SCI', 1].header
-    meta.filter = data.attrs['mhdr']['GRATING']
-    meta.nirspec_filter = data.attrs['mhdr']['FILTER']
-
-    sci = hdulist['SCI', 1].data
-    err = hdulist['ERR', 1].data
-    dq = hdulist['DQ', 1].data
-    v0 = hdulist['VAR_RNOISE', 1].data
-    wave_2d = hdulist['WAVELENGTH', 1].data
+        sci = hdulist['SCI', 1].data
+        err = hdulist['ERR', 1].data
+        dq = hdulist['DQ', 1].data
+        v0 = hdulist['VAR_RNOISE', 1].data
+        wave_2d = hdulist['WAVELENGTH', 1].data
+        int_times = hdulist['INT_TIMES', 1].data
 
     try:
         data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
@@ -74,7 +75,6 @@ def read(filename, data, meta, log):
         wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=0)
 
     # Record integration mid-times in BMJD_TDB
-    int_times = hdulist['INT_TIMES', 1].data
     if meta.time_file is not None:
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:

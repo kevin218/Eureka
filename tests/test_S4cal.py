@@ -3,6 +3,8 @@ import sys
 import time as time_pkg
 from importlib import reload
 
+from .cleanup import remove_test_outputs
+
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
@@ -63,8 +65,10 @@ def test_S4cal(capsys, keep_s3_output):
     assert os.path.exists(name+os.sep+'figs')
 
     # remove temporary files
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}"
-              f"Stage2{os.sep}S2_*")
+    s3_spec.close()
+    s4_spec.close()
+    s4_ds.close()
+    remove_test_outputs('data/JWST-Sim/NIRSpec/Stage2/S2_*')
     if not keep_s3_output:
-        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage4cal")
+        remove_test_outputs('data/JWST-Sim/NIRSpec/Stage3')
+    remove_test_outputs('data/JWST-Sim/NIRSpec/Stage4cal')

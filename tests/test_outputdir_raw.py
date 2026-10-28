@@ -1,11 +1,29 @@
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib import util
 from eureka.lib.readECF import MetaClass
 
 EVENTLABEL = 'testevent'
+
+
+@pytest.mark.parametrize('directory', [
+    'data/Stage2/', '/data/Stage2/',
+    'data\\Stage2\\', '\\data\\Stage2\\',
+])
+@pytest.mark.parametrize('attribute', ['inputdir', 'outputdir'])
+def test_ecf_directories_accept_both_path_separators(tmp_path, directory,
+                                                    attribute):
+    """Control-file directory separators must not discard the project root."""
+    meta = MetaClass()
+    meta.topdir = str(tmp_path)
+    setattr(meta, attribute, directory)
+
+    assert os.path.normpath(getattr(meta, attribute)) == str(
+        tmp_path / 'data' / 'Stage2')
 
 
 def _make_meta(tmp_path):

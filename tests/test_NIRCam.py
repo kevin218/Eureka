@@ -5,6 +5,8 @@ from importlib import reload
 
 import numpy as np
 
+from .cleanup import remove_test_outputs
+
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 
 from eureka.lib.readECF import MetaClass
@@ -97,8 +99,8 @@ def test_NIRCam(capsys, keep_s3_output, keep_s4_output):
 
     # Rerun Stages 5 and 6 using POET
     # remove Stage 5 and 6 temporary files
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage5")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage6")
+    remove_test_outputs('data/JWST-Sim/NIRCam/Stage5')
+    remove_test_outputs('data/JWST-Sim/NIRCam/Stage6')
 
     ecf_path = f'.{os.sep}NIRCam_ecfs{os.sep}POET{os.sep}'
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=None)
@@ -124,8 +126,8 @@ def test_NIRCam(capsys, keep_s3_output, keep_s4_output):
     # Rerun Stages 5 and 6 using Harmonica
     if harmonica_installed:
         # remove Stage 5 and 6 temporary files
-        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage5")
-        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage6")
+        remove_test_outputs('data/JWST-Sim/NIRCam/Stage5')
+        remove_test_outputs('data/JWST-Sim/NIRCam/Stage6')
 
         ecf_path = f'.{os.sep}NIRCam_ecfs{os.sep}Harmonica{os.sep}'
         s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=None)
@@ -149,9 +151,12 @@ def test_NIRCam(capsys, keep_s3_output, keep_s4_output):
         assert os.path.exists(name+os.sep+'figs')
 
     # remove temporary files
+    s3_spec.close()
+    s4_spec.close()
+    s4_lc.close()
     if not keep_s3_output:
-        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage3")
+        remove_test_outputs('data/JWST-Sim/NIRCam/Stage3')
     if not keep_s4_output:
-        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage4")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage5")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage6")
+        remove_test_outputs('data/JWST-Sim/NIRCam/Stage4')
+    remove_test_outputs('data/JWST-Sim/NIRCam/Stage5')
+    remove_test_outputs('data/JWST-Sim/NIRCam/Stage6')

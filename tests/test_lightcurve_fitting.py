@@ -14,6 +14,16 @@ from eureka.S5_lightcurve_fitting import fitters, models, s5_fit, simulations
 from eureka.S5_lightcurve_fitting.s5_meta import S5MetaClass
 
 
+@pytest.fixture
+def model_log(tmp_path):
+    """Give each model test a log that is closed before pytest cleans up."""
+    log = logedit.Logedit(str(tmp_path / 'model.log'))
+    try:
+        yield log
+    finally:
+        log.closelog()
+
+
 class testingMetaClass(S5MetaClass):
     """Apply testing-relevant defaults to S5MetaClass objects.
 
@@ -126,7 +136,10 @@ def test_old_dynesty_checkpoint_folder(tmp_path):
         str(old_checkpoint)
 
 
-def test_old_dynesty_checkpoint_file(tmp_path):
+@pytest.mark.parametrize('checkpoint_path', [
+    'old/custom.save', 'old\\custom.save',
+])
+def test_old_dynesty_checkpoint_file(tmp_path, checkpoint_path):
     """Test old dynesty checkpoint files."""
     lc = _make_dynesty_lc(white=True)
     old_folder = tmp_path / 'old'
@@ -134,7 +147,7 @@ def test_old_dynesty_checkpoint_file(tmp_path):
     old_checkpoint = old_folder / 'custom.save'
     old_checkpoint.write_text('checkpoint')
     meta = _make_dynesty_meta(tmp_path,
-                              old_dynesty_checkpoint='old/custom.save')
+                              old_dynesty_checkpoint=checkpoint_path)
 
     assert fitters._get_old_dynesty_checkpoint_file(meta, lc, 'dynesty') == \
         str(old_checkpoint)
@@ -329,7 +342,7 @@ def test_transitmodel(capsys):
     assert vals.size == time.size
 
 
-def test_eclipsemodel(capsys):
+def test_eclipsemodel(capsys, model_log):
     """Tests for the BatmanEclipseModel class"""
     # Set the intial parameters
     params = Parameters()
@@ -347,7 +360,7 @@ def test_eclipsemodel(capsys):
     meta = testingMetaClass()
     longparamlist, paramtitles, freenames, params = \
         s5_fit.make_longparamlist(meta, params, 1)
-    log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
+    log = model_log
     e_model = models.BatmanEclipseModel(parameters=params,
                                         name='transit', fmt='r--',
                                         log=log, freenames=freenames,
@@ -356,9 +369,6 @@ def test_eclipsemodel(capsys):
                                         paramtitles=paramtitles,
                                         num_planets=meta.num_planets)
 
-    # Remove the temporary log file
-    os.system(f"rm .{os.sep}data{os.sep}test.log")
-
     # Evaluate and test output
     time = np.linspace(0, 1, 100)
     e_model.time = time
@@ -366,7 +376,7 @@ def test_eclipsemodel(capsys):
     assert vals.size == time.size
 
 
-def test_sinsoidalmodel(capsys):
+def test_sinsoidalmodel(capsys, model_log):
     """Tests for the SinusoidPhaseCurve class"""
     # create dictionary
     params = Parameters()
@@ -393,7 +403,7 @@ def test_sinsoidalmodel(capsys):
     meta = testingMetaClass()
     longparamlist, paramtitles, freenames, params = \
         s5_fit.make_longparamlist(meta, params, 1)
-    log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
+    log = model_log
     t_model = models.BatmanTransitModel(parameters=params,
                                         name='transit', fmt='r--',
                                         freenames=freenames,
@@ -417,9 +427,6 @@ def test_sinsoidalmodel(capsys):
                                        transit_model=t_model,
                                        eclipse_model=e_model,
                                        num_planets=meta.num_planets)
-
-    # Remove the temporary log file
-    os.system(f"rm .{os.sep}data{os.sep}test.log")
 
     # Evaluate and test output
     time = np.linspace(0, 1, 100)
@@ -469,7 +476,7 @@ def test_poettr_model(capsys):
     assert vals.size == time.size
 
 
-def test_poetecl_model(capsys):
+def test_poetecl_model(capsys, model_log):
     """Tests for the POETModel class"""
     # Set the intial parameters
     params = Parameters()
@@ -487,16 +494,13 @@ def test_poetecl_model(capsys):
     meta = testingMetaClass()
     longparamlist, paramtitles, freenames, params = \
         s5_fit.make_longparamlist(meta, params, 1)
-    log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
+    log = model_log
     t_poet_ecl = models.PoetEclipseModel(parameters=params,
                                          name='eclipse', fmt='r--',
                                          log=log, freenames=freenames,
                                          longparamlist=longparamlist,
                                          nchan=1, paramtitles=paramtitles,
                                          num_planets=meta.num_planets)
-
-    # Remove the temporary log file
-    os.system(f"rm .{os.sep}data{os.sep}test.log")
 
     # Evaluate and test output
     time = np.linspace(0, 1, 100)
@@ -505,7 +509,7 @@ def test_poetecl_model(capsys):
     assert vals.size == time.size
 
 
-def test_poetpc_model(capsys):
+def test_poetpc_model(capsys, model_log):
     """Tests for the PoetPC class"""
     # create dictionary
     params = Parameters()
@@ -530,7 +534,7 @@ def test_poetpc_model(capsys):
     meta = testingMetaClass()
     longparamlist, paramtitles, freenames, params = \
         s5_fit.make_longparamlist(meta, params, 1)
-    log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
+    log = model_log
     t_model = models.PoetTransitModel(parameters=params,
                                       name='transit', fmt='r--',
                                       freenames=freenames,
@@ -555,9 +559,6 @@ def test_poetpc_model(capsys):
                            eclipse_model=e_model,
                            num_planets=meta.num_planets)
 
-    # Remove the temporary log file
-    os.system(f"rm .{os.sep}data{os.sep}test.log")
-
     # Evaluate and test output
     time = np.linspace(0, 1, 100)
     phasecurve.time = time
@@ -565,7 +566,7 @@ def test_poetpc_model(capsys):
     assert vals.size == time.size
 
 
-def test_lorentzian_model(capsys):
+def test_lorentzian_model(capsys, model_log):
     """Tests for the LorentzianModel class"""
     # Set the intial parameters
     params = Parameters()
@@ -580,15 +581,12 @@ def test_lorentzian_model(capsys):
     meta = testingMetaClass()
     longparamlist, paramtitles, freenames, params = \
         s5_fit.make_longparamlist(meta, params, 1)
-    log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
+    log = model_log
     t_lorentzian = models.LorentzianModel(parameters=params,
                                           name='transit', fmt='r--',
                                           log=log, freenames=freenames,
                                           longparamlist=longparamlist,
                                           nchan=1, paramtitles=paramtitles)
-
-    # Remove the temporary log file
-    os.system(f"rm .{os.sep}data{os.sep}test.log")
 
     # Evaluate and test output
     time = np.linspace(0, 1, 100)
