@@ -36,28 +36,51 @@ def find_column_median_shifts(data, meta, m):
     # define an array of pixel positions (in their centers)
     pix_centers = np.arange(nb_rows)
 
-    # Do a super quick/simple background subtraction to reduce biases
-    data = np.copy(data) - np.ma.min(data, axis=0)
+    if not meta.calibrated_spectra:
+        # Do a super quick/simple background subtraction to reduce biases
+        data = np.copy(data) - np.ma.min(data, axis=0)
 
     # Compute the center of mass of each column
     column_coms = (np.ma.sum(pix_centers[:, None]*data, axis=0) /
                    np.ma.sum(data, axis=0))
 
+    # Replace NaNs with linear interpolation of the nearest valid values
+    bad = ~np.isfinite(column_coms)
+    good_idx = np.flatnonzero(~bad)
+    if np.any(bad):
+        column_coms[bad] = np.interp(np.flatnonzero(bad), good_idx,
+                                     column_coms[good_idx])
+
     # Center of mass doesn't always work well with calibrated spectra
     # Therefore, use CoM as starting point for Gaussian fit
     if meta.calibrated_spectra:
         # Rough initial guess (heigh, center, width, BG)
-        width = np.ma.sqrt(np.ma.sum(data[:, 0] *
-                           (pix_centers-column_coms[0])**2) /
-                           np.ma.sum(data[:, 0]))
-        guess = [np.ma.max(data[:, 0]), column_coms[0], width, 0]
-        for i in np.arange(data.shape[1]):
-            # Gaussian fit for each column
-            params, _ = curve_fit(gauss, pix_centers, data[:, i],
-                                  guess, maxfev=10000)
-            column_coms[i] = params[1]
-            # Update guess for next iteration
-            guess = params
+        ig = good_idx[0]
+        width = np.ma.sqrt(np.ma.sum(data[:, ig] *
+                           (pix_centers-column_coms[ig])**2) /
+                           np.ma.sum(data[:, ig]))
+        guess = [np.ma.max(data[:, ig]), column_coms[ig], width, 0]
+        for i in range(data.shape[1]):
+            if i in good_idx:
+                # Gaussian fit for each good column
+                params, _ = curve_fit(gauss, pix_centers, data[:, i],
+                                    guess, maxfev=10000)
+                if (0 < params[1] < nb_rows):
+                    column_coms[i] = params[1]
+                elif i > 0:
+                    # Adopt previous value if fit fails or is out of bounds
+                    column_coms[i] = column_coms[i-1]
+                else:
+                    column_coms[i] = column_coms[ig]
+                if np.abs(column_coms[i] - guess[1]) < 1:
+                    # If close, update guess centroid for next iteration
+                    guess[1] = column_coms[i]
+            else:
+                # Adopt previous value if column is bad
+                if i > 0:
+                    column_coms[i] = column_coms[i-1]
+                else:
+                    column_coms[i] = column_coms[ig]
 
     # Smooth CoM values to get rid of outliers
     smooth_coms = smooth.medfilt(column_coms, 11)
