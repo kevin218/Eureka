@@ -6,9 +6,8 @@ from glob import glob
 import astraeus.xarrayIO as xrio
 import numpy as np
 
-from ..lib import logedit
+from ..lib import logedit, util
 from ..lib import manageevent as me
-from ..lib import util
 from ..lib.readEPF import Parameters
 from ..lib.util import resolve_param_key
 from ..version import version

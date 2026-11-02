@@ -11,10 +11,9 @@ from astropy.io import fits
 from tqdm import tqdm
 
 from ..lib import suntimecorr, utc_tt, util
-from . import background
+from . import background, nircam, plots_s3, sigrej, source_pos
 from . import bright2flux as b2f
 from . import hst_scan as hst
-from . import nircam, plots_s3, sigrej, source_pos
 
 
 def preparation_step(meta, log):

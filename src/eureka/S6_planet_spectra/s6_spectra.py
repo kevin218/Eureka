@@ -18,9 +18,8 @@ except ModuleNotFoundError:
     # Harmonica hasn't been installed
     pass
 
-from ..lib import astropytable, logedit
+from ..lib import astropytable, logedit, util
 from ..lib import manageevent as me
-from ..lib import util
 from ..version import version
 from . import plots_s6 as plots
 from .s6_meta import S6MetaClass

@@ -6,9 +6,8 @@ import numpy as np
 from astropy.io import fits
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
 
-from ..lib import logedit
+from ..lib import logedit, util
 from ..lib import manageevent as me
-from ..lib import util
 from .ramp_fitting import Eureka_RampFitStep
 from .rscd import Eureka_RscdStep
 from .s1_meta import S1MetaClass
