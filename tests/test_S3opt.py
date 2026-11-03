@@ -2,6 +2,8 @@ import os
 import sys
 from importlib import reload
 
+from .cleanup import remove_test_outputs
+
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 import eureka.optimizer.S3opt_optimizer as s3opt
 from eureka.S2_calibrations import s2_calibrate as s2
@@ -35,6 +37,5 @@ def test_S3opt(capsys):
     assert history["final_run"] <= history["initial_run"]
 
     # remove temporary files
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}"
-              f"Stage2{os.sep}S2_*")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3opt")
+    remove_test_outputs('data/JWST-Sim/NIRSpec/Stage2/S2_*')
+    remove_test_outputs('data/JWST-Sim/NIRSpec/Stage3opt')

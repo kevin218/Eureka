@@ -39,17 +39,21 @@ def read(filename, data, meta, log):
     log : logedit.Logedit
         The current log.
     '''
-    hdulist = fits.open(filename)
+    # Returned arrays must remain usable without locking the source FITS file.
+    with fits.open(filename, memmap=False) as hdulist:
+        # Load main and science headers
+        data.attrs['filename'] = filename
+        data.attrs['mhdr'] = hdulist[0].header
+        data.attrs['shdr'] = hdulist['SCI', 1].header
 
-    # Load main and science headers
-    data.attrs['filename'] = filename
-    data.attrs['mhdr'] = hdulist[0].header
-    data.attrs['shdr'] = hdulist['SCI', 1].header
-
-    sci = hdulist['SCI', 1].data
-    err = hdulist['ERR', 1].data
-    dq = hdulist['DQ', 1].data
-    v0 = hdulist['VAR_RNOISE', 1].data
+        sci = hdulist['SCI', 1].data
+        err = hdulist['ERR', 1].data
+        dq = hdulist['DQ', 1].data
+        v0 = hdulist['VAR_RNOISE', 1].data
+        int_times = hdulist['INT_TIMES', 1].data
+        wave_2d = None
+        if not meta.photometry and ('WAVELENGTH', 1) in hdulist:
+            wave_2d = hdulist['WAVELENGTH', 1].data
 
     try:
         data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
@@ -63,7 +67,7 @@ def read(filename, data, meta, log):
 
     if meta.photometry:
         # Working on photometry data
-        meta.filter = hdulist[0].header['FILTER']
+        meta.filter = data.attrs['mhdr']['FILTER']
 
         # The DISPAXIS argument does not exist in the header of the photometry
         # data. Added it here so that code in other sections doesn't have to
@@ -97,19 +101,12 @@ def read(filename, data, meta, log):
 
         # If wavelengths are all zero or missing --> use jwst to get
         # wavelengths. Otherwise use the wavelength array from the header
-        try:
-            hdulist['WAVELENGTH', 1]
-            wl_missing = False
-        except:
-            if meta.firstFile:
-                log.writelog('  WAVELENGTH extension not found, using '
-                             'miri.wave_MIRI_jwst function instead.')
-            wl_missing = True
+        if wave_2d is None and meta.firstFile:
+            log.writelog('  WAVELENGTH extension not found, using '
+                         'miri.wave_MIRI_jwst function instead.')
 
-        if wl_missing or np.all(hdulist['WAVELENGTH', 1].data == 0):
+        if wave_2d is None or np.all(wave_2d == 0):
             wave_2d = wave_MIRI_jwst(filename, meta, log)
-        else:
-            wave_2d = hdulist['WAVELENGTH', 1].data
 
         # Increase pixel resolution along cross-dispersion direction
         if meta.expand > 1:
@@ -123,7 +120,6 @@ def read(filename, data, meta, log):
             wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=1)
 
     # Record integration mid-times in BMJD_TDB
-    int_times = hdulist['INT_TIMES', 1].data
     if meta.time_file is not None:
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:

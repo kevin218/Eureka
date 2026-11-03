@@ -3,7 +3,7 @@ import numpy as np
 try:
     from harmonica import HarmonicaTransit
 except ImportError:
-    print("Could not import harmonica. Functionality may be limited.")
+    HarmonicaTransit = None
 
 from ...lib.split_channels import split
 from .AstroModel import PlanetParams
@@ -23,6 +23,9 @@ class HarmonicaTransitModel(BatmanTransitModel):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
+        if HarmonicaTransit is None:
+            raise ImportError("Could not import harmonica. Make sure it is "
+                              "installed.")
         # Inherit from BatmanTransitModel class
         super().__init__(**kwargs)
         self.name = 'harmonica transit'

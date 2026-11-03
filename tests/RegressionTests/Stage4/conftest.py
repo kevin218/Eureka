@@ -41,6 +41,12 @@ def run_s4(tmp_path, pytestconfig, monkeypatch):
             monkeypatch.setattr(readECF.crds, "get_context_name",
                                 lambda observatory: "hst_1345.pmap")
 
-        return s4_genLC.genlc(case.eventlabel, input_meta=input_meta)
+        result = s4_genLC.genlc(case.eventlabel, input_meta=input_meta)
+        # Windows must be able to move the input while results remain alive.
+        input_path = input_dir / case.input_filename
+        moved_path = input_path.with_suffix('.closed.h5')
+        input_path.rename(moved_path)
+        moved_path.rename(input_path)
+        return result
 
     return _run

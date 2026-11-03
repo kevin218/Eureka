@@ -36,20 +36,23 @@ def read(filename, data, meta, log):
     log : logedit.Logedit
         The current log.
     '''
-    hdulist = fits.open(filename)
+    # Returned arrays must remain usable without locking the source FITS file.
+    with fits.open(filename, memmap=False) as hdulist:
+        # Load master and science headers
+        data.attrs['filename'] = filename
+        data.attrs['mhdr'] = hdulist[0].header
+        data.attrs['shdr'] = hdulist['SCI', 1].header
 
-    # Load master and science headers
-    data.attrs['filename'] = filename
-    data.attrs['mhdr'] = hdulist[0].header
-    data.attrs['shdr'] = hdulist['SCI', 1].header
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
+        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
 
-    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
-    data.attrs['intend'] = data.attrs['mhdr']['INTEND']
-
-    sci = hdulist['SCI', 1].data
-    err = hdulist['ERR', 1].data
-    dq = hdulist['DQ', 1].data
-    v0 = hdulist['VAR_RNOISE', 1].data
+        sci = hdulist['SCI', 1].data
+        err = hdulist['ERR', 1].data
+        dq = hdulist['DQ', 1].data
+        v0 = hdulist['VAR_RNOISE', 1].data
+        int_times = hdulist['INT_TIMES', 1].data
+        if data.attrs['mhdr']['CHANNEL'] == 'LONG':
+            wave_2d_file = hdulist['WAVELENGTH', 1].data
 
     try:
         data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
@@ -63,15 +66,15 @@ def read(filename, data, meta, log):
 
     meta.filter = data.attrs['mhdr']['FILTER']
 
-    if hdulist[0].header['CHANNEL'] == 'LONG':
+    if data.attrs['mhdr']['CHANNEL'] == 'LONG':
         # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
         if not meta.poly_wavelength:
             # Use the FITS data
-            wave_2d = hdulist['WAVELENGTH', 1].data
+            wave_2d = wave_2d_file
         elif meta.filter == 'F322W2':
             # The new way, using the polynomial model Everett Schlawin computed
-            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1], dtype=float)
+            X = np.arange(wave_2d_file.shape[1], dtype=float)
             if meta.wave_pixel_offset is not None:
                 if meta.firstFile:
                     log.writelog('\n  Offsetting polynomial wavelength '
@@ -85,10 +88,10 @@ def read(filename, data, meta, log):
                        - 0.002874123523765872*Xprime**3)
             # Convert 1D array to 2D
             wave_2d = np.repeat(wave_2d[np.newaxis],
-                                hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
+                                wave_2d_file.shape[0], axis=0)
         elif meta.filter == 'F444W':
             # The new way, using the polynomial model Everett Schlawin computed
-            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1], dtype=float)
+            X = np.arange(wave_2d_file.shape[1], dtype=float)
             if meta.wave_pixel_offset is not None:
                 if meta.firstFile:
                     log.writelog('\n  Offsetting polynomial wavelength '
@@ -100,7 +103,7 @@ def read(filename, data, meta, log):
                        + 0.979649332832983*Xprime)
             # Convert 1D array to 2D
             wave_2d = np.repeat(wave_2d[np.newaxis],
-                                hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
+                                wave_2d_file.shape[0], axis=0)
         # Increase pixel resolution along cross-dispersion direction
         if meta.expand > 1:
             log.writelog(f'    Super-sampling y axis from {sci.shape[1]} ' +
@@ -112,7 +115,7 @@ def read(filename, data, meta, log):
             v0 = supersample(v0, meta.expand, 'flux', axis=1)
             wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=0)
 
-    elif hdulist[0].header['CHANNEL'] == 'SHORT':
+    elif data.attrs['mhdr']['CHANNEL'] == 'SHORT':
         # Photometry will have "SHORT" as CHANNEL
         meta.photometry = True
         # The DISPAXIS argument does not exist in the header of the photometry
@@ -134,7 +137,6 @@ def read(filename, data, meta, log):
             meta.phot_wave = 2.121
 
     # Record integration mid-times in BMJD_TDB
-    int_times = hdulist['INT_TIMES', 1].data
     if meta.time_file is not None:
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:

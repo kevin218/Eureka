@@ -13,6 +13,16 @@ from ..version import version
 warned = False
 
 
+def _clear_foreign_crds_context(observatory):
+    """Do not carry the other mission's context into a CRDS lookup."""
+    other = 'jwst' if observatory == 'hst' else 'hst'
+    context = os.environ.get('CRDS_CONTEXT', '').replace('\\', '/')
+    context = context.rsplit('/', 1)[-1]
+    if context.startswith((f'{other}_', f'{other}-')):
+        os.environ.pop('CRDS_CONTEXT', None)
+        getattr(crds.get_context_name, 'cache', {}).clear()
+
+
 # ECF parameter names that were renamed from MAD to MAED.
 # Allows legacy ECF files to be handled by every pipeline stage.
 LEGACY_MAD_PARAMETERS = {
@@ -210,6 +220,7 @@ class MetaClass:
 
         if (item == 'inst' and value == 'wfc3' and stage != '4cal'
                 and stage != '1opt' and stage != '3opt' and stage < 4):
+            _clear_foreign_crds_context('hst')
             # Fix issues with CRDS server set for JWST
             if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for JWST and not HST.'
@@ -222,11 +233,13 @@ class MetaClass:
             # If a specific CRDS context is entered in the ECF, apply it.
             # Otherwise, log and fix the default CRDS context to make sure
             # it doesn't change between different segments.
-            self.pmap = getattr(self, 'pmap',
-                                crds.get_context_name('hst')[4:-5])
+            self.pmap = getattr(self, 'pmap', None)
+            if self.pmap is None:
+                self.pmap = crds.get_context_name('hst')[4:-5]
             os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
         elif (item == 'inst' and value is not None and stage != '4cal'
               and stage != '1opt' and stage != '3opt' and stage < 4):
+            _clear_foreign_crds_context('jwst')
             # Fix issues with CRDS server set for HST
             if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
                 print('CRDS_SERVER_URL is set for HST and not JWST.'
@@ -259,6 +272,10 @@ class MetaClass:
             print(f'WARNING: The Eureka! version was {self.version} in the '
                   f'previous stage but is now {value} in this stage. This may '
                   'cause unexpected or undesireable behaviors.')
+
+        if item in ('topdir', 'inputdir', 'outputdir'):
+            # ECFs and saved metadata can originate on either platform.
+            value = os.fspath(value).replace('\\', os.sep).replace('/', os.sep)
 
         if item == 'topdir':
             # Make sure topdir ends with a separator

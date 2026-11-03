@@ -4,15 +4,135 @@ import sys
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 import astraeus.xarrayIO as xrio
 from astropy.io import fits
 
-from eureka.lib import util
+from eureka.lib import readECF, util
 from eureka.lib.medstddev import medstddev
 from eureka.lib.readECF import MetaClass
 from eureka.optimizer import S1opt_optimizer, objective_funcs
+from eureka.S3_data_reduction import miri, nircam, niriss, nirspec
+
+
+@pytest.mark.parametrize('instrument, observatory, context, previous', [
+    ('nircam', 'jwst', 'jwst_1584.pmap', 'hst_1367.pmap'),
+    ('wfc3', 'hst', 'hst_1367.pmap', 'jwst_1584.pmap'),
+])
+def test_instrument_switch_clears_foreign_crds_context(
+        monkeypatch, instrument, observatory, context, previous):
+    monkeypatch.setenv('CRDS_SERVER_URL',
+                       f'https://{observatory}-crds.stsci.edu')
+    monkeypatch.setenv('CRDS_CONTEXT', previous)
+
+    def get_context_name(requested):
+        assert requested == observatory
+        assert 'CRDS_CONTEXT' not in os.environ
+        return context
+
+    monkeypatch.setattr(readECF.crds, 'get_context_name', get_context_name)
+    meta = MetaClass()
+    meta.inst = instrument
+
+    assert os.environ['CRDS_CONTEXT'] == context
+    assert meta.pmap == context.split('_')[1].split('.')[0]
+
+
+@pytest.mark.parametrize('instrument, observatory, pmap', [
+    ('nircam', 'jwst', '1584'), ('wfc3', 'hst', '1367'),
+])
+def test_explicit_pmap_does_not_query_crds(monkeypatch, instrument,
+                                         observatory, pmap):
+    context = f'{observatory}_{pmap}.pmap'
+    monkeypatch.setenv('CRDS_SERVER_URL',
+                       f'https://{observatory}-crds.stsci.edu')
+    monkeypatch.setenv('CRDS_CONTEXT', context)
+
+    def unexpected_lookup(requested):
+        pytest.fail('A saved pmap must not require a CRDS context lookup.')
+
+    monkeypatch.setattr(readECF.crds, 'get_context_name', unexpected_lookup)
+    meta = MetaClass(pmap=pmap)
+    meta.inst = instrument
+
+    assert meta.pmap == pmap
+    assert os.environ['CRDS_CONTEXT'] == context
+
+
+@pytest.mark.parametrize('instrument, filter_name, photometry, '
+                         'poly_wavelength, wavelength_mode', [
+    (nirspec, 'F290LP', False, False, 'present'),
+    (miri, 'LRS', False, False, 'present'),
+    (miri, 'LRS', False, False, 'missing'),
+    (miri, 'LRS', False, False, 'zeros'),
+    (miri, 'F560W', True, False, 'present'),
+    (nircam, 'F444W', False, False, 'present'),
+    (nircam, 'F444W', False, True, 'present'),
+    (nircam, 'F322W2', False, True, 'present'),
+    (nircam, 'F210M', True, False, 'present'),
+    (niriss, 'CLEAR', False, False, 'present'),
+], ids=['nirspec', 'miri-spectroscopy', 'miri-missing-wave',
+        'miri-zero-wave', 'miri-photometry',
+        'nircam-spectroscopy', 'nircam-poly-f444w', 'nircam-poly-f322w2',
+        'nircam-photometry', 'niriss'])
+def test_jwst_reader_releases_fits_input(tmp_path, monkeypatch, instrument,
+                                        filter_name, photometry,
+                                        poly_wavelength, wavelength_mode):
+    """Returned science arrays must not keep the FITS source locked."""
+    path = tmp_path / 'input_calints.fits'
+    science = np.arange(24, dtype=np.float32).reshape(2, 3, 4)
+    primary = fits.PrimaryHDU()
+    if instrument is nirspec:
+        primary.header['GRATING'] = 'G395H'
+    primary.header['FILTER'] = filter_name
+    if instrument is nircam:
+        primary.header['CHANNEL'] = 'SHORT' if photometry else 'LONG'
+    primary.header['INTSTART'] = 1
+    primary.header['INTEND'] = 2
+    sci = fits.ImageHDU(science, name='SCI')
+    sci.header['BUNIT'] = 'DN/s'
+    sci.header['DISPAXIS'] = 2 if instrument is miri else 1
+    times = np.array([1., 2.])
+    hdus = [primary, sci,
+            fits.ImageHDU(np.ones_like(science), name='ERR'),
+            fits.ImageHDU(np.zeros(science.shape, dtype=np.int32), name='DQ'),
+            fits.ImageHDU(np.ones_like(science), name='VAR_RNOISE'),
+            fits.ImageHDU(np.ones((3, 4)), name='WAVELENGTH'),
+            fits.BinTableHDU.from_columns([
+                fits.Column(name='int_mid_BJD_TDB', format='D', array=times)],
+                name='INT_TIMES')]
+    if wavelength_mode == 'missing':
+        hdus = [hdu for hdu in hdus if hdu.name != 'WAVELENGTH']
+    elif wavelength_mode == 'zeros':
+        hdus[5].data[:] = 0
+    fits.HDUList(hdus).writeto(path)
+    monkeypatch.setattr(miri, 'wave_MIRI_jwst',
+                        lambda *args: np.full((3, 4), 5.0))
+    meta = SimpleNamespace(expand=1, time_file=None, firstFile=False,
+                           photometry=photometry,
+                           poly_wavelength=poly_wavelength,
+                           wave_pixel_offset=None,
+                           orders=[1, 2], all_orders=[1, 2])
+
+    data, _, _ = instrument.read(str(path), xrio.makeDataset(), meta, None)
+    moved_path = path.with_name('released.fits')
+    path.rename(moved_path)
+
+    expected = science
+    if instrument is miri and not photometry:
+        expected = np.swapaxes(expected, 1, 2)[:, :, ::-1]
+    elif instrument is niriss:
+        expected = np.repeat(expected[..., np.newaxis], 2, axis=3)
+    np.testing.assert_array_equal(data.flux.values, expected)
+    np.testing.assert_array_equal(data.err.values, np.ones_like(expected))
+    np.testing.assert_array_equal(data.dq.values, np.zeros_like(expected))
+    np.testing.assert_array_equal(data.v0.values, np.ones_like(expected))
+    np.testing.assert_array_equal(data.time.values, times)
+    if wavelength_mode != 'present':
+        np.testing.assert_array_equal(data.wave_2d.values,
+                                      np.full((4, 3), 5.0))
 
 
 def test_trim(capsys):
