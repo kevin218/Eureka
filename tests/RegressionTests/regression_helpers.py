@@ -1,5 +1,8 @@
 """Shared assertions and reference-file utilities for regression tests."""
 
+from pathlib import Path
+from shutil import copy2
+
 import astraeus.xarrayIO as xrio
 import numpy as np
 
@@ -106,5 +109,21 @@ def overwrite_reference(case, product, actual, reference_path, stage):
     success = xrio.writeXR(str(temporary_path), actual.copy(), verbose=False)
     if not success:
         raise OSError(f"Failed to write updated reference: {reference_path}")
+    temporary_path.replace(reference_path)
+    print(f"Updated Stage {stage} {product} reference: {reference_path}")
+
+
+def overwrite_file_reference(case, product, actual_path, reference_path,
+                             stage):
+    """Safely replace one native file reference with a current output file."""
+    actual_path = Path(actual_path)
+    reference_path = Path(reference_path)
+    assert actual_path.is_file(), (
+        f"{case.name}: missing output to use as a reference: {actual_path}"
+    )
+    reference_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = reference_path.with_name(
+        reference_path.stem + ".tmp" + reference_path.suffix)
+    copy2(actual_path, temporary_path)
     temporary_path.replace(reference_path)
     print(f"Updated Stage {stage} {product} reference: {reference_path}")

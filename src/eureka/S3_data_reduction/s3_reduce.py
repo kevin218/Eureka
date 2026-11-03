@@ -32,9 +32,8 @@ import psutil
 from stdatamodels.jwst.datamodels import CubeModel
 from tqdm import tqdm
 
-from ..lib import apphot, centerdriver, logedit
+from ..lib import apphot, centerdriver, logedit, util
 from ..lib import manageevent as me
-from ..lib import util
 from . import background as bg
 from . import bright2flux as b2f
 from . import optspex, plots_s3, source_pos

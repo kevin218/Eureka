@@ -26,8 +26,7 @@ except ModuleNotFoundError:
                    "Eureka!'s Stages 1 and 2 will not work.")
     success = False
 if success:
-    from . import S1_detector_processing
-    from . import S2_calibrations
+    from . import S1_detector_processing, S2_calibrations
 
 from . import (S3_data_reduction, S4_generate_lightcurves,
                S4cal_StellarSpectra, S5_lightcurve_fitting, S6_planet_spectra)

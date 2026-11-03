@@ -1,0 +1,5 @@
+# An independent linear polynomial baseline is fit to each NIRSpec channel.
+
+# Name          Value       Free?       PriorPar1   PriorPar2   PriorType
+c0              1.0         'free'      0.5         1.5         U
+c1              0.0         'free'      -1.0        1.0         U
