@@ -140,8 +140,12 @@ def get_wave(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with...
     '''
-    # Report actual pupil position
-    pwcpos = data.attrs['mhdr']['PWCPOS']
+    if meta.pwcpos is None:
+        # Use pupil position reported in header
+        pwcpos = data.attrs['mhdr']['PWCPOS']
+    else:
+        # Use pupil position specified in ECF
+        pwcpos = meta.pwcpos
 
     # Keep track of base pupil position for custom offset correction
     base_pwcpos = 245.76
