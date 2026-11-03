@@ -10,9 +10,8 @@ import astraeus.xarrayIO as xrio
 import numpy as np
 import scipy.interpolate as spi
 
-from ..lib import logedit
+from ..lib import logedit, util
 from ..lib import manageevent as me
-from ..lib import util
 from ..S3_data_reduction.sigrej import sigrej
 from ..version import version
 from .plots_s4cal import plot_stellarSpec, plot_whitelc

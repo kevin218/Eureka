@@ -24,9 +24,8 @@ import scipy.interpolate as spi
 from astropy.convolution import Box1DKernel
 from tqdm import tqdm
 
-from ..lib import clipping, logedit
+from ..lib import clipping, logedit, util
 from ..lib import manageevent as me
-from ..lib import util
 from ..version import version
 from . import drift, generate_LD, plots_s4, wfc3
 from .outliers import get_outliers
