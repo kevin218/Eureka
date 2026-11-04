@@ -2,10 +2,11 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+import xarray as xr
 from astropy.convolution import Box1DKernel, convolve
 from tests.unit.helpers import RecordingLog
 
-from eureka.S4_generate_lightcurves import drift, outliers, s4_genLC
+from eureka.S4_generate_lightcurves import drift, outliers, s4_genLC, wfc3
 
 
 class _Values:
@@ -14,6 +15,53 @@ class _Values:
 
     def __getitem__(self, key):
         return self.values[key]
+
+
+def test_sum_reads_propagates_rescaled_flux_errors_and_variances():
+    """Missing reads reduce information even when flux is rescaled."""
+    flux = np.array([[10., 10., 30., 70.],
+                     [20., 20., 999., 90.],
+                     [40., 40., 40., 40.],
+                     [50., 50., 50., 50.]])
+    err = np.repeat([[1.], [2.], [3.], [4.]], 4, axis=1)
+    mask = np.array([[False, True, False, True],
+                     [False, False, True, True],
+                     [False, True, False, False],
+                     [False, False, False, False]])
+    spec = xr.Dataset(
+        {'optspec': (['time', 'x'], flux),
+         'opterr': (['time', 'x'], err),
+         'optmask': (['time', 'x'], mask),
+         'stdspec': (['time', 'x'], 2*flux),
+         'stdvar': (['time', 'x'], 4*err**2)},
+        coords={'time': np.arange(4, dtype=float), 'x': np.arange(4)},
+    )
+    for key in ('centroid_x', 'centroid_y', 'guess', 'scandir'):
+        spec[key] = (['time'], np.zeros(4))
+    lc = xr.Dataset(
+        {'data': (['time'], np.ones(4)),
+         'centroid_x': spec.centroid_x,
+         'centroid_y': spec.centroid_y,
+         'scandir': spec.scandir},
+        coords={'time': spec.time},
+    )
+    meta = SimpleNamespace(nreads=2, correctDrift=False)
+
+    spec, lc, meta = wfc3.sum_reads(spec, lc, meta)
+
+    expected_flux = [[30., 40., 60., np.nan], [90., 100., 90., 90.]]
+    expected_err = [[np.sqrt(5), 4., 2., np.nan], [5., 8., 5., 5.]]
+    expected_stdvar = [[20., 64., 16., np.nan], [100., 256., 100., 100.]]
+    np.testing.assert_allclose(spec.optspec.values, expected_flux)
+    np.testing.assert_allclose(spec.opterr.values, expected_err)
+    np.testing.assert_allclose(spec.stdspec.values, 2*np.array(expected_flux))
+    np.testing.assert_allclose(spec.stdvar.values, expected_stdvar)
+    np.testing.assert_array_equal(spec.optmask.values,
+                                  [[False, False, False, True],
+                                   [False, False, False, False]])
+    assert spec.sizes['time'] == lc.sizes['time'] == 2
+    assert meta.nreads == 1
+    assert meta.n_int == 2
 
 
 def test_highpassfilt_matches_boxcar_convolution_with_extend_boundary():

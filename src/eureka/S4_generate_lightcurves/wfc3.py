@@ -5,6 +5,9 @@ def sum_reads(spec, lc, meta):
     """Sum together the non-destructive reads from each file to reduce noise
     and data volume.
 
+    Missing reads are excluded, and the remaining flux is rescaled to the
+    full number of reads. Errors and variances use the same flux scaling.
+
     spec : Xarray Dataset
         The Dataset object containing the 2D spectra.
     lc : Xarray Dataset
@@ -48,9 +51,13 @@ def sum_reads(spec, lc, meta):
     flux = flux.mean(axis=1)*meta.nreads
     std_flux = std_flux.mean(axis=1)*meta.nreads
 
-    # Add errors in quadrature
-    err = np.ma.sqrt(np.ma.mean(err**2, axis=1)*meta.nreads)
-    std_var = np.ma.sqrt(np.ma.mean(std_var**2, axis=1)*meta.nreads)
+    # Rescale uncertainties by the same factor as the surviving flux sum.
+    # Mask zero counts so fully masked channels remain masked.
+    n_good = np.ma.masked_equal(np.sum(~optmask, axis=1), 0)
+    scale = meta.nreads / n_good
+    err = np.ma.sqrt(np.ma.sum(err**2, axis=1))*scale
+    # stdvar already contains variances, which scale as flux squared.
+    std_var = np.ma.sum(std_var, axis=1)*scale**2
 
     # Mask if all of the reads were masked
     optmask = np.all(optmask, axis=1)
