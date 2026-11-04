@@ -246,13 +246,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 elif meta.ld_file:
                     # Load limb-darkening coefficients from a custom file
                     ld_fix_file = str(meta.ld_file_white)
-                    try:
-                        ld_coeffs = np.genfromtxt(ld_fix_file)
-                    except FileNotFoundError:
-                        raise Exception("The limb-darkening file "
-                                        f"{ld_fix_file} could not be found.")
-                    if len(ld_coeffs.shape) == 1:
-                        ld_coeffs = ld_coeffs[:, np.newaxis]
+                    ld_coeffs = _load_ld_coeffs(ld_fix_file)
                 else:
                     ld_coeffs = None
 
@@ -321,13 +315,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             elif meta.ld_file:
                 # Load limb-darkening coefficients from a custom file
                 ld_fix_file = str(meta.ld_file)
-                try:
-                    ld_coeffs = np.genfromtxt(ld_fix_file)
-                except FileNotFoundError:
-                    raise Exception("The limb-darkening file " + ld_fix_file +
-                                    " could not be found.")
-                if len(ld_coeffs.shape) == 1:
-                    ld_coeffs = ld_coeffs[:, np.newaxis]
+                ld_coeffs = _load_ld_coeffs(ld_fix_file)
             else:
                 ld_coeffs = None
 
@@ -482,6 +470,15 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             log.closelog()
 
     return meta
+
+
+def _load_ld_coeffs(filename):
+    """Read limb-darkening rows as channels and columns as coefficients."""
+    try:
+        return np.genfromtxt(filename, ndmin=2)
+    except FileNotFoundError:
+        raise Exception(f"The limb-darkening file {filename} could not be "
+                        "found.")
 
 
 def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,

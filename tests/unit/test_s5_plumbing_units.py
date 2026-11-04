@@ -43,6 +43,53 @@ def _params(**values):
     return params
 
 
+@pytest.mark.parametrize('law, expected', [
+    pytest.param('linear', [[0.1]], id='single-channel-linear'),
+    pytest.param('linear', [[0.1], [0.2]], id='multiple-channel-linear'),
+    pytest.param('quadratic', [[0.1, 0.2]], id='single-channel-quadratic'),
+    pytest.param('quadratic', [[0.1, 0.2], [0.3, 0.4]],
+                 id='multiple-channel-quadratic'),
+    pytest.param('4-parameter', [[0.1, 0.2, 0.3, 0.4]],
+                 id='single-channel-nonlinear'),
+])
+def test_custom_limb_darkening_file_loads_coefficients_per_channel(
+        tmp_path, law, expected):
+    """Custom files must preserve channel rows even for one row or column."""
+    expected = np.array(expected)
+    filename = tmp_path / 'limb_darkening.txt'
+    np.savetxt(filename, expected)
+    coeffs = s5_fit._load_ld_coeffs(filename)
+
+    nchannel, ncoeffs = expected.shape
+    params = _params(limb_dark=(law, 'independent'),
+                     **{f'u{n+1}': (0.0, 'fixed') for n in range(ncoeffs)})
+    meta = SimpleNamespace(multwhite=False, sharedp=True,
+                           wl_groups=[0]*nchannel)
+    longparamlist, paramtitles, _, params = s5_fit.make_longparamlist(
+        meta, params, nchannel)
+    model = models.BatmanTransitModel(
+        parameters=params, paramtitles=paramtitles,
+        longparamlist=longparamlist, nchannel=nchannel,
+        nchannel_fitted=nchannel, fitted_channels=np.arange(nchannel),
+        ld_from_S4=False, ld_from_file=True, ld_coeffs=coeffs,
+        log=RecordingLog(),
+    )
+
+    np.testing.assert_allclose(coeffs, expected)
+    for channel in range(nchannel):
+        for n in range(ncoeffs):
+            index = paramtitles.index(f'u{n+1}')
+            param = getattr(model.parameters, longparamlist[channel][index])
+            assert param.value == pytest.approx(expected[channel, n])
+
+
+def test_custom_limb_darkening_file_reports_missing_path(tmp_path):
+    filename = tmp_path / 'missing.txt'
+
+    with pytest.raises(Exception, match=f'{filename} could not be found'):
+        s5_fit._load_ld_coeffs(filename)
+
+
 def test_update_uncertainty_applies_scatter_mult_per_channel():
     """Scatter multipliers should inflate each fitted channel locally."""
     theta = np.array([2.0, 3.0])
