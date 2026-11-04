@@ -88,6 +88,32 @@ def test_WFC3_cut_aperture_returns_medflux():
     assert np.array_equal(apmedflux[1], expected)
 
 
+def test_WFC3_reference_frame_applies_detector_coordinate_mask_before_trim():
+    class Log:
+        def writelog(self, *args, **kwargs):
+            pass
+
+    shape = (1, 30, 30)
+    data = xr.Dataset(
+        {'flux': (['time', 'y', 'x'], np.ones(shape)),
+         'err': (['time', 'y', 'x'], np.ones(shape)),
+         'v0': (['time', 'y', 'x'], np.ones(shape)),
+         'guess': (['time'], [15])},
+        coords={'time': [0], 'y': np.arange(30), 'x': np.arange(30)},
+    )
+    meta = SimpleNamespace(
+        manmask=[[12, 12, 13, 13]], xwindow=[10, 20], ywindow=[10, 20],
+        inst='wfc3', verbose=False,
+    )
+
+    data, meta = wfc3._prepare_reference_frame(data, meta, Log())
+
+    assert data.mask.shape == (1, 10, 10)
+    assert data.mask.sel(x=12, y=13).item()
+    assert np.count_nonzero(data.mask.values) == 1
+    assert data.guess.item() == 5
+
+
 def test_optspex_meddata_requires_median_aperture():
     meta = SimpleNamespace(isplots_S3=0, int_end=0)
     subdata = np.ones((2, 3))

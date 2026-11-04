@@ -139,18 +139,7 @@ def get_reference_frames(meta, log):
         data = xrio.makeDataset()
         data, meta, log = read(meta.segment_list[i], data, meta, log)
         meta.n_int, meta.ny, meta.nx = data.flux.shape
-        data, meta = util.trim(data, meta)
-        # Create bad pixel mask (1 = good, 0 = bad)
-        data['mask'] = (['time', 'y', 'x'],
-                        np.zeros(data.flux.shape, dtype=bool))
-        data['mask'] = util.check_nans(data['flux'], data['mask'],
-                                       log, name='FLUX')
-        data['mask'] = util.check_nans(data['err'], data['mask'],
-                                       log, name='ERR')
-        data['mask'] = util.check_nans(data['v0'], data['mask'],
-                                       log, name='V0')
-        if meta.manmask is not None:
-            util.manmask(data, meta, log)
+        data, meta = _prepare_reference_frame(data, meta, log)
         # Need to add guess after trimming and before cut_aperture
         meta.guess.append(data.guess)
         data, meta, log = source_pos.source_pos_wrapper(data, meta, log, i)
@@ -169,6 +158,42 @@ def get_reference_frames(meta, log):
     meta.isplots_S3 = isplots_S3
 
     return meta, log
+
+
+def _prepare_reference_frame(data, meta, log):
+    """Apply detector-coordinate masks before trimming a reference frame.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object containing the reference frame.
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with applied masks.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
+    """
+    data['mask'] = (['time', 'y', 'x'],
+                    np.zeros(data.flux.shape, dtype=bool))
+    if meta.manmask is not None:
+        data = util.manmask(data, meta, log)
+
+    data, meta = util.trim(data, meta)
+    data['mask'] = util.check_nans(data['flux'], data['mask'],
+                                   log, name='FLUX')
+    data['mask'] = util.check_nans(data['err'], data['mask'],
+                                   log, name='ERR')
+    data['mask'] = util.check_nans(data['v0'], data['mask'],
+                                   log, name='V0')
+    return data, meta
 
 
 def conclusion_step(data, meta, log):
