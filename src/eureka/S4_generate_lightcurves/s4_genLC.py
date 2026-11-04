@@ -672,13 +672,19 @@ def compute_wavelength_bins(meta, wave_1d, log):
         # Shift bins by some number of pixels (only useful for MIRI)
         istart += meta.npixelshift
         iend += meta.npixelshift
-        edges = wave_1d[istart:iend+meta.npixelbins:meta.npixelbins]
-        dwav = np.ediff1d(
-            wave_1d[istart:iend+meta.npixelbins])[::meta.npixelbins]/2
-        if len(edges) != len(dwav):
-            edges = edges[:len(dwav)]
-        meta.wave_low = (edges-dwav)[:-1]
-        meta.wave_hi = (edges-dwav)[1:]
+        edge_indices = np.arange(istart, iend+meta.npixelbins,
+                                 meta.npixelbins)
+        edge_indices = edge_indices[edge_indices < len(wave_1d)]
+        nedge = len(np.ediff1d(
+            wave_1d[istart:iend+meta.npixelbins])[::meta.npixelbins])
+        edge_indices = edge_indices[:nedge]
+        edges = np.asarray(wave_1d[edge_indices], dtype=float)
+        if len(edges) > 1:
+            edges[0] -= (wave_1d[istart+1] - wave_1d[istart])/2
+            edges[1:] = ((wave_1d[edge_indices[1:]-1] +
+                          wave_1d[edge_indices[1:]])/2)
+        meta.wave_low = edges[:-1]
+        meta.wave_hi = edges[1:]
         meta.wave = (meta.wave_low + meta.wave_hi)/2
         meta.nspecchan = len(meta.wave)
         log.writelog(f'  Creating {meta.nspecchan} channels of '

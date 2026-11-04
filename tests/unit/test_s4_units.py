@@ -206,6 +206,22 @@ def test_compute_wavelength_bins_discards_partial_final_pixel_bin(wave_max):
     assert result.nspecchan == 2
 
 
+def test_compute_wavelength_bins_uses_midpoints_on_nonuniform_grid():
+    """Pixel-bin boundaries fall between adjacent detector pixels."""
+    wave = np.array([1.0, 1.2, 1.5, 1.9, 2.4, 3.0,
+                     3.7, 4.5, 5.4, 6.4, 7.5, 8.7])
+    meta = SimpleNamespace(wave_input=None, nspecchan=None, npixelbins=3,
+                           npixelshift=0, wave_min=1.5, wave_max=4.5,
+                           wave_low=None, wave_hi=None)
+
+    result = s4_genLC.compute_wavelength_bins(meta, wave, RecordingLog())
+
+    np.testing.assert_allclose(result.wave_low, [1.3, 2.7])
+    np.testing.assert_allclose(result.wave_hi, [2.7, 4.95])
+    np.testing.assert_allclose(result.wave, [2.0, 3.825])
+    assert result.nspecchan == 2
+
+
 @pytest.mark.parametrize('wave', [[], [1.0]], ids=['empty', 'single-sample'])
 def test_compute_wavelength_bins_rejects_undersized_native_grid(wave):
     """Reject native grids without a neighboring wavelength for bin widths."""
