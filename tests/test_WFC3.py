@@ -13,9 +13,8 @@ sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 import eureka.lib.plots
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
-from eureka.S3_data_reduction import optspex
+from eureka.S3_data_reduction import optspex, wfc3
 from eureka.S3_data_reduction import s3_reduce as s3
-from eureka.S3_data_reduction import wfc3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 
 try:
