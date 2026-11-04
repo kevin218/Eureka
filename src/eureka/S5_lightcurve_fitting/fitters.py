@@ -859,6 +859,18 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
     return pos, nwalkers
 
 
+def _get_dynesty_sampling_name(sampler):
+    """Return the resolved method name across dynesty 2.x and 3.x."""
+    sampling = getattr(sampler, 'sampling', None)
+    if sampling is None:
+        # dynesty 2.x dynamic samplers expose only the method string.
+        sampling = sampler.method
+    else:
+        # dynesty 3.x dynamic samplers expose the sampling object.
+        sampling = type(sampling).__name__
+    return sampling
+
+
 def dynestyfitter(lc, model, meta, log, **kwargs):
     """Perform sampling using dynesty.
 
@@ -996,7 +1008,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         # number of dimensions
         if sample == 'auto':
             log.writelog(f'  run_sample=auto was resolved to '
-                         f'"{type(sampler.sampling).__name__}"',
+                         f'"{_get_dynesty_sampling_name(sampler)}"',
                          mute=(not meta.verbose))
 
         # Handle 'auto' for meta.run_nlive_batch
@@ -1030,7 +1042,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         # number of dimensions
         if sample == 'auto':
             log.writelog(f'  run_sample=auto was resolved to '
-                         f'"{type(sampler.sampling).__name__}"',
+                         f'"{_get_dynesty_sampling_name(sampler)}"',
                          mute=(not meta.verbose))
 
         # Run the sampler

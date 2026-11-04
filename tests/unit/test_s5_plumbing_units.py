@@ -90,6 +90,27 @@ def test_custom_limb_darkening_file_reports_missing_path(tmp_path):
         s5_fit._load_ld_coeffs(filename)
 
 
+@pytest.mark.parametrize('sampler_class', [
+    pytest.param(fitters.NestedSampler, id='static'),
+    pytest.param(fitters.DynamicNestedSampler, id='dynamic'),
+])
+@pytest.mark.parametrize('ndim, expected', [
+    (2, ('unif', 'UniformBoundSampler')),
+    (15, ('rwalk', 'RWalkSampler')),
+    (25, ('rslice', 'RSliceSampler')),
+])
+def test_dynesty_auto_sampling_name_identifies_resolved_method(
+        sampler_class, ndim, expected):
+    """Both dynesty 2.x and 3.x must report the resolved auto method."""
+    sampler = sampler_class(lambda x: -np.sum(x**2), lambda u: u, ndim,
+                             nlive=100, sample='auto',
+                             rstate=np.random.default_rng(123))
+
+    name = fitters._get_dynesty_sampling_name(sampler)
+
+    assert name in expected
+
+
 def test_update_uncertainty_applies_scatter_mult_per_channel():
     """Scatter multipliers should inflate each fitted channel locally."""
     theta = np.array([2.0, 3.0])
