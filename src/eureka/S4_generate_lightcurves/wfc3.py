@@ -71,30 +71,19 @@ def sum_reads(spec, lc, meta):
     lc = lc.isel(time=np.arange(0, len(lc.data.time),
                                 meta.nreads))
 
+    # Replace the shared Dataset coordinates with the averaged read times.
+    # Assigning a coordinate through an individual DataArray does not update
+    # the parent Dataset's coordinate.
+    time = np.ma.filled(time, np.nan)
+    spec = spec.assign_coords(time=spec.time.copy(data=time))
+    lc = lc.assign_coords(time=lc.time.copy(data=time))
+
     # Update values based on those we've calculated above
     spec.optspec.values = flux
-    spec.optspec['time'] = time
     spec.opterr.values = err
-    spec.opterr['time'] = time
     spec.optmask.values = optmask
-    spec.optmask['time'] = time
     spec.stdspec.values = std_flux
-    spec.stdspec['time'] = time
     spec.stdvar.values = std_var
-    spec.stdvar['time'] = time
-
-    # For these values, just use the first read's value
-    spec.centroid_x['time'] = time
-    spec.centroid_y['time'] = time
-    spec.guess['time'] = time
-    spec.scandir['time'] = time
-    lc.centroid_x['time'] = time
-    if hasattr(lc, 'centroid_sx'):
-        lc.centroid_sx['time'] = time
-    lc.centroid_y['time'] = time
-    lc.scandir['time'] = time
-    if meta.correctDrift:
-        lc.driftmask['time'] = time
 
     # Update meta parameters
     meta.nreads = 1

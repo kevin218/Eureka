@@ -59,6 +59,8 @@ def test_sum_reads_propagates_rescaled_flux_errors_and_variances():
     np.testing.assert_array_equal(spec.optmask.values,
                                   [[False, False, False, True],
                                    [False, False, False, False]])
+    np.testing.assert_allclose(spec.time.values, [0.5, 2.5])
+    np.testing.assert_allclose(lc.time.values, [0.5, 2.5])
     assert spec.sizes['time'] == lc.sizes['time'] == 2
     assert meta.nreads == 1
     assert meta.n_int == 2
