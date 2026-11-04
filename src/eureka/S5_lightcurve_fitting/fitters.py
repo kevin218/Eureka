@@ -888,6 +888,9 @@ def _get_dynesty_sampling_name(sampler):
     if sampling is None:
         # dynesty 2.x dynamic samplers expose only the method string.
         sampling = sampler.method
+    elif isinstance(sampling, str):
+        # dynesty 2.x static samplers expose the resolved method as a string.
+        return sampling
     else:
         # dynesty 3.x dynamic samplers expose the sampling object.
         sampling = type(sampling).__name__

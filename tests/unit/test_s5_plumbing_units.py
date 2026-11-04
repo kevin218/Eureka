@@ -111,6 +111,14 @@ def test_dynesty_auto_sampling_name_identifies_resolved_method(
     assert name in expected
 
 
+@pytest.mark.parametrize('method', ['unif', 'rwalk', 'rslice'])
+def test_dynesty_sampling_name_preserves_string_method(method):
+    """dynesty 2.x static samplers expose the method string directly."""
+    sampler = SimpleNamespace(sampling=method)
+
+    assert fitters._get_dynesty_sampling_name(sampler) == method
+
+
 @pytest.mark.parametrize('stretch_scale', [1.5, 2.0, 7.0])
 def test_emcee_stretch_scale_configures_sampler_move(stretch_scale):
     """The configured scale must reach emcee's active proposal move."""
