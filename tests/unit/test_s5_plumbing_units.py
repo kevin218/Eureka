@@ -111,6 +111,23 @@ def test_dynesty_auto_sampling_name_identifies_resolved_method(
     assert name in expected
 
 
+@pytest.mark.parametrize('stretch_scale', [1.5, 2.0, 7.0])
+def test_emcee_stretch_scale_configures_sampler_move(stretch_scale):
+    """The configured scale must reach emcee's active proposal move."""
+    move = fitters._get_emcee_move(stretch_scale)
+    sampler = fitters.emcee.EnsembleSampler(
+        6, 2, lambda x: -np.sum(x**2), moves=move
+    )
+
+    assert sampler._moves[0].a == pytest.approx(stretch_scale)
+
+
+@pytest.mark.parametrize('stretch_scale', [1.0, 0.5, -2.0])
+def test_emcee_stretch_scale_rejects_invalid_values(stretch_scale):
+    with pytest.raises(ValueError, match='must be greater than 1'):
+        fitters._get_emcee_move(stretch_scale)
+
+
 def test_update_uncertainty_applies_scatter_mult_per_channel():
     """Scatter multipliers should inflate each fitted channel locally."""
     theta = np.array([2.0, 3.0])

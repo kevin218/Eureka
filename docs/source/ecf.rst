@@ -1351,6 +1351,12 @@ run_nburn
 ^^^^^^^^^
 Integer. The number of burn-in steps to run.
 
+stretch_scale
+^^^^^^^^^^^^^
+Float controlling the scale of emcee's stretch-move proposals. Defaults to
+``2.0``. Larger values propose broader moves, while smaller values propose
+narrower moves. This value must be greater than ``1``.
+
 
 Dynesty Fitting Parameters
 ''''''''''''''''''''''''''

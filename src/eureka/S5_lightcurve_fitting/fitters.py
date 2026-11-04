@@ -316,6 +316,29 @@ def demcfitter(lc, model, meta, log, **kwargs):
     return best_model
 
 
+def _get_emcee_move(stretch_scale):
+    """Create the emcee stretch move with the configured scale.
+
+    Parameters
+    ----------
+    stretch_scale : float
+        The scale parameter for the emcee stretch move. Must be greater than 1.
+
+    Returns
+    -------
+    move : emcee.moves.StretchMove
+        The configured emcee stretch move.
+
+    Raises
+    ------
+    ValueError
+        If stretch_scale is less than or equal to 1.
+    """
+    if stretch_scale <= 1:
+        raise ValueError('stretch_scale must be greater than 1.')
+    return emcee.moves.StretchMove(a=stretch_scale)
+
+
 def emceefitter(lc, model, meta, log, **kwargs):
     """Perform sampling using emcee.
 
@@ -399,7 +422,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     args=(lc, model, prior1, prior2,
                                           priortype, freenames),
-                                    a=meta.stretch_scale,
+                                    moves=_get_emcee_move(meta.stretch_scale),
                                     pool=pool)
     log.writelog('Running emcee burn-in and production steps...')
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
