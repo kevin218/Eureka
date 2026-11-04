@@ -43,9 +43,9 @@ class HSTRampModel(Model):
             for chan in self.fitted_channels:
                 trim1, trim2 = get_trim(self.nints, chan)
                 piece = self._time[trim1:trim2]
-                self.time_local[trim1:trim2] = piece - np.ma.min(piece.data)
+                self.time_local[trim1:trim2] = piece - piece.min()
         else:
-            self.time_local = self._time - np.ma.min(self._time.data)
+            self.time_local = self._time - self._time.min()
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
