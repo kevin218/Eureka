@@ -109,7 +109,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None,
         im1 = ax1.pcolormesh(np.arange(meta.n_int), wave_1d,
                              normspec.swapaxes(0, 1), vmin=meta.vmin,
                              vmax=meta.vmax, cmap=cmap)
-        im2 = ax1.pcolormesh(np.arange(meta.n_int), optspec.x.values,
+        im2 = ax2.pcolormesh(np.arange(meta.n_int), optspec.x.values,
                              normspec.swapaxes(0, 1), vmin=meta.vmin,
                              vmax=meta.vmax, cmap=cmap)
         ax1.set_ylim(wmin, wmax)
