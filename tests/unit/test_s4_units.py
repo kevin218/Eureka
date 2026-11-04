@@ -66,6 +66,43 @@ def test_sum_reads_propagates_rescaled_flux_errors_and_variances():
     assert meta.n_int == 2
 
 
+def test_sum_reads_averages_covariates_from_unmasked_reads():
+    """A padded read must not leave NaN centroids on recovered exposures."""
+    mask = np.array([[True, True], [False, False],
+                     [False, False], [False, False]])
+    covariates = {
+        'centroid_x': [np.nan, 5.0, 10.0, 12.0],
+        'centroid_y': [np.nan, 20.0, 30.0, 32.0],
+        'centroid_sx': [np.nan, 2.0, 4.0, 6.0],
+        'centroid_sy': [np.nan, 3.0, 5.0, 7.0],
+    }
+    spec = xr.Dataset(
+        {'optspec': (['time', 'x'], np.ones((4, 2))),
+         'opterr': (['time', 'x'], np.ones((4, 2))),
+         'optmask': (['time', 'x'], mask),
+         'stdspec': (['time', 'x'], np.ones((4, 2))),
+         'stdvar': (['time', 'x'], np.ones((4, 2)))},
+        coords={'time': [0.0, 2.0, 10.0, 14.0], 'x': [0, 1]},
+    )
+    lc = xr.Dataset(
+        {'data': (['time'], np.ones(4))},
+        coords={'time': spec.time},
+    )
+    for name, values in covariates.items():
+        spec[name] = (['time'], values)
+        lc[name] = (['time'], values)
+
+    spec, lc, _ = wfc3.sum_reads(
+        spec, lc, SimpleNamespace(nreads=2, correctDrift=False)
+    )
+
+    for dataset in (spec, lc):
+        np.testing.assert_allclose(dataset.centroid_x.values, [5.0, 11.0])
+        np.testing.assert_allclose(dataset.centroid_y.values, [20.0, 31.0])
+        np.testing.assert_allclose(dataset.centroid_sx.values, [2.0, 5.0])
+        np.testing.assert_allclose(dataset.centroid_sy.values, [3.0, 6.0])
+
+
 def test_highpassfilt_matches_boxcar_convolution_with_extend_boundary():
     """The S4 high-pass helper should match its documented boxcar smoothing."""
     signal = np.array([1.0, 2.0, 10.0, 2.0, 1.0])

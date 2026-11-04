@@ -59,11 +59,31 @@ def sum_reads(spec, lc, meta):
     # stdvar already contains variances, which scale as flux squared.
     std_var = np.ma.sum(std_var, axis=1)*scale**2
 
+    # Track which reads contribute any wavelengths to their summed exposure.
+    read_valid = ~np.all(optmask, axis=2)
+
     # Mask if all of the reads were masked
     optmask = np.all(optmask, axis=1)
 
     # Average together the reads' times
     time = time.mean(axis=1)
+
+    # Average continuous centroid covariates over reads with usable spectra.
+    # The first read can be padding for a scan direction, so copying its NaN
+    # centroid would discard an otherwise recovered exposure in Stage 5.
+    read_covariates = []
+    for dataset in (spec, lc):
+        averaged = {}
+        for name in ('centroid_x', 'centroid_y', 'centroid_sx',
+                     'centroid_sy'):
+            if name in dataset and dataset[name].dims == ('time',):
+                values = dataset[name].values.reshape(-1, meta.nreads)
+                covariate = np.ma.masked_array(
+                    values, mask=~read_valid, dtype=float)
+                covariate = np.ma.masked_invalid(covariate)
+                averaged[name] = np.ma.filled(
+                    covariate.mean(axis=1), np.nan)
+        read_covariates.append(averaged)
 
     # Take every nread value out of the spec and lc object
     spec = spec.isel(time=np.arange(0, len(spec.optspec.time),
@@ -77,6 +97,9 @@ def sum_reads(spec, lc, meta):
     time = np.ma.filled(time, np.nan)
     spec = spec.assign_coords(time=spec.time.copy(data=time))
     lc = lc.assign_coords(time=lc.time.copy(data=time))
+    for dataset, averaged in zip((spec, lc), read_covariates):
+        for name, values in averaged.items():
+            dataset[name].values = values
 
     # Update values based on those we've calculated above
     spec.optspec.values = flux
