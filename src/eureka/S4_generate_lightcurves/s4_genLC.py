@@ -680,7 +680,10 @@ def compute_wavelength_bins(meta, wave_1d, log):
         edge_indices = edge_indices[:nedge]
         edges = np.asarray(wave_1d[edge_indices], dtype=float)
         if len(edges) > 1:
-            edges[0] -= (wave_1d[istart+1] - wave_1d[istart])/2
+            if istart > 0:
+                edges[0] = ((wave_1d[istart-1] + wave_1d[istart])/2)
+            else:
+                edges[0] -= (wave_1d[istart+1] - wave_1d[istart])/2
             edges[1:] = ((wave_1d[edge_indices[1:]-1] +
                           wave_1d[edge_indices[1:]])/2)
         meta.wave_low = edges[:-1]

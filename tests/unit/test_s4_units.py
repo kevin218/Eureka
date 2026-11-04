@@ -218,9 +218,12 @@ def test_compute_wavelength_bins_uses_midpoints_on_nonuniform_grid():
 
     result = s4_genLC.compute_wavelength_bins(meta, wave, RecordingLog())
 
-    np.testing.assert_allclose(result.wave_low, [1.3, 2.7])
+    np.testing.assert_allclose(result.wave_low, [1.35, 2.7])
     np.testing.assert_allclose(result.wave_hi, [2.7, 4.95])
-    np.testing.assert_allclose(result.wave, [2.0, 3.825])
+    np.testing.assert_allclose(result.wave, [2.025, 3.825])
+    for wave_low, wave_hi in zip(result.wave_low, result.wave_hi):
+        pixels = wave[(wave >= wave_low) & (wave < wave_hi)]
+        assert pixels.size == meta.npixelbins
     assert result.nspecchan == 2
 
 
