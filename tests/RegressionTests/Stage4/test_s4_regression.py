@@ -1,4 +1,5 @@
 import astraeus.xarrayIO as xrio
+import numpy as np
 import pytest
 
 from ..regression_helpers import (assert_array, assert_attribute,
@@ -11,6 +12,9 @@ from .conftest import REFERENCE_ROOT
 RTOL = 1e-4
 MAED_RTOL = 1e-3
 CENTROID_ATOL = 1e-2
+# WFC3 times are in days. A relative tolerance on full Julian dates would
+# conceal the difference between first-read and averaged-read timestamps.
+WFC3_TIME_ATOL = 1e-9
 
 
 def _reference_paths(case):
@@ -35,6 +39,14 @@ def test_s4_science_products(case, run_s4, overwrite_ref_files):
     # Compare the configured science arrays from both Stage 4 products.
     expected_spec = xrio.readXR(str(spec_path), verbose=False)
     expected_lc = xrio.readXR(str(lc_path), verbose=False)
+    if case.name == "wfc3_spectroscopy":
+        for product, actual, expected in (
+                ("SpecData", spec, expected_spec),
+                ("LCData", lc, expected_lc)):
+            np.testing.assert_allclose(
+                actual.time.values, expected.time.values,
+                rtol=0, atol=WFC3_TIME_ATOL,
+                err_msg=f"{case.name}: {product} time coordinate")
     for variable in case.spec_variables:
         assert variable in spec, (
             f"{case.name}: missing SpecData output {variable}"

@@ -43,6 +43,99 @@ def _params(**values):
     return params
 
 
+@pytest.mark.parametrize('law, expected', [
+    pytest.param('linear', [[0.1]], id='single-channel-linear'),
+    pytest.param('linear', [[0.1], [0.2]], id='multiple-channel-linear'),
+    pytest.param('quadratic', [[0.1, 0.2]], id='single-channel-quadratic'),
+    pytest.param('quadratic', [[0.1, 0.2], [0.3, 0.4]],
+                 id='multiple-channel-quadratic'),
+    pytest.param('4-parameter', [[0.1, 0.2, 0.3, 0.4]],
+                 id='single-channel-nonlinear'),
+])
+def test_custom_limb_darkening_file_loads_coefficients_per_channel(
+        tmp_path, law, expected):
+    """Custom files must preserve channel rows even for one row or column."""
+    expected = np.array(expected)
+    filename = tmp_path / 'limb_darkening.txt'
+    np.savetxt(filename, expected)
+    coeffs = s5_fit._load_ld_coeffs(filename)
+
+    nchannel, ncoeffs = expected.shape
+    params = _params(limb_dark=(law, 'independent'),
+                     **{f'u{n+1}': (0.0, 'fixed') for n in range(ncoeffs)})
+    meta = SimpleNamespace(multwhite=False, sharedp=True,
+                           wl_groups=[0]*nchannel)
+    longparamlist, paramtitles, _, params = s5_fit.make_longparamlist(
+        meta, params, nchannel)
+    model = models.BatmanTransitModel(
+        parameters=params, paramtitles=paramtitles,
+        longparamlist=longparamlist, nchannel=nchannel,
+        nchannel_fitted=nchannel, fitted_channels=np.arange(nchannel),
+        ld_from_S4=False, ld_from_file=True, ld_coeffs=coeffs,
+        log=RecordingLog(),
+    )
+
+    np.testing.assert_allclose(coeffs, expected)
+    for channel in range(nchannel):
+        for n in range(ncoeffs):
+            index = paramtitles.index(f'u{n+1}')
+            param = getattr(model.parameters, longparamlist[channel][index])
+            assert param.value == pytest.approx(expected[channel, n])
+
+
+def test_custom_limb_darkening_file_reports_missing_path(tmp_path):
+    filename = tmp_path / 'missing.txt'
+
+    with pytest.raises(Exception, match=f'{filename} could not be found'):
+        s5_fit._load_ld_coeffs(filename)
+
+
+@pytest.mark.parametrize('sampler_class', [
+    pytest.param(fitters.NestedSampler, id='static'),
+    pytest.param(fitters.DynamicNestedSampler, id='dynamic'),
+])
+@pytest.mark.parametrize('ndim, expected', [
+    (2, ('unif', 'UniformBoundSampler')),
+    (15, ('rwalk', 'RWalkSampler')),
+    (25, ('rslice', 'RSliceSampler')),
+])
+def test_dynesty_auto_sampling_name_identifies_resolved_method(
+        sampler_class, ndim, expected):
+    """Both dynesty 2.x and 3.x must report the resolved auto method."""
+    sampler = sampler_class(lambda x: -np.sum(x**2), lambda u: u, ndim,
+                             nlive=100, sample='auto',
+                             rstate=np.random.default_rng(123))
+
+    name = fitters._get_dynesty_sampling_name(sampler)
+
+    assert name in expected
+
+
+@pytest.mark.parametrize('method', ['unif', 'rwalk', 'rslice'])
+def test_dynesty_sampling_name_preserves_string_method(method):
+    """dynesty 2.x static samplers expose the method string directly."""
+    sampler = SimpleNamespace(sampling=method)
+
+    assert fitters._get_dynesty_sampling_name(sampler) == method
+
+
+@pytest.mark.parametrize('stretch_scale', [1.5, 2.0, 7.0])
+def test_emcee_stretch_scale_configures_sampler_move(stretch_scale):
+    """The configured scale must reach emcee's active proposal move."""
+    move = fitters._get_emcee_move(stretch_scale)
+    sampler = fitters.emcee.EnsembleSampler(
+        6, 2, lambda x: -np.sum(x**2), moves=move
+    )
+
+    assert sampler._moves[0].a == pytest.approx(stretch_scale)
+
+
+@pytest.mark.parametrize('stretch_scale', [1.0, 0.5, -2.0])
+def test_emcee_stretch_scale_rejects_invalid_values(stretch_scale):
+    with pytest.raises(ValueError, match='must be greater than 1'):
+        fitters._get_emcee_move(stretch_scale)
+
+
 def test_update_uncertainty_applies_scatter_mult_per_channel():
     """Scatter multipliers should inflate each fitted channel locally."""
     theta = np.array([2.0, 3.0])

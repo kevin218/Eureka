@@ -5,6 +5,9 @@ def sum_reads(spec, lc, meta):
     """Sum together the non-destructive reads from each file to reduce noise
     and data volume.
 
+    Missing reads are excluded, and the remaining flux is rescaled to the
+    full number of reads. Errors and variances use the same flux scaling.
+
     spec : Xarray Dataset
         The Dataset object containing the 2D spectra.
     lc : Xarray Dataset
@@ -37,19 +40,50 @@ def sum_reads(spec, lc, meta):
     std_var = std_var.reshape(-1, meta.nreads, std_var.shape[1])
     time = time.reshape(-1, meta.nreads)
 
+    # Convert to masked arrays to safely sum reads
+    flux = np.ma.masked_array(flux, mask=optmask)
+    err = np.ma.masked_array(err, mask=optmask)
+    std_flux = np.ma.masked_array(std_flux, mask=optmask)
+    std_var = np.ma.masked_array(std_var, mask=optmask)
+    time = np.ma.masked_array(time, mask=np.all(optmask, axis=2))
+
     # Sum together the reads to get (nfiles, nwaves)
-    flux = flux.sum(axis=1)
-    std_flux = std_flux.sum(axis=1)
+    flux = flux.mean(axis=1)*meta.nreads
+    std_flux = std_flux.mean(axis=1)*meta.nreads
 
-    # Add errors in quadrature
-    err = np.sqrt(np.sum(err**2, axis=1))
-    std_var = np.sqrt(np.sum(std_var**2, axis=1))
+    # Rescale uncertainties by the same factor as the surviving flux sum.
+    # Mask zero counts so fully masked channels remain masked.
+    n_good = np.ma.masked_equal(np.sum(~optmask, axis=1), 0)
+    scale = meta.nreads / n_good
+    err = np.ma.sqrt(np.ma.sum(err**2, axis=1))*scale
+    # stdvar already contains variances, which scale as flux squared.
+    std_var = np.ma.sum(std_var, axis=1)*scale**2
 
-    # Mask if any of the reads were masked
-    optmask = np.any(optmask, axis=1)
+    # Track which reads contribute any wavelengths to their summed exposure.
+    read_valid = ~np.all(optmask, axis=2)
+
+    # Mask if all of the reads were masked
+    optmask = np.all(optmask, axis=1)
 
     # Average together the reads' times
     time = time.mean(axis=1)
+
+    # Average continuous centroid covariates over reads with usable spectra.
+    # The first read can be padding for a scan direction, so copying its NaN
+    # centroid would discard an otherwise recovered exposure in Stage 5.
+    read_covariates = []
+    for dataset in (spec, lc):
+        averaged = {}
+        for name in ('centroid_x', 'centroid_y', 'centroid_sx',
+                     'centroid_sy'):
+            if name in dataset and dataset[name].dims == ('time',):
+                values = dataset[name].values.reshape(-1, meta.nreads)
+                covariate = np.ma.masked_array(
+                    values, mask=~read_valid, dtype=float)
+                covariate = np.ma.masked_invalid(covariate)
+                averaged[name] = np.ma.filled(
+                    covariate.mean(axis=1), np.nan)
+        read_covariates.append(averaged)
 
     # Take every nread value out of the spec and lc object
     spec = spec.isel(time=np.arange(0, len(spec.optspec.time),
@@ -57,30 +91,22 @@ def sum_reads(spec, lc, meta):
     lc = lc.isel(time=np.arange(0, len(lc.data.time),
                                 meta.nreads))
 
+    # Replace the shared Dataset coordinates with the averaged read times.
+    # Assigning a coordinate through an individual DataArray does not update
+    # the parent Dataset's coordinate.
+    time = np.ma.filled(time, np.nan)
+    spec = spec.assign_coords(time=spec.time.copy(data=time))
+    lc = lc.assign_coords(time=lc.time.copy(data=time))
+    for dataset, averaged in zip((spec, lc), read_covariates):
+        for name, values in averaged.items():
+            dataset[name].values = values
+
     # Update values based on those we've calculated above
     spec.optspec.values = flux
-    spec.optspec['time'] = time
     spec.opterr.values = err
-    spec.opterr['time'] = time
     spec.optmask.values = optmask
-    spec.optmask['time'] = time
     spec.stdspec.values = std_flux
-    spec.stdspec['time'] = time
     spec.stdvar.values = std_var
-    spec.stdvar['time'] = time
-
-    # For these values, just use the first read's value
-    spec.centroid_x['time'] = time
-    spec.centroid_y['time'] = time
-    spec.guess['time'] = time
-    spec.scandir['time'] = time
-    lc.centroid_x['time'] = time
-    if hasattr(lc, 'centroid_sx'):
-        lc.centroid_sx['time'] = time
-    lc.centroid_y['time'] = time
-    lc.scandir['time'] = time
-    if meta.correctDrift:
-        lc.driftmask['time'] = time
 
     # Update meta parameters
     meta.nreads = 1

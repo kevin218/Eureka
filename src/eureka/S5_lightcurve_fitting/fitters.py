@@ -260,7 +260,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_rms(lc, model, meta, fitter=calling_function)
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3 and calling_function == 'lsq':
+    if meta.isplots_S5 >= 5 and calling_function == 'lsq':
         plots.plot_res_distr(lc, model, meta, fitter=calling_function)
 
     # Make a new model instance
@@ -314,6 +314,29 @@ def demcfitter(lc, model, meta, log, **kwargs):
     """
     best_model = None
     return best_model
+
+
+def _get_emcee_move(stretch_scale):
+    """Create the emcee stretch move with the configured scale.
+
+    Parameters
+    ----------
+    stretch_scale : float
+        The scale parameter for the emcee stretch move. Must be greater than 1.
+
+    Returns
+    -------
+    move : emcee.moves.StretchMove
+        The configured emcee stretch move.
+
+    Raises
+    ------
+    ValueError
+        If stretch_scale is less than or equal to 1.
+    """
+    if stretch_scale <= 1:
+        raise ValueError('stretch_scale must be greater than 1.')
+    return emcee.moves.StretchMove(a=stretch_scale)
 
 
 def emceefitter(lc, model, meta, log, **kwargs):
@@ -399,6 +422,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     args=(lc, model, prior1, prior2,
                                           priortype, freenames),
+                                    moves=_get_emcee_move(meta.stretch_scale),
                                     pool=pool)
     log.writelog('Running emcee burn-in and production steps...')
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
@@ -409,7 +433,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # log.writelog(f"Mean acceptance fraction: {acceptance_fraction:.3f}",
     #              mute=(not meta.verbose))
     # try:
-    # autocorr = sampler.get_autocorr_time()
+    #     autocorr = sampler.get_autocorr_time()
     #     log.writelog(f"Mean autocorrelation time: {autocorr:.3f} steps",
     #                  mute=(not meta.verbose))
     # except:
@@ -526,7 +550,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_rms(lc, model, meta, fitter='emcee')
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 5:
         plots.plot_res_distr(lc, model, meta, fitter='emcee')
 
     # Plot chain evolution
@@ -858,6 +882,21 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
     return pos, nwalkers
 
 
+def _get_dynesty_sampling_name(sampler):
+    """Return the resolved method name across dynesty 2.x and 3.x."""
+    sampling = getattr(sampler, 'sampling', None)
+    if sampling is None:
+        # dynesty 2.x dynamic samplers expose only the method string.
+        sampling = sampler.method
+    elif isinstance(sampling, str):
+        # dynesty 2.x static samplers expose the resolved method as a string.
+        return sampling
+    else:
+        # dynesty 3.x dynamic samplers expose the sampling object.
+        sampling = type(sampling).__name__
+    return sampling
+
+
 def dynestyfitter(lc, model, meta, log, **kwargs):
     """Perform sampling using dynesty.
 
@@ -991,6 +1030,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                 queue_size=queue_size, bound=bound, sample=sample,
                 logl_args=l_args, ptform_args=[prior1, prior2, priortype])
 
+        # Log what sample='auto' resolves to since the default depends on the
+        # number of dimensions
+        if sample == 'auto':
+            log.writelog(f'  run_sample=auto was resolved to '
+                         f'"{_get_dynesty_sampling_name(sampler)}"',
+                         mute=(not meta.verbose))
+
         # Handle 'auto' for meta.run_nlive_batch
         nlive_batch = meta.run_nlive_batch
         if nlive_batch == 'auto':
@@ -1017,6 +1063,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                 ln_like, ptform, ndims, nlive=nlive, pool=pool,
                 queue_size=queue_size, bound=bound, sample=sample,
                 logl_args=l_args, ptform_args=[prior1, prior2, priortype])
+
+        # Log what sample='auto' resolves to since the default depends on the
+        # number of dimensions
+        if sample == 'auto':
+            log.writelog(f'  run_sample=auto was resolved to '
+                         f'"{_get_dynesty_sampling_name(sampler)}"',
+                         mute=(not meta.verbose))
 
         # Run the sampler
         sampler.run_nested(dlogz=meta.run_tol, **run_kwargs)
@@ -1130,7 +1183,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_rms(lc, model, meta, fitter=fittername)
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 5:
         plots.plot_res_distr(lc, model, meta, fitter=fittername)
 
     # plot using corner.py
@@ -1244,7 +1297,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_rms(lc, model, meta, fitter='lmfitter')
 
     # Plot residuals distribution
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 5:
         plots.plot_res_distr(lc, model, meta, fitter='lmfitter')
 
     # Create new model with best fit parameters

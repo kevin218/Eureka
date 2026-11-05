@@ -2,10 +2,12 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+import xarray as xr
 from astropy.convolution import Box1DKernel, convolve
 from tests.unit.helpers import RecordingLog
 
-from eureka.S4_generate_lightcurves import drift, outliers, s4_genLC
+from eureka.S4_generate_lightcurves import (drift, outliers, plots_s4,
+                                            s4_genLC, wfc3)
 
 
 class _Values:
@@ -14,6 +16,127 @@ class _Values:
 
     def __getitem__(self, key):
         return self.values[key]
+
+
+@pytest.mark.parametrize('time_axis', ['x', 'y'])
+@pytest.mark.parametrize('wave_low, wave_hi, expected_edges', [
+    pytest.param([1., 1.6], [1.3, 2.], [1., 1.3, 1.6, 2.], id='gapped'),
+    pytest.param([1., 1.5], [1.5, 2.], [1., 1.5, 2.], id='contiguous'),
+])
+def test_drift_plot_marks_all_unique_bin_edges(
+        monkeypatch, time_axis, wave_low, wave_hi, expected_edges):
+    """Show both ends of gapped bins without duplicating shared boundaries."""
+    monkeypatch.setattr(plots_s4.plt, 'savefig', lambda *args, **kwargs: None)
+    monkeypatch.setattr(plots_s4.plt, 'pause', lambda *args, **kwargs: None)
+    wave = np.linspace(1., 2., 12)
+    spectrum = xr.DataArray(np.ones((4, 12)), dims=('time', 'x'))
+    meta = SimpleNamespace(
+        inst='nircam', wave_min=1., wave_max=2., n_int=4,
+        time_axis=time_axis, vmin=.95, vmax=1.05,
+        wave=(np.array(wave_low) + np.array(wave_hi))/2,
+        wave_low=np.array(wave_low), wave_hi=np.array(wave_hi),
+        nspecchan=2, maed_s4=1., outputdir='', hide_plots=False,
+    )
+    try:
+        plots_s4.lc_driftcorr(meta, wave, spectrum,
+                              optmask=xr.zeros_like(spectrum, dtype=bool))
+
+        axis = plots_s4.plt.figure(4101).axes[0]
+        secondary = axis.child_axes[0]
+        ticks = (secondary.get_xticks() if time_axis == 'y' else
+                 secondary.get_yticks())
+        np.testing.assert_allclose(ticks, expected_edges)
+        segments = np.array(axis.collections[-1].get_segments())
+        wave_axis = 0 if time_axis == 'y' else 1
+        np.testing.assert_allclose(segments[:, 0, wave_axis], expected_edges)
+    finally:
+        plots_s4.plt.close(4101)
+
+
+def test_sum_reads_propagates_rescaled_flux_errors_and_variances():
+    """Missing reads reduce information even when flux is rescaled."""
+    flux = np.array([[10., 10., 30., 70.],
+                     [20., 20., 999., 90.],
+                     [40., 40., 40., 40.],
+                     [50., 50., 50., 50.]])
+    err = np.repeat([[1.], [2.], [3.], [4.]], 4, axis=1)
+    mask = np.array([[False, True, False, True],
+                     [False, False, True, True],
+                     [False, True, False, False],
+                     [False, False, False, False]])
+    spec = xr.Dataset(
+        {'optspec': (['time', 'x'], flux),
+         'opterr': (['time', 'x'], err),
+         'optmask': (['time', 'x'], mask),
+         'stdspec': (['time', 'x'], 2*flux),
+         'stdvar': (['time', 'x'], 4*err**2)},
+        coords={'time': np.arange(4, dtype=float), 'x': np.arange(4)},
+    )
+    for key in ('centroid_x', 'centroid_y', 'guess', 'scandir'):
+        spec[key] = (['time'], np.zeros(4))
+    lc = xr.Dataset(
+        {'data': (['time'], np.ones(4)),
+         'centroid_x': spec.centroid_x,
+         'centroid_y': spec.centroid_y,
+         'scandir': spec.scandir},
+        coords={'time': spec.time},
+    )
+    meta = SimpleNamespace(nreads=2, correctDrift=False)
+
+    spec, lc, meta = wfc3.sum_reads(spec, lc, meta)
+
+    expected_flux = [[30., 40., 60., np.nan], [90., 100., 90., 90.]]
+    expected_err = [[np.sqrt(5), 4., 2., np.nan], [5., 8., 5., 5.]]
+    expected_stdvar = [[20., 64., 16., np.nan], [100., 256., 100., 100.]]
+    np.testing.assert_allclose(spec.optspec.values, expected_flux)
+    np.testing.assert_allclose(spec.opterr.values, expected_err)
+    np.testing.assert_allclose(spec.stdspec.values, 2*np.array(expected_flux))
+    np.testing.assert_allclose(spec.stdvar.values, expected_stdvar)
+    np.testing.assert_array_equal(spec.optmask.values,
+                                  [[False, False, False, True],
+                                   [False, False, False, False]])
+    np.testing.assert_allclose(spec.time.values, [0.5, 2.5])
+    np.testing.assert_allclose(lc.time.values, [0.5, 2.5])
+    assert spec.sizes['time'] == lc.sizes['time'] == 2
+    assert meta.nreads == 1
+    assert meta.n_int == 2
+
+
+def test_sum_reads_averages_covariates_from_unmasked_reads():
+    """A padded read must not leave NaN centroids on recovered exposures."""
+    mask = np.array([[True, True], [False, False],
+                     [False, False], [False, False]])
+    covariates = {
+        'centroid_x': [np.nan, 5.0, 10.0, 12.0],
+        'centroid_y': [np.nan, 20.0, 30.0, 32.0],
+        'centroid_sx': [np.nan, 2.0, 4.0, 6.0],
+        'centroid_sy': [np.nan, 3.0, 5.0, 7.0],
+    }
+    spec = xr.Dataset(
+        {'optspec': (['time', 'x'], np.ones((4, 2))),
+         'opterr': (['time', 'x'], np.ones((4, 2))),
+         'optmask': (['time', 'x'], mask),
+         'stdspec': (['time', 'x'], np.ones((4, 2))),
+         'stdvar': (['time', 'x'], np.ones((4, 2)))},
+        coords={'time': [0.0, 2.0, 10.0, 14.0], 'x': [0, 1]},
+    )
+    lc = xr.Dataset(
+        {'data': (['time'], np.ones(4))},
+        coords={'time': spec.time},
+    )
+    for name, values in covariates.items():
+        spec[name] = (['time'], values)
+        lc[name] = (['time'], values)
+
+    spec, lc, _ = wfc3.sum_reads(
+        spec, lc, SimpleNamespace(nreads=2, correctDrift=False)
+    )
+
+    for dataset in (spec, lc):
+        np.testing.assert_allclose(dataset.centroid_x.values, [5.0, 11.0])
+        np.testing.assert_allclose(dataset.centroid_y.values, [20.0, 31.0])
+        np.testing.assert_allclose(dataset.centroid_sx.values, [2.0, 5.0])
+        np.testing.assert_allclose(dataset.centroid_sy.values, [3.0, 6.0])
 
 
 def test_highpassfilt_matches_boxcar_convolution_with_extend_boundary():
@@ -155,6 +278,25 @@ def test_compute_wavelength_bins_discards_partial_final_pixel_bin(wave_max):
     np.testing.assert_allclose(result.wave_low, [2.5, 5.5])
     np.testing.assert_allclose(result.wave_hi, [5.5, 8.5])
     np.testing.assert_allclose(result.wave, [4.0, 7.0])
+    assert result.nspecchan == 2
+
+
+def test_compute_wavelength_bins_uses_midpoints_on_nonuniform_grid():
+    """Pixel-bin boundaries fall between adjacent detector pixels."""
+    wave = np.array([1.0, 1.2, 1.5, 1.9, 2.4, 3.0,
+                     3.7, 4.5, 5.4, 6.4, 7.5, 8.7])
+    meta = SimpleNamespace(wave_input=None, nspecchan=None, npixelbins=3,
+                           npixelshift=0, wave_min=1.5, wave_max=4.5,
+                           wave_low=None, wave_hi=None)
+
+    result = s4_genLC.compute_wavelength_bins(meta, wave, RecordingLog())
+
+    np.testing.assert_allclose(result.wave_low, [1.35, 2.7])
+    np.testing.assert_allclose(result.wave_hi, [2.7, 4.95])
+    np.testing.assert_allclose(result.wave, [2.025, 3.825])
+    for wave_low, wave_hi in zip(result.wave_low, result.wave_hi):
+        pixels = wave[(wave >= wave_low) & (wave < wave_hi)]
+        assert pixels.size == meta.npixelbins
     assert result.nspecchan == 2
 
 

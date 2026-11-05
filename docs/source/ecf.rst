@@ -703,6 +703,22 @@ fittype
 '''''''
 Used during Optimal Extraction. fittype defines how to construct the normalized spatial profile for optimal spectral extraction. Options are: 'smooth', 'meddata', 'wavelet', 'wavelet2D', 'gauss', or 'poly'. Using the median frame (meddata) should work well with JWST. Otherwise, using a smoothing function (smooth) is the most robust and versatile option. Default is meddata. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
+For HST/WFC3, ``meddata`` uses a separate median for each read position and scan
+direction, after background subtraction and 2D drift correction. With
+``indep_batches=False``, the first batch with usable data for a given read
+position and scan direction supplies a fixed template for subsequent batches.
+Templates with no usable source aperture, wholly unobserved aperture rows,
+or no positive source flux are retried when later batches provide usable
+data. Missing template pixels are interpolated along the dispersion direction,
+including when ``window_len=1`` disables smoothing. With
+``indep_batches=True``, templates are rebuilt independently for each batch.
+Include multiple exposures per scan direction in the template-building batch
+for a more robust median; if only one usable exposure is available at a read
+position and scan direction, that exposure supplies its template. Templates
+are reset for each aperture/background combination.
+The saved overall median image remains a diagnostic rather than the extraction
+template for individual reads.
+
 window_len
 ''''''''''
 Used during Optimal Extraction. window_len is only used when fittype = 'smooth' or 'meddata' (when computing median frame). It sets the length scale over which the data are smoothed. You can set this to 1 for no smoothing when computing median frame for fittype=meddata.
@@ -1350,6 +1366,12 @@ Integer. The number of walkers to use.
 run_nburn
 ^^^^^^^^^
 Integer. The number of burn-in steps to run.
+
+stretch_scale
+^^^^^^^^^^^^^
+Float controlling the scale of emcee's stretch-move proposals. Defaults to
+``2.0``. Larger values propose broader moves, while smaller values propose
+narrower moves. This value must be greater than ``1``.
 
 
 Dynesty Fitting Parameters

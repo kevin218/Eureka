@@ -129,6 +129,39 @@ def test_hst_ramp_model_matches_orbit_modulo_formula():
     np.testing.assert_allclose(result, expected)
 
 
+def test_hst_ramp_model_preserves_invalid_time_mask():
+    model = models.HSTRampModel()
+    model.time = np.array([5.0, np.nan, 6.25])
+
+    result = model.eval()
+
+    np.testing.assert_allclose(model.time_local.compressed(), [0.0, 1.25])
+    np.testing.assert_array_equal(np.ma.getmaskarray(model.time_local),
+                                  [False, True, False])
+    np.testing.assert_allclose(result.compressed(), [1.0, 1.0])
+    np.testing.assert_array_equal(np.ma.getmaskarray(result),
+                                  [False, True, False])
+
+
+def test_hst_ramp_model_preserves_invalid_time_mask_per_white_lightcurve():
+    model = models.HSTRampModel(multwhite=True, nints=[3, 3],
+                                nchannel_fitted=2,
+                                fitted_channels=[0, 1])
+    model.time = np.array([5.0, np.nan, 6.25, 10.0, np.nan, 12.0])
+
+    result = model.eval()
+
+    np.testing.assert_allclose(model.time_local.compressed(),
+                               [0.0, 1.25, 0.0, 2.0])
+    np.testing.assert_array_equal(np.ma.getmaskarray(model.time_local),
+                                  [False, True, False,
+                                   False, True, False])
+    np.testing.assert_allclose(result.compressed(), np.ones(4))
+    np.testing.assert_array_equal(np.ma.getmaskarray(result),
+                                  [False, True, False,
+                                   False, True, False])
+
+
 def test_damped_oscillator_model_matches_decay_formula_and_pre_t0_unity():
     """The oscillator must remain unity before its configured start time."""
     params = _params(osc_amp=0.2, osc_amp_decay=0.1,

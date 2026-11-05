@@ -181,11 +181,6 @@ In Stage 5:
 
       Fig 5301: RMS Deviation Plot
 
-   .. figure:: ../media/S5_out/fig5302_ch0_res_distri_emcee.png
-      :alt: Stage 5 residual distribution
-
-      Fig 5302: Residual Distribution
-
    .. figure:: ../media/S5_out/fig5303_ch0_burninchain.png
       :alt: Stage 5 fitting chains
 
@@ -207,6 +202,11 @@ In Stage 5:
       :alt: Stage 5 corner plot
 
       Fig 5501: Corner Plot
+
+   .. figure:: ../media/S5_out/fig5502_ch0_res_distri_emcee.png
+      :alt: Stage 5 residual distribution
+
+      Fig 5502: Residual Distribution
 
 
 .. _s6-out:

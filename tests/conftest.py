@@ -7,7 +7,20 @@ from pathlib import Path
 import pytest
 
 # Import this checkout before regression fixtures and test modules load.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+CHECKOUT_SRC = Path(__file__).resolve().parents[1] / 'src'
+sys.path.insert(0, str(CHECKOUT_SRC))
+
+# Changing sys.path cannot replace modules imported before pytest started.
+# Reject mixed or installed-package runs before they can refresh references.
+for module_name, module in tuple(sys.modules.items()):
+    if module_name == 'eureka' or module_name.startswith('eureka.'):
+        module_file = getattr(module, '__file__', None)
+        if module_file and not Path(module_file).resolve().is_relative_to(
+                CHECKOUT_SRC):
+            raise pytest.UsageError(
+                f'{module_name} was already imported from {module_file}. '
+                'Set PYTHONPATH to this checkout\'s src directory before '
+                'importing Eureka or invoking pytest.')
 
 # Set this before test modules and regression fixtures import Matplotlib.
 # Respect an explicit configuration directory supplied by the caller.

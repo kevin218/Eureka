@@ -215,6 +215,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             saved_refrence_tilt_frame = None
             saved_ref_median_frame = None
             saved_photometric_profile = None
+            saved_wfc3_median_profiles = {}
 
             for m in range(meta.nbatch):
                 # Reset saved median frame if meta.indep_batches
@@ -222,6 +223,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     saved_ref_median_frame = None
                     saved_refrence_tilt_frame = None
                     saved_photometric_profile = None
+                    saved_wfc3_median_profiles = {}
 
                 first_file = m*meta.files_per_batch
                 last_file = min([meta.num_data_files,
@@ -285,6 +287,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 else:
                     meta.int_end = meta.int_start+meta.nplots
 
+                # Manually mask regions [colstart, colend, rowstart, rowend]
+                if meta.manmask is not None:
+                    data = util.manmask(data, meta, log)
+
                 # Perform BG subtraction along dispersion direction
                 # for untrimmed NIRCam spectroscopic data
                 if meta.bg_row_by_row:
@@ -323,10 +329,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Odd numbers in DQ array are bad pixels. Do not use.
                 if meta.dqmask:
                     data.mask.values[data.dq.values % 2 == 1] = True
-
-                # Manually mask regions [colstart, colend, rowstart, rowend]
-                if meta.manmask is not None:
-                    data = util.manmask(data, meta, log)
 
                 if not meta.photometry:
                     # Locate source postion for the first integration of
@@ -412,8 +414,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             plots_s3.driftywidth(data, meta, m)
 
                     # Select only aperture region
+                    aperture_kwargs = {}
+                    if meta.inst == 'wfc3' and meta.fittype == 'meddata':
+                        aperture_kwargs['profile_cache'] = \
+                            saved_wfc3_median_profiles
                     apdata, aperr, apmask, apbg, apv0, apmedflux = \
-                        inst.cut_aperture(data, meta, log)
+                        inst.cut_aperture(data, meta, log, **aperture_kwargs)
 
                     # Extract standard spectrum and its variance
                     log.writelog('  Computing standard spectrum...',

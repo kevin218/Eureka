@@ -11,7 +11,7 @@ from astropy.io import fits
 from tqdm import tqdm
 
 from ..lib import suntimecorr, utc_tt, util
-from . import background, nircam, plots_s3, sigrej, source_pos
+from . import background, nircam, optspex, plots_s3, sigrej, source_pos
 from . import bright2flux as b2f
 from . import hst_scan as hst
 
@@ -43,6 +43,7 @@ def preparation_step(meta, log):
 
     if meta.segment_list[0].endswith('flt.fits'):
         # FLT files subtract first from last, 2 reads
+        meta.nreads_full = 1
         meta.nreads = 1
     else:
         meta.nreads_full = 0
@@ -127,7 +128,9 @@ def get_reference_frames(meta, log):
                 meta.iref[i] -= 1
 
     # Make sure that the scan directions are in the right order
-    if len(meta.iref) > 1 and meta.iref[0] % 2 != 0:
+    if len(meta.iref) > 1 and meta.iref[0] % 2 != 0 and meta.scandir[0] == 0:
+        meta.iref = meta.iref[::-1]
+    elif len(meta.iref) > 1 and meta.iref[0] % 2 == 0 and meta.scandir[0] != 0:
         meta.iref = meta.iref[::-1]
 
     # Save the reference frame for each scan direction
@@ -136,18 +139,7 @@ def get_reference_frames(meta, log):
         data = xrio.makeDataset()
         data, meta, log = read(meta.segment_list[i], data, meta, log)
         meta.n_int, meta.ny, meta.nx = data.flux.shape
-        data, meta = util.trim(data, meta)
-        # Create bad pixel mask (1 = good, 0 = bad)
-        data['mask'] = (['time', 'y', 'x'],
-                        np.zeros(data.flux.shape, dtype=bool))
-        data['mask'] = util.check_nans(data['flux'], data['mask'],
-                                       log, name='FLUX')
-        data['mask'] = util.check_nans(data['err'], data['mask'],
-                                       log, name='ERR')
-        data['mask'] = util.check_nans(data['v0'], data['mask'],
-                                       log, name='V0')
-        if meta.manmask is not None:
-            util.manmask(data, meta, log)
+        data, meta = _prepare_reference_frame(data, meta, log)
         # Need to add guess after trimming and before cut_aperture
         meta.guess.append(data.guess)
         data, meta, log = source_pos.source_pos_wrapper(data, meta, log, i)
@@ -166,6 +158,42 @@ def get_reference_frames(meta, log):
     meta.isplots_S3 = isplots_S3
 
     return meta, log
+
+
+def _prepare_reference_frame(data, meta, log):
+    """Apply detector-coordinate masks before trimming a reference frame.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object containing the reference frame.
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with applied masks.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
+    """
+    data['mask'] = (['time', 'y', 'x'],
+                    np.zeros(data.flux.shape, dtype=bool))
+    if meta.manmask is not None:
+        data = util.manmask(data, meta, log)
+
+    data, meta = util.trim(data, meta)
+    data['mask'] = util.check_nans(data['flux'], data['mask'],
+                                   log, name='FLUX')
+    data['mask'] = util.check_nans(data['err'], data['mask'],
+                                   log, name='ERR')
+    data['mask'] = util.check_nans(data['v0'], data['mask'],
+                                   log, name='V0')
+    return data, meta
 
 
 def conclusion_step(data, meta, log):
@@ -389,6 +417,39 @@ def separate_scan_direction(meta, log):
     return meta, log
 
 
+def _fill_missing_read_times(jd, exptime):
+    """Fill missing read times without changing the finite timestamps.
+
+    Interpolate internal gaps. For padded reads at either end, use distinct
+    times separated by one tenth of the nominal read cadence. ``jd`` is in
+    days and ``exptime`` is in seconds; the latter supplies the cadence when
+    only one finite timestamp is available.
+    """
+    time = np.array(jd, dtype=float, copy=True)
+    finite_inds = np.flatnonzero(np.isfinite(time))
+    missing_inds = np.flatnonzero(~np.isfinite(time))
+    if missing_inds.size == 0:
+        return time
+    if finite_inds.size == 0:
+        raise ValueError('Cannot fill WFC3 read times without a finite '
+                         'timestamp.')
+
+    if finite_inds.size > 1:
+        cadence = np.median(np.diff(time[finite_inds]) / np.diff(finite_inds))
+    else:
+        cadence = exptime / 86400.
+    if not np.isfinite(cadence) or cadence <= 0:
+        raise ValueError('Missing WFC3 read times require a positive cadence.')
+
+    time[missing_inds] = np.interp(missing_inds, finite_inds,
+                                   time[finite_inds])
+    first, last = finite_inds[[0, -1]]
+    step = cadence / 10
+    time[:first] = time[first] - step*np.arange(first, 0, -1)
+    time[last+1:] = time[last] + step*np.arange(1, len(time)-last)
+    return time
+
+
 def read(filename, data, meta, log):
     '''Reads single FITS file from HST's WFC3 instrument.
 
@@ -465,11 +526,8 @@ def read(filename, data, meta, log):
     frametime = (2400000.5+0.5*(data.attrs['mhdr']['EXPSTART']
                                 + data.attrs['mhdr']['EXPEND']))
 
-    # Make sure there aren't any NaN times so that concat works later
-    # Increment by something smaller than t_exp for safety
-    t_exp = np.nanmedian(np.diff(jd))
-    nan_inds = np.flatnonzero(np.isnan(jd))
-    jd[nan_inds] = jd[nan_inds - 1] + t_exp / 10
+    # Padded reads need distinct finite coordinates for xarray alignment.
+    jd = _fill_missing_read_times(jd, data.attrs['exptime'])
 
     if meta.horizonsfile is not None:
         horizon_path = os.path.join(meta.hst_cal,
@@ -547,7 +605,10 @@ def read(filename, data, meta, log):
 
     # Assign dq to diffdata
     # This is a bit of a hack, but dq is not currently being used
-    diffdata['dq'] = data.dq[:-1]
+    if meta.nreads_full > 1:
+        diffdata['dq'] = data.dq[:-1]
+    else:
+        diffdata['dq'] = data.dq
 
     # Assign wavelength to diffdata
     diffdata['wave'] = (['x'], wave)
@@ -556,8 +617,8 @@ def read(filename, data, meta, log):
     diffdata['wave_2d'].attrs['wave_units'] = wave_units
 
     # Figure out which read this file starts and ends with
-    diffdata.attrs['intstart'] = image_number*(meta.nreads-1)
-    diffdata.attrs['intend'] = (image_number+1)*(meta.nreads-1)
+    diffdata.attrs['intstart'] = image_number*meta.nreads
+    diffdata.attrs['intend'] = (image_number+1)*meta.nreads
 
     # Copy science and master headers
     diffdata.attrs['shdr'] = data.attrs['shdr']
@@ -1003,7 +1064,102 @@ def correct_drift2D(data, meta, log, m):
     return data, meta, log
 
 
-def cut_aperture(data, meta, log):
+def _aperture_bounds(guess, spec_hw, ny):
+    """Return the extraction rows, keeping the aperture inside the image."""
+    ap_y1 = int(guess-spec_hw)
+    ap_y2 = int(guess+spec_hw+1)
+    if ap_y1 < 0:
+        ap_y1 = 0
+        ap_y2 = 2*spec_hw + 1
+    if ap_y2 > ny:
+        ap_y2 = ny
+        ap_y1 = ny - (2*spec_hw + 1)
+    return ap_y1, ap_y2
+
+
+def _interpolate_profile_gaps(medflux):
+    """Fill masked template pixels along dispersion without smoothing."""
+    clean = medflux.filled(np.nan)
+    xx = np.arange(clean.shape[1])
+    for row, missing in enumerate(np.ma.getmaskarray(medflux)):
+        if not np.any(missing):
+            continue
+        good = ~missing
+        if np.count_nonzero(good) == 1:
+            clean[row, missing] = clean[row, good][0]
+        elif np.count_nonzero(good) > 1:
+            interp = spi.interp1d(xx[good], clean[row, good], 'linear',
+                                  fill_value='extrapolate')
+            clean[row, missing] = interp(xx[missing])
+    return clean
+
+
+def _read_median_profiles(data, meta, log, profile_cache=None):
+    """Clean a median profile for each read position and scan direction.
+
+    Called on the current batch after background subtraction and 2D drift
+    correction, so the templates share the extraction frames' coordinates.
+    When batches are linked, cache the first usable template for each read
+    position and scan direction.
+    """
+    log.writelog('  Preparing median profiles per read and scan direction...',
+                 mute=(not meta.verbose))
+    if getattr(meta, 'indep_batches', False):
+        profile_cache = None
+    flux = data.flux.values
+    err = data.err.values
+    mask = (data.mask.values | ~np.isfinite(flux) | ~np.isfinite(err))
+    if 'flatmask' in data:
+        # Missing IMA reads retain an entirely masked flatmask even if drift
+        # correction has filled their science arrays with finite zeros.
+        missing_reads = np.all(data.flatmask.values, axis=(1, 2))
+        mask[missing_reads] = True
+
+    read_position = np.arange(meta.n_int) % meta.nreads
+    profiles = dict(profile_cache) if profile_cache is not None else {}
+    for scandir in np.unique(data.scandir.values):
+        for read in range(meta.nreads):
+            key = (scandir, read)
+            if key in profiles:
+                continue
+            indices = ((data.scandir.values == scandir) &
+                       (read_position == read))
+            if not np.any(indices):
+                continue
+            medflux = np.ma.median(np.ma.masked_array(
+                flux[indices], mask=mask[indices]), axis=0)
+            mederr = np.ma.median(np.ma.masked_array(
+                err[indices], mask=mask[indices]), axis=0)
+            ap_y1, ap_y2 = _aperture_bounds(
+                meta.guess[int(scandir)].values[read], meta.spec_hw,
+                flux.shape[1])
+            usable_rows = np.any(
+                ~np.ma.getmaskarray(medflux)[ap_y1:ap_y2], axis=1)
+            if not np.any(usable_rows):
+                # Do not cache an empty template: a later batch may provide the
+                # first usable source aperture at this position/direction.
+                profiles[key] = np.zeros(flux.shape[1:])
+                continue
+
+            medflux = np.ma.array(medflux.filled(np.nan),
+                                  mask=np.ma.getmaskarray(medflux))
+            if meta.window_len > 1:
+                clean = optspex.get_clean(data, meta, log, medflux, mederr)
+            else:
+                # Missing pixels must be repaired even without smoothing:
+                # later batches can have valid data at these same pixels.
+                clean = _interpolate_profile_gaps(medflux)
+            profiles[key] = np.ma.masked_invalid(clean).filled(0.)
+            # Entirely unobserved rows cannot be interpolated along dispersion.
+            # Retry these or nonpositive source apertures in a later batch.
+            if (profile_cache is not None and np.all(usable_rows) and
+                    np.all(np.isfinite(clean[ap_y1:ap_y2])) and
+                    np.any(profiles[key][ap_y1:ap_y2] > 0)):
+                profile_cache[key] = profiles[key]
+    return profiles
+
+
+def cut_aperture(data, meta, log, profile_cache=None):
     """Select the aperture region out of each trimmed image.
 
     Parameters
@@ -1014,6 +1170,10 @@ def cut_aperture(data, meta, log):
         The metadata object.
     log : logedit.Logedit
         The current log.
+    profile_cache : dict; optional
+        WFC3 median profiles keyed by scan direction and read position.
+        Reused and extended unless ``meta.indep_batches`` is True. The caller
+        resets this cache for each aperture/background combination.
 
     Returns
     -------
@@ -1028,7 +1188,7 @@ def cut_aperture(data, meta, log):
     apv0 : ndarray
         The v0 values over the aperture region.
     apmedflux : ndarray
-        The median flux over the aperture region. Currently None.
+        The median flux over the aperture region.
     """
     log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))
@@ -1038,11 +1198,18 @@ def cut_aperture(data, meta, log):
     apmask = np.ones((meta.n_int, meta.spec_hw*2+1, meta.subnx), dtype=bool)
     apbg = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
     apv0 = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    apmedflux = None
+    read_profiles = None
+    if hasattr(data, 'medflux'):
+        apmedflux = np.zeros_like(apdata)
+        if getattr(meta, 'fittype', None) == 'meddata':
+            read_profiles = _read_median_profiles(
+                data, meta, log, profile_cache=profile_cache)
 
     for f in range(int(meta.n_int/meta.nreads)):
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
-        p = data.scandir[f*meta.nreads].values
+        p = int(data.scandir.values[f*meta.nreads])
         for r in range(meta.nreads):
             # Figure out the index currently being cut out
             n = f*meta.nreads + r
@@ -1050,16 +1217,8 @@ def cut_aperture(data, meta, log):
             # Use the centroid from the relevant reference frame
             guess = meta.guess[p].values[r]
 
-            ap_y1 = (guess-meta.spec_hw).astype(int)
-            ap_y2 = (guess+meta.spec_hw+1).astype(int)
-
-            if ap_y1 < 0:
-                ap_y1 = 0
-                ap_y2 = 2*meta.spec_hw + 1
-
-            if ap_y2 > len(data.flux.values[n]):
-                ap_y2 = len(data.flux.values[n])
-                ap_y1 = len(data.flux.values[n]) - (2*meta.spec_hw + 1)
+            ap_y1, ap_y2 = _aperture_bounds(
+                guess, meta.spec_hw, data.sizes['y'])
 
             # Cut out this particular read
             apdata[n] = data.flux.values[n, ap_y1:ap_y2]
@@ -1067,8 +1226,13 @@ def cut_aperture(data, meta, log):
             apmask[n] = data.mask.values[n, ap_y1:ap_y2]
             apbg[n] = data.bg.values[n, ap_y1:ap_y2]
             apv0[n] = data.v0.values[n, ap_y1:ap_y2]
+            if apmedflux is not None:
+                if read_profiles is None:
+                    apmedflux[n] = data.medflux.values[ap_y1:ap_y2]
+                else:
+                    apmedflux[n] = read_profiles[p, r][ap_y1:ap_y2]
 
-    return apdata, aperr, apmask, apbg, apv0, None
+    return apdata, aperr, apmask, apbg, apv0, apmedflux
 
 
 def standard_spectrum(data, meta, apdata, apmask, aperr):
