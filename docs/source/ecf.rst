@@ -596,6 +596,11 @@ including ``0`` to disable the header-derived shift. Explicit ECF values
 smaller than 0.01 pixel are still applied. The X and Y settings are independent,
 so either axis can use the header while the other uses an explicit value.
 
+The legacy name ``trace_offset`` is still accepted when ``trace_yoffset`` is
+omitted. If both are supplied, ``trace_yoffset`` takes precedence, including
+an explicit ``0`` or ``None``. Replace ``trace_offset`` with ``trace_yoffset``
+in existing ECFs.
+
 Eureka! uses the PASTASOSS implementation in ``jwst`` with a reference file
 retrieved from CRDS, which already accounts for SUBSTRIP96 if needed. The
 header-derived or explicit Y shift is an additional correction to that trace.

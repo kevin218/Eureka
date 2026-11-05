@@ -352,10 +352,54 @@ def test_niriss_metadata_preserves_trace_yoffset(yoffset):
     assert meta.trace_yoffset == yoffset
 
 
-def test_niriss_metadata_accepts_legacy_trace_offset():
+@pytest.mark.parametrize('legacy_offset', [None, -2., 0., 3.])
+def test_niriss_metadata_accepts_legacy_trace_offset(legacy_offset):
     meta = S3MetaClass(topdir='.', spec_hw=17, bg_hw=22, window_len=13,
-                       p7thresh=7, trace_offset=-2.)
+                       p7thresh=7, trace_offset=legacy_offset)
 
     meta.set_NIRISS_defaults()
 
-    assert meta.trace_yoffset == -2.
+    assert meta.trace_yoffset == legacy_offset
+    meta.set_NIRISS_defaults()
+    assert meta.trace_yoffset == legacy_offset
+
+
+@pytest.mark.parametrize('source', ['kwargs', 'ecf'])
+@pytest.mark.parametrize('legacy_first', [True, False])
+@pytest.mark.parametrize('legacy_offset', [None, 3.])
+@pytest.mark.parametrize('yoffset', [None, -2.5, 0.])
+def test_niriss_metadata_modern_offset_takes_precedence(
+        tmp_path, capsys, source, legacy_first, legacy_offset, yoffset):
+    """Keep explicit modern values for either input spelling order."""
+    offsets = [('trace_offset', legacy_offset), ('trace_yoffset', yoffset)]
+    if not legacy_first:
+        offsets.reverse()
+    parameters = dict(topdir='.', inputdir='Stage2', outputdir='Stage3',
+                      spec_hw=17, bg_hw=22, window_len=13, p7thresh=7)
+    parameters.update(offsets)
+    if source == 'kwargs':
+        meta = S3MetaClass(**parameters)
+    else:
+        ecf = tmp_path / 'S3_NIRISS.ecf'
+        ecf.write_text(''.join(f'{key} {value!r}\n'
+                               for key, value in parameters.items()))
+        meta = S3MetaClass(folder=str(tmp_path), file=ecf.name)
+
+    meta.set_NIRISS_defaults()
+
+    assert meta.trace_yoffset == yoffset
+    assert meta.params['trace_yoffset'] == yoffset
+    assert 'renamed to trace_yoffset' in capsys.readouterr().out
+    # Stage defaults may be applied again to copied or reused metadata.
+    meta.set_NIRISS_defaults()
+    assert meta.trace_yoffset == yoffset
+
+
+def test_niriss_metadata_initializes_trace_offsets():
+    meta = S3MetaClass(topdir='.', spec_hw=17, bg_hw=22, window_len=13,
+                       p7thresh=7)
+
+    meta.set_NIRISS_defaults()
+
+    assert meta.trace_xoffset is None
+    assert meta.trace_yoffset is None
