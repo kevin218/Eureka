@@ -181,21 +181,46 @@ def test_ecf_offsets_override_header_dithers(
 
 
 @pytest.mark.parametrize('subarray', ['SUBSTRIP256', 'SUBSTRIP96'])
-def test_small_header_dithers_are_ignored(reference_model, subarray):
+@pytest.mark.parametrize('axis,header_offset,expected_offset', [
+    ('x', 0.0099, 0.),
+    ('x', 0.01, 0.01),
+    ('x', 0.0101, 0.0101),
+    ('y', 0.0099, 0.),
+    ('y', 0.01, 0.01),
+    ('y', 0.0101, 0.0101),
+    ('y', -0.0099, 0.),
+    ('y', -0.01, -0.01),
+    ('y', -0.0101, -0.0101),
+])
+def test_header_dither_threshold(reference_model, subarray, axis,
+                                 header_offset, expected_offset):
+    """Check science coordinates below, at, and above the header cutoff."""
     model, _ = reference_model
-    data, meta, log = trace_inputs(subarray=subarray, xoffset=0.0005)
-    data.attrs['mhdr']['YOFFSET'] = -0.0005 * 0.0658
-    expected = [pastasoss.get_soss_traces(245.85, order, subarray, model)
-                for order in meta.all_orders]
+    data, meta, log = trace_inputs(subarray=subarray,
+                                   pwcpos=model.meta.pwcpos_cmd)
+    meta.trace_xoffset = None
+    pixel_scale = 0.0653 if axis == 'x' else 0.0658
+    data.attrs['mhdr'][f'{axis.upper()}OFFSET'] = header_offset * pixel_scale
 
     result = niriss.get_wave(data, meta, log)
 
-    for order, x, y, wavelength in expected:
-        x = x.astype(int)
-        np.testing.assert_allclose(result.trace.sel(order=order)[x], y,
-                                   rtol=0, atol=1e-12)
-        np.testing.assert_allclose(result.wave_1d.sel(order=order)[x],
-                                   wavelength, rtol=0, atol=1e-12)
+    x = np.arange(4, 64)
+    xoffset = expected_offset if axis == 'x' else 0.
+    yoffset = expected_offset if axis == 'y' else 0.
+    subarray_offset = -10. if subarray == 'SUBSTRIP96' else 0.
+    for order in meta.all_orders:
+        np.testing.assert_allclose(
+            result.trace.sel(order=order)[x],
+            40. * order + 0.1 * (x - xoffset) + yoffset + subarray_offset,
+            rtol=0, atol=1e-12)
+        np.testing.assert_allclose(
+            result.wave_1d.sel(order=order)[x],
+            3. / order - 0.01 * (x - xoffset) + 0.06,
+            rtol=0, atol=1e-12)
+        outside = ~np.isin(result.x, x)
+        assert np.isnan(result.wave_1d.sel(order=order)[outside]).all()
+    assert meta.trace_xoffset is None
+    assert meta.trace_yoffset is None
     model.close.assert_called_once_with()
 
 

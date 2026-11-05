@@ -140,17 +140,17 @@ def get_wave(data, meta, log):
                  mute=(not meta.verbose))
 
     # Explicit ECF offsets are in pixels. Otherwise convert header dithers
-    # from arcsec, ignoring header offsets at or below 0.001 pixel.
+    # from arcsec, ignoring header offsets smaller than 0.01 pixel.
     trace_xoffset = getattr(meta, 'trace_xoffset', None)
     if trace_xoffset is None:
         trace_xoffset = data.attrs['mhdr']['XOFFSET'] / 0.0653
-        if np.abs(trace_xoffset) <= 0.001:
+        if np.abs(trace_xoffset) < 0.01:
             trace_xoffset = 0.
 
     trace_yoffset = meta.trace_yoffset
     if trace_yoffset is None:
         trace_yoffset = data.attrs['mhdr'].get('YOFFSET', 0.) / 0.0658
-        if np.abs(trace_yoffset) <= 0.001:
+        if np.abs(trace_yoffset) < 0.01:
             trace_yoffset = 0.
 
     log.writelog(f"  There is an X offset of {trace_xoffset:.3f} pixels",
