@@ -147,12 +147,28 @@ def get_wave(data, meta, log):
     log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
                  mute=(not meta.verbose))
 
-    # Calculate offset amount from header (given in arcsec) and
-    # NIRISS pixel scale (0.0653 arcsec/px in X direction)
-    pixscale = 0.0653
-    trace_xoffset = data.attrs['mhdr']['XOFFSET'] / pixscale
-    log.writelog(f"  There is an X offset of {trace_xoffset:.3f} pixels",
-                 mute=(not meta.verbose))
+
+    # Check meta for trace offsets, and if not present,
+    # calculate offset amounts from header (given in arcsec) and
+    # NIRISS pixel scale (0.0653 arcsec/px in X direction, 0.0658 in Y)
+    trace_xoffset = meta.trace_xoffset
+    if trace_xoffset is not None:
+            trace_xoffset = data.attrs['mhdr']['XOFFSET'] / 0.0653
+
+    trace_yoffset = meta.trace_yoffset
+    if trace_yoffset is not None:
+        trace_yoffset = data.attrs['mhdr']['YOFFSET'] / 0.0658
+
+    if np.abs(trace_xoffset) > 0.001:
+        log.writelog(f"  There is an X offset of {trace_xoffset:.3f} pixels",
+                    mute=(not meta.verbose))
+    else:
+        trace_xoffset = 0
+    if np.abs(trace_yoffset) > 0.001:
+        log.writelog(f"  There is a Y offset of {trace_yoffset:.3f} pixels",
+                    mute=(not meta.verbose))
+    else:
+        trace_yoffset = 0
 
     norders = len(meta.all_orders)
     data['trace'] = (['x', 'order'],
@@ -171,11 +187,11 @@ def get_wave(data, meta, log):
         else:
             trace = get_soss_traces(pwcpos=pwcpos,
                                     order=str(order), interp=True)
-        if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96' and \
-                meta.trace_yoffset is None:
+        #if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96' and \
+        #       meta.trace_yoffset is None:
             # PASTASOSS doesn't account for different substrip starting rows;
             # therefore, set trace offset to best guess (-12 pixels).
-            meta.trace_yoffset = -12
+        #    meta.trace_yoffset = -12
         if meta.trace_yoffset is not None:
             # Shift trace
             trace.y += meta.trace_yoffset
