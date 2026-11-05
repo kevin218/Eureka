@@ -12,6 +12,7 @@ import numpy as np
 import stcal.ramp_fitting.ols_fit
 from jwst import datamodels
 from jwst.datamodels import dqflags
+from jwst.lib import stripe_utils
 from jwst.ramp_fitting.ramp_fit_step import (RampFitStep, create_image_model,
                                              create_integration_model,
                                              get_reference_file_subarrays,
@@ -131,7 +132,16 @@ class Eureka_RampFitStep(RampFitStep):
         int_model : CubeModel
             The output 3-D image model with the fit ramps for each integration.
         '''
-        with datamodels.RampModel(input) as input_model:
+        with self.prepare_output(input, open_as_ramp=True) as input_model:
+
+            # The JWST refpix step normally collates superstripes.  Eureka
+            # allows refpix to be skipped, so make sure the custom ramp-fit
+            # step never passes a SuperstripeRampModel to the standard ramp
+            # fitting/output-model machinery.
+            nstripe = getattr(input_model.meta.subarray,
+                              'num_superstripe', 0)
+            if nstripe is not None and nstripe > 0:
+                input_model = stripe_utils.collate_superstripes(input_model)
 
             if self.s1_meta.remove_390hz:
                 input_model = remove390.run(input_model, self.s1_log,
@@ -207,6 +217,7 @@ class Eureka_RampFitStep(RampFitStep):
             log.info(f"Using weighting = {self.weighting}")
 
             int_times = input_model.int_times
+            int_times_stripe = getattr(input_model, 'int_times_stripe', None)
 
             # Set the DO_NOT_USE bit in the groupdq values for groups before
             # firstgroup and groups after lastgroup
@@ -306,7 +317,8 @@ class Eureka_RampFitStep(RampFitStep):
                 out_model = datamodels.IFUImageModel(out_model)
 
             int_model = create_integration_model(input_model, integ_info,
-                                                 int_times)
+                                                 int_times,
+                                                 int_times_stripe)
             int_model.meta.bunit_data = "DN/s"
             int_model.meta.bunit_err = "DN/s"
             int_model.meta.cal_step.ramp_fit = "COMPLETE"

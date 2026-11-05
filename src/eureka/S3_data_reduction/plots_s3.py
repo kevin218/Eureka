@@ -720,13 +720,20 @@ def median_frame(data, meta, m, medflux, order=None):
             plt.plot(data.flux.x.values, trace,
                      "--k", lw=1, label=f"Trace Order {order}")
         else:
+            fmt = ["--", ":", "-."]
             for order in meta.all_orders:
-                trace = data["trace"].sel(order=order)
-                plt.plot(data.flux.x.values, trace,
-                         c="white", lw=2)
-                plt.plot(data.flux.x.values, trace,
-                         "--k", lw=1, label=f"Trace Order {order}")
+                x = data.flux.x.values
+                trace = data.trace.sel(order=order).values
+                wave = data.wave_1d.sel(order=order).values
+                # Only plot the trace where the wavelength is finite
+                valid = np.isfinite(wave)
+                trace_plot = np.where(valid, trace, np.nan)
+                plt.plot(x, trace_plot, c="white", lw=2)
+                plt.plot(x, trace_plot, fmt[order-1], color='k', lw=1,
+                         label=f"Trace Order {order}")
         plt.legend()
+    plt.xlim(xmin, xmax)
+    plt.ylim(ymin, ymax)
 
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
