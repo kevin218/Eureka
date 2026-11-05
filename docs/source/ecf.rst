@@ -572,9 +572,11 @@ Only used for NIRISS. List of spectral orders to be reduced.
 trace_xoffset
 '''''''''''''
 Only used for NIRISS. An additional shift of the nominal trace along the
-dispersion direction, in pixels, before the pupil-wheel rotation. The default
-is ``None``, which uses the FITS header's ``XOFFSET`` value in arcseconds,
-divided by the X pixel scale of 0.0653 arcsec/pixel. Header-derived offsets
+dispersion direction, in pixels, before the pupil-wheel rotation. Positive
+values shift the nominal trace toward increasing detector X; negative values
+shift it toward decreasing detector X. The default is ``None``, which uses
+the FITS header's ``XOFFSET`` value in arcseconds, divided by the X pixel
+scale of 0.0653 arcsec/pixel. Header-derived offsets
 with an absolute value smaller than 0.01 pixel are ignored; offsets of exactly
 0.01 pixel or larger are retained.
 

@@ -81,23 +81,24 @@ def test_jwst_traces_and_additional_yoffset(reference_model, subarray,
 @pytest.mark.parametrize('subarray', ['SUBSTRIP256', 'SUBSTRIP96'])
 @pytest.mark.parametrize('yoffset', [None, 3.])
 @pytest.mark.parametrize('pwcpos', [245.6, 245.8, 245.85, 246.])
+@pytest.mark.parametrize('xoffset', [-2., 2.])
 def test_xoffset_uses_reference_pupil_position_and_pivots(
-        reference_model, subarray, yoffset, pwcpos):
+        reference_model, subarray, yoffset, pwcpos, xoffset):
     """Compare translate-then-rotate results to an analytic straight line."""
     model, retrieve = reference_model
     data, meta, log = trace_inputs(subarray=subarray, yoffset=yoffset,
-                                   xoffset=2., pwcpos=pwcpos)
+                                   xoffset=xoffset, pwcpos=pwcpos)
     result = niriss.get_wave(data, meta, log)
     x = np.arange(4, 64)
     radians = np.radians(pwcpos - model.meta.pwcpos_cmd)
     c, s = np.cos(radians), np.sin(radians)
     for order in meta.all_orders:
-        # A translation by 2 pixels before rotation becomes (2*c, 2*s)
-        # after rotation. Evaluate the observed-pupil wavecal at x - 2*c.
+        # A translation by dx before rotation becomes (dx*c, dx*s) after
+        # rotation. Evaluate the observed-pupil wavecal at x - dx*c.
         pupil_scaled = (pwcpos - model.meta.pwcpos_cmd + 0.3) / 0.6
-        wavelength = (3. / order - 0.01 * (x - 2. * c)
+        wavelength = (3. / order - 0.01 * (x - xoffset * c)
                       + 0.12 * pupil_scaled)
-        intercept = 40. * order - 0.1 * 2. + (yoffset or 0.)
+        intercept = 40. * order - 0.1 * xoffset + (yoffset or 0.)
         if subarray == 'SUBSTRIP96':
             intercept -= 10.
         slope = 0.1
@@ -117,17 +118,18 @@ def test_xoffset_uses_reference_pupil_position_and_pivots(
 
 @pytest.mark.parametrize('subarray', ['SUBSTRIP256', 'SUBSTRIP96'])
 @pytest.mark.parametrize('pwcpos', [245.6, 246.])
+@pytest.mark.parametrize('xoffset', [-1e-8, 1e-8])
 def test_small_xoffset_approaches_jwst_trace(reference_model, subarray,
-                                            pwcpos):
+                                            pwcpos, xoffset):
     """A small shift must not switch geometry or refit the reference trace."""
     model, _ = reference_model
     # Include structure that an eighth-order polynomial cannot reproduce.
     for trace in model.traces:
         trace.trace[:, 1] += 0.02 * np.sin(trace.trace[:, 0])
-    data, meta, log = trace_inputs(subarray=subarray, xoffset=1e-8,
+    data, meta, log = trace_inputs(subarray=subarray, xoffset=xoffset,
                                    pwcpos=pwcpos)
     # Explicit offsets bypass the header-dither noise threshold.
-    meta.trace_xoffset = 1e-8
+    meta.trace_xoffset = xoffset
     expected = [pastasoss.get_soss_traces(pwcpos, order, subarray, model)
                 for order in meta.all_orders]
 
@@ -149,9 +151,11 @@ def test_small_xoffset_approaches_jwst_trace(reference_model, subarray,
     (None, None, 2., 1.5),
     (0., 0., 0., 0.),
     (3., -2., 3., -2.),
+    (-3., -2., -3., -2.),
     (0., None, 0., 1.5),
     (None, 0., 2., 0.),
     (1e-8, 1e-8, 1e-8, 1e-8),
+    (-1e-8, -1e-8, -1e-8, -1e-8),
 ])
 def test_ecf_offsets_override_header_dithers(
         reference_model, subarray, ecf_x, ecf_y, expected_x, expected_y):
@@ -185,6 +189,9 @@ def test_ecf_offsets_override_header_dithers(
     ('x', 0.0099, 0.),
     ('x', 0.01, 0.01),
     ('x', 0.0101, 0.0101),
+    ('x', -0.0099, 0.),
+    ('x', -0.01, -0.01),
+    ('x', -0.0101, -0.0101),
     ('y', 0.0099, 0.),
     ('y', 0.01, 0.01),
     ('y', 0.0101, 0.0101),
@@ -225,20 +232,22 @@ def test_header_dither_threshold(reference_model, subarray, axis,
 
 
 @pytest.mark.parametrize('pwcpos', [245.6, 246.])
-def test_xoffset_preserves_pupil_dependent_wavecal(reference_model, pwcpos):
+@pytest.mark.parametrize('xoffset', [-2.3, 2.3])
+def test_xoffset_preserves_pupil_dependent_wavecal(reference_model, pwcpos,
+                                                  xoffset):
     """Evaluate an independent quadratic wavecal, including mixed terms."""
     model, _ = reference_model
     for wavecal in model.wavecal_models:
         wavecal.coefficients = np.array([
             3. / wavecal.spectral_order, -0.64, 0.12, 0.032, 0.048, -0.024,
         ])
-    data, meta, log = trace_inputs(xoffset=2.3, pwcpos=pwcpos)
+    data, meta, log = trace_inputs(xoffset=xoffset, pwcpos=pwcpos)
 
     result = niriss.get_wave(data, meta, log)
 
     x = np.arange(4, 64)
     radians = np.radians(pwcpos - model.meta.pwcpos_cmd)
-    u = (x - 2.3 * np.cos(radians)) / 64.
+    u = (x - xoffset * np.cos(radians)) / 64.
     v = (pwcpos - model.meta.pwcpos_cmd + 0.3) / 0.6
     for order in meta.all_orders:
         expected = (3. / order - 0.64 * u + 0.12 * v + 0.032 * u**2
@@ -248,9 +257,13 @@ def test_xoffset_preserves_pupil_dependent_wavecal(reference_model, pwcpos):
     model.close.assert_called_once_with()
 
 
-def test_xoffset_keeps_columns_aligned_when_rotation_trims(reference_model):
+@pytest.mark.parametrize('xoffset,last_valid', [(2., 42), (-2., 38)])
+def test_xoffset_keeps_columns_aligned_when_rotation_trims(reference_model,
+                                                           xoffset,
+                                                           last_valid):
     model, _ = reference_model
-    data, meta, log = trace_inputs(yoffset=210.95, xoffset=2., pwcpos=245.8)
+    data, meta, log = trace_inputs(yoffset=210.95, xoffset=xoffset,
+                                   pwcpos=245.8)
 
     result = niriss.get_wave(data, meta, log)
 
@@ -258,27 +271,28 @@ def test_xoffset_keeps_columns_aligned_when_rotation_trims(reference_model):
     # entirely outside the detector. Trimmed wavelengths must remain NaN.
     # Put the boundary between columns so interpolation roundoff
     # cannot change whether a point exactly at row 255 is retained.
-    valid = np.arange(4, 43)
+    valid = np.arange(4, last_valid + 1)
     np.testing.assert_allclose(result.trace.sel(order=1)[valid],
-                               250.95 + 0.1 * (valid - 2.))
+                               250.95 + 0.1 * (valid - xoffset))
     np.testing.assert_allclose(result.wave_1d.sel(order=1)[valid],
-                               3. - 0.01 * (valid - 2.) + 0.06)
-    assert np.isnan(result.wave_1d.sel(order=1)[43:]).all()
+                               3. - 0.01 * (valid - xoffset) + 0.06)
+    assert np.isnan(result.wave_1d.sel(order=1)[last_valid + 1:]).all()
     assert np.isnan(result.wave_1d.sel(order=2)).all()
     model.close.assert_called_once_with()
 
 
 @pytest.mark.parametrize('pwcpos', [245.6, 246.])
-def test_xoffset_recovers_columns_trimmed_before_translation(reference_model,
-                                                            pwcpos):
-    """A translated trace may enter columns outside the unshifted trace."""
+@pytest.mark.parametrize('xoffset', [-2., 2.])
+def test_xoffset_updates_columns_trimmed_before_translation(reference_model,
+                                                           pwcpos, xoffset):
+    """A translated trace may enter or leave columns at the detector edge."""
     model, _ = reference_model
     trace = next(t for t in model.traces if t.spectral_order == 1)
     trace.trace[:, 1] += 210.95
     trace.pivot_y += 210.95
     _, unshifted_x, _, _ = pastasoss.get_soss_traces(
         pwcpos, 1, refmodel=model)
-    data, meta, log = trace_inputs(xoffset=2., pwcpos=pwcpos)
+    data, meta, log = trace_inputs(xoffset=xoffset, pwcpos=pwcpos)
 
     result = niriss.get_wave(data, meta, log)
 
@@ -286,16 +300,19 @@ def test_xoffset_recovers_columns_trimmed_before_translation(reference_model,
     angle = np.radians(pwcpos - model.meta.pwcpos_cmd)
     c, s = np.cos(angle), np.sin(angle)
     slope = (s + 0.1 * c) / (c - 0.1 * s)
-    # Start from y = 250.95 + 0.1*(x - 2), then rotate about (20, 252.95).
-    y = 252.95 + slope * (x - 20.) - 0.2 / (c - 0.1 * s)
+    # Rotate y = 250.95 + 0.1*(x - xoffset) about (20, 252.95).
+    y = 252.95 + slope * (x - 20.) - 0.1 * xoffset / (c - 0.1 * s)
     valid = x[y <= 255.]
-    assert valid[-1] > unshifted_x[-1]
+    if xoffset > 0:
+        assert valid[-1] > unshifted_x[-1]
+    else:
+        assert valid[-1] < unshifted_x[-1]
     np.testing.assert_allclose(result.trace.sel(x=valid, order=1),
                                y[y <= 255.], rtol=0, atol=1e-10)
     pupil_scaled = (pwcpos - model.meta.pwcpos_cmd + 0.3) / 0.6
     np.testing.assert_allclose(
         result.wave_1d.sel(x=valid, order=1),
-        3. - 0.01 * (valid - 2. * c) + 0.12 * pupil_scaled,
+        3. - 0.01 * (valid - xoffset * c) + 0.12 * pupil_scaled,
         rtol=0, atol=1e-12)
     outside = ~np.isin(result.x, valid)
     assert np.isnan(result.wave_1d.sel(order=1)[outside]).all()
@@ -312,7 +329,7 @@ def test_missing_order_raises_and_closes_reference(reference_model):
     model.close.assert_called_once_with()
 
 
-@pytest.mark.parametrize('xoffset', [0., 2.])
+@pytest.mark.parametrize('xoffset', [-2., 0., 2.])
 def test_invalid_pupil_position_raises_and_closes_reference(reference_model,
                                                            xoffset):
     model, _ = reference_model

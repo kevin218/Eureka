@@ -194,7 +194,7 @@ def get_wave(data, meta, log):
                     f"for {subarray} and Order {order}.",
                     mute=(not meta.verbose))
 
-            if trace_xoffset > 0:
+            if trace_xoffset != 0:
                 # Translating by (dx, 0) before rotation is equivalent to
                 # translating the rotated trace by (dx*cos(a), dx*sin(a)).
                 # Reuse JWST's observed-pupil trace so its pivots and subarray
