@@ -569,9 +569,46 @@ orders
 ''''''
 Only used for NIRISS. List of spectral orders to be reduced.
 
+trace_xoffset
+'''''''''''''
+Only used for NIRISS. An additional shift of the nominal trace along the
+dispersion direction, in pixels, before the pupil-wheel rotation. Positive
+values shift the nominal trace toward increasing detector X; negative values
+shift it toward decreasing detector X. The default is ``None``, which uses
+the FITS header's ``XOFFSET`` value in arcseconds, divided by the X pixel
+scale of 0.0653 arcsec/pixel. Header-derived offsets
+with an absolute value smaller than 0.01 pixel are ignored; offsets of exactly
+0.01 pixel or larger are retained.
+
+An explicit ECF value overrides the header, including ``0`` to disable the
+header-derived shift. The threshold applies only to header-derived offsets;
+explicit ECF values smaller than 0.01 pixel are still applied.
+
 trace_yoffset
 '''''''''''''
-Only used for NIRISS. PASTASOSS v1.2 doesn't correctly compute the trace position for SUBSTRIP96 mode; therefore, we have to apply a manual offset in the cross-dispersion direction.  The default is -12 pixels for SUBSTRIP96 and should be good to within a pixel or two.  If you see in Fig. 3304 that the spectrum is not quite centered, you should adjust the ``trace_yoffset`` accordingly.
+Only used for NIRISS. An additional shift in the cross-dispersion direction,
+in pixels. The default is ``None``, which uses the FITS header's ``YOFFSET``
+value in arcseconds, divided by the Y pixel scale of 0.0658 arcsec/pixel. A
+missing ``YOFFSET`` is treated as zero. Header-derived offsets with an
+absolute value smaller than 0.01 pixel are ignored; offsets of exactly
+0.01 pixel or larger are retained. An explicit ECF value overrides the header,
+including ``0`` to disable the header-derived shift. Explicit ECF values
+smaller than 0.01 pixel are still applied. The X and Y settings are independent,
+so either axis can use the header while the other uses an explicit value.
+
+The legacy name ``trace_offset`` is still accepted when ``trace_yoffset`` is
+omitted. If both are supplied, ``trace_yoffset`` takes precedence, including
+an explicit ``0`` or ``None``. Replace ``trace_offset`` with ``trace_yoffset``
+in existing ECFs.
+
+Eureka! uses the PASTASOSS implementation in ``jwst`` with a reference file
+retrieved from CRDS, which already accounts for SUBSTRIP96 if needed. The
+header-derived or explicit Y shift is an additional correction to that trace.
+If you see in Fig. 3304 that the spectrum is not quite centered, adjust
+``trace_yoffset`` accordingly.
+Existing SUBSTRIP96 configurations that specified -12 pixels to compensate for
+the stand-alone PASTASOSS implementation should remove that setting or retune
+it as an additional correction to the JWST trace.
 
 src_ypos
 ''''''''

@@ -302,7 +302,6 @@ class S3MetaClass(MetaClass):
         self.orders = getattr(self, 'orders', [1, 2])
         self.all_orders = getattr(self, 'all_orders', [1, 2])
         self.record_ypos = getattr(self, 'record_ypos', False)
-        self.trace_offset = getattr(self, 'trace_offset', None)
         self.xwindow = getattr(self, 'xwindow', [6, 2043])
         self.ywindow = getattr(self, 'ywindow', [0, -1])
 
@@ -312,9 +311,12 @@ class S3MetaClass(MetaClass):
                   " renamed to trace_yoffset.\n  Please switch to "
                   " using trace_yoffset instead, as support for"
                   " trace_offset will soon be deprecated.")
-            self.trace_yoffset = self.trace_offset
-        else:
-            self.trace_yoffset = getattr(self, 'trace_yoffset', None)
+            # Check before setting the default so an explicit None or zero
+            # takes precedence over the legacy spelling.
+            if not hasattr(self, 'trace_yoffset'):
+                self.trace_yoffset = self.trace_offset
+        self.trace_yoffset = getattr(self, 'trace_yoffset', None)
+        self.trace_xoffset = getattr(self, 'trace_xoffset', None)
 
         self.set_spectral_defaults()
 
