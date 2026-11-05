@@ -8,13 +8,64 @@ from tests.unit.helpers import RecordingLog
 
 from eureka.lib import util
 from eureka.S3_data_reduction import (background, bright2flux, nircam, optspex,
-                                      sigrej, source_pos, straighten)
+                                      sigrej, source_pos, straighten, wfc3)
 
 
 def _trace_image(center=7.3, sigma=1.2, ny=15, nx=6, background=0.1):
     y = np.arange(ny, dtype=float)
     profile = background + np.exp(-0.5*((y-center)/sigma)**2)
     return np.repeat(profile[:, None], nx, axis=1)
+
+
+@pytest.mark.parametrize('relative_times, expected', [
+    pytest.param([1., 2., 3.], [1., 2., 3.], id='complete'),
+    pytest.param([1., 2., np.nan, np.nan, np.nan],
+                 [1., 2., 2.1, 2.2, 2.3], id='trailing-padding'),
+    pytest.param([np.nan, np.nan, np.nan, 4., 5.],
+                 [3.7, 3.8, 3.9, 4., 5.], id='leading-padding'),
+    pytest.param([1., np.nan, np.nan, 4.],
+                 [1., 2., 3., 4.], id='internal-gap'),
+    pytest.param([np.nan, 2., np.nan],
+                 [1.9, 2., 2.1], id='single-finite-time'),
+    pytest.param([np.nan, 2., np.nan, np.nan, 5., np.nan],
+                 [1.9, 2., 3., 4., 5., 5.1], id='mixed-gaps'),
+])
+def test_wfc3_missing_read_times_are_distinct_and_preserve_finite_values(
+        relative_times, expected):
+    """Repair consecutive gaps even at the scale of full Julian dates."""
+    jd = 2457000. + np.array(relative_times)
+    original = jd.copy()
+
+    result = wfc3._fill_missing_read_times(jd, exptime=86400.)
+
+    np.testing.assert_allclose(result, 2457000. + np.array(expected),
+                               rtol=0, atol=1e-9)
+    np.testing.assert_array_equal(result[np.isfinite(jd)], jd[np.isfinite(jd)])
+    np.testing.assert_array_equal(jd, original)
+    assert np.all(np.isfinite(result))
+    assert np.all(np.diff(result) > 0)
+
+
+def test_wfc3_padded_read_times_allow_differenced_dq_alignment():
+    """Three trailing placeholders previously created duplicate DQ indices."""
+    time = wfc3._fill_missing_read_times(
+        np.array([1., 2., np.nan, np.nan, np.nan]), exptime=86400.
+    )
+    raw = xr.DataArray(np.zeros((5, 1)), dims=('time', 'x'),
+                       coords={'time': time})
+    diff_time = time[:-1] + 0.5*np.diff(time)
+    differenced = xr.Dataset(coords={'time': diff_time})
+
+    # Exercise the same labeled assignment performed by wfc3.read.
+    differenced['dq'] = raw[:-1]
+
+    assert differenced.dq.shape == (4, 1)
+    np.testing.assert_array_equal(differenced.time.values, diff_time)
+
+
+def test_wfc3_missing_read_times_require_a_finite_anchor():
+    with pytest.raises(ValueError, match='without a finite timestamp'):
+        wfc3._fill_missing_read_times(np.full(3, np.nan), exptime=1.)
 
 
 def test_source_pos_weighted_recovers_synthetic_trace_centroid_and_width():

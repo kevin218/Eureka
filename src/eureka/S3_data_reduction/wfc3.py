@@ -417,6 +417,39 @@ def separate_scan_direction(meta, log):
     return meta, log
 
 
+def _fill_missing_read_times(jd, exptime):
+    """Fill missing read times without changing the finite timestamps.
+
+    Interpolate internal gaps. For padded reads at either end, use distinct
+    times separated by one tenth of the nominal read cadence. ``jd`` is in
+    days and ``exptime`` is in seconds; the latter supplies the cadence when
+    only one finite timestamp is available.
+    """
+    time = np.array(jd, dtype=float, copy=True)
+    finite_inds = np.flatnonzero(np.isfinite(time))
+    missing_inds = np.flatnonzero(~np.isfinite(time))
+    if missing_inds.size == 0:
+        return time
+    if finite_inds.size == 0:
+        raise ValueError('Cannot fill WFC3 read times without a finite '
+                         'timestamp.')
+
+    if finite_inds.size > 1:
+        cadence = np.median(np.diff(time[finite_inds]) / np.diff(finite_inds))
+    else:
+        cadence = exptime / 86400.
+    if not np.isfinite(cadence) or cadence <= 0:
+        raise ValueError('Missing WFC3 read times require a positive cadence.')
+
+    time[missing_inds] = np.interp(missing_inds, finite_inds,
+                                   time[finite_inds])
+    first, last = finite_inds[[0, -1]]
+    step = cadence / 10
+    time[:first] = time[first] - step*np.arange(first, 0, -1)
+    time[last+1:] = time[last] + step*np.arange(1, len(time)-last)
+    return time
+
+
 def read(filename, data, meta, log):
     '''Reads single FITS file from HST's WFC3 instrument.
 
@@ -493,23 +526,8 @@ def read(filename, data, meta, log):
     frametime = (2400000.5+0.5*(data.attrs['mhdr']['EXPSTART']
                                 + data.attrs['mhdr']['EXPEND']))
 
-    # Make sure there aren't any NaN times so that concat works later.
-    # Increment by something smaller than t_exp for safety.
-    nan_inds = np.flatnonzero(np.isnan(jd))
-    if len(nan_inds) > 0:
-        finite_inds = np.flatnonzero(np.isfinite(jd))
-        if len(finite_inds) > 1:
-            t_exp = np.nanmedian(np.diff(jd[finite_inds]))
-        else:
-            t_exp = data.attrs['exptime'] / 86400.
-        for ind in nan_inds:
-            prev_inds = finite_inds[finite_inds < ind]
-            if len(prev_inds) > 0:
-                jd[ind] = jd[prev_inds[-1]] + t_exp / 10
-            else:
-                next_inds = finite_inds[finite_inds > ind]
-                if len(next_inds) > 0:
-                    jd[ind] = jd[next_inds[0]] - t_exp / 10
+    # Padded reads need distinct finite coordinates for xarray alignment.
+    jd = _fill_missing_read_times(jd, data.attrs['exptime'])
 
     if meta.horizonsfile is not None:
         horizon_path = os.path.join(meta.hst_cal,

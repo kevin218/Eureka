@@ -292,7 +292,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
         if len(meta.wave) > 1 and len(wave_1d) != meta.nspecchan:
             # Insert vertical dashed lines at spectroscopic channel edges
             secax = plt.gca().secondary_xaxis('top')
-            xticks = np.concatenate([meta.wave_low, meta.wave_hi[-1:]])
+            xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
             xticks_labels = [f'{np.round(xtick, 3):.3f}' for xtick in xticks]
             secax.set_xticks(xticks, xticks_labels, rotation=90,
                              fontsize='xx-small')
@@ -310,7 +310,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
         if len(meta.wave_low) > 1 and len(wave_1d) != meta.nspecchan:
             # Insert vertical dashed lines at spectroscopic channel edges
             secax = plt.gca().secondary_yaxis('right')
-            yticks = np.concatenate([meta.wave_low, meta.wave_hi[-1:]])
+            yticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
             yticks_labels = [f'{np.round(ytick, 3):.3f}' for ytick in yticks]
             secax.set_yticks(yticks, yticks_labels, rotation=0,
                              fontsize='xx-small')

@@ -6,7 +6,8 @@ import xarray as xr
 from astropy.convolution import Box1DKernel, convolve
 from tests.unit.helpers import RecordingLog
 
-from eureka.S4_generate_lightcurves import drift, outliers, s4_genLC, wfc3
+from eureka.S4_generate_lightcurves import (drift, outliers, plots_s4,
+                                          s4_genLC, wfc3)
 
 
 class _Values:
@@ -15,6 +16,41 @@ class _Values:
 
     def __getitem__(self, key):
         return self.values[key]
+
+
+@pytest.mark.parametrize('time_axis', ['x', 'y'])
+@pytest.mark.parametrize('wave_low, wave_hi, expected_edges', [
+    pytest.param([1., 1.6], [1.3, 2.], [1., 1.3, 1.6, 2.], id='gapped'),
+    pytest.param([1., 1.5], [1.5, 2.], [1., 1.5, 2.], id='contiguous'),
+])
+def test_drift_plot_marks_all_unique_bin_edges(
+        monkeypatch, time_axis, wave_low, wave_hi, expected_edges):
+    """Show both ends of gapped bins without duplicating shared boundaries."""
+    monkeypatch.setattr(plots_s4.plt, 'savefig', lambda *args, **kwargs: None)
+    monkeypatch.setattr(plots_s4.plt, 'pause', lambda *args, **kwargs: None)
+    wave = np.linspace(1., 2., 12)
+    spectrum = xr.DataArray(np.ones((4, 12)), dims=('time', 'x'))
+    meta = SimpleNamespace(
+        inst='nircam', wave_min=1., wave_max=2., n_int=4,
+        time_axis=time_axis, vmin=.95, vmax=1.05,
+        wave=(np.array(wave_low) + np.array(wave_hi))/2,
+        wave_low=np.array(wave_low), wave_hi=np.array(wave_hi),
+        nspecchan=2, maed_s4=1., outputdir='', hide_plots=False,
+    )
+    try:
+        plots_s4.lc_driftcorr(meta, wave, spectrum,
+                              optmask=xr.zeros_like(spectrum, dtype=bool))
+
+        axis = plots_s4.plt.figure(4101).axes[0]
+        secondary = axis.child_axes[0]
+        ticks = (secondary.get_xticks() if time_axis == 'y' else
+                 secondary.get_yticks())
+        np.testing.assert_allclose(ticks, expected_edges)
+        segments = np.array(axis.collections[-1].get_segments())
+        wave_axis = 0 if time_axis == 'y' else 1
+        np.testing.assert_allclose(segments[:, 0, wave_axis], expected_edges)
+    finally:
+        plots_s4.plt.close(4101)
 
 
 def test_sum_reads_propagates_rescaled_flux_errors_and_variances():
