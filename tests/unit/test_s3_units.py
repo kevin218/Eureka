@@ -479,6 +479,78 @@ def test_wfc3_meddata_does_not_cache_an_entirely_masked_group():
         np.testing.assert_allclose(valid_profiles[n, :, 0], 2*profiles[0])
 
 
+@pytest.mark.parametrize('nreads', [1, 3], ids=['flt', 'scanned-ima'])
+@pytest.mark.parametrize('missing_columns', [[2], [0, 1], [0, 1, 2, 4, 5]],
+                         ids=['internal', 'edge', 'single-anchor'])
+def test_wfc3_meddata_repairs_masked_template_pixels_without_smoothing(
+        nreads, missing_columns):
+    """A transient mask must not bias later spectra through a cached zero."""
+    valid, meta, profiles = _wfc3_profile_batch(nreads=nreads, window_len=1)
+    first = valid.copy(deep=True)
+    for column in missing_columns:
+        first.mask.values[[0, 2*nreads], 1, column] = True
+    cache = {}
+    *_, first_profiles = wfc3.cut_aperture(
+        first, meta, RecordingLog(), profile_cache=cache)
+
+    np.testing.assert_allclose(first_profiles[0],
+                               np.repeat(2*profiles[0, :, None],
+                                         meta.subnx, axis=1))
+    original = {key: value.copy() for key, value in cache.items()}
+    aperture = wfc3.cut_aperture(
+        valid, meta, RecordingLog(), profile_cache=cache)
+    apdata, aperr, apmask, apbg, apv0, apmedflux = aperture
+    result = wfc3.standard_spectrum(valid, meta, apdata, apmask, aperr)
+    result, _, _ = optspex.optimize_wrapper(
+        result, meta, RecordingLog(), apdata, apmask, apbg, apv0, apmedflux)
+
+    np.testing.assert_allclose(result.optspec.values,
+                               valid.flux.values.sum(axis=1))
+    assert not result.optmask.values.any()
+    for key, value in original.items():
+        np.testing.assert_array_equal(cache[key], value)
+
+
+@pytest.mark.parametrize('window_len', [1, 3])
+@pytest.mark.parametrize('read, guess', [(0, 1), (0, 0), (2, 8)],
+                         ids=['center', 'lower-edge', 'upper-edge'])
+@pytest.mark.parametrize('missing_support', ['aperture', 'row', 'zero-flux'])
+def test_wfc3_meddata_retries_templates_without_source_support(
+        window_len, read, guess, missing_support):
+    """Usable background alone must not qualify an extraction template."""
+    valid, meta, profiles = _wfc3_profile_batch(window_len=window_len)
+    meta.guess[0].values[read] = guess
+    first = valid.copy(deep=True)
+    indices = [read, 2*meta.nreads+read]
+    source = slice(3*read, 3*read+3)
+    if missing_support == 'aperture':
+        first.mask.values[indices, source, :] = True
+    elif missing_support == 'row':
+        first.mask.values[indices, 3*read+1, :] = True
+    else:
+        first.flux.values[indices, source, :] = 0.
+    cache = {}
+    wfc3.cut_aperture(first, meta, RecordingLog(), profile_cache=cache)
+
+    assert (0, read) not in cache
+    original = {key: value.copy() for key, value in cache.items()}
+    aperture = wfc3.cut_aperture(
+        valid, meta, RecordingLog(), profile_cache=cache)
+    apdata, aperr, apmask, apbg, apv0, apmedflux = aperture
+    assert (0, read) in cache
+    np.testing.assert_allclose(apmedflux[read, :, 0],
+                               2*(read+1)*profiles[0])
+    result = wfc3.standard_spectrum(valid, meta, apdata, apmask, aperr)
+    result, _, _ = optspex.optimize_wrapper(
+        result, meta, RecordingLog(), apdata, apmask, apbg, apv0, apmedflux)
+
+    np.testing.assert_allclose(result.optspec.values,
+                               valid.flux.values.sum(axis=1))
+    assert not result.optmask.values.any()
+    for key, value in original.items():
+        np.testing.assert_array_equal(cache[key], value)
+
+
 def test_profile_meddata_clips_negative_values_and_normalizes_columns():
     """Profiles used for optimal extraction must be positive and normalized."""
     meddata = np.array([[-1.0, 2.0, 1.0],

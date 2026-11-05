@@ -1064,6 +1064,36 @@ def correct_drift2D(data, meta, log, m):
     return data, meta, log
 
 
+def _aperture_bounds(guess, spec_hw, ny):
+    """Return the extraction rows, keeping the aperture inside the image."""
+    ap_y1 = int(guess-spec_hw)
+    ap_y2 = int(guess+spec_hw+1)
+    if ap_y1 < 0:
+        ap_y1 = 0
+        ap_y2 = 2*spec_hw + 1
+    if ap_y2 > ny:
+        ap_y2 = ny
+        ap_y1 = ny - (2*spec_hw + 1)
+    return ap_y1, ap_y2
+
+
+def _interpolate_profile_gaps(medflux):
+    """Fill masked template pixels along dispersion without smoothing."""
+    clean = medflux.filled(np.nan)
+    xx = np.arange(clean.shape[1])
+    for row, missing in enumerate(np.ma.getmaskarray(medflux)):
+        if not np.any(missing):
+            continue
+        good = ~missing
+        if np.count_nonzero(good) == 1:
+            clean[row, missing] = clean[row, good][0]
+        elif np.count_nonzero(good) > 1:
+            interp = spi.interp1d(xx[good], clean[row, good], 'linear',
+                                  fill_value='extrapolate')
+            clean[row, missing] = interp(xx[missing])
+    return clean
+
+
 def _read_median_profiles(data, meta, log, profile_cache=None):
     """Clean a median profile for each read position and scan direction.
 
@@ -1100,20 +1130,31 @@ def _read_median_profiles(data, meta, log, profile_cache=None):
                 flux[indices], mask=mask[indices]), axis=0)
             mederr = np.ma.median(np.ma.masked_array(
                 err[indices], mask=mask[indices]), axis=0)
-            if medflux.count() == 0:
+            ap_y1, ap_y2 = _aperture_bounds(
+                meta.guess[int(scandir)].values[read], meta.spec_hw,
+                flux.shape[1])
+            usable_rows = np.any(
+                ~np.ma.getmaskarray(medflux)[ap_y1:ap_y2], axis=1)
+            if not np.any(usable_rows):
                 # Do not cache an empty template: a later batch may provide the
-                # first usable exposure at this position/direction.
+                # first usable source aperture at this position/direction.
                 profiles[key] = np.zeros(flux.shape[1:])
                 continue
 
-            # Do not expose arbitrary masked payloads when get_clean returns
-            # medflux.data for window_len=1. Unobservable pixels contribute
-            # zero to the profile and remain excluded by the extraction mask.
             medflux = np.ma.array(medflux.filled(np.nan),
                                   mask=np.ma.getmaskarray(medflux))
-            clean = optspex.get_clean(data, meta, log, medflux, mederr)
+            if meta.window_len > 1:
+                clean = optspex.get_clean(data, meta, log, medflux, mederr)
+            else:
+                # Missing pixels must be repaired even without smoothing:
+                # later batches can have valid data at these same pixels.
+                clean = _interpolate_profile_gaps(medflux)
             profiles[key] = np.ma.masked_invalid(clean).filled(0.)
-            if profile_cache is not None:
+            # Entirely unobserved rows cannot be interpolated along dispersion.
+            # Retry these or nonpositive source apertures in a later batch.
+            if (profile_cache is not None and np.all(usable_rows) and
+                    np.all(np.isfinite(clean[ap_y1:ap_y2])) and
+                    np.any(profiles[key][ap_y1:ap_y2] > 0)):
                 profile_cache[key] = profiles[key]
     return profiles
 
@@ -1176,16 +1217,8 @@ def cut_aperture(data, meta, log, profile_cache=None):
             # Use the centroid from the relevant reference frame
             guess = meta.guess[p].values[r]
 
-            ap_y1 = (guess-meta.spec_hw).astype(int)
-            ap_y2 = (guess+meta.spec_hw+1).astype(int)
-
-            if ap_y1 < 0:
-                ap_y1 = 0
-                ap_y2 = 2*meta.spec_hw + 1
-
-            if ap_y2 > len(data.flux.values[n]):
-                ap_y2 = len(data.flux.values[n])
-                ap_y1 = len(data.flux.values[n]) - (2*meta.spec_hw + 1)
+            ap_y1, ap_y2 = _aperture_bounds(
+                guess, meta.spec_hw, data.sizes['y'])
 
             # Cut out this particular read
             apdata[n] = data.flux.values[n, ap_y1:ap_y2]

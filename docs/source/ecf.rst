@@ -707,8 +707,10 @@ For HST/WFC3, ``meddata`` uses a separate median for each read position and scan
 direction, after background subtraction and 2D drift correction. With
 ``indep_batches=False``, the first batch with usable data for a given read
 position and scan direction supplies a fixed template for subsequent batches.
-Read positions and scan directions absent or entirely masked in earlier
-batches receive templates when usable data become available. With
+Templates with no usable source aperture, wholly unobserved aperture rows,
+or no positive source flux are retried when later batches provide usable
+data. Missing template pixels are interpolated along the dispersion direction,
+including when ``window_len=1`` disables smoothing. With
 ``indep_batches=True``, templates are rebuilt independently for each batch.
 Include multiple exposures per scan direction in the template-building batch
 for a more robust median; if only one usable exposure is available at a read
