@@ -7,7 +7,7 @@ from astropy.convolution import Box1DKernel, convolve
 from tests.unit.helpers import RecordingLog
 
 from eureka.S4_generate_lightcurves import (drift, outliers, plots_s4,
-                                          s4_genLC, wfc3)
+                                            s4_genLC, wfc3)
 
 
 class _Values:
