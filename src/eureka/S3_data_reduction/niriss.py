@@ -139,12 +139,25 @@ def get_wave(data, meta, log):
     log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
                  mute=(not meta.verbose))
 
-    # Calculate offset amount from header (given in arcsec) and
-    # NIRISS pixel scale (0.0653 arcsec/px in X direction)
-    pixscale = 0.0653
-    trace_xoffset = data.attrs['mhdr']['XOFFSET'] / pixscale
+    # Explicit ECF offsets are in pixels. Otherwise convert header dithers
+    # from arcsec, ignoring header offsets at or below 0.001 pixel.
+    trace_xoffset = getattr(meta, 'trace_xoffset', None)
+    if trace_xoffset is None:
+        trace_xoffset = data.attrs['mhdr']['XOFFSET'] / 0.0653
+        if np.abs(trace_xoffset) <= 0.001:
+            trace_xoffset = 0.
+
+    trace_yoffset = meta.trace_yoffset
+    if trace_yoffset is None:
+        trace_yoffset = data.attrs['mhdr'].get('YOFFSET', 0.) / 0.0658
+        if np.abs(trace_yoffset) <= 0.001:
+            trace_yoffset = 0.
+
     log.writelog(f"  There is an X offset of {trace_xoffset:.3f} pixels",
                  mute=(not meta.verbose))
+    if trace_yoffset != 0:
+        log.writelog(f"  There is a Y offset of {trace_yoffset:.3f} pixels",
+                     mute=(not meta.verbose))
 
     norders = len(meta.all_orders)
     data['trace'] = (['x', 'order'],
@@ -172,12 +185,12 @@ def get_wave(data, meta, log):
                 pwcpos=pwcpos, order=order, subarray=subarray,
                 refmodel=refmodel)
 
-            if meta.trace_yoffset is not None:
+            if trace_yoffset != 0:
                 # JWST already handles the SUBSTRIP96 offset. Apply only
                 # the additional correction requested by the user.
-                trace_y += meta.trace_yoffset
+                trace_y += trace_yoffset
                 log.writelog(
-                    f"  Shifting trace by {meta.trace_yoffset} pixels "
+                    f"  Shifting trace by {trace_yoffset} pixels "
                     f"for {subarray} and Order {order}.",
                     mute=(not meta.verbose))
 

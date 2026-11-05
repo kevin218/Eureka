@@ -126,6 +126,8 @@ def test_small_xoffset_approaches_jwst_trace(reference_model, subarray,
         trace.trace[:, 1] += 0.02 * np.sin(trace.trace[:, 0])
     data, meta, log = trace_inputs(subarray=subarray, xoffset=1e-8,
                                    pwcpos=pwcpos)
+    # Explicit offsets bypass the header-dither noise threshold.
+    meta.trace_xoffset = 1e-8
     expected = [pastasoss.get_soss_traces(pwcpos, order, subarray, model)
                 for order in meta.all_orders]
 
@@ -139,6 +141,61 @@ def test_small_xoffset_approaches_jwst_trace(reference_model, subarray,
                                    wavelength, rtol=0, atol=1e-9)
         outside = ~np.isin(result.x, x)
         assert np.isnan(result.wave_1d.sel(order=order)[outside]).all()
+    model.close.assert_called_once_with()
+
+
+@pytest.mark.parametrize('subarray', ['SUBSTRIP256', 'SUBSTRIP96'])
+@pytest.mark.parametrize('ecf_x,ecf_y,expected_x,expected_y', [
+    (None, None, 2., 1.5),
+    (0., 0., 0., 0.),
+    (3., -2., 3., -2.),
+    (0., None, 0., 1.5),
+    (None, 0., 2., 0.),
+    (1e-8, 1e-8, 1e-8, 1e-8),
+])
+def test_ecf_offsets_override_header_dithers(
+        reference_model, subarray, ecf_x, ecf_y, expected_x, expected_y):
+    model, _ = reference_model
+    data, meta, log = trace_inputs(subarray=subarray, xoffset=2.,
+                                   pwcpos=model.meta.pwcpos_cmd)
+    data.attrs['mhdr']['YOFFSET'] = 1.5 * 0.0658
+    meta.trace_xoffset = ecf_x
+    meta.trace_yoffset = ecf_y
+
+    result = niriss.get_wave(data, meta, log)
+
+    x = np.arange(4, 64)
+    subarray_offset = -10. if subarray == 'SUBSTRIP96' else 0.
+    for order in meta.all_orders:
+        np.testing.assert_allclose(
+            result.trace.sel(order=order)[x],
+            40. * order + 0.1 * (x - expected_x) + expected_y
+            + subarray_offset, rtol=0, atol=1e-10)
+        np.testing.assert_allclose(
+            result.wave_1d.sel(order=order)[x],
+            3. / order - 0.01 * (x - expected_x) + 0.06,
+            rtol=0, atol=1e-12)
+    assert meta.trace_xoffset == ecf_x
+    assert meta.trace_yoffset == ecf_y
+    model.close.assert_called_once_with()
+
+
+@pytest.mark.parametrize('subarray', ['SUBSTRIP256', 'SUBSTRIP96'])
+def test_small_header_dithers_are_ignored(reference_model, subarray):
+    model, _ = reference_model
+    data, meta, log = trace_inputs(subarray=subarray, xoffset=0.0005)
+    data.attrs['mhdr']['YOFFSET'] = -0.0005 * 0.0658
+    expected = [pastasoss.get_soss_traces(245.85, order, subarray, model)
+                for order in meta.all_orders]
+
+    result = niriss.get_wave(data, meta, log)
+
+    for order, x, y, wavelength in expected:
+        x = x.astype(int)
+        np.testing.assert_allclose(result.trace.sel(order=order)[x], y,
+                                   rtol=0, atol=1e-12)
+        np.testing.assert_allclose(result.wave_1d.sel(order=order)[x],
+                                   wavelength, rtol=0, atol=1e-12)
     model.close.assert_called_once_with()
 
 
