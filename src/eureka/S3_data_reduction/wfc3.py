@@ -11,7 +11,7 @@ from astropy.io import fits
 from tqdm import tqdm
 
 from ..lib import suntimecorr, utc_tt, util
-from . import background, nircam, plots_s3, sigrej, source_pos
+from . import background, nircam, optspex, plots_s3, sigrej, source_pos
 from . import bright2flux as b2f
 from . import hst_scan as hst
 
@@ -1064,7 +1064,61 @@ def correct_drift2D(data, meta, log, m):
     return data, meta, log
 
 
-def cut_aperture(data, meta, log):
+def _read_median_profiles(data, meta, log, profile_cache=None):
+    """Clean a median profile for each read position and scan direction.
+
+    Called on the current batch after background subtraction and 2D drift
+    correction, so the templates share the extraction frames' coordinates.
+    When batches are linked, cache the first usable template for each read
+    position and scan direction.
+    """
+    log.writelog('  Preparing median profiles per read and scan direction...',
+                 mute=(not meta.verbose))
+    if getattr(meta, 'indep_batches', False):
+        profile_cache = None
+    flux = data.flux.values
+    err = data.err.values
+    mask = (data.mask.values | ~np.isfinite(flux) | ~np.isfinite(err))
+    if 'flatmask' in data:
+        # Missing IMA reads retain an entirely masked flatmask even if drift
+        # correction has filled their science arrays with finite zeros.
+        missing_reads = np.all(data.flatmask.values, axis=(1, 2))
+        mask[missing_reads] = True
+
+    read_position = np.arange(meta.n_int) % meta.nreads
+    profiles = dict(profile_cache) if profile_cache is not None else {}
+    for scandir in np.unique(data.scandir.values):
+        for read in range(meta.nreads):
+            key = (scandir, read)
+            if key in profiles:
+                continue
+            indices = ((data.scandir.values == scandir) &
+                       (read_position == read))
+            if not np.any(indices):
+                continue
+            medflux = np.ma.median(np.ma.masked_array(
+                flux[indices], mask=mask[indices]), axis=0)
+            mederr = np.ma.median(np.ma.masked_array(
+                err[indices], mask=mask[indices]), axis=0)
+            if medflux.count() == 0:
+                # Do not cache an empty template: a later batch may provide the
+                # first usable exposure at this position/direction.
+                profiles[key] = np.zeros(flux.shape[1:])
+                continue
+
+            # Do not expose arbitrary masked payloads when get_clean returns
+            # medflux.data for window_len=1. Unobservable pixels contribute
+            # zero to the profile and remain excluded by the extraction mask.
+            medflux = np.ma.array(medflux.filled(np.nan),
+                                  mask=np.ma.getmaskarray(medflux))
+            clean = optspex.get_clean(data, meta, log, medflux, mederr)
+            profiles[key] = np.ma.masked_invalid(clean).filled(0.)
+            if profile_cache is not None:
+                profile_cache[key] = profiles[key]
+    return profiles
+
+
+def cut_aperture(data, meta, log, profile_cache=None):
     """Select the aperture region out of each trimmed image.
 
     Parameters
@@ -1075,6 +1129,10 @@ def cut_aperture(data, meta, log):
         The metadata object.
     log : logedit.Logedit
         The current log.
+    profile_cache : dict; optional
+        WFC3 median profiles keyed by scan direction and read position.
+        Reused and extended unless ``meta.indep_batches`` is True. The caller
+        resets this cache for each aperture/background combination.
 
     Returns
     -------
@@ -1100,13 +1158,17 @@ def cut_aperture(data, meta, log):
     apbg = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
     apv0 = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
     apmedflux = None
+    read_profiles = None
     if hasattr(data, 'medflux'):
         apmedflux = np.zeros_like(apdata)
+        if getattr(meta, 'fittype', None) == 'meddata':
+            read_profiles = _read_median_profiles(
+                data, meta, log, profile_cache=profile_cache)
 
     for f in range(int(meta.n_int/meta.nreads)):
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
-        p = data.scandir[f*meta.nreads].values
+        p = int(data.scandir.values[f*meta.nreads])
         for r in range(meta.nreads):
             # Figure out the index currently being cut out
             n = f*meta.nreads + r
@@ -1132,7 +1194,10 @@ def cut_aperture(data, meta, log):
             apbg[n] = data.bg.values[n, ap_y1:ap_y2]
             apv0[n] = data.v0.values[n, ap_y1:ap_y2]
             if apmedflux is not None:
-                apmedflux[n] = data.medflux.values[ap_y1:ap_y2]
+                if read_profiles is None:
+                    apmedflux[n] = data.medflux.values[ap_y1:ap_y2]
+                else:
+                    apmedflux[n] = read_profiles[p, r][ap_y1:ap_y2]
 
     return apdata, aperr, apmask, apbg, apv0, apmedflux
 

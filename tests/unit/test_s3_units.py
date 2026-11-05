@@ -305,6 +305,180 @@ def test_standard_spectrum_replaces_masked_pixels_with_spectral_neighbors():
     np.testing.assert_allclose(stdvar[0], np.full(5, 2.0))
 
 
+def _wfc3_profile_batch(nreads=3, window_len=1):
+    """Two exposures per direction with disjoint source positions per read."""
+    n_int, ny, nx = 4*nreads, 3*nreads, 6
+    flux = np.zeros((n_int, ny, nx))
+    profiles = np.array([[10., 80., 10.], [20., 30., 50.]])
+    directions = np.repeat([0, 1, 0, 1], nreads)
+    for exposure, scale in enumerate([1., 1., 3., 3.]):
+        for read in range(nreads):
+            n = exposure*nreads + read
+            flux[n, 3*read:3*read+3] = (
+                profiles[directions[n], :, None] * scale * (read+1))
+    data = xr.Dataset(
+        {'flux': (['time', 'y', 'x'], flux),
+         'err': (['time', 'y', 'x'], np.sqrt(flux+1)),
+         'mask': (['time', 'y', 'x'], np.zeros_like(flux, dtype=bool)),
+         'flatmask': (['time', 'y', 'x'], np.zeros_like(flux, dtype=bool)),
+         'bg': (['time', 'y', 'x'], np.zeros_like(flux)),
+         'v0': (['time', 'y', 'x'], np.ones_like(flux)),
+         'medflux': (['y', 'x'], np.median(flux, axis=0)),
+         'scandir': (['time'], directions),
+         'wave_1d': (['x'], np.linspace(1., 2., nx))},
+        coords={'time': np.arange(n_int), 'y': np.arange(ny),
+                'x': np.arange(nx)},
+    )
+    data.flux.attrs.update(flux_units='ELECTRONS', time_units='BJD_TDB')
+    data.wave_1d.attrs['wave_units'] = 'microns'
+    guesses = np.arange(nreads)*3+1
+    meta = SimpleNamespace(
+        n_int=n_int, nreads=nreads, spec_hw=1, subnx=nx, verbose=False,
+        guess=[SimpleNamespace(values=guesses.copy()) for _ in range(2)],
+        fittype='meddata', window_len=window_len, median_thresh=5,
+        orders=None, ncpu=1, int_start=0, int_end=0, isplots_S3=0,
+        p5thresh=10, p7thresh=10, prof_deg=3, indep_batches=False,
+    )
+    return data, meta, profiles
+
+
+@pytest.mark.parametrize('nreads', [1, 3], ids=['flt', 'scanned-ima'])
+@pytest.mark.parametrize('window_len', [1, 3], ids=['unsmoothed', 'cleaned'])
+def test_wfc3_meddata_preserves_read_profiles_and_recovers_known_flux(
+        nreads, window_len):
+    """Separate templates preserve source flux for both scan directions."""
+    data, meta, profiles = _wfc3_profile_batch(nreads, window_len)
+    expected_flux = data.flux.values.sum(axis=1)
+    original_median = data.medflux.values.copy()
+
+    aperture = wfc3.cut_aperture(data, meta, RecordingLog())
+    apdata, aperr, apmask, apbg, apv0, apmedflux = aperture
+
+    for n in range(meta.n_int):
+        read = n % nreads
+        direction = data.scandir.values[n]
+        expected = np.repeat(
+            (2*(read+1)*profiles[direction])[:, None], meta.subnx, axis=1)
+        np.testing.assert_allclose(apmedflux[n], expected)
+    np.testing.assert_array_equal(data.medflux.values, original_median)
+
+    data = wfc3.standard_spectrum(data, meta, apdata, apmask, aperr)
+    data, _, _ = optspex.optimize_wrapper(
+        data, meta, RecordingLog(), apdata, apmask, apbg, apv0, apmedflux)
+
+    np.testing.assert_allclose(data.optspec.values, expected_flux)
+    assert not data.optmask.values.any()
+    assert np.all(np.isfinite(data.opterr.values))
+    assert np.all(data.opterr.values > 0)
+
+
+def test_wfc3_meddata_excludes_padded_masked_and_nonfinite_reads():
+    """Missing data must not contaminate another exposure's template."""
+    data, meta, profiles = _wfc3_profile_batch()
+    # A padded read can become finite after drift correction; its flatmask
+    # still identifies it. Its valid counterpart is the third exposure.
+    data.flux.values[0] = 1e6
+    data.flatmask.values[0] = True
+    # A masked outlier in one pixel leaves only its valid counterpart there.
+    data.flux.values[3, 1, 0] = 1e6
+    data.mask.values[3, 1, 0] = True
+    # No usable data at all for direction 0, read position 2.
+    data.mask.values[[2, 8]] = True
+    # Nonfinite flux or uncertainty must also exclude a read from its group.
+    data.flux.values[4] = np.nan
+    data.err.values[5] = np.inf
+
+    *_, apmedflux = wfc3.cut_aperture(data, meta, RecordingLog())
+
+    for n in (0, 6):
+        np.testing.assert_allclose(apmedflux[n, :, 0], 3*profiles[0])
+    for n in (3, 9):
+        np.testing.assert_allclose(apmedflux[n, :, 0], [40., 90., 100.])
+    for n in (2, 8):
+        np.testing.assert_array_equal(apmedflux[n], 0.)
+    for n in (4, 10):
+        np.testing.assert_allclose(apmedflux[n, :, 0], 6*profiles[1])
+    for n in (5, 11):
+        np.testing.assert_allclose(apmedflux[n, :, 0], 9*profiles[1])
+
+
+def test_wfc3_meddata_uses_available_exposure_for_singleton_groups():
+    data, meta, _ = _wfc3_profile_batch()
+    data = data.isel(time=slice(0, 2*meta.nreads))
+    meta.n_int = data.sizes['time']
+
+    apdata, _, _, _, _, apmedflux = wfc3.cut_aperture(
+        data, meta, RecordingLog())
+
+    np.testing.assert_allclose(apmedflux, apdata)
+
+
+@pytest.mark.parametrize('indep_batches', [False, True])
+def test_wfc3_meddata_reuses_or_rebuilds_profiles_between_batches(
+        indep_batches):
+    """The setting controls the actual extraction templates across batches."""
+    first, meta, _ = _wfc3_profile_batch()
+    meta.indep_batches = indep_batches
+    cache = {}
+    *_, first_profiles = wfc3.cut_aperture(
+        first, meta, RecordingLog(), profile_cache=cache)
+    second = first.copy(deep=True)
+    # Change the spatial shape, keeping the saved diagnostic median fixed.
+    second.flux.values[:, 1::3, :] *= 2
+
+    *_, second_profiles = wfc3.cut_aperture(
+        second, meta, RecordingLog(), profile_cache=cache)
+
+    expected = first_profiles.copy()
+    if indep_batches:
+        expected[:, 1, :] *= 2
+        assert cache == {}
+    else:
+        assert len(cache) == 2*meta.nreads
+    np.testing.assert_allclose(second_profiles, expected)
+
+
+def test_wfc3_meddata_initializes_new_scan_direction_in_later_batch():
+    data, meta, profiles = _wfc3_profile_batch()
+    first = data.isel(time=np.flatnonzero(data.scandir.values == 0))
+    second = data.isel(time=np.flatnonzero(data.scandir.values == 1))
+    meta.n_int = first.sizes['time']
+    cache = {}
+    wfc3.cut_aperture(first, meta, RecordingLog(), profile_cache=cache)
+    original = {key: value.copy() for key, value in cache.items()}
+    assert set(cache) == {(0, read) for read in range(meta.nreads)}
+
+    *_, new_profiles = wfc3.cut_aperture(
+        second, meta, RecordingLog(), profile_cache=cache)
+
+    assert set(cache) == {(direction, read) for direction in (0, 1)
+                          for read in range(meta.nreads)}
+    for key, value in original.items():
+        np.testing.assert_array_equal(cache[key], value)
+    for n in range(meta.n_int):
+        read = n % meta.nreads
+        np.testing.assert_allclose(new_profiles[n, :, 0],
+                                   2*(read+1)*profiles[1])
+
+
+def test_wfc3_meddata_does_not_cache_an_entirely_masked_group():
+    valid, meta, profiles = _wfc3_profile_batch()
+    first = valid.copy(deep=True)
+    first.flatmask.values[[0, 6]] = True
+    cache = {}
+    *_, first_profiles = wfc3.cut_aperture(
+        first, meta, RecordingLog(), profile_cache=cache)
+    assert (0, 0) not in cache
+    np.testing.assert_array_equal(first_profiles[[0, 6]], 0.)
+
+    *_, valid_profiles = wfc3.cut_aperture(
+        valid, meta, RecordingLog(), profile_cache=cache)
+
+    assert (0, 0) in cache
+    for n in (0, 6):
+        np.testing.assert_allclose(valid_profiles[n, :, 0], 2*profiles[0])
+
+
 def test_profile_meddata_clips_negative_values_and_normalizes_columns():
     """Profiles used for optimal extraction must be positive and normalized."""
     meddata = np.array([[-1.0, 2.0, 1.0],
