@@ -305,3 +305,22 @@ def test_metaclass_missing_file_requires_kwargs(tmp_path):
     """MetaClass should fail clearly when an ECF file is missing."""
     with pytest.raises(ValueError, match='does not exist'):
         readECF.MetaClass(folder=str(tmp_path), file='missing.ecf')
+
+
+def test_metaclass_writes_legacy_mad_parameter(tmp_path):
+    """Writing an ECF preserves legacy MAD parameter names."""
+    ecf = tmp_path/'S4_demo.ecf'
+    ecf.write_text(
+        'topdir "."\n'
+        'inputdir "input"\n'
+        'outputdir "output"\n'
+        'mad_sigma 7\n'
+    )
+
+    meta = readECF.MetaClass(folder=str(tmp_path), file='S4_demo.ecf',
+                             stage=4)
+    assert meta.maed_sigma == 7
+    meta.maed_sigma = 3
+    meta.write(str(tmp_path))
+
+    assert 'mad_sigma 3' in ecf.read_text()
