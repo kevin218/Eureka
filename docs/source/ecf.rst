@@ -129,7 +129,7 @@ custom_bias
 Boolean, allows user to supply a custom superbias file and overwrite the default file.
 
 mask_groups
-''''''''''''
+'''''''''''
 List of zero-based group indices to mark as ``DO_NOT_USE`` before ramp fitting. For example, ``[0, 1]`` masks the first and second groups. Default is ``False`` (no groups are manually masked).
 
 superbias_file
@@ -305,7 +305,7 @@ scaling_MAED_white
 Scaling factor applied to the white light curve MAED value in the fitness function. Higher values prioritize band-integrated quality.
 
 params_to_optimize_s1
-''''''''''''''''''''''
+'''''''''''''''''''''
 List of parameters to optimize in Stage 1. Commenting out this line uses the
 instrument-specific default parameters. Single parameter options:
 ``jump_rejection_threshold``, ``expand_mask``, ``bg_deg``, ``bg_method``,
@@ -602,7 +602,7 @@ manmask
 Optional list of rectangular regions to mask manually. Each region is specified as ``[col_start, col_end, row_start, row_end]``, with the end coordinates included. To mask multiple regions, provide one four-element list for each region, e.g. ``[[10, 20, 5, 15], [40, 50, 30, 35]]``. Default is ``None``.
 
 minskyfrac
-'''''''''''
+''''''''''
 Minimum fraction of the ideal background region that must remain unmasked for aperture-photometry background subtraction. Default is ``0.1``.
 
 expand
@@ -672,7 +672,7 @@ skip_bg
 If True, skip background subtraction. Default is ``False``.
 
 use_estsig
-'''''''''''
+''''''''''
 If True, use the estimated per-pixel uncertainties during extraction. Default is ``False``.
 
 betahw
@@ -680,7 +680,7 @@ betahw
 Half-width, in pixels, of the box used to estimate the centroid for aperture photometry. Default is ``None``.
 
 cutoff
-'''''''
+''''''
 Flux cutoff used when masking pixels during NIRSpec calibrated-spectra processing. Default is ``1e-4``.
 
 wave_pixel_offset
@@ -904,15 +904,15 @@ nspecchan
 Number of spectroscopic channels spread evenly over given wavelength range. Set to None to leave the spectrum unbinned.
 
 data_format
-''''''''''''
+'''''''''''
 Format of the Stage 4 input data. The default ``'eureka'`` reads Eureka! ``SpecData.h5`` files; other values select non-Eureka input handling.
 
 npixelbins
-'''''''''''
+''''''''''
 Number of detector pixels in each wavelength bin, used when ``nspecchan`` is not specified.
 
 npixelshift
-''''''''''''
+'''''''''''
 Number of detector pixels by which the wavelength-binning grid is shifted after locating the requested wavelength range. This changes which pixels are grouped into each bin and is useful for exploring pixel-phase and other detector systematics in MIRI LRS data. Positive values shift the binning grid toward later detector pixels. Default is ``0``.
 
 
@@ -926,11 +926,11 @@ wave_min & wave_max
 Start and End of the wavelength range being considered. Set to None to use the shortest/longest extracted wavelength from Stage 3.
 
 wave_low & wave_hi
-'''''''''''''''''''
+''''''''''''''''''
 Lower and upper wavelength edges to use for each spectral bin. These may be supplied as arrays.
 
 wave_input
-'''''''''''''''''''
+''''''''''
 Path to a user supplied txt file with pre-defined wavelength bins. Two columns (separated by whitespace): first column is the lower edge of the wavelength bins and the second column is the upper edge of the wavelength bins.
 
 
@@ -1787,7 +1787,7 @@ or '(days$^{-1})$'. Set to None to automatically add any implied units from y_sc
 must also be a list unless you want the same value applied to all y_params.
 
 y_scalar
-'''''''''
+''''''''
 This parameter can be used to rescale the y-axis. If set to 100, the y-axis will be in units of
 percent. If set to 1e6, the y-axis will be in units of ppm. If set to any other value other than
 1, 100, 1e6, then the y-axis will simply be multiplied by that value and the scalar will be noted
@@ -1818,7 +1818,7 @@ Harmonica strings angle (in degrees) to include in morning/evening limb calculat
 .. image:: ../media/HarmonicaStringAngle_60.png
 
 ncols
-''''
+'''''
 The number of columns you want in your LaTeX formatted tables. Defaults to 4.
 
 star_Rad
