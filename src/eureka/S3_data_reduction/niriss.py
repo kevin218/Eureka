@@ -5,6 +5,7 @@ from astropy.io import fits
 from astropy.table import Table
 from jwst.extract_1d.soss_extract import pastasoss
 from jwst.photom.photom import find_row
+from scipy.interpolate import interp1d
 
 from ..lib.util import read_time, supersample
 from . import nircam, optspex, plots_s3, sigrej
@@ -165,15 +166,11 @@ def get_wave(data, meta, log):
                     f'Order {order} is not available in the PASTASOSS '
                     'reference file.')
 
-            # Validate the observed pupil position, even when an X offset
-            # requires starting the correction from the nominal trace.
+            # JWST rotates the reference trace in detector coordinates and
+            # validates the observed pupil position.
             _, trace_x, trace_y, wavelength = pastasoss.get_soss_traces(
                 pwcpos=pwcpos, order=order, subarray=subarray,
                 refmodel=refmodel)
-            if trace_xoffset > 0:
-                _, trace_x, trace_y, wavelength = pastasoss.get_soss_traces(
-                    pwcpos=base_pwcpos, order=order, subarray=subarray,
-                    refmodel=refmodel)
 
             if meta.trace_yoffset is not None:
                 # JWST already handles the SUBSTRIP96 offset. Apply only
@@ -185,31 +182,27 @@ def get_wave(data, meta, log):
                     mute=(not meta.verbose))
 
             if trace_xoffset > 0:
-                reference_trace = reference_traces[order]
-                pivot = np.array([reference_trace.pivot_x,
-                                  reference_trace.pivot_y], dtype=float)
-                if meta.trace_yoffset is not None:
-                    pivot[1] += meta.trace_yoffset
-                ind = np.argmin(np.abs(trace_x - pivot[0]))
-                pivot[0] = wavelength[ind]
+                # Translating by (dx, 0) before rotation is equivalent to
+                # translating the rotated trace by (dx*cos(a), dx*sin(a)).
+                # Reuse JWST's observed-pupil trace so its pivots and subarray
+                # correction are preserved, with geometry entirely in pixels.
+                angle = np.radians(pwcpos - base_pwcpos)
+                offset_x = trace_xoffset * np.cos(angle)
+                offset_y = trace_xoffset * np.sin(angle)
+                columns = reference_traces[order].trace[:, 0]
+                trace_interp = interp1d(trace_x, trace_y,
+                                         fill_value='extrapolate')
+                shifted_y = trace_interp(columns - offset_x) + offset_y
 
-                shift_x = trace_x - trace_xoffset
-
-                # Extrapolate the trace and wavelength to the offset
-                # columns, retaining the existing 8th-order correction.
-                fitdeg = 8
-                y_interp = np.polynomial.polynomial.Polynomial.fit(
-                    trace_x, trace_y, fitdeg,
-                    domain=[shift_x[0], shift_x[-1]])(shift_x)
-                wav_interp = np.polynomial.polynomial.Polynomial.fit(
-                    trace_x, wavelength, fitdeg,
-                    domain=[shift_x[0], shift_x[-1]])(shift_x)
-
-                # JWST's rotation helper interpolates onto the original
-                # wavelengths and may trim points above the detector.
-                wavelength, trace_y = pastasoss._rotate(
-                    wav_interp, y_interp, pwcpos - base_pwcpos, pivot)
-                trace_x = trace_x[np.isin(wav_interp, wavelength)]
+                # Resample onto detector columns and retain JWST's upper-row
+                # cutoff, keeping wavelengths aligned with retained columns.
+                valid = shifted_y <= 255.
+                trace_x = columns[valid]
+                trace_y = shifted_y[valid]
+                # Evaluate the CRDS wavecal at the shifted detector columns
+                # and actual pupil position, including mixed polynomial terms.
+                wavelength = pastasoss._get_wavelengths(
+                    refmodel, trace_x - offset_x, pwcpos, order)
 
                 log.writelog(
                     f"  Shifting trace by {trace_xoffset} pixels "
