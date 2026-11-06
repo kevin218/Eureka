@@ -336,7 +336,7 @@ Example:
 
 params_to_optimize_s3
 '''''''''''''''''''''
-List of parameters to optimize in Stage 3. Commenting out this line will use all single parameters. Single parameter options: dqmask, bg_deg, bg_thresh, bg_hw, bg_method, p3thresh, spec_hw, median_thresh, window_len, p7thresh. Double parameter options: any combination of the above, joined by two underscores (e.g., bg_hw__p3thresh). Special cases: spec_hw__bg_hw (requires spec_hw < bg_hw). Recommended parameters:
+List of parameters to optimize in Stage 3. Set to ``None`` or ``[]`` to skip optimizing Stage 3. Commenting out this line will use all single parameters. Single parameter options: dqmask, bg_deg, bg_thresh, bg_hw, bg_method, p3thresh, spec_hw, median_thresh, window_len, p7thresh. Double parameter options: any combination of the above, joined by two underscores (e.g., bg_hw__p3thresh). Special cases: spec_hw__bg_hw (requires spec_hw < bg_hw). Recommended parameters:
 
 .. code-block:: python
 
@@ -344,7 +344,7 @@ List of parameters to optimize in Stage 3. Commenting out this line will use all
 
 params_to_optimize_s4
 '''''''''''''''''''''
-List of parameters to optimize in Stage 4. Single parameter options: maed_sigma, maed_box_width, sigma, box_width. Double parameter options: maed_sigma__maed_box_width, sigma__box_width. Recommended parameters:
+List of parameters to optimize in Stage 4. Set to ``None`` or ``[]`` to skip optimizing Stage 4. Single parameter options: maed_sigma, maed_box_width, sigma, box_width. Double parameter options: maed_sigma__maed_box_width, sigma__box_width. Recommended parameters:
 
 .. code-block:: python
 

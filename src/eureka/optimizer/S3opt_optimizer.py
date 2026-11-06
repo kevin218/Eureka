@@ -101,6 +101,8 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
 
     # Run optimization loop for Stage 3 parameters
     best_s3 = {}
+    if s3opt_meta.params_to_optimize_s3 is None:
+        s3opt_meta.params_to_optimize_s3 = []
     for p in s3opt_meta.params_to_optimize_s3:
         s3opt_meta, log, history, best_s3 = optimize(s3opt_meta, log, history,
                                                      best_s3, p, eventlabel,
@@ -108,6 +110,8 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
 
     # Run optimization loop for Stage 4 parameters
     best_s4 = {}
+    if s3opt_meta.params_to_optimize_s4 is None:
+        s3opt_meta.params_to_optimize_s4 = []
     for i, p in enumerate(s3opt_meta.params_to_optimize_s4):
         s3opt_meta, log, history, best_s4 = optimize(s3opt_meta, log, history,
                                                      best_s4, p, eventlabel,
