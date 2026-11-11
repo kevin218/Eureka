@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 name = "eureka-bang"
 description = "A data reduction and analysis pipeline intended for time-series observations with JWST."
 readme = { file = "README.md", content-type = "text/markdown" }
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11,<3.16"
 license = { text = "MIT" }
 authors = [
     { name = "Eureka! pipeline developers", email = "kbstevenson@gmail.com" },
@@ -39,6 +39,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
@@ -110,7 +111,7 @@ src_paths = ["src"]
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64"]
 dependencies = [
-    { conda = "python>=3.11,<3.13" }, # Python 3.13 fails to build with conda for some dependencies on some platforms
+    { conda = "python>=3.11,<3.16" },
     { conda = "pip" },
     { conda = "libopenblas=*=openmp*" },
     { conda = "libblas=*=*openblas*" },
