@@ -128,6 +128,10 @@ custom_bias
 '''''''''''
 Boolean, allows user to supply a custom superbias file and overwrite the default file.
 
+mask_groups
+'''''''''''
+List of zero-based group indices to mark as ``DO_NOT_USE`` before ramp fitting. For example, ``[0, 1]`` masks the first and second groups. Default is ``False`` (no groups are manually masked).
+
 superbias_file
 ''''''''''''''
 The fully qualified path to the custom superbias file to use if custom_bias is True.
@@ -301,7 +305,7 @@ scaling_MAED_white
 Scaling factor applied to the white light curve MAED value in the fitness function. Higher values prioritize band-integrated quality.
 
 params_to_optimize_s1
-''''''''''''''''''''''
+'''''''''''''''''''''
 List of parameters to optimize in Stage 1. Commenting out this line uses the
 instrument-specific default parameters. Single parameter options:
 ``jump_rejection_threshold``, ``expand_mask``, ``bg_deg``, ``bg_method``,
@@ -332,7 +336,7 @@ Example:
 
 params_to_optimize_s3
 '''''''''''''''''''''
-List of parameters to optimize in Stage 3. Commenting out this line will use all single parameters. Single parameter options: dqmask, bg_deg, bg_thresh, bg_hw, bg_method, p3thresh, spec_hw, median_thresh, window_len, p7thresh. Double parameter options: any combination of the above, joined by two underscores (e.g., bg_hw__p3thresh). Special cases: spec_hw__bg_hw (requires spec_hw < bg_hw). Recommended parameters:
+List of parameters to optimize in Stage 3. Set to ``None`` or ``[]`` to skip optimizing Stage 3. Commenting out this line will use all single parameters. Single parameter options: dqmask, bg_deg, bg_thresh, bg_hw, bg_method, p3thresh, spec_hw, median_thresh, window_len, p7thresh. Double parameter options: any combination of the above, joined by two underscores (e.g., bg_hw__p3thresh). Special cases: spec_hw__bg_hw (requires spec_hw < bg_hw). Recommended parameters:
 
 .. code-block:: python
 
@@ -340,7 +344,7 @@ List of parameters to optimize in Stage 3. Commenting out this line will use all
 
 params_to_optimize_s4
 '''''''''''''''''''''
-List of parameters to optimize in Stage 4. Single parameter options: maed_sigma, maed_box_width, sigma, box_width. Double parameter options: maed_sigma__maed_box_width, sigma__box_width. Recommended parameters:
+List of parameters to optimize in Stage 4. Set to ``None`` or ``[]`` to skip optimizing Stage 4. Single parameter options: maed_sigma, maed_box_width, sigma, box_width. Double parameter options: maed_sigma__maed_box_width, sigma__box_width. Recommended parameters:
 
 .. code-block:: python
 
@@ -569,6 +573,10 @@ orders
 ''''''
 Only used for NIRISS. List of spectral orders to be reduced.
 
+pwcpos
+''''''
+Only used for NIRISS. Optional pupil-wheel position in degrees used to calculate the spectral trace. If set to ``None`` (default), the value is read from the FITS ``PWCPOS`` header keyword.
+
 trace_yoffset
 '''''''''''''
 Only used for NIRISS. PASTASOSS v1.2 doesn't correctly compute the trace position for SUBSTRIP96 mode; therefore, we have to apply a manual offset in the cross-dispersion direction.  The default is -12 pixels for SUBSTRIP96 and should be good to within a pixel or two.  If you see in Fig. 3304 that the spectrum is not quite centered, you should adjust the ``trace_yoffset`` accordingly.
@@ -588,6 +596,14 @@ Option to record the cross-dispersion trace position and width (if Gaussian fit)
 dqmask
 ''''''
 Masks odd data quality (DQ) entries which indicate "Do not use" pixels following the jwst package documentation: https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
+
+manmask
+'''''''
+Optional list of rectangular regions to mask manually. Each region is specified as ``[col_start, col_end, row_start, row_end]``, with the end coordinates included. To mask multiple regions, provide one four-element list for each region, e.g. ``[[10, 20, 5, 15], [40, 50, 30, 35]]``. Default is ``None``.
+
+minskyfrac
+''''''''''
+Minimum fraction of the ideal background region that must remain unmasked for aperture-photometry background subtraction. Default is ``0.1``.
 
 expand
 ''''''
@@ -650,6 +666,26 @@ bg_thresh
 Double-iteration X-sigma threshold for outlier rejection along time axis.
 The flux of every full-frame or background pixel will be considered over time for the current data segment.
 e.g: ``bg_thresh = [5,5]``: Two iterations of 5-sigma clipping will be performed in time for every full-frame or background pixel. Outliers will be masked and not considered in the flux calculation.
+
+skip_bg
+'''''''
+If True, skip background subtraction. Default is ``False``.
+
+use_estsig
+''''''''''
+If True, use the estimated per-pixel uncertainties during extraction. Default is ``False``.
+
+betahw
+''''''
+Half-width, in pixels, of the box used to estimate the centroid for aperture photometry. Default is ``None``.
+
+cutoff
+''''''
+Flux cutoff used when masking pixels during NIRSpec calibrated-spectra processing. Default is ``1e-4``.
+
+wave_pixel_offset
+'''''''''''''''''
+Optional pixel offset applied to the NIRCam wavelength solution. Default is ``None``.
 
 bg_deg
 ''''''
@@ -867,6 +903,18 @@ nspecchan
 '''''''''
 Number of spectroscopic channels spread evenly over given wavelength range. Set to None to leave the spectrum unbinned.
 
+data_format
+'''''''''''
+Format of the Stage 4 input data. The default ``'eureka'`` reads Eureka! ``SpecData.h5`` files; other values select non-Eureka input handling.
+
+npixelbins
+''''''''''
+Number of detector pixels in each wavelength bin, used when ``nspecchan`` is not specified.
+
+npixelshift
+'''''''''''
+Number of detector pixels by which the wavelength-binning grid is shifted after locating the requested wavelength range. This changes which pixels are grouped into each bin and is useful for exploring pixel-phase and other detector systematics in MIRI LRS data. Positive values shift the binning grid toward later detector pixels. Default is ``0``.
+
 
 compute_white
 '''''''''''''
@@ -877,8 +925,12 @@ wave_min & wave_max
 '''''''''''''''''''
 Start and End of the wavelength range being considered. Set to None to use the shortest/longest extracted wavelength from Stage 3.
 
+wave_low & wave_hi
+''''''''''''''''''
+Lower and upper wavelength edges to use for each spectral bin. These may be supplied as arrays.
+
 wave_input
-'''''''''''''''''''
+''''''''''
 Path to a user supplied txt file with pre-defined wavelength bins. Two columns (separated by whitespace): first column is the lower edge of the wavelength bins and the second column is the upper edge of the wavelength bins.
 
 
@@ -886,6 +938,10 @@ allapers
 ''''''''
 If True, run S4 on all of the apertures considered in S3. Otherwise the code will use the only or newest S3 outputs found in the inputdir. To specify a particular S3 save file, ensure that "inputdir" points to the procedurally generated folder containing that save file (e.g. set inputdir to /Data/JWST-Sim/NIRCam/Stage3/S3_2021-11-08_nircam_wfss_ap10_bg10_run1/).
 When ``allapers`` is ``True``, ``inputdir`` can include glob-style patterns to restrict which previous-stage aperture/background folders are processed. For example, setting ``inputdir`` to ``Stage3/S3_*_run*/ap5_bg*`` and ``allapers`` to ``True`` runs Stage 4 for aperture 5 over all matching background settings.
+
+s4_order
+''''''''
+The NIRISS spectral order to retain when generating light curves. Set to ``None`` to retain all available orders (default).
 
 
 mask_columns
@@ -985,6 +1041,10 @@ compute_ld
 ''''''''''
 Whether or not to compute limb-darkening coefficients using exotic-ld.
 
+spam_file
+'''''''''
+Path to the SPAM limb-darkening coefficient file, required when ``compute_ld='spam'``. It has no default when that mode is selected.
+
 metallicity
 '''''''''''
 Used by exotic-ld if compute_ld=True. The metallicity of the star.
@@ -1025,6 +1085,10 @@ If True and when exotic_ld_grid = phoenix, Eureka! rescales the PHOENIX mu/inten
 custom_si_grid
 ''''''''''''''
 If exotic_ld_grid = custom, supply the fully qualified path to your stellar intensity grid file here.
+
+minmu
+'''''
+Minimum stellar-disk ``mu`` value used when calculating limb-darkening coefficients with exotic-ld. Default is ``0.1``.
 
 isplots_S4
 ''''''''''
@@ -1175,6 +1239,14 @@ allapers
 Boolean to determine whether Stage 5 is run on all the apertures considered in Stage 4. If False, will just use the most recent output in the input directory.
 When ``allapers`` is ``True``, ``inputdir`` can include glob-style patterns to restrict which previous-stage aperture/background folders are processed. For example, setting ``inputdir`` to ``Stage4/S4_*_run*/ap5_bg*`` and ``allapers`` to ``True`` runs Stage 5 for aperture 5 over all matching background settings.
 
+skip_channels
+'''''''''''''
+List of wavelength-channel indices to omit from the Stage 5 fit.
+
+wl_groups
+'''''''''
+Optional integer group labels for wavelength channels. Channels with the same label share fitted parameters where supported.
+
 multwhite
 '''''''''
 Boolean to determine whether to run a joint fit of multiple white light curves. If True, must use inputdirlist.
@@ -1318,9 +1390,9 @@ lsq_method
 ^^^^^^^^^^
 Least-squares fitting method: one of any of the scipy.optimize.minimize least-squares methods.  We recommend using Powell.
 
-lsq_tolerance
-^^^^^^^^^^^^^
-Float to determine the tolerance of the scipy.optimize.minimize method.
+lsq_tol
+^^^^^^^
+Float specifying the tolerance of the scipy.optimize.minimize method. Default is ``1e-7``.
 
 lsq_maxiter
 ^^^^^^^^^^^
@@ -1334,6 +1406,10 @@ The following set the parameters for running emcee.
 old_chain
 ^^^^^^^^^
 Output folder containing previous emcee chains to resume previous runs. To start from scratch, set to None.
+
+old_fitparams
+^^^^^^^^^^^^^
+Path, relative to ``topdir``, to a previous Stage 5 fit-parameter output used to initialize a new fit.
 
 lsq_first
 ^^^^^^^^^
@@ -1706,17 +1782,17 @@ also be a list unless you want the same value applied to all y_params.
 y_label_units
 '''''''''''''
 The formatted string for the units you want on the label of the y-axis. For example '(ppm)', '(seconds)',
-or '(days$^{-1})$'. Set to None to automatically add any implied units from y_scalars
-(e.g. ppm if y_scalars=1e6), or set to '' to force no units. If y_params is a list, then y_label_units
+or '(days$^{-1})$'. Set to None to automatically add any implied units from y_scalar
+(e.g. ppm if y_scalar=1e6), or set to '' to force no units. If y_params is a list, then y_label_units
 must also be a list unless you want the same value applied to all y_params.
 
-y_scalars
-'''''''''
+y_scalar
+''''''''
 This parameter can be used to rescale the y-axis. If set to 100, the y-axis will be in units of
 percent. If set to 1e6, the y-axis will be in units of ppm. If set to any other value other than
 1, 100, 1e6, then the y-axis will simply be multiplied by that value and the scalar will be noted
-in the y-axis label. If y_params is a list, then y_scalars must also be a list unless you want the
-same value applied to all y_params.
+in the y-axis label. If y_params is a list, then y_scalar must also be a list unless you want the
+same value applied to all y_params. Default is ``1``.
 
 x_unit
 ''''''
@@ -1741,8 +1817,8 @@ Harmonica strings angle (in degrees) to include in morning/evening limb calculat
 
 .. image:: ../media/HarmonicaStringAngle_60.png
 
-ncol
-''''
+ncols
+'''''
 The number of columns you want in your LaTeX formatted tables. Defaults to 4.
 
 star_Rad
@@ -1826,3 +1902,11 @@ The zorder of the model on the plot (0 for beneath the data, 1 for above the dat
 model_delimiter
 '''''''''''''''
 Delimiter between columns. Typical options: None (for whitespace), ',' for comma.
+
+wave_units
+''''''''''
+Units used when writing wavelength values in the Stage 6 outputs. Default is ``'microns'``.
+
+time_units
+''''''''''
+Time units or time scale used when writing time values in the Stage 6 outputs. The default is ``BMJD_TDB``.
