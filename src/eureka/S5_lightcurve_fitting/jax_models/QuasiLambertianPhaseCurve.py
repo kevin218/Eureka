@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 from . import JaxModel
-from .AstroModel import compute_astroparams
+from .AstroModel import compute_astroparams, orbital_phase_jax
 from ...lib.split_channels import split
 
 
@@ -17,6 +17,7 @@ def evaluate_quasi_lambertian_phase_curve_jax(
     fitted_channels: List[int],
     num_planets: int,
     param_dict: Dict[str, float],
+    pid: Optional[int] = None,
 ) -> jnp.ndarray:
     """Evaluate the quasi-Lambertian phase curve model in a JAX-pure way.
 
@@ -65,23 +66,14 @@ def evaluate_quasi_lambertian_phase_curve_jax(
 
         lcpiece = jnp.ones_like(time)
 
-        for pid in range(num_planets):
-            astro = compute_astroparams(param_dict, channel=chan, pid=pid)
+        for planet_id in (range(num_planets) if pid is None else [pid]):
+            astro = compute_astroparams(
+                param_dict, channel=chan, pid=planet_id, require_radius=False)
 
             gamma = jnp.asarray(astro.get('quasi_gamma', 0.))
             offset_deg = jnp.asarray(astro.get('quasi_offset', 0.))
 
-            # If gamma == 0, this planet contributes no phase curve signal.
-            if bool(gamma == 0.):  # type: ignore[arg-type]
-                continue
-
-            t_secondary = astro.get('t_secondary')
-            if t_secondary is None:
-                # Approximate secondary eclipse as half an orbit after transit.
-                t_secondary = astro['t0'] + 0.5 * astro['per']
-
-            per = jnp.asarray(astro['per'])
-            phi = 2. * jnp.pi * (time - t_secondary) / per
+            phi = orbital_phase_jax(astro, time)
 
             phase = 0.5 * (phi + offset_deg * jnp.pi / 180.)
             phase_vars = jnp.abs(jnp.cos(phase)) ** gamma
@@ -106,16 +98,15 @@ class QuasiLambertianPhaseCurve(JaxModel):
             Additional parameters to pass to
             :class:`eureka.S5_lightcurve_fitting.jax_models.JaxModel`.
         """
-        super().__init__(
-            **kwargs,
-            name='quasi-lambertian phase curve',
-            modeltype='physical',
-        )
+        super().__init__(**kwargs)
+        self.name = 'quasi-lambertian phase curve'
+        self.modeltype = 'physical'
 
     def eval(
         self,
         param_dict: Optional[Dict[str, float]] = None,
         channel: Optional[int] = None,
+        pid: Optional[int] = None,
         **kwargs: Any,
     ) -> jnp.ndarray:
         """Evaluate the quasi-Lambertian phase curve model.
@@ -134,8 +125,7 @@ class QuasiLambertianPhaseCurve(JaxModel):
         jnp.ndarray
             Multiplicative phase curve evaluated at observation times.
         """
-        if param_dict is None:
-            param_dict = self._get_param_dict()
+        param_dict = self._prepare_param_dict(param_dict)
 
         if channel is None:
             fitted_channels = self.fitted_channels
@@ -143,10 +133,11 @@ class QuasiLambertianPhaseCurve(JaxModel):
             fitted_channels = [channel]
 
         return evaluate_quasi_lambertian_phase_curve_jax(
-            time_global=self.time,
-            nints=self.nints,
+            time_global=kwargs.get('time', self.time),
+            nints=kwargs.get('nints', self.nints),
             multwhite=self.multwhite,
             fitted_channels=fitted_channels,
             num_planets=self.num_planets,
             param_dict=param_dict,
+            pid=pid,
         )

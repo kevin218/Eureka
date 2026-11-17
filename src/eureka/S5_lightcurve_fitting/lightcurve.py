@@ -1,14 +1,15 @@
-import os
-from copy import copy
-
-import matplotlib.pyplot as plt
 import numpy as np
+import os
+import matplotlib.pyplot as plt
+from copy import copy, deepcopy
 
+from .models import Model
+from . import fitters
+# from . import gradient_fitters
+from . import jax_fitters
+from .utils import COLORS, color_gen
 from ..lib import plots, util
 from ..lib.split_channels import get_trim, split
-from . import fitters
-from . import models as m
-from .utils import COLORS, color_gen
 
 
 class LightCurve(Model):
@@ -155,14 +156,13 @@ class LightCurve(Model):
             raise NotImplementedError(
                 'PyMC3/starry support within Eureka! had to be dropped because'
                 ' PyMC3 is now extremely deprecated and incompatible with the '
-                'current jwst pipeline version. For the time being, you must '
-                'instead use the numpy-based models.')
+                'current jwst pipeline version. Instead, consider using the '
+                'recently added jax/jaxoplanet models.')
+            # self.fitter_func = gradient_fitters.exoplanetfitter
+        elif fitter == 'jaxopt':
+            self.fitter_func = jax_fitters.jaxoptfitter
         elif fitter == 'nuts':
-            raise NotImplementedError(
-                'PyMC3/starry support within Eureka! had to be dropped because'
-                ' PyMC3 is now extremely deprecated and incompatible with the '
-                'current jwst pipeline version. For the time being, you must '
-                'instead use the numpy-based models.')
+            self.fitter_func = jax_fitters.nutsfitter
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
 

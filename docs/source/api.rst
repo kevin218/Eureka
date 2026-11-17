@@ -190,9 +190,9 @@ S5_lightcurve_fitting.models.BatmanModels
     :undoc-members:
     :show-inheritance:
 
-S5_lightcurve_fitting.models.ExpRampModel
------------------------------------------
-.. automodule:: eureka.S5_lightcurve_fitting.models.ExpRampModel
+S5_lightcurve_fitting.jax_models.ExpRampModel
+---------------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.jax_models.ExpRampModel
     :members:
     :undoc-members:
     :show-inheritance:
@@ -218,23 +218,23 @@ S5_lightcurve_fitting.models.Model
     :undoc-members:
     :show-inheritance:
 
-S5_lightcurve_fitting.models.PolynomialModel
---------------------------------------------
-.. automodule:: eureka.S5_lightcurve_fitting.models.PolynomialModel
+S5_lightcurve_fitting.jax_models.PolynomialModel
+------------------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.jax_models.PolynomialModel
     :members:
     :undoc-members:
     :show-inheritance:
 
-S5_lightcurve_fitting.models.SinusoidPhaseCurve
------------------------------------------------
-.. automodule:: eureka.S5_lightcurve_fitting.models.SinusoidPhaseCurve
+S5_lightcurve_fitting.jax_models.SinusoidPhaseCurve
+---------------------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.jax_models.SinusoidPhaseCurve
     :members:
     :undoc-members:
     :show-inheritance:
 
-S5_lightcurve_fitting.models.StepModel
---------------------------------------
-.. automodule:: eureka.S5_lightcurve_fitting.models.StepModel
+S5_lightcurve_fitting.jax_models.StepModel
+------------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.jax_models.StepModel
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,6 +1,7 @@
 from .JaxModel import JaxModel, CompositeJaxModel
 from .AstroModel import AstroModel, compute_astroparams
 from .CentroidModel import CentroidModel
+from .CommonModeModel import CommonModeModel
 from .DampedOscillator import DampedOscillatorModel
 from .ExpRampModel import ExpRampModel
 from .FleckModel import FleckTransitModel

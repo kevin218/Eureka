@@ -102,7 +102,7 @@ def evaluate_jaxoplanet_model_jax(
 
         # Use the limb-darkening coefficients from the last astro dict
         # (typically identical across planets; preserves legacy behavior).
-        lc = limb_dark_light_curve(system, astro['u'])(time).reshape(-1)
+        lc = jnp.sum(limb_dark_light_curve(system, astro['u'])(time), axis=-1)
         lcpiece = 1. + lc
 
         lcfinal = lcfinal.at[offset:offset + len(lcpiece)].set(lcpiece)
@@ -113,6 +113,7 @@ def evaluate_jaxoplanet_model_jax(
 
 class JaxoplanetModel(JaxModel):
     """Transit model wrapper for jaxoplanet."""
+
     def __init__(self, **kwargs: Any) -> None:
         """Initialize the transit model.
 
@@ -202,8 +203,7 @@ class JaxoplanetModel(JaxModel):
         jnp.ndarray
             The model light curve evaluated at observation times.
         """
-        if param_dict is None:
-            param_dict = self._get_param_dict()
+        param_dict = self._prepare_param_dict(param_dict)
 
         if channel is None:
             fitted_channels = self.fitted_channels
@@ -211,8 +211,8 @@ class JaxoplanetModel(JaxModel):
             fitted_channels = [channel]
 
         return evaluate_jaxoplanet_model_jax(
-            time_global=self.time,
-            nints=self.nints,
+            time_global=kwargs.get('time', self.time),
+            nints=kwargs.get('nints', self.nints),
             multwhite=self.multwhite,
             fitted_channels=fitted_channels,
             num_planets=self.num_planets,

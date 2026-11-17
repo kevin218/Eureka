@@ -168,7 +168,7 @@ class HarmonicaTransitModel(JaxModel):
             for c in range(self.nchannel_fitted):
                 chan = self.fitted_channels[c]
                 if self.ld_from_S4:
-                    ld_array = self.ld_array[len_params-2]
+                    ld_array = self.ld_array[len_params - 2]
                 else:
                     ld_array = self.ld_array
                 for u in self.coeffs:
@@ -176,7 +176,7 @@ class HarmonicaTransitModel(JaxModel):
                     if len(index) != 0:
                         item = self.longparamlist[c][index[0]]
                         param = int(item.split('_')[0][-1])
-                        ld_val = ld_array[chan][param-1]
+                        ld_val = ld_array[chan][param - 1]
                         if log is not None:
                             log.writelog(f'{item}: {ld_val}')
                         # Use the file value as the starting guess
@@ -239,8 +239,7 @@ class HarmonicaTransitModel(JaxModel):
                 "the JAX-enabled version of harmonica."
             )
 
-        if param_dict is None:
-            param_dict = self._get_param_dict()
+        param_dict = self._prepare_param_dict(param_dict)
 
         if channel is None:
             fitted_channels = list(self.fitted_channels)
@@ -248,8 +247,8 @@ class HarmonicaTransitModel(JaxModel):
             fitted_channels = [channel]
 
         return evaluate_harmonica_transit_model_jax(
-            time_global=self.time,
-            nints=self.nints,
+            time_global=kwargs.get('time', self.time),
+            nints=kwargs.get('nints', self.nints),
             multwhite=self.multwhite,
             fitted_channels=fitted_channels,
             num_planets=self.num_planets,

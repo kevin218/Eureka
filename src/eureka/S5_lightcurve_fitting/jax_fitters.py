@@ -8,12 +8,13 @@ try:
     import numpyro
     import numpyro_ext
     from numpyro.infer import MCMC, NUTS
+    from .jax_models.JaxModel import build_scatter_array_jax
 except ModuleNotFoundError:
     # jax hasn't been installed
     pass
 
 from ..lib.split_channels import get_trim
-from .likelihood import computeRedChiSq, update_uncertainty, lnprob
+from .likelihood import computeRedChiSq, lnprob
 from . import plots_s5 as plots
 from .fitters import group_variables, load_old_fitparams, save_fit
 from .jax_models.JaxModel import make_numpyro_composite_model
@@ -81,7 +82,7 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
             lc, model, meta,
             fitter=calling_function + 'StartingPoint',
         )
-    if 'jaxoplanet' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(
                 lc, model, meta,
@@ -96,7 +97,8 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
         )
 
     # Build a functional numpyro model from the composite model
-    numpyro_model = make_numpyro_composite_model(model)
+    numpyro_model = make_numpyro_composite_model(
+        model, lc.time, lc.flux, lc.unc)
 
     # Add some extra fitting controls
     optimizer = numpyro_ext.optim.JAXOptMinimize(
@@ -119,23 +121,12 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
         lc.unc,
     )
 
-    # Reset any JAX tracers stored on the model during optimization.
-    # This ensures that later calls to component.eval() (e.g., in save_fit
-    # and plotting) see plain NumPy arrays, not leaked JAX tracers.
-    model.time = np.array(lc.time)
-    model.flux = np.array(lc.flux)
-    model.lc_unc = np.array(lc.unc)
-
     # Get the best fit params
     fit_params = np.array([map_soln[name] for name in freenames])
     model.update(fit_params)
-    lc.unc_fit = update_uncertainty(
-        fit_params,
-        lc.nints,
-        lc.unc,
-        freenames,
-        lc.nchannel_fitted,
-    )
+    lc.unc_fit = np.asarray(build_scatter_array_jax(
+        lc.unc, lc.time, lc.nints, model.fitted_channels,
+        model.nchannel_fitted, model.multwhite, model._prepare_param_dict()))
 
     t_results = table.Table(
         [freenames, fit_params],
@@ -200,7 +191,7 @@ def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter=calling_function)
-    if 'jaxoplanet' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter=calling_function)
 
@@ -316,7 +307,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     # Plot star spots starting point
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='nutsStartingPoint')
-    if 'jaxoplanet' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter='nutsStartingPoint')
 
@@ -336,7 +327,8 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         chain_method = 'sequential'
 
     # Build a functional numpyro model from the composite model
-    numpyro_model = make_numpyro_composite_model(model)
+    numpyro_model = make_numpyro_composite_model(
+        model, lc.time, lc.flux, lc.unc)
 
     kernel = NUTS(
         numpyro_model,
@@ -401,22 +393,11 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     upper_errs = q[2] - q[1]
     lower_errs = q[1] - q[0]
 
-    # Reset any JAX tracers stored on the model during NUTS.
-    # This ensures that later calls to component.eval() (e.g., in save_fit
-    # and plotting) see plain NumPy arrays, not leaked JAX tracers.
-    model.time = np.array(lc.time)
-    model.flux = np.array(lc.flux)
-    model.lc_unc = np.array(lc.unc)
-
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    lc.unc_fit = update_uncertainty(
-        fit_params,
-        lc.nints,
-        lc.unc,
-        freenames,
-        lc.nchannel_fitted,
-    )
+    lc.unc_fit = np.asarray(build_scatter_array_jax(
+        lc.unc, lc.time, lc.nints, model.fitted_channels,
+        model.nchannel_fitted, model.multwhite, model._prepare_param_dict()))
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'nuts', t_results, freenames, samples)
@@ -497,7 +478,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     # Plot star spots starting point
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='nuts')
-    if 'jaxoplanet' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter='nuts')
 

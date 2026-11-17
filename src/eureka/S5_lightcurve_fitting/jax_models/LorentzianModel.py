@@ -20,9 +20,9 @@ def _maybe_get_channel_param(
     if channel != 0:
         ch_key = f"{base_name}_ch{channel}"
         if ch_key in param_dict:
-            return float(param_dict[ch_key])
+            return param_dict[ch_key]
     if base_name in param_dict:
-        return float(param_dict[base_name])
+        return param_dict[base_name]
     return None
 
 
@@ -96,19 +96,14 @@ def evaluate_lorentzian_model_jax(
         else:
             time = time_global
 
-        # Mask out non-finite entries but preserve them in the output
         full_time = time
         good = jnp.isfinite(time)
-        time_good = time[good]
-
-        # If all times are non-finite, just leave this segment as zeros
-        # (i.e., multiplicative factor of 0 + 1 will be applied elsewhere)
-        if time_good.size == 0:
-            offset += full_time.size
-            continue
+        time_good = jnp.where(good, time, 0.)
 
         # Read parameters for this channel
-        t0 = _get_required_param(param_dict, "lor_t0", chan)
+        t0 = _maybe_get_channel_param(param_dict, "lor_t0", chan)
+        if t0 is None:
+            t0 = 0.
         power = _maybe_get_channel_param(param_dict, "lor_power", chan)
         if power is None:
             power = 2.
@@ -201,8 +196,8 @@ def evaluate_lorentzian_model_jax(
 
         else:
             # Unresolvable situation
-            raise Exception(
-                "Cannot determine the type of Lorentzian model to fit. "
+            raise ValueError(
+                "Ambiguous Lorentzian parameterization. "
                 "Use one of the following options: "
                 "1) lor_amp, lor_hwhm; "
                 "2) lor_amp, lor_hwhm_lhs, lor_hwhm_rhs; "
@@ -211,10 +206,9 @@ def evaluate_lorentzian_model_jax(
 
         # Re-insert into full time array, keeping NaNs where original time
         # was non-finite.
-        lorentzian_full = jnp.full_like(full_time, jnp.nan)
-        lorentzian_full = lorentzian_full.at[good].set(lorentzian_good)
+        lorentzian_full = jnp.where(good, lorentzian_good, jnp.nan)
 
-        lcfinal = lcfinal.at[offset:(offset+full_time.size)].set(
+        lcfinal = lcfinal.at[offset:(offset + full_time.size)].set(
             lorentzian_full
         )
         offset += full_time.size
@@ -263,8 +257,7 @@ class LorentzianModel(JaxModel):
         jnp.ndarray
             The model evaluated at the observation times.
         """
-        if param_dict is None:
-            param_dict = self._get_param_dict()
+        param_dict = self._prepare_param_dict(param_dict)
 
         if channel is None:
             fitted_channels = self.fitted_channels
@@ -272,8 +265,8 @@ class LorentzianModel(JaxModel):
             fitted_channels = [channel]
 
         return evaluate_lorentzian_model_jax(
-            time_global=self.time,
-            nints=self.nints,
+            time_global=kwargs.get('time', self.time),
+            nints=kwargs.get('nints', self.nints),
             multwhite=self.multwhite,
             fitted_channels=fitted_channels,
             param_dict=param_dict,

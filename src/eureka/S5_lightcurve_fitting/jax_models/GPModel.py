@@ -1,385 +1,157 @@
+"""Functional tinygp likelihoods and an ordinary Stage 5 model wrapper."""
 import numpy as np
 import jax.numpy as jnp
-
-# import celerite2.jax as celerite2
+import numpyro
 import tinygp
 
 from . import JaxModel
-from ..likelihood import update_uncertainty
+from .JaxModel import build_scatter_array_jax
 from ...lib.split_channels import split
 
 
+def build_tinygp_kernel(kernel_name, log_amplitude, log_metric):
+    """Build the shared tinygp kernel for ordinary and gradient fitters."""
+    kernels = {'Matern32': tinygp.kernels.Matern32,
+               'ExpSquared': tinygp.kernels.ExpSquared,
+               'RationalQuadratic': tinygp.kernels.RationalQuadratic,
+               'Exp': tinygp.kernels.Exp}
+    if kernel_name not in kernels:
+        raise AssertionError(f'Unsupported kernel for tinygp: {kernel_name}. '
+                             f'Supported: {", ".join(kernels)}.')
+    kwargs = {'alpha': 1.} if kernel_name == 'RationalQuadratic' else {}
+    kernel = kernels[kernel_name](scale=jnp.exp(2. * log_metric), **kwargs)
+    return jnp.exp(log_amplitude) * kernel
+
+
+def build_gp_jax(time, uncertainty, param_dict, channel=0, normalize=False):
+    """Build a Matern-3/2 GP using the current parameters and uncertainties.
+
+    ``A`` is log covariance amplitude and ``m`` is log square-root scale,
+    preserving the existing tinygp parameter convention in Stage 5.
+    """
+    suffix = '' if channel == 0 else f'_ch{channel}'
+    amplitude = param_dict.get(f'A{suffix}', param_dict.get('A'))
+    metric = param_dict.get(f'm{suffix}', param_dict.get('m'))
+    if amplitude is None or metric is None:
+        raise ValueError('A and m must be defined for the tinygp kernel.')
+    x = jnp.asarray(time)
+    if normalize:
+        std = jnp.std(x)
+        x = (x - jnp.mean(x)) / jnp.where(std > 0., std, 1.)
+    kernel = build_tinygp_kernel('Matern32', amplitude, metric)
+    return tinygp.GaussianProcess(kernel, X=x,
+                                  diag=jnp.asarray(uncertainty)**2, mean=0.)
+
+
 class GPModel(JaxModel):
-    """Model for Gaussian Process (GP)"""
+    """A tinygp wrapper whose numerical operations never mutate model state."""
+
     def __init__(self, kernel_types, kernel_input_names, lc,
-                 gp_code_name='tinygp', normalize=False,
-                 **kwargs):
-        """Initialize the GP model.
-
-        Parameters
-        ----------
-        kernel_types : list
-            The types of GP kernels to use.
-        kernel_input_names : list
-            The names of the GP kernel inputs.
-        lc : eureka.S5_lightcurve_fitting.lightcurve
-            The current lightcurve object.
-        gp_code : str; optional
-            Type GP package to use from ('celerite'),
-            by default 'celerite'.
-        normalize : bool; optional
-            If True, normalize the covariate by mean subtracting it and
-            dividing by the standard deviation. By default, False.
-        **kwargs : dict
-            Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.jax_models.JaxModel.__init__().
-            Can pass in the parameters, longparamlist, nchan, and
-            paramtitles arguments here.
-        """
-        # raise NotImplementedError('There is currently a bug with the '
-        #                           'celerite2.jax package. Once that is '
-        #                           'resolved, we will enable Eureka!\'s '
-        #                           'jax_models.GPModel.')
-
-        # Inherit from JaxModel class
+                 gp_code_name='tinygp', normalize=False, **kwargs):
         super().__init__(kernel_types=kernel_types,
-                         nkernels=len(kernel_types),
                          kernel_input_names=kernel_input_names,
-                         kernel_inputs=None,
                          gp_code_name=gp_code_name, normalize=normalize,
-                         fit_lc=np.ones(lc.flux.shape),
                          flux=lc.flux, unc=lc.unc, unc_fit=lc.unc_fit,
                          **kwargs)
         self.name = 'GP'
-
-        # Define model type (physical, systematic, other)
         self.modeltype = 'GP'
+        if gp_code_name != 'tinygp':
+            raise ValueError('JAX fitters require GP_package = tinygp.')
+        if list(kernel_types) != ['Matern32']:
+            raise ValueError(
+                'The JAX GP currently supports one Matern32 kernel.')
+        if list(kernel_input_names) != ['time']:
+            raise ValueError('The JAX GP currently supports only time inputs.')
 
-        # Do some initial sanity checks and raise errors if needed
-        if self.gp_code_name != 'tinygp':
-            raise AssertionError('Currently tinygp is the only GP package '
-                                 'that can be used with the jax methods.')
-        elif self.nkernels > 1:
-            raise AssertionError('Our tinygp implementation cannot compute '
-                                 'multi-dimensional GPs, please choose a '
-                                 'different GP code.')
-        elif self.kernel_types[0] != 'Matern32':
-            raise AssertionError('Our tinygp implementation currently only '
-                                 'supports a Matern32 kernel.')
+        self.configure_mask(self.time, self.flux, self.unc)
 
-    def setup(self, newparams):
-        """Setup a model for evaluation and fitting.
+    def configure_mask(self, time, flux, unc):
+        """Freeze an observation mask before constructing the traced model."""
+        # Resolve missing observations once, outside all JAX transformations.
+        # These integer indices keep GP matrix shapes static under JIT.
+        self.good_indices = {}
+        for chan in self.fitted_channels:
+            channel_time = self._time_for_channel(time, chan)
+            channel_flux = self._data_for_channel(flux, chan)
+            channel_unc = self._data_for_channel(unc, chan)
+            good = (np.isfinite(np.ma.filled(channel_time, np.nan)) &
+                    np.isfinite(np.ma.filled(channel_flux, np.nan)) &
+                    np.isfinite(np.ma.filled(channel_unc, np.nan)))
+            self.good_indices[int(chan)] = np.flatnonzero(good)
 
-        Parameters
-        ----------
-        newparams : ndarray
-            New parameter values.
-        """
-        self.gps = []
-        for c in range(self.nchannel_fitted):
-            if self.nchannel_fitted > 1:
-                chan = self.fitted_channels[c]
+    def _time_for_channel(self, time, channel):
+        if self.multwhite:
+            return split([time], self.nints, channel)[0]
+        return time
+
+    def _data_for_channel(self, data, channel):
+        if self.nchannel_fitted == 1:
+            return data
+        return split([data], self.nints, channel)[0]
+
+    def _channel_gp(self, channel, param_dict, time, scatter):
+        indices = self.good_indices[int(channel)]
+        x = jnp.asarray(self._time_for_channel(time, channel))[indices]
+        unc = jnp.asarray(self._data_for_channel(scatter, channel))[indices]
+        return build_gp_jax(x, unc, param_dict, channel, self.normalize)
+
+    def _scatter(self, param_dict, time):
+        return build_scatter_array_jax(
+            self.unc, time, self.nints, self.fitted_channels,
+            self.nchannel_fitted, self.multwhite, param_dict)
+
+    def sample_likelihood(self, fit_lc, param_dict, *, time, flux, scatter):
+        """Register a GP likelihood using the current hyperparameters."""
+        for chan in self.fitted_channels:
+            indices = self.good_indices[int(chan)]
+            if not len(indices):
+                continue
+            gp = self._channel_gp(chan, param_dict, time, scatter)
+            observed = jnp.asarray(self._data_for_channel(flux, chan))
+            residual = (observed[indices]
+                        - self._data_for_channel(fit_lc, chan)[indices])
+            numpyro.sample(f'obs_{chan}', gp.numpyro_dist(), obs=residual)
+
+    def eval(self, fit_lc, channel=None, param_dict=None, **kwargs):
+        """Condition the GP on residuals and return its predictive mean."""
+        params = self._prepare_param_dict(param_dict)
+        time = kwargs.get('time', self.time)
+        flux = kwargs.get('flux', self.flux)
+        scatter = kwargs.get('scatter', self._scatter(params, time))
+        pieces = []
+        for chan in self._channels(channel)[1]:
+            indices = self.good_indices[int(chan)]
+            x = self._time_for_channel(time, chan)
+            if len(indices):
+                gp = self._channel_gp(chan, params, time, scatter)
+                fit = (self._data_for_channel(fit_lc, chan)
+                       if channel is None else fit_lc)
+                observed = jnp.asarray(self._data_for_channel(flux, chan))
+                residual = (observed[indices]
+                            - jnp.asarray(fit)[indices])
+                mu = gp.condition(residual, gp.X).gp.loc
+                piece = jnp.full(len(x), jnp.nan).at[indices].set(mu)
             else:
-                chan = 0
+                piece = jnp.full(len(x), jnp.nan)
+            pieces.append(piece)
+        return jnp.concatenate(pieces)
 
-            # Make the gp object
-            gp = self.setup_GP(chan, eval=False)
-            self.gps.append(gp)
-
-    def update(self, newparams, **kwargs):
-        # Inherit from Model class
-        super().update(newparams, **kwargs)
-
-        self.unc_fit = update_uncertainty(newparams, self.nints, self.unc,
-                                          self.freenames, self.nchannel_fitted)
-
-    def eval(self, fit_lc, channel=None, gp=None, eval=True, **kwargs):
-        """Evaluate the function with the given values.
-
-        Parameters
-        ----------
-        fit_lc : ndarray
-            The rest of the current model evaluated.
-        channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
-        gp : tinygp.GaussianProcess; optional
-            The input GaussianProcess object. Defaults to None.
-        eval : bool; optional
-            If true evaluate the model, otherwise simply compile the model.
-            Defaults to True.
-        **kwargs : dict
-            Must pass in the time array here if not already set.
-
-        Returns
-        -------
-        lcfinal : ndarray
-            Predicted systematics model
-        """
-        input_gp = gp
-
-        if eval:
-            lib = np
-        else:
-            lib = jnp
-
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
-
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
-
-        lcfinal = lib.zeros(0)
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-                # get flux and uncertainties for current channel
-                flux, unc_fit = split([self.flux, self.unc_fit],
-                                      self.nints, chan)
-                if channel is None:
-                    fit_lc_temp = split([fit_lc, ], self.nints, chan)[0]
-                else:
-                    # If only a specific channel is being evaluated, then only
-                    # that channel's fitted mode will be passed in
-                    fit_lc_temp = fit_lc
-            else:
-                chan = 0
-                # get flux and uncertainties for current channel
-                flux = self.flux
-                fit_lc_temp = fit_lc
-                unc_fit = self.unc_fit
-            residuals = flux-fit_lc_temp
-
-            if self.multwhite:
-                time = split([self.time, ], self.nints, chan)[0]
-            else:
-                time = self.time
-
-            # Remove poorly handled invalid values
-            good = np.isfinite(time) & np.isfinite(flux)
-            unc_fit = unc_fit[good]
-            residuals = residuals[good]
-            time_fit = time[good]
-
-            # Create the GP object with current parameters
-            if input_gp is None:
-                gp = self.setup_GP(chan, unc_fit, good, eval)
-            else:
-                gp = input_gp
-
-            cond_gp = gp.condition(residuals, time_fit).gp
-            mu = cond_gp.loc
-
-            # Re-insert and mask bad values
-            mu_full = np.nan*lib.ones(len(time))
-            if eval:
-                mu_full[good] = mu
-            else:
-                # Jax arrays are immutable, so we need to update the array
-                # in a different way
-                mu_full = mu_full.at[good].set(mu)
-
-            # Append this channel to the outputs
-            lcfinal = lib.concatenate([lcfinal, mu_full])
-
-        return lcfinal
-
-    def setup_inputs(self, lib):
-        """Setting up kernel inputs as array and standardizing them if asked.
-
-        For details on the benefits of normalization, see e.g.
-        Evans et al. 2017.
-
-        Parameters
-        ----------
-        lib : module
-            The library to use (np or jnp).
-        """
-        self.kernel_inputs = []
-        for c in range(self.nchannel_fitted):
-            if self.nchannel_fitted > 1:
-                chan = self.fitted_channels[c]
-            else:
-                chan = 0
-
-            if self.multwhite:
-                time = split([self.time, ], self.nints, chan)[0]
-            else:
-                time = self.time
-
-            kernel_inputs_channel = np.zeros((0, time.size))
-            for name in self.kernel_input_names:
-                if name == 'time':
-                    x = np.copy(self.time)
-                else:
-                    # add more input options here
-                    raise ValueError('Currently, only GPs as a function of '
-                                     'time are supported, but you have '
-                                     'specified a GP as a function of '
-                                     f'{name}.')
-
-                if self.multwhite:
-                    x = split([x, ], self.nints, chan)[0]
-
-                if self.normalize:
-                    x = (x-np.nanmean(x))/np.nanstd(x)
-
-                kernel_inputs_channel = np.append(kernel_inputs_channel,
-                                                  x[np.newaxis], axis=0)
-
-            self.kernel_inputs.append(kernel_inputs_channel)
-
-    def setup_GP(self, c=0, unc_fit=None, good=None, eval=True):
-        """Set up GP kernels and GP object.
-
-        Parameters
-        ----------
-        c : int; optional
-            The current channel index. Defaults to 0.
-        eval : bool; optional
-            If true evaluate the model, otherwise simply compile the model.
-            Defaults to True.
-
-        Returns
-        -------
-        tinygp.GaussianProcess
-            The GaussianProcess object to use for this fit.
-        """
-        if c == 0:
-            chankey = ''
-        else:
-            chankey = f'_ch{c}'
-
-        if eval:
-            lib = np
-            model = self.fit
-        else:
-            lib = jnp
-            model = self.model
-
-        if unc_fit is None:
-            unc_fit = self.unc_fit
-
-        # Parse model attributes as coefficients
-        coeffs = np.zeros((self.nkernels, 2)).tolist()
-        for i, par in enumerate(['A', 'm']):
-            for k in range(self.nkernels):
-                if k == 0:
-                    kernelkey = ''
-                else:
-                    kernelkey = str(k)
-                parname = f'{par}{kernelkey}{chankey}'
-                coeffs[k][i] = getattr(model, parname)
-
-        if self.kernel_inputs is None:
-            self.setup_inputs(lib=lib)
-
-        # get the kernel which is the sum of the individual kernel functions
-        kernel = self.get_kernel(lib, self.kernel_types[0], coeffs, 0, c)
-        for k in range(1, self.nkernels):
-            kernel += self.get_kernel(lib, self.kernel_types[k], coeffs, k, c)
-
-        kernel_inputs = self.kernel_inputs[c][0]
-        if good is not None:
-            kernel_inputs = kernel_inputs[good]
-
-        # Make the gp object
-        return tinygp.GaussianProcess(kernel, X=kernel_inputs,
-                                      diag=unc_fit**2,
-                                      mean=0.)
-
-    def get_kernel(self, lib, kernel_name, coeffs, k, c=0):
-        """Get individual kernels.
-
-        Parameters
-        ----------
-        lib : module
-            The library to use (np or jnp).
-        kernel_name : str
-            The name of the kernel to get. Currently unused since only
-            celerite's Matern32 is supported.
-        coeffs : list
-            The kernel coefficients (e.g., amplitude and lengthscale).
-        k : int
-            The kernel number.
-        c : int; optional
-            The channel index, by default 0.
-
-        Returns
-        -------
-        kernel
-            The requested kernel.
-        """
-        # get metric and amplitude for the current kernel and channel
-        amp = lib.exp(coeffs[k][0])
-        metric = lib.exp(coeffs[k][1]*2)
-
-        # Currently only the Matern32 kernel is supported
-        kernel = amp*tinygp.kernels.Matern32(metric)
-
-        return kernel
-
-    def loglikelihood(self, fit_lc, channel=None):
-        """Compute log likelihood of GP
-
-        Parameters
-        ----------
-        fit_lc : ndarray
-            The fitted model.
-        channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
-
-        Returns
-        -------
-        float
-            log likelihood of the GP evaluated by tinygp
-        """
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
-
-        logL = 0
-        for c in np.arange(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-                # get flux and uncertainties for current channel
-                flux, unc_fit = split([self.flux, self.unc_fit],
-                                      self.nints, chan)
-                if channel is None:
-                    fit_temp = split([fit_lc, ], self.nints, chan)[0]
-                else:
-                    # If only a specific channel is being evaluated, then only
-                    # that channel's fitted model will be passed in
-                    fit_temp = fit_lc
-            else:
-                chan = 0
-                # get flux and uncertainties for current channel
-                flux = self.flux
-                fit_temp = fit_lc
-                unc_fit = self.unc_fit
-            residuals = flux-fit_temp
-            if self.multwhite:
-                time = split([self.time, ], self.nints, chan)[0]
-            else:
-                time = self.time
-
-            # Remove poorly handled invalid values
-            good = np.isfinite(time) & np.isfinite(flux)
-            unc_fit = unc_fit[good]
-            residuals = residuals[good]
-            time_fit = time[good]
-
-            # set up GP with current parameters
-            gp = self.setup_GP(chan, unc_fit, good=good, eval=True)
-            cond = gp.condition(residuals, time_fit)
-            logL_temp = cond.log_probability
-            logL += logL_temp
-
-        return logL
+    def loglikelihood(self, fit_lc, channel=None, param_dict=None, **kwargs):
+        """Evaluate the NumPyro likelihood for ordinary fitters."""
+        params = self._prepare_param_dict(param_dict)
+        time = kwargs.get('time', self.time)
+        flux = kwargs.get('flux', self.flux)
+        scatter = kwargs.get('scatter', self._scatter(params, time))
+        log_prob = 0.
+        for chan in self._channels(channel)[1]:
+            indices = self.good_indices[int(chan)]
+            if not len(indices):
+                continue
+            gp = self._channel_gp(chan, params, time, scatter)
+            fit = (self._data_for_channel(fit_lc, chan)
+                   if channel is None else fit_lc)
+            observed = jnp.asarray(self._data_for_channel(flux, chan))
+            residual = (observed[indices]
+                        - jnp.asarray(fit)[indices])
+            log_prob += gp.log_probability(residual)
+        return log_prob

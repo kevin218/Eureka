@@ -1,8 +1,5 @@
-import copy
-
 import numpy as np
 from scipy.stats import norm
-import jax.numpy as jnp
 
 from ..lib.split_channels import get_trim
 
@@ -28,26 +25,17 @@ def update_uncertainty(theta, nints, unc, freenames, nchannel_fitted):
     unc_fit : np.array
         The updated values for the uncertainty array.
     """
-    # Make a copy so we don't edit in place
-    unc_fit = copy.deepcopy(unc)
-
-    param_type = None
-    if "scatter_mult" in freenames:
-        param_type = "scatter_mult"
-    elif "scatter_ppm" in freenames:
-        param_type = "scatter_ppm"
-
-    if param_type in ("scatter_mult", "scatter_ppm"):
-        for chan in range(nchannel_fitted):
-            trim1, trim2 = get_trim(nints, chan)
-            param_name = f"{param_type}_ch{chan}" if chan > 0 else param_type
-            loc = np.flatnonzero(np.array(freenames) == param_name)
-            param_val = theta[loc]
-
-            if param_type == "scatter_mult":
-                unc_fit[trim1:trim2] *= param_val
-            elif param_type == "scatter_ppm":
-                unc_fit[trim1:trim2] = param_val * 1e-6
+    unc_fit = np.ma.copy(unc) if np.ma.isMaskedArray(unc) else np.copy(unc)
+    values = dict(zip(freenames, theta))
+    for chan in range(nchannel_fitted):
+        trim1, trim2 = get_trim(nints, chan)
+        suffix = '' if chan == 0 else f'_ch{chan}'
+        mult = values.get(f'scatter_mult{suffix}', values.get('scatter_mult'))
+        ppm = values.get(f'scatter_ppm{suffix}', values.get('scatter_ppm'))
+        if ppm is not None:
+            unc_fit[trim1:trim2] = ppm * 1e-6
+        elif mult is not None:
+            unc_fit[trim1:trim2] *= mult
 
     return unc_fit
 
@@ -72,9 +60,16 @@ def ln_like(theta, lc, model, freenames):
         The log-likelihood value at the position theta.
     """
     model.update(theta)
-    model_lc = model.eval()
-    lc.unc_fit = update_uncertainty(theta, lc.nints, lc.unc, freenames,
-                                    lc.nchannel_fitted)
+    model_lc = np.asarray(model.eval())
+    if hasattr(model, '_prepare_param_dict'):
+        from .jax_models.JaxModel import build_scatter_array_jax
+        lc.unc_fit = np.asarray(build_scatter_array_jax(
+            lc.unc, lc.time, lc.nints, model.fitted_channels,
+            model.nchannel_fitted, model.multwhite,
+            model._prepare_param_dict()))
+    else:
+        lc.unc_fit = update_uncertainty(theta, lc.nints, lc.unc, freenames,
+                                        lc.nchannel_fitted)
 
     if model.GP:
         ln_like_val = 0
@@ -82,18 +77,19 @@ def ln_like(theta, lc, model, freenames):
             if m.modeltype == 'GP':
                 ln_like_val += m.loglikelihood(model_lc)
     else:
-        residuals = (lc.flux - model_lc)
-        if (isinstance(lc.unc_fit, (np.ma.MaskedArray, np.ndarray)) and
-                isinstance(residuals, (np.ma.MaskedArray, np.ndarray))):
-            # Use NumPy masked logic
-            ln_like_val = -0.5 * np.ma.sum(
-                (residuals / lc.unc_fit)**2 +
-                np.ma.log(2.0 * np.pi * lc.unc_fit**2))
-        else:
-            # Assume dense array for JAX compatibility
-            ln_like_val = -0.5 * jnp.sum(
-                (residuals / lc.unc_fit)**2 +
-                jnp.log(2.0 * jnp.pi * lc.unc_fit**2))
+        flux = np.ma.masked_invalid(lc.flux)
+        unc = np.ma.masked_invalid(lc.unc_fit)
+        time = np.ma.masked_invalid(getattr(lc, 'time', model.time))
+        time_mask = np.ma.getmaskarray(time)
+        if not getattr(lc, 'multwhite', model.multwhite):
+            time_mask = np.tile(time_mask, lc.nchannel_fitted)
+        mask = np.ma.getmaskarray(flux) | np.ma.getmaskarray(unc) | time_mask
+        # Invalid model values at valid observations must reject the fit.
+        if np.any(~np.isfinite(np.asarray(model_lc)[~mask])):
+            return -np.inf
+        residuals = np.ma.array(flux - model_lc, mask=mask)
+        ln_like_val = -0.5 * np.ma.sum(
+            (residuals / unc)**2 + np.ma.log(2.0 * np.pi * unc**2))
 
     return ln_like_val
 
@@ -131,8 +127,9 @@ def lnprior(theta, prior1, prior2, priortype, freenames):
                             np.log(theta[i]) > prior2[i])):
             return -np.inf
         elif priortype[i] == 'N':
-            lnprior_prob -= (0.5*(np.sum(((theta[i]-prior1[i])/prior2[i])**2
-                             + np.log(2.0*np.pi*(prior2[i])**2))))
+            z = (theta[i] - prior1[i]) / prior2[i]
+            lnprior_prob -= .5 * np.sum(
+                z**2 + np.log(2.0 * np.pi * prior2[i]**2))
         elif priortype[i] not in ['U', 'LU', 'N']:
             raise ValueError("PriorType must be 'U', 'LU', or 'N'")
 
@@ -230,7 +227,7 @@ def transform_log_uniform(x, a, b):
     float
         The log-uniform prior transform.
     """
-    return a*(b/a)**x
+    return a * (b / a)**x
 
 
 def transform_normal(x, mu, sigma):
@@ -309,10 +306,11 @@ def computeRedChiSq(lc, log, model, meta, freenames):
     chi2red : float
         The reduced chi-squared value.
     """
-    model_lc = model.eval(incl_GP=True)
-    residuals = (lc.flux - model_lc)
-    chi2 = np.ma.sum((residuals / lc.unc_fit) ** 2)
-    chi2red = chi2 / (np.sum(~np.ma.getmaskarray(lc.flux)) - len(freenames))
+    model_lc = np.asarray(model.eval(incl_GP=True))
+    residuals = np.ma.masked_invalid(np.ma.asarray(lc.flux) - model_lc)
+    chi2_terms = np.ma.masked_invalid((residuals / lc.unc_fit) ** 2)
+    chi2 = np.ma.sum(chi2_terms)
+    chi2red = chi2 / (chi2_terms.count() - len(freenames))
 
     log.writelog(f'Reduced Chi-squared: {chi2red}', mute=(not meta.verbose))
 

@@ -3,6 +3,7 @@ import re
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
+from jaxoplanet.core.kepler import kepler
 
 from .JaxModel import JaxModel
 # Importing these here to give access to other differentiable models
@@ -14,6 +15,7 @@ def compute_astroparams(
     param_dict: Dict[str, Any],
     channel: int = 0,
     pid: int = 0,
+    require_radius: bool = True,
 ) -> Dict[str, Any]:
     """Compute derived astrophysical parameters for a planet and channel.
 
@@ -27,6 +29,8 @@ def compute_astroparams(
         Channel index to select channel-specific parameters. Defaults to 0.
     pid : int; optional
         Planet ID index to select planet-specific parameters. Defaults to 0.
+    require_radius : bool; optional
+        Require a radius for transit models. Phase-only models set False.
 
     Returns
     -------
@@ -82,16 +86,18 @@ def compute_astroparams(
     for i in range(1, 5):
         astro[f"u{i}"] = get_param(f"u{i}")
 
+    # Resolve aliases before deriving inclination or Fourier coefficients.
+    if astro['a'] is None:
+        astro['a'] = astro['ars']
+    if astro['rp'] is None:
+        astro['rp'] = astro['rprs']
+
     # Harmonica shape coefficients: a1, b1, a2, b2, ..., aN, bN
     ab_keys = [
         k for k in param_dict
         if re.fullmatch(r"[ab][0-9]+(_pl[0-9]+)?(_ch[0-9]+)?", k)
     ]
-    ab_keys = [
-        k for k in ab_keys
-        if ((f"_pl{pid}" in k) or (pid == 0 and "_pl" not in k))
-        and ((f"_ch{channel}" in k) or (channel == 0 and "_ch" not in k))
-    ]
+    ab_keys = {k.split('_')[0] for k in ab_keys}
     ab_keys = sorted(
         ab_keys,
         key=lambda s: (int(re.findall(r"[0-9]+", s)[0]), s[0]),
@@ -100,7 +106,11 @@ def compute_astroparams(
     ab_coeffs: List[Any] = []
     if astro["rp"] is not None:
         ab_coeffs.append(astro["rp"])
-    ab_coeffs.extend([param_dict[k] for k in ab_keys])
+    if ab_keys:
+        max_order = max(int(k[1:]) for k in ab_keys)
+        ab_coeffs.extend(get_param(f'{prefix}{i}', default=0.)
+                         for i in range(1, max_order + 1)
+                         for prefix in ('a', 'b'))
     astro["ab"] = jnp.array(ab_coeffs) if ab_coeffs else jnp.array([])
 
     # POET phase curve parameters
@@ -112,7 +122,7 @@ def compute_astroparams(
         astro[k] = get_param(k, default=0.)
 
     # Quasi-Lambertian parameters
-    astro["quasi_gamma"] = get_param("quasi_gamma")  # No safe default
+    astro["quasi_gamma"] = get_param("quasi_gamma", default=0.)
     astro["quasi_offset"] = get_param("quasi_offset", default=0.)
 
     # Identify which spot indices exist in param_dict for this planet/channel.
@@ -146,13 +156,9 @@ def compute_astroparams(
 
     # Additional pixel map and Ylm harmonics if defined
     for k in param_dict:
-        if k.startswith("pixel") and (
-            (f"_ch{channel}" in k) or channel == 0
-        ):
-            astro[k] = param_dict[k]
-        if re.fullmatch(r"Y[0-9]+-?[0-9]+(_ch[0-9]+)?", k):
-            if (f"_ch{channel}" in k) or channel == 0:
-                astro[k] = param_dict[k]
+        root = k.split('_')[0]
+        if root.startswith('pixel') or re.fullmatch(r'Y\d+-?\d+', root):
+            astro[root] = get_param(root)
 
     # Eccentricity / argument-of-periastron conversions
     if (
@@ -164,7 +170,9 @@ def compute_astroparams(
         esinw = astro["esinw"]
         astro["ecc"] = jnp.sqrt(ecosw**2 + esinw**2)
         astro["w"] = jnp.arctan2(esinw, ecosw) * 180. / jnp.pi
-    elif astro.get("ecc") is not None and astro.get("w") is not None:
+    elif astro.get("ecc") is not None:
+        if astro['w'] is None:
+            astro['w'] = 90.
         ecc = astro["ecc"]
         w_rad = astro["w"] * jnp.pi / 180.
         astro["ecosw"] = ecc * jnp.cos(w_rad)
@@ -204,7 +212,8 @@ def compute_astroparams(
         astro["rprs"] = astro["rp"]
     elif astro.get("rp") is None and astro.get("rprs") is not None:
         astro["rp"] = astro["rprs"]
-    elif astro.get("rp") is None and astro.get("rprs") is None:
+    elif (require_radius and astro.get("rp") is None
+          and astro.get("rprs") is None):
         raise AssertionError(
             'At least one of "rp" or "rprs" must be defined in parameters.'
         )
@@ -235,10 +244,7 @@ def compute_astroparams(
     astro["Rs"] = get_param("Rs")
 
     # spotrot fallback
-    if astro.get("spotrot") == 1e12:
-        astro["fleck_fast"] = True
-    else:
-        astro["fleck_fast"] = False
+    astro["fleck_fast"] = astro['spotrot'] == 1e12
 
     # Derived angle versions
     astro["inc_rad"] = astro["inc"] * jnp.pi / 180.
@@ -261,6 +267,45 @@ def compute_astroparams(
         astro["u"] = jnp.array(u_coeffs)
 
     return astro
+
+
+def orbital_phase_jax(astro, time):
+    """Phase relative to eclipse, including eccentric Keplerian motion."""
+    ecc = astro['ecc']
+    omega = astro['w_rad']
+    f_transit = jnp.pi / 2. - omega
+    e_transit = 2. * jnp.arctan2(
+        jnp.sqrt(1. - ecc) * jnp.sin(f_transit / 2.),
+        jnp.sqrt(1. + ecc) * jnp.cos(f_transit / 2.))
+    m_transit = e_transit - ecc * jnp.sin(e_transit)
+    mean_anomaly = m_transit + 2. * jnp.pi * \
+        (time - astro['t0']) / astro['per']
+    sin_f, cos_f = kepler(mean_anomaly, ecc)
+    eccentric_phase = jnp.arctan2(sin_f, cos_f) + omega + jnp.pi / 2.
+    t_secondary = astro.get('t_secondary')
+    if t_secondary is None:
+        t_secondary = astro['t0'] + astro['per'] / 2.
+    circular_phase = 2. * jnp.pi * (time - t_secondary) / astro['per']
+    return jnp.where(ecc == 0., circular_phase, eccentric_phase)
+
+
+def eclipse_midpoint_jax(astro):
+    """Return the first secondary conjunction after the reference transit."""
+    if astro.get('t_secondary') is not None:
+        return astro['t_secondary']
+    ecc = astro['ecc']
+    omega = astro['w_rad']
+
+    def mean_anomaly(anomaly):
+        eccentric_anomaly = 2. * jnp.arctan2(
+            jnp.sqrt(1. - ecc) * jnp.sin(anomaly / 2.),
+            jnp.sqrt(1. + ecc) * jnp.cos(anomaly / 2.))
+        return eccentric_anomaly - ecc * jnp.sin(eccentric_anomaly)
+
+    transit = mean_anomaly(jnp.pi / 2. - omega)
+    eclipse = mean_anomaly(3. * jnp.pi / 2. - omega)
+    phase = jnp.mod(eclipse - transit, 2. * jnp.pi) / (2. * jnp.pi)
+    return astro['t0'] + astro['per'] * phase
 
 
 def evaluate_astrophysical_model_jax(
@@ -316,6 +361,7 @@ def evaluate_astrophysical_model_jax(
         The combined astrophysical model flux across all evaluated channels.
     """
     time_global = jnp.array(time_global)
+    eval_kwargs = dict(eval_kwargs, time=time_global, nints=nints)
     nchan = len(fitted_channels)
 
     # Total length across selected channels
@@ -338,18 +384,19 @@ def evaluate_astrophysical_model_jax(
         star_flux = jnp.ones_like(time)
         for component in stellar_models:
             star_flux *= component.eval(
-                param_dict, channel=chan, **eval_kwargs
+                param_dict=param_dict, channel=chan, **eval_kwargs
             )
 
         if jaxoplanet_model is not None:
             star_flux *= jaxoplanet_model.eval(
-                param_dict, channel=chan, **eval_kwargs
+                param_dict=param_dict, channel=chan, **eval_kwargs
             )
 
         eclipses = None
         if starry_model is not None:
             result = starry_model.eval(
-                param_dict, channel=chan, piecewise=True, **eval_kwargs
+                param_dict=param_dict, channel=chan, piecewise=True,
+                **eval_kwargs
             )[0]
             transits = result.pop(0)
             eclipses = result
@@ -362,14 +409,14 @@ def evaluate_astrophysical_model_jax(
                 planet_flux = eclipses[pid]
             elif len(phasevariation_models) > 0:
                 # Simple fp-only planet term if only phase-curve models exist
-                fp_key = 'fp' if pid == 0 else f"fp_pl{pid}"
-                planet_flux = param_dict.get(fp_key, 0.)
+                planet_flux = compute_astroparams(
+                    param_dict, chan, pid, require_radius=False)['fp']
             else:
                 planet_flux = 0.
 
             for model in phasevariation_models:
                 planet_flux *= model.eval(
-                    param_dict, pid, channel=chan, **eval_kwargs
+                    param_dict=param_dict, pid=pid, channel=chan, **eval_kwargs
                 )
 
             planet_fluxes += planet_flux
@@ -383,6 +430,7 @@ def evaluate_astrophysical_model_jax(
 
 class AstroModel(JaxModel):
     """A model that combines all astrophysical components."""
+
     def __init__(self, components: List[Any], **kwargs: Any) -> None:
         """Initialize the astrophysical model.
 
@@ -451,8 +499,7 @@ class AstroModel(JaxModel):
             The combined astrophysical model flux across all evaluated
             channels.
         """
-        if param_dict is None:
-            param_dict = self._get_param_dict()
+        param_dict = self._prepare_param_dict(param_dict)
 
         if channel is None:
             fitted_channels = self.fitted_channels
@@ -460,8 +507,8 @@ class AstroModel(JaxModel):
             fitted_channels = [channel]
 
         return evaluate_astrophysical_model_jax(
-            time_global=self.time,
-            nints=self.nints,
+            time_global=kwargs.get('time', self.time),
+            nints=kwargs.pop('nints', self.nints),
             multwhite=self.multwhite,
             fitted_channels=fitted_channels,
             num_planets=self.num_planets,

@@ -102,7 +102,7 @@ def evaluate_hst_ramp_model_jax(
             + h3 * time_batch**2
         )
 
-        hst_flux = hst_flux.at[offset:(offset+lcpiece.size)].set(lcpiece)
+        hst_flux = hst_flux.at[offset:(offset + lcpiece.size)].set(lcpiece)
         offset += lcpiece.size
 
     return hst_flux
@@ -147,8 +147,7 @@ class HSTRampModel(JaxModel):
         jnp.ndarray
             The model evaluated at the observation times.
         """
-        if param_dict is None:
-            param_dict = self._get_param_dict()
+        param_dict = self._prepare_param_dict(param_dict)
 
         if channel is None:
             fitted_channels = self.fitted_channels
@@ -156,8 +155,8 @@ class HSTRampModel(JaxModel):
             fitted_channels = [channel]
 
         return evaluate_hst_ramp_model_jax(
-            time_global=self.time,
-            nints=self.nints,
+            time_global=kwargs.get('time', self.time),
+            nints=kwargs.get('nints', self.nints),
             multwhite=self.multwhite,
             fitted_channels=fitted_channels,
             param_dict=param_dict,

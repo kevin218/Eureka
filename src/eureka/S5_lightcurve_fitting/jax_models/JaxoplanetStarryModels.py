@@ -1,19 +1,22 @@
 from typing import Any, Dict, List, Optional
 import inspect
 import re
+from functools import lru_cache
 import numpy as np
+import jax
 from astropy import constants as const
 from jax.typing import ArrayLike
 import jax.numpy as jnp
 
 from jaxoplanet.orbits.keplerian import Central
-from jaxoplanet.starry.ylm import Ylm, ylm_spot
+from jaxoplanet.starry.ylm import Ylm
+from jaxoplanet.starry.core.rotation import dot_rotation_matrix
 from jaxoplanet.starry.surface import Surface
 from jaxoplanet.starry.orbit import SurfaceSystem, SurfaceBody
 from jaxoplanet.starry.light_curves import surface_light_curve, light_curve
 
 from . import JaxModel
-from .AstroModel import compute_astroparams
+from .AstroModel import compute_astroparams, eclipse_midpoint_jax
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
@@ -21,6 +24,26 @@ from ...lib.split_channels import split
 jnp_Rsun = jnp.array(const.R_sun.value)
 jnp_Msun = jnp.array(const.M_sun.value)
 jnp_G = jnp.array(const.G.value)
+
+
+@lru_cache(maxsize=32)
+def _spot_basis(ydeg, npts):
+    """Build jaxoplanet's fixed Legendre projection using host arrays.
+
+    Its upstream Bp routine mixes NumPy polynomials and traced JAX arrays.
+    Keeping this configuration calculation on the host avoids both tracer
+    conversion and tracer caching when a spotted model is compiled.
+    """
+    theta = np.linspace(0., np.pi, npts)
+    ell = np.arange(ydeg + 1)
+    basis = np.polynomial.legendre.legvander(np.cos(theta), ydeg)
+    basis *= np.sqrt(2. * ell + 1.)
+    projection = np.linalg.solve(
+        basis.T @ basis + 1e-9 * np.eye(ydeg + 1), basis.T)
+    smoothing = .5 if ydeg < 4 else 2. / ydeg
+    indices = ell * (ell + 1)
+    projection *= np.exp(-.5 * indices * smoothing**2)[:, None]
+    return projection, theta, indices
 
 
 def _get_channel_param(
@@ -113,21 +136,28 @@ def build_stellar_surface(
         return Surface(u=astro_star['u'])
 
     # Convert lists to arrays and apply fleck -> starry conversions
-    spotrad_arr = jnp.stack(spot_rads) * 90.
+    spotrad_arr = jnp.arcsin(jnp.stack(spot_rads))
     spotlat_arr = jnp.stack(spot_lats) * jnp.pi / 180.
     spotlon_arr = jnp.stack(spot_lons) * jnp.pi / 180.
     # fleck defines contrast as (1 - spot_contrast); starry uses 1 - contrast
     spotcon_arr = 1. - jnp.stack(spot_cons)
 
-    spotnpts = astro_star.get('spotnpts', default_spotnpts)
+    spotnpts = astro_star.get('spotnpts') or default_spotnpts
     spotfac = astro_star.get('spotfac', default_spotfac)
 
-    ylm = ylm_spot(
-        ydeg=int(ydeg),
-        npts=int(spotnpts),
-        spot_fac=int(spotfac),
-    )
-    ylm_star = ylm(spotcon_arr, spotrad_arr, spotlat_arr, spotlon_arr)
+    projection, theta, indices = _spot_basis(int(ydeg), int(spotnpts))
+    # Each expansion includes a uniform background, so add only its deficit
+    # to the shared background.
+    coefficients = jnp.zeros((ydeg + 1)**2).at[0].set(1.)
+    for i in range(nspots):
+        profile = -jax.nn.sigmoid(
+            -spotfac * (jnp.asarray(theta) - spotrad_arr[i]))
+        spot = jnp.zeros((ydeg + 1)**2).at[indices].set(
+            jnp.asarray(projection) @ profile * spotcon_arr[i])
+        spot = dot_rotation_matrix(ydeg, 1., 0., 0., spotlat_arr[i])(spot)
+        spot = dot_rotation_matrix(ydeg, 0., 1., 0., -spotlon_arr[i])(spot)
+        coefficients = coefficients + spot
+    ylm_star = Ylm.from_dense(coefficients, normalize=False)
 
     inc_deg = astro_star.get('spotstari', astro_star.get('inc', 90.))
     obl_deg = astro_star.get('spotstarobl', 0.)
@@ -158,48 +188,38 @@ def build_planet_body(
     SurfaceBody
         The starry surface + Keplerian orbit for this planet.
     '''
-    # Build the planet surface if fp is defined; otherwise treat it as dark.
-    if astro.get('fp', 0.) == 0.:
-        planet_surface = None
-    else:
-        per = astro["per"]
-        t0 = astro["t0"]
-        # Prefer an explicit secondary eclipse time if available, otherwise
-        # assume circular orbit with eclipse half an orbit after transit.
-        t_ecl = astro.get("t_secondary")
-        if t_ecl is None:
-            t_ecl = t0 + 0.5*per
+    per = astro["per"]
+    t_ecl = eclipse_midpoint_jax(astro)
 
-        # Choose map phase so that the rotational phase at mid-eclipse is 0:
-        #   phi(t) = 2*pi*t / P + phase0
-        #   phi(t_ecl) = 0  -> phase0 = -2*pi*t_ecl/P
-        phase0 = -2. * jnp.pi * (t_ecl / per)
+    # Choose map phase so that the rotational phase at mid-eclipse is 0:
+    #   phi(t) = 2*pi*t / P + phase0
+    #   phi(t_ecl) = 0  -> phase0 = -2*pi*t_ecl/P
+    phase0 = -2. * jnp.pi * (t_ecl / per)
 
-        # Gather any Y_lm coefficients stored in astro as Y{ell}{m}[_ch#]
-        planet_Ylm_dict: Dict[tuple[int, int], jnp.ndarray] = {
-            (0, 0): jnp.array(1.)}
-        planet_Ylm_temp: Dict[tuple[int, int], jnp.ndarray] = {
-            (0, 0): jnp.array(1.)}
+    # Gather any Y_lm coefficients stored in astro as Y{ell}{m}[_ch#]
+    planet_Ylm_dict: Dict[tuple[int, int], jnp.ndarray] = {
+        (0, 0): jnp.array(1.)}
+    planet_Ylm_temp: Dict[tuple[int, int], jnp.ndarray] = {
+        (0, 0): jnp.array(1.)}
 
-        for key, val in astro.items():
-            match = re.fullmatch(r'Y([0-9]+)(-?[0-9]+)(?:_ch[0-9]+)?', key)
-            if match:
-                ell = int(match.group(1))
-                mm = int(match.group(2))
-                planet_Ylm_dict[(ell, mm)] = jnp.asarray(val)
-                planet_Ylm_temp[(ell, mm)] = jnp.asarray(val)
+    for key, val in astro.items():
+        match = re.fullmatch(r'Y([0-9]+)(-?[0-9]+)(?:_ch[0-9]+)?', key)
+        if match:
+            ell = int(match.group(1))
+            mm = int(match.group(2))
+            planet_Ylm_dict[(ell, mm)] = jnp.asarray(val)
+            planet_Ylm_temp[(ell, mm)] = jnp.asarray(val)
 
-        # Normalize Y_00 so that the phase-curve amplitude matches fp
-        planet_Ylm_temp_obj = Ylm(planet_Ylm_temp)
-        planet_surface_temp = Surface(y=planet_Ylm_temp_obj,
-                                      period=per, phase=phase0)
-        scale = astro['fp'] / surface_light_curve(planet_surface_temp,
-                                                  theta=0.)
+    # Normalize Y_00 so that the phase-curve amplitude matches fp
+    planet_Ylm_temp_obj = Ylm(planet_Ylm_temp)
+    planet_surface_temp = Surface(y=planet_Ylm_temp_obj,
+                                  period=per, phase=phase0)
+    scale = astro['fp'] / surface_light_curve(planet_surface_temp,
+                                              theta=0.)
 
-        for key in planet_Ylm_dict.keys():
-            planet_Ylm_dict[key] *= scale
-        planet_Ylm_obj = Ylm(planet_Ylm_dict)
-        planet_surface = Surface(y=planet_Ylm_obj, period=per, phase=phase0)
+    planet_Ylm_obj = Ylm(planet_Ylm_dict)
+    planet_surface = Surface(y=planet_Ylm_obj, period=per, phase=phase0,
+                             amplitude=scale, normalize=False)
 
     # Solve Keplerian equation for the system mass, as in the transit model
     a_m = astro['a'] * astro['Rs'] * jnp_Rsun
@@ -328,8 +348,7 @@ def evaluate_starry_model_jax(
             per_channel_results.append(components)
         else:
             lcpiece = fstar
-            if fplanets:
-                lcpiece = lcpiece + sum(fplanets)
+            lcpiece = lcpiece + jnp.sum(fplanets, axis=0)
             lcfinal = lcfinal.at[offset:(offset + len(lcpiece))].set(lcpiece)
             offset += len(lcpiece)
 
@@ -356,13 +375,28 @@ class JaxoplanetStarryModel(JaxModel):
         self.name = 'starry'
         self.modeltype = 'physical'
 
+        if getattr(self, 'pixelsampling', False):
+            raise NotImplementedError(
+                'Pixel sampling has not been ported to jaxoplanet. '
+                'Fit spherical harmonic coefficients instead.')
+        if getattr(self, 'compute_ltt', False):
+            raise NotImplementedError(
+                'Light-travel-time correction is not implemented for starry. '
+                'Set compute_ltt=False for this model.')
+        if (self.num_planets > 1 and
+                getattr(self, 'mutualOccultations', False)):
+            raise NotImplementedError(
+                'jaxoplanet does not model mutual planetary occultations. '
+                'Set mutualOccultations=False to omit these events.')
+
         log = kwargs.get('log')
 
         required = ['Rs']
         missing = [name not in self.paramtitles for name in required]
         if any(missing):
+            absent = [r for r, m in zip(required, missing) if m]
             message = (
-                f"Missing required params {required[missing]} in your EPF. "
+                f"Missing required params {absent} in your EPF. "
                 "Make sure it is not set to 'independent' as this is no "
                 "longer a supported option; you can set these parameters to "
                 "fixed if you want to maintain the old 'independent' "
@@ -468,11 +502,10 @@ class JaxoplanetStarryModel(JaxModel):
 
         # Precompute spot base names (no channel suffix), e.g. spotrad,
         # spotrad1, etc.
-        self.spot_bases: List[str] = [
-            name
-            for name in self.parameters.dict.keys()
-            if 'spotrad' in name and '_' not in name
-        ]
+        self.spot_bases = sorted({
+            name.split('_')[0] for name in self.parameters.dict
+            if name.split('_')[0].startswith('spotrad')
+        })
 
         # Degree of spherical harmonics for star/planet maps
         self.ydeg = getattr(self, 'ydeg', None)
@@ -519,8 +552,7 @@ class JaxoplanetStarryModel(JaxModel):
         list or jnp.ndarray
             See :func:`evaluate_starry_model_jax` for details.
         '''
-        if param_dict is None:
-            param_dict = self._get_param_dict()
+        param_dict = self._prepare_param_dict(param_dict)
 
         if channel is None:
             fitted_channels = self.fitted_channels
@@ -528,8 +560,8 @@ class JaxoplanetStarryModel(JaxModel):
             fitted_channels = [channel]
 
         return evaluate_starry_model_jax(
-            time_global=self.time,
-            nints=self.nints,
+            time_global=kwargs.get('time', self.time),
+            nints=kwargs.get('nints', self.nints),
             multwhite=self.multwhite,
             fitted_channels=fitted_channels,
             num_planets=self.num_planets,

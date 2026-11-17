@@ -2,10 +2,9 @@ from jax.typing import ArrayLike
 import jax.numpy as jnp
 from typing import Optional, Any
 
-from ...lib.split_channels import split, get_trim
-from ...lib.readEPF import Parameters
+from ...lib.split_channels import split
 from . import JaxModel
-from .JaxModel import get_param_names, get_param_index_map, get_param_array
+from .JaxModel import get_param_index_map, get_param_array
 
 
 def evaluate_centroid_model_jax(
@@ -69,7 +68,8 @@ class CentroidModel(JaxModel):
     The `axis` keyword determines which centroid quantity to use.
     Channel-specific coefficients (e.g., xpos_ch1) are supported.
     """
-    def __init__(self, **kwargs: Any) -> None:
+
+    def __init__(self, axis: str = 'xpos', **kwargs: Any) -> None:
         """Initialize the centroid model.
 
         Parameters
@@ -83,18 +83,13 @@ class CentroidModel(JaxModel):
                 - nints: integration counts per channel
                 - axis: one of 'xpos', 'xwidth', 'ypos', or 'ywidth'
         """
-        super().__init__(**kwargs)
-        self.axis: str = kwargs.get('axis', 'xpos')
+        if axis not in ('xpos', 'ypos', 'xwidth', 'ywidth'):
+            raise ValueError('CentroidModel requires xpos, ypos, xwidth, '
+                             'or ywidth as its axis.')
+        super().__init__(axis=axis, **kwargs)
+        self.axis = axis
         self.name: str = self.axis
         self.modeltype: str = 'systematic'
-
-        self.parameters: Parameters = kwargs.get('parameters', Parameters())
-        self.nchannel_fitted: int = kwargs.get('nchan', 1)
-        self.multwhite: bool = kwargs.get('multwhite', False)
-        self.fitted_channels: list[int] = kwargs.get(
-            'fitted_channels', list(range(self.nchannel_fitted))
-        )
-        self.nints: list[int] = kwargs.get('nints', [0] * self.nchannel_fitted)
 
     @property
     def centroid(self) -> Optional[ArrayLike]:
@@ -110,28 +105,9 @@ class CentroidModel(JaxModel):
         centroid_array : array-like
             Original centroid measurements along the selected `axis`.
         """
-        if hasattr(centroid_array, "filled"):
+        if hasattr(centroid_array, 'filled'):
             centroid_array = centroid_array.filled(jnp.nan)
-        self._centroid = jnp.array(centroid_array)
-
-        if self._centroid is not None:
-            if self.multwhite:
-                # Build channel-separated centered centroid arrays
-                centroid_local = []
-                self.total_length = 0
-                for chan in self.fitted_channels:
-                    trim1, trim2 = get_trim(self.nints, chan)
-                    centroid = self._centroid[trim1:trim2]
-                    self.total_length += centroid.size
-                    centroid_local.append(centroid - jnp.nanmean(centroid))
-                self.centroid_local = jnp.concatenate(centroid_local)
-            else:
-                self.centroid_local = (
-                    self._centroid - jnp.nanmean(self._centroid)
-                )
-                self.total_length = (
-                    self.centroid_local.size * self.nchannel_fitted
-                )
+        self._centroid = centroid_array
 
     def build_coeff_index_matrix(
         self, param_index_map: dict[str, int]
@@ -187,40 +163,30 @@ class CentroidModel(JaxModel):
         jnp.ndarray
             The model flux array at the centroid values.
         """
-        if param_dict is None:
-            param_dict = self._get_param_dict()
-        param_names = get_param_names(self)
+        param_dict = self._prepare_param_dict(param_dict)
+        channels = list(self._channels(channel)[1])
+        nints_global = kwargs.get('nints', self.nints)
+        data = jnp.asarray(kwargs.get('centroid', self.centroid))
+        pieces = []
+        for chan in channels:
+            piece = split([data], nints_global, chan)[
+                0] if self.multwhite else data
+            pieces.append(piece - jnp.nanmean(piece))
+        data_local = jnp.concatenate(pieces) if self.multwhite else pieces[0]
+        nints = [len(piece) for piece in pieces]
+
+        param_names = [key for key, value in param_dict.items()
+                       if not isinstance(value, str) and value is not None]
         param_array = get_param_array(param_dict, param_names)
         param_index_map = get_param_index_map(param_names)
-        coeff_index_matrix = self.build_coeff_index_matrix(
-            param_index_map)
-
-        if channel is not None:
-            if channel not in self.fitted_channels:
-                raise ValueError(
-                    f"Channel {channel} not in fitted_channels"
-                    f" {self.fitted_channels}."
-                )
-            chan_idx = list(self.fitted_channels).index(channel)
-            nints = [self.nints[channel]]
-            coeff_index_matrix = coeff_index_matrix[
-                chan_idx:chan_idx + 1
-            ]
-            if self.multwhite:
-                centroid = split(
-                    [self.centroid_local], self.nints, channel
-                )[0]
-            else:
-                centroid = self.centroid_local
-        else:
-            nints = self.nints
-            coeff_index_matrix = coeff_index_matrix
-            centroid = self.centroid_local
-
+        matrix = self.build_coeff_index_matrix(param_index_map)
+        positions = [list(self.fitted_channels).index(chan)
+                     for chan in channels]
+        matrix = matrix[jnp.array(positions)]
         return evaluate_centroid_model_jax(
-            centroids=centroid,
+            centroids=data_local,
             nints=nints,
-            coeff_index_matrix=coeff_index_matrix,
+            coeff_index_matrix=matrix,
             param_array=param_array,
-            multwhite=self.multwhite
+            multwhite=self.multwhite,
         )

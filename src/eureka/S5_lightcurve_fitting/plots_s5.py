@@ -10,8 +10,9 @@ try:
     from mc3.stats import time_avg
 except ModuleNotFoundError:
     print("Could not import MC3. No RMS time-averaging plots will be made.")
-import astropy.units as unit
 import corner
+import arviz as az
+from arviz.rcparams import rcParams as az_rcParams
 import fleck
 from scipy import stats
 
@@ -563,6 +564,58 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
 
 
 @plots.apply_style
+def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
+               **kwargs):
+    """Plot the evolution of the trace to look for temporal trends. (Figs 5305)
+
+    Parameters
+    ----------
+    trace : arviz.InferenceData
+        An ArviZ ``InferenceData`` like object that contains the samples.
+    model : Class
+        A model_class instance used to make the plot within the jax
+        model context.
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    freenames : iterable
+        The names of the fitted parameters.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str; optional
+        The name of the fitter (for plot filename). Defaults to 'nuts'.
+    compact: bool; optional
+        Plot multidimensional variables in a single plot. Defailts to False.
+    **kwargs : dict
+        Additional keyword arguments to pass to pm.traceplot.
+    """
+
+    max_subplots = az_rcParams['plot.max_subplots'] // 2
+    nplots = int(np.ceil(len(freenames)/max_subplots))
+    npanels = min([len(freenames), max_subplots])
+
+    for i in range(nplots):
+        ax = az.plot_trace(trace, var_names=freenames[i*npanels:(i+1)*npanels],
+                           compact=compact, show=False, **kwargs)
+        fig = ax[0][0].figure
+
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = f'figs{os.sep}fig5305_{fname_tag}_trace'
+        fname += '_'+fitter
+        fname += f'figure{i+1}of{nplots}'
+        fname += plots.get_filetype()
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight',
+                    pad_inches=0.05, dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+        else:
+            plt.close(fig)
+
+
+@plots.apply_style
 def plot_res_distr(lc, model, meta, fitter):
     """Plot the normalized distribution of residuals + a Gaussian. (Fig 5302)
 
@@ -874,6 +927,60 @@ def plot_fleck_star(lc, model, meta, fitter):
             ch_number = str(chan).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5307_{fname_tag}_fleck_star_{fitter}'
+                 + plots.get_filetype())
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
+
+@plots.apply_style
+def plot_starry_star(lc, model, meta, fitter):
+    """Plot the location and contrast of the starry star spots (Figs 5308)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.jax_models.CompositeJaxModel
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    """
+    from .jax_models.JaxoplanetStarryModels import build_stellar_surface
+    from .jax_models.AstroModel import compute_astroparams
+
+    def find_starry(component):
+        if component.name == 'starry':
+            return component
+        for child in component.components:
+            found = find_starry(child)
+            if found is not None:
+                return found
+        return None
+
+    starry_model = find_starry(model)
+    if starry_model is None:
+        return
+    params = starry_model._prepare_param_dict()
+    for channel in lc.fitted_channels:
+        astro = compute_astroparams(params, channel=channel)
+        surface = build_stellar_surface(
+            astro, params, starry_model.spot_bases, starry_model.ydeg,
+            starry_model.default_spotnpts, starry_model.default_spotfac,
+            channel)
+        fig = plt.figure(5308, figsize=(8, 6))
+        plt.clf()
+        ax = fig.gca()
+        ax.imshow(np.asarray(surface.render(res=200)), origin='lower')
+        ax.set_axis_off()
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5308_{fname_tag}_starry_star_{fitter}'
                  + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:

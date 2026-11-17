@@ -115,9 +115,9 @@ def evaluate_damped_oscillator_model_jax(
 
         # Before osc_t0, the model should be flat at 1
         mask_pre_t0 = time < osc_t0
-        osc = osc.at[mask_pre_t0].set(1.)
+        osc = jnp.where(mask_pre_t0, 1., osc)
 
-        lcfinal = lcfinal.at[offset:(offset+osc.size)].set(osc)
+        lcfinal = lcfinal.at[offset:(offset + osc.size)].set(osc)
         offset += osc.size
 
     return lcfinal
@@ -164,8 +164,7 @@ class DampedOscillatorModel(JaxModel):
         jnp.ndarray
             The model evaluated at observation times.
         """
-        if param_dict is None:
-            param_dict = self._get_param_dict()
+        param_dict = self._prepare_param_dict(param_dict)
 
         if channel is None:
             fitted_channels = self.fitted_channels
@@ -173,8 +172,8 @@ class DampedOscillatorModel(JaxModel):
             fitted_channels = [channel]
 
         return evaluate_damped_oscillator_model_jax(
-            time_global=self.time,
-            nints=self.nints,
+            time_global=kwargs.get('time', self.time),
+            nints=kwargs.get('nints', self.nints),
             multwhite=self.multwhite,
             fitted_channels=fitted_channels,
             param_dict=param_dict,

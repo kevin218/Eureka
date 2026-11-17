@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 from . import JaxModel
-from .AstroModel import compute_astroparams
+from .AstroModel import compute_astroparams, orbital_phase_jax
 from ...lib.split_channels import split
 
 
@@ -15,6 +15,8 @@ def evaluate_sinusoid_phase_curve_jax(
     fitted_channels: List[int],
     num_planets: int,
     param_dict: Dict[str, float],
+    pid: Optional[int] = None,
+    force_positivity: bool = False,
 ) -> jnp.ndarray:
     """Evaluate the sinusoidal phase curve model in a JAX-pure way.
 
@@ -63,21 +65,14 @@ def evaluate_sinusoid_phase_curve_jax(
         # Start with a flat phase curve for this channel
         lcpiece = jnp.ones_like(time)
 
-        for pid in range(num_planets):
-            astro = compute_astroparams(param_dict, channel=chan, pid=pid)
+        for planet_id in (range(num_planets) if pid is None else [pid]):
+            astro = compute_astroparams(
+                param_dict, channel=chan, pid=planet_id, require_radius=False)
 
             amps = jnp.array([astro.get(k) for k in
                               ['AmpCos1', 'AmpSin1', 'AmpCos2', 'AmpSin2']])
 
-            # Secondary eclipse time:
-            # if not explicitly present, approximate as half an orbit
-            # after transit for now (exact for circular orbits).
-            t_secondary = astro.get('t_secondary')
-            if t_secondary is None:
-                t_secondary = astro['t0'] + 0.5 * astro['per']
-
-            per = jnp.asarray(astro['per'])
-            phi = 2. * jnp.pi * (time - t_secondary) / per
+            phi = orbital_phase_jax(astro, time)
 
             phase_vars = (
                 1.
@@ -86,6 +81,15 @@ def evaluate_sinusoid_phase_curve_jax(
                 + amps[2] * (jnp.cos(2. * phi) - 1.)
                 + amps[3] * jnp.sin(2. * phi)
             )
+            if force_positivity:
+                grid = jnp.linspace(0., 2. * jnp.pi, 1000)
+                minimum = jnp.min(
+                    1. + amps[0] * (jnp.cos(grid) - 1.)
+                    + amps[1] * jnp.sin(grid)
+                    + amps[2] * (jnp.cos(2. * grid) - 1.)
+                    + amps[3] * jnp.sin(2. * grid))
+                phase_vars = jnp.where(minimum < 0.,
+                                       1e6 * jnp.abs(minimum), phase_vars)
             lcpiece = lcpiece * phase_vars
 
         lcfinal = lcfinal.at[offset:offset + len(lcpiece)].set(lcpiece)
@@ -106,18 +110,17 @@ class SinusoidPhaseCurveModel(JaxModel):
             Additional parameters to pass to
             :class:`eureka.S5_lightcurve_fitting.jax_models.JaxModel`.
         """
-        super().__init__(**kwargs, modeltype='physical',
-                         name='sinusoid phase curve')
+        super().__init__(**kwargs)
+        self.modeltype = 'physical'
+        self.name = 'sinusoid phase curve'
 
-        # Preserve the old flag, even though we currently do not enforce
-        # positivity in the JAX backend. This can be revisited later with
-        # a JAX-friendly implementation.
         self.force_positivity = getattr(self, 'force_positivity', False)
 
     def eval(
         self,
         param_dict: Optional[Dict[str, float]] = None,
         channel: Optional[int] = None,
+        pid: Optional[int] = None,
         **kwargs: Any,
     ) -> jnp.ndarray:
         """Evaluate the sinusoidal phase curve model.
@@ -136,8 +139,7 @@ class SinusoidPhaseCurveModel(JaxModel):
         jnp.ndarray
             Multiplicative phase curve evaluated at observation times.
         """
-        if param_dict is None:
-            param_dict = self._get_param_dict()
+        param_dict = self._prepare_param_dict(param_dict)
 
         if channel is None:
             fitted_channels = self.fitted_channels
@@ -145,10 +147,12 @@ class SinusoidPhaseCurveModel(JaxModel):
             fitted_channels = [channel]
 
         return evaluate_sinusoid_phase_curve_jax(
-            time_global=self.time,
-            nints=self.nints,
+            time_global=kwargs.get('time', self.time),
+            nints=kwargs.get('nints', self.nints),
             multwhite=self.multwhite,
             fitted_channels=fitted_channels,
             num_planets=self.num_planets,
             param_dict=param_dict,
+            pid=pid,
+            force_positivity=self.force_positivity,
         )

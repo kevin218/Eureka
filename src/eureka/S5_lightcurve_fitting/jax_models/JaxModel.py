@@ -1,12 +1,15 @@
-from copy import copy
+from copy import copy, deepcopy
+import re
 import numpy as np
 import numpyro
 import jax.numpy as jnp
 from numpyro.distributions import (
-    Normal, Uniform, LogUniform, LogNormal, TruncatedNormal)
+    Normal, Uniform, LogUniform, LogNormal, TruncatedNormal, ImproperUniform,
+    constraints)
 
-from ..models import Model, CompositeModel
-from ...lib.split_channels import split, get_trim
+from ..models.Model import Model, CompositeModel
+from ...lib.readEPF import Parameters
+from ...lib.split_channels import split
 
 
 def get_param_names(model):
@@ -68,6 +71,28 @@ def get_param_array(param_dict, param_names):
     return jnp.array([param_dict[name] for name in param_names])
 
 
+def channel_parameters(param_dict, fitted_channels, wl_groups):
+    """Resolve wavelength-shared parameters without changing the input dict.
+
+    The numerical kernels use channel keys. Aliasing wavelength keys here
+    keeps their precedence identical to ``Model._get_param_value`` while
+    preserving gradients back to the original sampled parameter.
+    """
+    result = dict(param_dict)
+    roots = {re.sub(r'_(?:ch|wl)\d+$', '', key) for key in param_dict}
+    for chan, wl in zip(fitted_channels, wl_groups):
+        for root in roots:
+            wl_key = f'{root}_wl{wl}'
+            ch_key = root if chan == 0 else f'{root}_ch{chan}'
+            if wl and wl_key in param_dict:
+                result[ch_key] = param_dict[wl_key]
+            elif ch_key in param_dict:
+                result[ch_key] = param_dict[ch_key]
+            elif root in param_dict:
+                result[ch_key] = param_dict[root]
+    return result
+
+
 def build_scatter_array_jax(
     lc_unc,
     time,
@@ -111,23 +136,32 @@ def build_scatter_array_jax(
     model_attrs = param_dict
 
     for c in range(nchannel_fitted):
-        size = nints[c] if multwhite else time.size
+        chan = fitted_channels[c]
+        size = nints[chan] if multwhite and len(nints) > 1 else (
+            nints[0] if multwhite else time.size)
 
-        pname_ppm = 'scatter_ppm' if c == 0 else f'scatter_ppm_ch{c}'
-        pname_mult = 'scatter_mult' if c == 0 else f'scatter_mult_ch{c}'
+        suffix = '' if chan == 0 else f'_ch{chan}'
+        pname_ppm = f'scatter_ppm{suffix}'
+        pname_mult = f'scatter_mult{suffix}'
+        if pname_ppm not in model_attrs:
+            pname_ppm = 'scatter_ppm'
+        if pname_mult not in model_attrs:
+            pname_mult = 'scatter_mult'
+
+        if nchannel_fitted == 1:
+            unc = lc_unc
+        else:
+            unc = split([lc_unc], nints, chan)[0]
 
         if pname_ppm in model_attrs:
             scatter = model_attrs[pname_ppm] * jnp.ones(size) / 1e6
         elif pname_mult in model_attrs:
-            chan = fitted_channels[c]
-            trim1, trim2 = get_trim(nints, chan)
-            unc = lc_unc[trim1:trim2]
-            scatter = unc * model_attrs[pname_mult]
+            good_unc = jnp.isfinite(unc)
+            safe_unc = jnp.where(good_unc, unc, 0.)
+            scatter = jnp.where(good_unc,
+                                safe_unc * model_attrs[pname_mult], jnp.nan)
         else:
-            if nchannel_fitted == 1:
-                scatter = lc_unc
-            else:
-                scatter = split([lc_unc], nints, fitted_channels[c])[0]
+            scatter = unc
 
         scatter_list.append(jnp.array(scatter))
 
@@ -193,7 +227,14 @@ def evaluate_composite_model(
     param_dict = _ensure_param_dict(params, param_names)
 
     nchan = 1 if channel is not None else composite_model.nchannel_fitted
-    flux_length = composite_model._get_flux_length(channel, nchan)
+    time = kwargs.get('time', composite_model.time)
+    nints = kwargs.get('nints', composite_model.nints)
+    if composite_model.multwhite:
+        channels = composite_model._channels(channel)[1]
+        flux_length = sum(nints[c] if len(nints) > 1 else nints[0]
+                          for c in channels)
+    else:
+        flux_length = len(time) * nchan
     model_flux = jnp.ones(flux_length)
 
     # Non-GP components
@@ -284,7 +325,14 @@ def evaluate_composite_systematics(
     param_dict = _ensure_param_dict(params, param_names)
 
     nchan = 1 if channel is not None else composite_model.nchannel_fitted
-    flux_length = composite_model._get_flux_length(channel, nchan)
+    time = kwargs.get('time', composite_model.time)
+    nints = kwargs.get('nints', composite_model.nints)
+    if composite_model.multwhite:
+        channels = composite_model._channels(channel)[1]
+        flux_length = sum(nints[c] if len(nints) > 1 else nints[0]
+                          for c in channels)
+    else:
+        flux_length = len(time) * nchan
     flux = jnp.ones(flux_length)
 
     for component in composite_model.components:
@@ -343,70 +391,41 @@ def evaluate_composite_physical(
     """
     param_dict = _ensure_param_dict(params, param_names)
 
-    if channel is None:
-        nchan = composite_model.nchannel_fitted
-        channels = composite_model.fitted_channels
-    else:
-        nchan = 1
-        channels = [channel]
-
+    channels = list(composite_model._channels(channel)[1])
+    nchan = len(channels)
+    time_full = kwargs.pop('time', composite_model.time)
+    nints_interp = kwargs.pop('nints', composite_model.nints)
     if interp:
+        # Grid sizes are host-side plotting configuration, never traced values.
+        def grid(time):
+            time = np.asarray(time)
+            time = time[np.isfinite(time)]
+            if len(time) < 2:
+                return time
+            dt = np.min(np.diff(time))
+            steps = int(np.round((time[-1] - time[0]) / dt)) + 1
+            return np.linspace(time[0], time[-1], steps)
+
         if composite_model.multwhite:
-            new_time = []
-            nints_interp = []
-            for chan_i in channels:
-                time = split(
-                    [composite_model.time],
-                    composite_model.nints,
-                    chan_i,
-                )[0]
-                time = time[jnp.isfinite(time)]
-                dt = jnp.min(jnp.diff(time))
-                steps = jnp.round(
-                    (time[-1] - time[0]) / dt + 1,
-                ).astype(int)
-                nints_interp.append(steps)
-                new_time.append(
-                    jnp.linspace(time[0], time[-1], steps, endpoint=True),
-                )
-            new_time = jnp.concatenate(new_time)
+            grids = [grid(split([time_full], nints_interp, chan)[0])
+                     for chan in composite_model.fitted_channels]
+            nints_interp = [len(t) for t in grids]
+            time_full = np.concatenate(grids)
         else:
-            time = composite_model.time
-            time = time[jnp.isfinite(time)]
-            dt = jnp.min(jnp.diff(time))
-            steps = jnp.round(
-                (time[-1] - time[0]) / dt + 1,
-            ).astype(int)
-            nints_interp = jnp.ones(nchan) * steps
-            new_time = jnp.linspace(time[0], time[-1], steps, endpoint=True)
-    else:
-        new_time = composite_model.time
-        if composite_model.multwhite and channel is not None:
-            new_time = split([new_time], composite_model.nints, channel)[0]
-        nints_interp = composite_model.nints
+            time_full = grid(time_full)
+            nints_interp = [len(time_full)] * nchan
 
-    if composite_model.multwhite:
-        flux = jnp.ones(len(new_time))
-    else:
-        flux = jnp.ones(len(new_time) * nchan)
-
+    new_time = time_full
+    if composite_model.multwhite and channel is not None:
+        new_time = split([time_full], nints_interp, channel)[0]
+    size = len(new_time) if composite_model.multwhite else len(
+        new_time) * nchan
+    flux = jnp.ones(size)
     for component in composite_model.components:
         if component.modeltype == 'physical':
-            if interp:
-                flux *= component.interp(
-                    new_time,
-                    nints_interp,
-                    channel=channel,
-                    param_dict=param_dict,
-                    **kwargs,
-                )
-            else:
-                flux *= component.eval(
-                    channel=channel,
-                    param_dict=param_dict,
-                    **kwargs,
-                )
-
+            flux *= component.eval(channel=channel, param_dict=param_dict,
+                                   time=time_full, nints=nints_interp,
+                                   **kwargs)
     return flux, new_time, nints_interp
 
 
@@ -447,14 +466,21 @@ def evaluate_composite_gp(
     else:
         nchan = 1
 
-    flux_length = composite_model._get_flux_length(channel, nchan)
+    time = kwargs.get('time', composite_model.time)
+    nints = kwargs.get('nints', composite_model.nints)
+    if composite_model.multwhite:
+        channels = composite_model._channels(channel)[1]
+        flux_length = sum(nints[c] if len(nints) > 1 else nints[0]
+                          for c in channels)
+    else:
+        flux_length = len(time) * nchan
     flux = jnp.zeros(flux_length)
 
     for component in composite_model.components:
         if component.modeltype == 'GP':
             flux += component.eval(
-                param_dict,
                 fit,
+                param_dict=param_dict,
                 channel=channel,
                 **kwargs,
             )
@@ -462,41 +488,72 @@ def evaluate_composite_gp(
     return flux
 
 
-def make_numpyro_composite_model(composite_model):
-    """Build a numpyro-ready model function from a CompositeJaxModel.
+def make_numpyro_composite_model(composite_model, time=None, flux=None,
+                                 lc_unc=None):
+    """Freeze model configuration and build a NumPyro function with no writes.
 
-    The returned function has the signature ``model(time, flux, lc_unc)``
-    and internally:
-
-    * sets the model's data attributes (time, flux, lc_unc)
-    * samples all parameters via ``sample_prior_dict``
-    * builds the scatter array using ``evaluate_composite_scatter``
-    * evaluates the mean model with ``evaluate_composite_model``
-    * calls ``_define_likelihood`` to register the numpyro likelihood
-      (including any GP components).
+    Data and sampled parameters are explicit inputs to the numerical kernels.
+    The observation mask is fixed at construction for GP fits, so the number
+    of GP training points is static under JIT. Rebuild this function when the
+    mask or channel configuration changes. Non-JAX components remain supported
+    by the ordinary CompositeModel and derivative-free fitters.
     """
+    model = deepcopy(composite_model)
+    if time is not None:
+        model.time = np.ma.filled(time, np.nan)
+    if flux is not None:
+        model.flux = np.ma.filled(flux, np.nan)
+    if lc_unc is not None:
+        model.lc_unc = np.ma.filled(lc_unc, np.nan)
+
+    def validate(component):
+        if not isinstance(component, JaxModel):
+            raise TypeError(f"{component.name} is not JAX-compatible; use a "
+                            "derivative-free fitter for mixed models.")
+        for child in component.components:
+            validate(child)
+
+    for component in model.components:
+        validate(component)
+        if component.modeltype == 'GP' and hasattr(model, 'lc_unc'):
+            component.configure_mask(model.time, model.flux, model.lc_unc)
+
     def numpyro_model(time, flux, lc_unc):
-        # Attach data to the composite model for component access
-        composite_model.time = time
-        composite_model.flux = flux
-        composite_model.lc_unc = lc_unc
-
-        # Sample all parameters from their priors (or use fixed values)
-        param_dict = composite_model.sample_prior_dict()
-
-        # Build scatter array and evaluate the mean model (no GP here)
-        composite_model.scatter_array = evaluate_composite_scatter(
-            composite_model,
-            param_dict,
-        )
-        fit_lc = evaluate_composite_model(
-            composite_model,
-            param_dict,
-            incl_GP=False,
-        )
-
-        # Define likelihood, including GP if present
-        composite_model._define_likelihood(fit_lc, param_dict)
+        param_dict = model._prepare_param_dict(model.sample_prior_dict())
+        time = jnp.asarray(time)
+        flux = jnp.asarray(flux)
+        lc_unc = jnp.asarray(lc_unc)
+        # Invalid timestamps must not enter orbital computations: masking a
+        # NaN likelihood afterwards is insufficient to make its gradients safe.
+        if model.multwhite:
+            pieces = []
+            for chan in model.fitted_channels:
+                piece = split([time], model.nints, chan)[0]
+                mean_time = jnp.nan_to_num(jnp.nanmean(piece))
+                pieces.append(jnp.where(jnp.isfinite(piece), piece, mean_time))
+            safe_time = jnp.concatenate(pieces)
+        else:
+            mean_time = jnp.nan_to_num(jnp.nanmean(time))
+            safe_time = jnp.where(jnp.isfinite(time), time, mean_time)
+        scatter = build_scatter_array_jax(
+            lc_unc, time, model.nints, model.fitted_channels,
+            model.nchannel_fitted, model.multwhite, param_dict)
+        fit_lc = evaluate_composite_model(model, param_dict, time=safe_time)
+        if model.GP:
+            gps = [c for c in model.components if c.modeltype == 'GP']
+            if len(gps) != 1:
+                raise ValueError('Use one GP component per composite model.')
+            gps[0].sample_likelihood(
+                fit_lc, param_dict, time=time, flux=flux, scatter=scatter)
+        else:
+            valid_time = (jnp.isfinite(time) if model.multwhite else
+                          jnp.tile(jnp.isfinite(time), model.nchannel_fitted))
+            good = valid_time & jnp.isfinite(flux) & jnp.isfinite(lc_unc)
+            # Finite substitutes avoid NaNs in masked distribution operations.
+            mean = jnp.where(good, fit_lc, 0.)
+            scale = jnp.where(good, scatter, 1.)
+            observed = jnp.where(good, flux, 0.)
+            numpyro.sample('obs', Normal(mean, scale).mask(good), obs=observed)
 
     return numpyro_model
 
@@ -513,11 +570,44 @@ class JaxModel(Model):
             Any parameter named 'log' is skipped for compatibility with
             multiprocessing (Logedit objects cannot be pickled).
         """
+        # Support the existing coefficient-dictionary constructor without a
+        # second numerical model implementation in the compatibility layer.
+        if kwargs.get('parameters') is None:
+            parameters = Parameters()
+            for key, value in kwargs.get('coeff_dict', {}).items():
+                if key == 'name':
+                    kwargs.setdefault('name', value)
+                else:
+                    setattr(parameters, key, value)
+            kwargs['parameters'] = parameters
+
         self.default_name = 'New JaxModel'
         kwargs['name'] = kwargs.get('name', self.default_name)
+        kwargs.setdefault('nchannel_fitted', kwargs.get('nchan', 1))
+        kwargs.setdefault('fitted_channels',
+                          list(range(kwargs['nchannel_fitted'])))
+        kwargs.setdefault('num_planets', 1)
 
         # Inherit from Model class
         super().__init__(**kwargs)
+
+    def _channels(self, channel=None):
+        if channel is not None and channel not in self.fitted_channels:
+            raise ValueError(f'Channel {channel} not in fitted_channels '
+                             f'{self.fitted_channels}.')
+        return super()._channels(channel)
+
+    def _prepare_param_dict(self, param_dict=None):
+        """Combine static configuration with numerical parameter overrides.
+
+        Strings such as the limb-darkening law remain Python constants;
+        sampled arrays stay in JAX and are never stored on the wrapper.
+        """
+        values = {name: getattr(self.parameters, name).value
+                  for name in self.parameters.params}
+        if param_dict is not None:
+            values.update(param_dict)
+        return channel_parameters(values, self.fitted_channels, self.wl_groups)
 
     def _get_param_dict(self):
         """Construct a dictionary of parameter values from self.parameters,
@@ -547,7 +637,9 @@ class JaxModel(Model):
             their respective prior distributions (or fixed values).
         """
         return {
-            name: self.sample_prior(getattr(self.parameters, name), name)
+            name: (self.sample_prior(getattr(self.parameters, name), name)
+                   if self.freenames is None or name in self.freenames
+                   else getattr(self.parameters, name).value)
             for name in self.parameters.params
         }
 
@@ -567,6 +659,9 @@ class JaxModel(Model):
         attrs = ['flux', 'time']
         if not all([hasattr(other, attr) for attr in attrs]):
             raise TypeError('Only another Model instance may be multiplied.')
+
+        if not isinstance(other, JaxModel):
+            return Model.__mul__(self, other)
 
         # Combine the model parameters too
         parameters = self.parameters + other.parameters
@@ -607,8 +702,9 @@ class JaxModel(Model):
         flux_array : sequence
             The flux array
         """
-        if not isinstance(flux_array, (np.ndarray, tuple, list, type(None))):
-            raise TypeError('flux axis must be a tuple, list, or numpy array.')
+        array_types = (np.ndarray, jnp.ndarray, tuple, list, type(None))
+        if not isinstance(flux_array, array_types):
+            raise TypeError('Flux must be a tuple, list, NumPy or JAX array.')
 
         if hasattr(flux_array, "filled"):
             # Convert masked arrays to regular arrays with NaNs
@@ -624,8 +720,9 @@ class JaxModel(Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time"""
-        if not isinstance(time_array, (np.ndarray, tuple, list, type(None))):
-            raise TypeError('Time axis must be a tuple, list, or numpy array.')
+        array_types = (np.ndarray, jnp.ndarray, tuple, list, type(None))
+        if not isinstance(time_array, array_types):
+            raise TypeError('Time must be a tuple, list, NumPy or JAX array.')
 
         if hasattr(time_array, "filled"):
             # Convert masked arrays to regular arrays with NaNs
@@ -656,9 +753,7 @@ class JaxModel(Model):
             Additional parameters to pass to self.eval().
         """
         # Inherit from Model class but add the eval argument for jax models
-        return super().interp(
-            new_time, nints, eval=eval, channel=channel, **kwargs,
-        )
+        return self.eval(time=new_time, nints=nints, channel=channel, **kwargs)
 
     def sample_prior(self, param, parname):
         """Sample from a parameter's prior distribution using numpyro.
@@ -678,6 +773,9 @@ class JaxModel(Model):
         """
         if param.ptype in ['fixed', 'independent']:
             return param.value
+        elif param.prior is None:
+            return numpyro.sample(parname, ImproperUniform(
+                constraints.real, (), ()))
         elif param.prior == 'U':
             return numpyro.sample(
                 parname, Uniform(param.priorpar1, param.priorpar2),
@@ -727,7 +825,8 @@ class JaxModel(Model):
                 )
         elif param.prior == 'LU':
             return numpyro.sample(
-                parname, LogUniform(param.priorpar1, param.priorpar2),
+                parname, LogUniform(jnp.exp(param.priorpar1),
+                                    jnp.exp(param.priorpar2)),
             )
         elif param.prior == 'LN':
             return numpyro.sample(
@@ -742,6 +841,7 @@ class JaxModel(Model):
 
 class CompositeJaxModel(JaxModel, CompositeModel):
     """A class to create composite models."""
+
     def __init__(self, components, **kwargs):
         """Initialize the composite model.
 
@@ -771,88 +871,9 @@ class CompositeJaxModel(JaxModel, CompositeModel):
         """
         self.scatter_array = evaluate_composite_scatter(self, param_dict)
 
-    def _define_likelihood(self, fit_lc, param_dict):
-        """Define the numpyro likelihood function for the model.
-
-        This function uses the current model prediction (`fit_lc`) and
-        the scatter_array to define the observational likelihood. If
-        any GP components are included, they are used to define a
-        GP-based likelihood for each channel. Otherwise, a Gaussian
-        (Normal) likelihood is assumed.
-
-        Parameters
-        ----------
-        fit_lc : jnp.ndarray
-            The model flux array excluding GP contributions.
-        param_dict : dict
-            Dictionary of parameter values sampled from priors or provided
-            externally.
-        """
-        if self.GP:
-            # Identify the GP component and its associated GP objects
-            for component in self.components:
-                if component.modeltype == 'GP':
-                    gps = component.gps
-
-            # Loop through channels to apply GP likelihoods
-            for c in range(self.nchannel_fitted):
-                if self.nchannel_fitted > 1:
-                    chan = self.fitted_channels[c]
-                    flux, fit_temp = split(
-                        [self.flux, fit_lc],
-                        self.nints, chan,
-                    )
-                    if self.multwhite:
-                        time = split([self.time], self.nints, chan)[0]
-                    else:
-                        time = self.time
-                else:
-                    chan = 0
-                    flux = self.flux
-                    fit_temp = fit_lc
-                    time = self.time
-
-                residuals = flux - fit_temp
-
-                # Remove poorly handled masked values
-                good = jnp.isfinite(time) & jnp.isfinite(residuals)
-                residuals = residuals[good]
-                setattr(
-                    self.model, f'obs_{c}',
-                    numpyro.sample(
-                        f'obs_{c}', gps[c].numpyro_dist(), obs=residuals,
-                    ),
-                )
-        else:
-            numpyro.sample(
-                'obs', Normal(fit_lc, self.scatter_array), obs=self.flux,
-            )
-
     def __call__(self, time, flux, lc_unc):
-        """Setup the model for either plotting or probabilistic sampling.
-
-        Parameters
-        ----------
-        time : array-like
-            The time axis to use.
-        flux : array-like
-            The observed flux.
-        lc_unc : array-like
-            The estimated uncertainties from Stages 3-4.
-        """
-        self.time = time
-        self.flux = flux
-        self.lc_unc = lc_unc
-
-        # Sample model parameters from their priors
-        param_dict = self.sample_prior_dict()
-
-        # Build scatter array and evaluate mean model (no GP here)
-        self.scatter_array = evaluate_composite_scatter(self, param_dict)
-        fit_lc = evaluate_composite_model(self, param_dict, incl_GP=False)
-
-        # Define likelihood, including GP if present
-        self._define_likelihood(fit_lc, param_dict)
+        """Evaluate a NumPyro model without changing this wrapper's state."""
+        return make_numpyro_composite_model(self)(time, flux, lc_unc)
 
     def eval(self, channel=None, incl_GP=False, param_dict=None, **kwargs):
         """Evaluate the model components.

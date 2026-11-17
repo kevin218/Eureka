@@ -3,9 +3,8 @@ import jax.numpy as jnp
 from typing import Optional, Any
 
 from ...lib.split_channels import split
-from ...lib.readEPF import Parameters
 from . import JaxModel
-from .JaxModel import get_param_names, get_param_index_map, get_param_array
+from .JaxModel import get_param_index_map, get_param_array
 
 
 def evaluate_polynomial_model_jax(
@@ -95,8 +94,6 @@ class PolynomialModel(JaxModel):
         self.name: str = 'polynomial'
         self.modeltype: str = 'systematic'
 
-        self.parameters: Parameters = kwargs.get('parameters', Parameters())
-
         # Infer maximum polynomial order from existing coefficients
         ckeys = [
             k for k in self.parameters.dict
@@ -108,52 +105,6 @@ class PolynomialModel(JaxModel):
         assert self.order > 0, (
             "No valid polynomial coefficients (e.g., c0) found in parameters."
         )
-
-        # Load configuration values
-        self.nchannel_fitted: int = kwargs.get('nchan', 1)
-        self.multwhite: bool = kwargs.get('multwhite', False)
-        self.fitted_channels: list[int] = kwargs.get(
-            'fitted_channels', list(range(self.nchannel_fitted))
-        )
-        self.nints: list[int] = kwargs.get('nints', [0] * self.nchannel_fitted)
-
-        # Initialize internal variables
-        self._time: Optional[ArrayLike] = None
-        self.time_local: Optional[ArrayLike] = None
-        self.total_length: Optional[int] = None
-        self._coeff_index_matrix: Optional[ArrayLike] = None
-        self._param_names: Optional[list[str]] = None
-        self._param_index_map: Optional[dict[str, int]] = None
-
-    @property
-    def time(self) -> Optional[ArrayLike]:
-        """Get the time array."""
-        return self._time
-
-    @time.setter
-    def time(self, time_array: Any) -> None:
-        """Set the time array and generate time_local centered arrays."""
-        if hasattr(time_array, "filled"):
-            time_array = time_array.filled(jnp.nan)
-        self._time = jnp.array(time_array)
-
-        if self._time is not None:
-            if self.multwhite:
-                # Build channel-separated centered time arrays,
-                # concatenated in fitted_channels order.
-                time_local = []
-                self.total_length = 0
-                for chan in self.fitted_channels:
-                    time = split([self._time], self.nints, chan)[0]
-                    self.total_length += time.size
-                    time_local.append(time - jnp.nanmean(time))
-                self.time_local = jnp.concatenate(time_local)
-            else:
-                # Center full time array and tile for channels
-                self.time_local = self._time - jnp.nanmean(self._time)
-                self.total_length = (
-                    self.time_local.size * self.nchannel_fitted
-                )
 
     def build_coeff_index_matrix(
         self,
@@ -213,46 +164,33 @@ class PolynomialModel(JaxModel):
         jnp.ndarray
             The model flux array at the times in self.time.
         """
-        if param_dict is None:
-            param_dict = self._get_param_dict()
-        if self._param_names is None:
-            self._param_names = get_param_names(self)
-        if self._param_index_map is None:
-            self._param_index_map = get_param_index_map(self._param_names)
-        if self._coeff_index_matrix is None:
-            self._coeff_index_matrix = self.build_coeff_index_matrix(
-                self._param_index_map)
-        param_array = get_param_array(param_dict, self._param_names)
+        param_dict = self._prepare_param_dict(param_dict)
+        channels = list(self._channels(channel)[1])
+        nints_global = kwargs.get('nints', self.nints)
+        data = jnp.asarray(kwargs.get('time', self.time))
+        pieces = []
+        for chan in channels:
+            piece = split([data], nints_global, chan)[
+                0] if self.multwhite else data
+            pieces.append(piece - jnp.nanmean(piece))
+        data_local = jnp.concatenate(pieces) if self.multwhite else pieces[0]
+        nints = [len(piece) for piece in pieces]
 
-        if channel is not None:
-            if channel not in self.fitted_channels:
-                raise ValueError(
-                    f"Channel {channel} not in fitted_channels "
-                    f"{self.fitted_channels}."
-                )
-            chan_idx = list(self.fitted_channels).index(channel)
-            nints = [self.nints[channel]]
-            coeff_index_matrix = self._coeff_index_matrix[
-                chan_idx:chan_idx + 1
-            ]
-
-            if self.multwhite:
-                start = sum(
-                    self.nints[c] for c in self.fitted_channels[:chan_idx]
-                )
-                stop = start + self.nints[channel]
-                time = self.time_local[start:stop]
-            else:
-                time = self.time_local
-        else:
-            nints = [self.nints[c] for c in self.fitted_channels]
-            coeff_index_matrix = self._coeff_index_matrix
-            time = self.time_local
-
+        param_dict = dict(param_dict)
+        for i in range(self.order):
+            param_dict.setdefault(f'c{i}', 0.)
+        param_names = [key for key, value in param_dict.items()
+                       if not isinstance(value, str) and value is not None]
+        param_array = get_param_array(param_dict, param_names)
+        param_index_map = get_param_index_map(param_names)
+        matrix = self.build_coeff_index_matrix(param_index_map)
+        positions = [list(self.fitted_channels).index(chan)
+                     for chan in channels]
+        matrix = matrix[jnp.array(positions)]
         return evaluate_polynomial_model_jax(
-            time_locals=time,
+            time_locals=data_local,
             nints=nints,
-            coeff_index_matrix=coeff_index_matrix,
+            coeff_index_matrix=matrix,
             param_array=param_array,
-            multwhite=self.multwhite
+            multwhite=self.multwhite,
         )

@@ -72,6 +72,8 @@ def _build_spot_arrays(
         lat = _get_channel_param(param_dict, f'spotlat{suffix}', channel)
         lon = _get_channel_param(param_dict, f'spotlon{suffix}', channel)
 
+        if rad is None or lat is None or lon is None:
+            continue
         spot_rads.append(jnp.asarray(rad))
         spot_lats.append(jnp.asarray(lat))
         spot_lons.append(jnp.asarray(lon))
@@ -196,6 +198,7 @@ def evaluate_fleck_transit_model_jax(
 
 class FleckTransitModel(JaxModel):
     """Transit model with star spots using ``fleck.jax``."""
+
     def __init__(self, **kwargs: Any) -> None:
         """Initialize the fleck model
 
@@ -213,11 +216,10 @@ class FleckTransitModel(JaxModel):
 
         # Precompute spot base names (no channel suffix), e.g. spotrad,
         # spotrad1, etc. This mirrors the starry model logic.
-        self.spot_bases: List[str] = [
-            name
-            for name in self.parameters.dict.keys()
-            if 'spotrad' in name and '_' not in name
-        ]
+        self.spot_bases = sorted({
+            name.split('_')[0] for name in self.parameters.dict
+            if name.split('_')[0].startswith('spotrad')
+        })
 
     def eval(
         self,
@@ -241,8 +243,7 @@ class FleckTransitModel(JaxModel):
         jnp.ndarray
             The model light curve evaluated at observation times.
         """
-        if param_dict is None:
-            param_dict = self._get_param_dict()
+        param_dict = self._prepare_param_dict(param_dict)
 
         if channel is None:
             fitted_channels = list(self.fitted_channels)
@@ -250,8 +251,8 @@ class FleckTransitModel(JaxModel):
             fitted_channels = [channel]
 
         return evaluate_fleck_transit_model_jax(
-            time_global=self.time,
-            nints=self.nints,
+            time_global=kwargs.get('time', self.time),
+            nints=kwargs.get('nints', self.nints),
             multwhite=self.multwhite,
             fitted_channels=fitted_channels,
             num_planets=self.num_planets,

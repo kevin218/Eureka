@@ -74,6 +74,8 @@ def evaluate_step_model_jax(
         else:
             time = time_global
 
+        time = time - jnp.nanmin(time)
+
         # Start at unity and add step contributions
         lcpiece = jnp.ones_like(time)
 
@@ -117,9 +119,12 @@ class StepModel(JaxModel):
         self.name = "step"
         self.modeltype = "systematic"
 
-        # Allow configuration of how many step{i}/steptime{i} pairs to read.
-        # Defaults to 10 to preserve legacy behaviour.
-        self.max_steps: int = getattr(self, "max_steps", 10)
+        indices = [int(key.split('_')[0][4:])
+                   for key in self.parameters.dict
+                   if key.split('_')[0].startswith('step')
+                   and key.split('_')[0][4:].isdigit()]
+        self.max_steps = max(getattr(self, 'max_steps', 10),
+                             max(indices, default=-1) + 1)
 
     def eval(
         self,
@@ -143,8 +148,7 @@ class StepModel(JaxModel):
         jnp.ndarray
             Multiplicative step model evaluated at observation times.
         """
-        if param_dict is None:
-            param_dict = self._get_param_dict()
+        param_dict = self._prepare_param_dict(param_dict)
 
         if channel is None:
             fitted_channels = self.fitted_channels
@@ -152,8 +156,8 @@ class StepModel(JaxModel):
             fitted_channels = [channel]
 
         return evaluate_step_model_jax(
-            time_global=self.time,
-            nints=self.nints,
+            time_global=kwargs.get('time', self.time),
+            nints=kwargs.get('nints', self.nints),
             multwhite=self.multwhite,
             fitted_channels=fitted_channels,
             param_dict=param_dict,
