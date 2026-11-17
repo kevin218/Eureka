@@ -4,9 +4,9 @@ import fleck.jax as fleck
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
+from ...lib.split_channels import split
 from . import JaxModel
 from .AstroModel import compute_astroparams
-from ...lib.split_channels import split
 
 
 def _get_channel_param(

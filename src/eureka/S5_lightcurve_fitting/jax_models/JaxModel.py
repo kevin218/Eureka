@@ -1,15 +1,16 @@
-from copy import copy, deepcopy
 import re
+from copy import copy, deepcopy
+
+import jax.numpy as jnp
 import numpy as np
 import numpyro
-import jax.numpy as jnp
-from numpyro.distributions import (
-    Normal, Uniform, LogUniform, LogNormal, TruncatedNormal, ImproperUniform,
-    constraints)
+from numpyro.distributions import (ImproperUniform, LogNormal, LogUniform,
+                                   Normal, TruncatedNormal, Uniform,
+                                   constraints)
 
-from ..models.Model import Model, CompositeModel
 from ...lib.readEPF import Parameters
 from ...lib.split_channels import split
+from ..models.Model import CompositeModel, Model
 
 
 def get_param_names(model):

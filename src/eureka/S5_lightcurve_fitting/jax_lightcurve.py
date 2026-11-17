@@ -1,7 +1,7 @@
 import numpy as np
 
-from .jax_models import JaxModel
 from . import lightcurve
+from .jax_models import JaxModel
 
 
 class LightCurve(lightcurve.LightCurve, JaxModel):

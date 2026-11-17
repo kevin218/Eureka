@@ -1,14 +1,14 @@
-from typing import Any, Dict, Optional, List
 import re
+from typing import Any, Dict, List, Optional
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 from jaxoplanet.core.kepler import kepler
 
-from .JaxModel import JaxModel
+from ...lib.split_channels import split
 # Importing these here to give access to other differentiable models
 from ..models.AstroModel import get_ecl_midpt, true_anomaly  # NOQA: F401, E501
-from ...lib.split_channels import split
+from .JaxModel import JaxModel
 
 
 def compute_astroparams(

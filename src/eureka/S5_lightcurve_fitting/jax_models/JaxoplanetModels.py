@@ -1,19 +1,17 @@
+import inspect
 from typing import Any, Dict, List, Optional
 
-import inspect
+import jax.numpy as jnp
 import numpy as np
 from astropy import constants as const
 from jax.typing import ArrayLike
-import jax.numpy as jnp
-
-from jaxoplanet.orbits.keplerian import Central, System, Body
 from jaxoplanet.light_curves import limb_dark_light_curve
+from jaxoplanet.orbits.keplerian import Body, Central, System
 
+from ...lib.split_channels import split
+from ..limb_darkening_fit import ld_profile
 from . import JaxModel
 from .AstroModel import compute_astroparams
-from ..limb_darkening_fit import ld_profile
-from ...lib.split_channels import split
-
 
 jnp_Rsun = jnp.array(const.R_sun.value)
 jnp_Msun = jnp.array(const.M_sun.value)

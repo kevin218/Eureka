@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Optional
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
+from ...lib.split_channels import split
 from . import JaxModel
 from .AstroModel import compute_astroparams, orbital_phase_jax
-from ...lib.split_channels import split
 
 
 def evaluate_quasi_lambertian_phase_curve_jax(

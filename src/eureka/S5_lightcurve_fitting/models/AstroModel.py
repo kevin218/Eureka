@@ -2,8 +2,8 @@ import inspect
 from copy import copy
 
 import astropy.constants as const
-import numpy as np
 import jax.numpy as jnp
+import numpy as np
 
 from ...lib.split_channels import split
 from ..limb_darkening_fit import ld_profile

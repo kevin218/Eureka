@@ -1,10 +1,11 @@
-from jax.typing import ArrayLike
+from typing import Any, Optional
+
 import jax.numpy as jnp
-from typing import Optional, Any
+from jax.typing import ArrayLike
 
 from ...lib.split_channels import split
 from . import JaxModel
-from .JaxModel import get_param_index_map, get_param_array
+from .JaxModel import get_param_array, get_param_index_map
 
 
 def evaluate_exp_ramp_model_jax(

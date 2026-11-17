@@ -3,8 +3,8 @@ from typing import Any, Dict, List, Optional
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
-from . import JaxModel
 from ...lib.split_channels import split
+from . import JaxModel
 
 
 def _get_channel_param(

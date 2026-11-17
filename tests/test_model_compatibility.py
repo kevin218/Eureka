@@ -7,10 +7,11 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from eureka.S5_lightcurve_fitting import jax_models as jm, models
-from eureka.S5_lightcurve_fitting.jax_models.JaxModel import (
-    make_numpyro_composite_model,
-)
+from eureka.S5_lightcurve_fitting import jax_models as jm
+from eureka.S5_lightcurve_fitting import models
+from eureka.S5_lightcurve_fitting.jax_models.JaxModel import \
+    make_numpyro_composite_model
+
 from .test_jax_models import SYSTEMATICS, config, orbit, parameters
 
 
@@ -87,8 +88,10 @@ def test_public_centroid_evaluation(axis):
 
 
 def test_public_common_mode_evaluation(tmp_path):
-    from astropy.table import Table
     from types import SimpleNamespace
+
+    from astropy.table import Table
+
     from eureka.lib.logedit import Logedit
 
     series = np.linspace(1.0, 1.1, 11)
@@ -129,10 +132,11 @@ def test_mixed_public_models_work_but_are_rejected_by_hmc(jax_first):
 )
 def test_tinygp_kernel_is_shared_by_both_fitters(kernel_name):
     from types import SimpleNamespace
+
     import tinygp
-    from eureka.S5_lightcurve_fitting.jax_models.GPModel import (
-        build_tinygp_kernel,
-    )
+
+    from eureka.S5_lightcurve_fitting.jax_models.GPModel import \
+        build_tinygp_kernel
 
     pars = parameters(A=-12.0, m=-2.0)
     time = np.linspace(0.0, 1.0, 11)

@@ -1,25 +1,24 @@
-from typing import Any, Dict, List, Optional
 import inspect
 import re
 from functools import lru_cache
-import numpy as np
+from typing import Any, Dict, List, Optional
+
 import jax
+import jax.numpy as jnp
+import numpy as np
 from astropy import constants as const
 from jax.typing import ArrayLike
-import jax.numpy as jnp
-
 from jaxoplanet.orbits.keplerian import Central
-from jaxoplanet.starry.ylm import Ylm
 from jaxoplanet.starry.core.rotation import dot_rotation_matrix
+from jaxoplanet.starry.light_curves import light_curve, surface_light_curve
+from jaxoplanet.starry.orbit import SurfaceBody, SurfaceSystem
 from jaxoplanet.starry.surface import Surface
-from jaxoplanet.starry.orbit import SurfaceSystem, SurfaceBody
-from jaxoplanet.starry.light_curves import surface_light_curve, light_curve
+from jaxoplanet.starry.ylm import Ylm
 
+from ...lib.split_channels import split
+from ..limb_darkening_fit import ld_profile
 from . import JaxModel
 from .AstroModel import compute_astroparams, eclipse_midpoint_jax
-from ..limb_darkening_fit import ld_profile
-from ...lib.split_channels import split
-
 
 jnp_Rsun = jnp.array(const.R_sun.value)
 jnp_Msun = jnp.array(const.M_sun.value)

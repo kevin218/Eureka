@@ -1,12 +1,12 @@
 """Functional tinygp likelihoods and an ordinary Stage 5 model wrapper."""
-import numpy as np
 import jax.numpy as jnp
+import numpy as np
 import numpyro
 import tinygp
 
+from ...lib.split_channels import split
 from . import JaxModel
 from .JaxModel import build_scatter_array_jax
-from ...lib.split_channels import split
 
 
 def build_tinygp_kernel(kernel_name, log_amplitude, log_metric):

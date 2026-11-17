@@ -2,9 +2,9 @@
 import jax.numpy as jnp
 import numpy as np
 
-from . import JaxModel
 from ...lib import astropytable
 from ...lib.split_channels import split
+from . import JaxModel
 
 
 def evaluate_common_mode_jax(time, cm_flux, nints, multwhite,

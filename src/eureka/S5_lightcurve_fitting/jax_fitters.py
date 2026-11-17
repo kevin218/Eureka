@@ -1,23 +1,26 @@
-import numpy as np
 import sys
 from io import StringIO
+
 import arviz
+import numpy as np
 from astropy import table
+
 try:
     import jax
     import numpyro
     import numpyro_ext
     from numpyro.infer import MCMC, NUTS
+
     from .jax_models.JaxModel import build_scatter_array_jax
 except ModuleNotFoundError:
     # jax hasn't been installed
     pass
 
 from ..lib.split_channels import get_trim
-from .likelihood import computeRedChiSq, lnprob
 from . import plots_s5 as plots
 from .fitters import group_variables, load_old_fitparams, save_fit
 from .jax_models.JaxModel import make_numpyro_composite_model
+from .likelihood import computeRedChiSq, lnprob
 
 
 def jaxoptfitter(lc, model, meta, log, calling_function='jaxopt',

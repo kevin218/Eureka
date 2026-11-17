@@ -10,14 +10,12 @@ import pytest
 from numpyro.infer.util import log_density
 
 from eureka.lib.readEPF import Parameters
-from eureka.S5_lightcurve_fitting import jax_models as jm, models
+from eureka.S5_lightcurve_fitting import jax_models as jm
+from eureka.S5_lightcurve_fitting import models
+from eureka.S5_lightcurve_fitting.jax_models.AstroModel import \
+    compute_astroparams
 from eureka.S5_lightcurve_fitting.jax_models.JaxModel import (
-    build_scatter_array_jax,
-    make_numpyro_composite_model,
-)
-from eureka.S5_lightcurve_fitting.jax_models.AstroModel import (
-    compute_astroparams,
-)
+    build_scatter_array_jax, make_numpyro_composite_model)
 
 
 def parameters(**values):
@@ -459,8 +457,8 @@ def test_nonzero_channel_and_explicit_data(name):
 @pytest.mark.parametrize("fitter", ["jaxopt", "nuts"])
 @pytest.mark.parametrize("gp", [False, True])
 def test_fitters_save_and_reuse_model(tmp_path, fitter, gp):
-    from eureka.S5_lightcurve_fitting import jax_fitters, jax_lightcurve
     from eureka.lib.logedit import Logedit
+    from eureka.S5_lightcurve_fitting import jax_fitters, jax_lightcurve
 
     model, time, flux, unc = composite(gp=gp)
     model.freenames = ["c0"]
@@ -537,11 +535,9 @@ def test_phasecurve_keplerian_expectations_for_eccentric_orbits(name, ecc):
         pars, time=np.linspace(-0.05, 0.95, 31), force_positivity=True
     )
     model = getattr(jm, name)(**cfg)
-    from eureka.S5_lightcurve_fitting.models.AstroModel import (
-        PlanetParams,
-        true_anomaly,
-        get_ecl_midpt,
-    )
+    from eureka.S5_lightcurve_fitting.models.AstroModel import (PlanetParams,
+                                                                get_ecl_midpt,
+                                                                true_anomaly)
 
     astro = PlanetParams(model)
     if ecc == 0.0:
@@ -632,10 +628,11 @@ def test_numpy_and_numpyro_likelihood_agree_with_missing_data(gp):
     ],
 )
 def test_stage5_fit_channel_dispatch_and_plot(tmp_path, fitter, transit):
+    from astropy.table import Table
+
+    from eureka.lib.logedit import Logedit
     from eureka.S5_lightcurve_fitting import s5_fit
     from eureka.S5_lightcurve_fitting.s5_meta import S5MetaClass
-    from eureka.lib.logedit import Logedit
-    from astropy.table import Table
 
     pars = orbit(c0=1.0, c1=0.02)
     pars.c0 = 1.0, "free", 0.9, 1.1, "U"
@@ -701,6 +698,7 @@ def test_stage5_fit_channel_dispatch_and_plot(tmp_path, fitter, transit):
 @pytest.mark.parametrize("multwhite", [False, True])
 def test_common_mode_jit_and_analytic_values(tmp_path, multwhite):
     from astropy.table import Table
+
     from eureka.lib.logedit import Logedit
 
     time = np.linspace(0.0, 0.1, 11)

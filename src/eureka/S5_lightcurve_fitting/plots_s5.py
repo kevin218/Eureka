@@ -10,10 +10,10 @@ try:
     from mc3.stats import time_avg
 except ModuleNotFoundError:
     print("Could not import MC3. No RMS time-averaging plots will be made.")
-import corner
 import arviz as az
-from arviz.rcparams import rcParams as az_rcParams
+import corner
 import fleck
+from arviz.rcparams import rcParams as az_rcParams
 from scipy import stats
 
 try:
@@ -948,8 +948,8 @@ def plot_starry_star(lc, model, meta, fitter):
     fitter : str
         The name of the fitter (for plot filename).
     """
-    from .jax_models.JaxoplanetStarryModels import build_stellar_surface
     from .jax_models.AstroModel import compute_astroparams
+    from .jax_models.JaxoplanetStarryModels import build_stellar_surface
 
     def find_starry(component):
         if component.name == 'starry':

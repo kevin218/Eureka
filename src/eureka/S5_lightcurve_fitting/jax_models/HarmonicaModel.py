@@ -1,16 +1,15 @@
-from typing import Any, Dict, List, Optional
-
 import inspect
-import numpy as np
-from jax.typing import ArrayLike
+from typing import Any, Dict, List, Optional
 
 import harmonica.jax as harmonica
 import jax.numpy as jnp
+import numpy as np
+from jax.typing import ArrayLike
 
+from ...lib.split_channels import split
+from ..limb_darkening_fit import ld_profile
 from . import JaxModel
 from .AstroModel import compute_astroparams
-from ..limb_darkening_fit import ld_profile
-from ...lib.split_channels import split
 
 
 def evaluate_harmonica_transit_model_jax(
