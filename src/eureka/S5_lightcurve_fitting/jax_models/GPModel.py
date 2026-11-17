@@ -5,8 +5,7 @@ import numpyro
 import tinygp
 
 from ...lib.split_channels import split
-from . import JaxModel
-from .JaxModel import build_scatter_array_jax
+from .JaxModel import JaxModel, build_scatter_array_jax
 
 
 def build_tinygp_kernel(kernel_name, log_amplitude, log_metric):

@@ -8,8 +8,8 @@ from jax.typing import ArrayLike
 
 from ...lib.split_channels import split
 from ..limb_darkening_fit import ld_profile
-from . import JaxModel
 from .AstroModel import compute_astroparams
+from .JaxModel import JaxModel
 
 
 def evaluate_harmonica_transit_model_jax(

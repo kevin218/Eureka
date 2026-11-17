@@ -5,6 +5,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import rcParams
+from matplotlib.patches import Ellipse
 
 try:
     from mc3.stats import time_avg
@@ -12,8 +13,6 @@ except ModuleNotFoundError:
     print("Could not import MC3. No RMS time-averaging plots will be made.")
 import arviz as az
 import corner
-import fleck
-from arviz.rcparams import rcParams as az_rcParams
 from scipy import stats
 
 try:
@@ -589,7 +588,7 @@ def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
         Additional keyword arguments to pass to pm.traceplot.
     """
 
-    max_subplots = az_rcParams['plot.max_subplots'] // 2
+    max_subplots = az.rcParams['plot.max_subplots'] // 2
     nplots = int(np.ceil(len(freenames)/max_subplots))
     npanels = min([len(freenames), max_subplots])
 
@@ -878,6 +877,8 @@ def plot_fleck_star(lc, model, meta, fitter):
     fitter : str
         The name of the fitter (for plot filename).
     """
+    from .jax_models.FleckModel import build_fleck_star
+
     for chan in lc.fitted_channels:
         # Initialize PlanetParams object
         pl_params = PlanetParams(model, 0, chan)
@@ -908,18 +909,38 @@ def plot_fleck_star(lc, model, meta, fitter):
         fig.set_size_inches(8, 6, forward=True)
         fig.clf()
         ax = fig.gca()
-        star = fleck.jax.ActiveStar(
-            times=np.array([pl_params.t0,]),
-            lon=spotlon * np.pi / 180.,
-            lat=spotlat * np.pi / 180.,
-            rad=spotrad,
-            contrast=pl_params.spotcon,
-            inclination=pl_params.spotstari * np.pi / 180.,
-            P_rot=pl_params.spotrot
-        )
-        ax = star.plot_star(pl_params.t0, pl_params.rp, pl_params.a,
-                            pl_params.inc_rad, pl_params.ecc, pl_params.w_rad,
-                            ax=ax)
+        star = build_fleck_star(
+            np.array([pl_params.t0]), spotrad, spotlat, spotlon,
+            np.full(spotrad.shape, pl_params.spotcon),
+            pl_params.spotstari, pl_params.spotrot)
+        coords = star.spot_coords(times=np.array([pl_params.t0]),
+                                 t0_rot=pl_params.t0)
+        x, y, z = [np.asarray(c)[0, :, 0, 0] for c in coords[:3]]
+
+        # Draw from the same projected coordinates used by the light curve.
+        # Older Fleck plotters require temperatures and squeeze single spots.
+        max_contrast = max(1., pl_params.spotcon)
+        ax.add_patch(plt.Circle(
+            (0, 0), 1, facecolor=str(1. / max_contrast), edgecolor='k'))
+        for i in range(len(spotrad)):
+            if z[i] < 0:
+                projected = np.sqrt(np.clip(
+                    1. - x[i]**2 - y[i]**2, 0., 1.))
+                ax.add_patch(Ellipse(
+                    (y[i], x[i]), width=2. * spotrad[i],
+                    height=2. * spotrad[i] * projected,
+                    angle=-np.degrees(np.arctan2(y[i], x[i])),
+                    facecolor=str(np.clip(
+                        pl_params.spotcon / max_contrast, 0., 1.)),
+                    edgecolor='k'))
+
+        impact = (pl_params.a * np.cos(pl_params.inc_rad) *
+                  (1. - pl_params.ecc**2) /
+                  (1. + pl_params.ecc * np.sin(pl_params.w_rad)))
+        for edge in [-abs(pl_params.rp), abs(pl_params.rp)]:
+            ax.axhline(-impact + edge, color='gray', ls='--')
+        ax.set(xlim=[-1.05, 1.05], ylim=[-1.05, 1.05], aspect='equal')
+        ax.axis('off')
 
         if lc.white:
             fname_tag = 'white'

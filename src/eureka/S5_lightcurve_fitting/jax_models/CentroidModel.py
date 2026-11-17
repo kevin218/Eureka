@@ -4,8 +4,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 from ...lib.split_channels import split
-from . import JaxModel
-from .JaxModel import get_param_array, get_param_index_map
+from .JaxModel import JaxModel, get_param_array, get_param_index_map
 
 
 def evaluate_centroid_model_jax(

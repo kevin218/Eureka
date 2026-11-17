@@ -1,3 +1,4 @@
+import inspect
 from typing import Any, Dict, List, Optional, Tuple
 
 import fleck.jax as fleck
@@ -5,8 +6,13 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 from ...lib.split_channels import split
-from . import JaxModel
 from .AstroModel import compute_astroparams
+from .JaxModel import JaxModel
+
+# The NumPy 2 branch uses spectra and colatitudes; newer Fleck versions
+# accept contrasts directly and use signed latitudes.
+_FLECK_HAS_CONTRAST = 'contrast' in inspect.signature(
+    fleck.ActiveStar).parameters
 
 
 def _get_channel_param(
@@ -92,6 +98,35 @@ def _build_spot_arrays(
     return spotrad_arr, spotlat_arr, spotlon_arr, spotcon_arr
 
 
+def build_fleck_star(time, spotrad, spotlat, spotlon, spotcon,
+                     spotstari, spotrot):
+    """Construct a Fleck star with Eureka's angle and contrast conventions."""
+    # Keep Eureka's signed latitudes and spot/photosphere flux ratios
+    # consistent across the two Fleck interfaces.
+    spotlat_rad = jnp.asarray(spotlat) * jnp.pi / 180.
+    if _FLECK_HAS_CONTRAST:
+        spot_kwargs = dict(lat=spotlat_rad, contrast=spotcon)
+    else:
+        # Older Fleck squeezes the wavelength axis for a single band,
+        # which then broadcasts time against time. Two identical bands
+        # retain that axis; take the first band from the result below.
+        spot_kwargs = dict(
+            lat=jnp.pi / 2. - spotlat_rad,
+            spectrum=spotcon[:, None] * jnp.ones((1, 2)),
+            phot=jnp.ones(2),
+            wavelength=jnp.ones(2),
+        )
+
+    return fleck.ActiveStar(
+        times=time,
+        lon=jnp.asarray(spotlon) * jnp.pi / 180.,
+        rad=spotrad,
+        inclination=spotstari * jnp.pi / 180.,
+        P_rot=spotrot,
+        **spot_kwargs,
+    )
+
+
 def evaluate_fleck_transit_model_jax(
     time_global: ArrayLike,
     nints: List[int],
@@ -154,16 +189,9 @@ def evaluate_fleck_transit_model_jax(
         spotstari_deg = astro_star.get('spotstari')
         spotrot = astro_star.get('spotrot')
 
-        # Construct the fleck ActiveStar (angles in radians)
-        star = fleck.ActiveStar(
-            times=time_chan,
-            lon=spotlon * jnp.pi / 180.,
-            lat=spotlat * jnp.pi / 180.,
-            rad=spotrad,
-            contrast=spotcon,
-            inclination=spotstari_deg * jnp.pi / 180.,
-            P_rot=spotrot,
-        )
+        star = build_fleck_star(
+            time_chan, spotrad, spotlat, spotlon, spotcon,
+            spotstari_deg, spotrot)
 
         for pid in range(num_planets):
             astro = compute_astroparams(param_dict, channel=chan, pid=pid)
@@ -184,7 +212,10 @@ def evaluate_fleck_transit_model_jax(
                 u1=astro['u1'],
                 u2=astro['u2'],
                 t0_rot=astro['t0']
-            )[0].reshape(-1)
+            )[0]
+            if not _FLECK_HAS_CONTRAST:
+                lc_raw = lc_raw[..., 0]
+            lc_raw = lc_raw.reshape(-1)
 
             # Invert if rp < 0
             lc_planet = jnp.where(inverse, 2. - lc_raw, lc_raw)

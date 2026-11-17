@@ -399,6 +399,51 @@ def test_orbital_wrappers_jit_grad_and_astro_composition(name):
     )
 
 
+@pytest.mark.parametrize("nspots", [1, 2])
+def test_fleck_unit_contrast_matches_unspotted_transit(nspots):
+    """One spectral channel must retain its time axis and flux scale."""
+    spots = dict(spotrad=0.05, spotlat=20.0, spotlon=10.0, spotcon=1.0)
+    if nspots == 2:
+        spots.update(spotrad1=0.03, spotlat1=-30.0, spotlon1=45.0,
+                     spotcon1=1.0)
+    pars = orbit(spotrot=1e12, spotstari=90.0, **spots)
+    cfg = config(pars)
+    model = jm.FleckTransitModel(**cfg)
+    expected = models.BatmanTransitModel(**cfg).eval()
+
+    actual = jax.jit(lambda rp: model.eval({"rp": rp}))(0.1)
+
+    assert actual.shape == cfg["time"].shape
+    np.testing.assert_allclose(actual, expected, atol=1e-7, rtol=0)
+
+
+def test_fleck_spot_plot_preserves_signed_latitude(tmp_path):
+    """Render the same spot geometry used by the fitted light curve."""
+    import matplotlib.pyplot as plt
+
+    from eureka.S5_lightcurve_fitting import plots_s5
+
+    pars = orbit(spotrot=1e12, spotstari=90.0, spotrad=0.05,
+                 spotlat=20.0, spotlon=10.0, spotcon=0.5)
+    model = jm.FleckTransitModel(**config(pars))
+    (tmp_path / "figs").mkdir()
+    meta = SimpleNamespace(outputdir=str(tmp_path) + "/", hide_plots=True)
+    lc = SimpleNamespace(fitted_channels=[0], white=True)
+
+    try:
+        plots_s5.plot_fleck_star(lc, model, meta, "test")
+        ax = plt.figure(5307).axes[0]
+        assert len(ax.patches) == 2  # Stellar disk and one projected spot.
+        expected = [np.cos(np.deg2rad(20)) * np.sin(np.deg2rad(10)),
+                    np.sin(np.deg2rad(20))]
+        np.testing.assert_allclose(ax.patches[1].center, expected, atol=1e-12)
+        assert len(ax.lines) == 2
+        assert list((tmp_path / "figs").glob(
+            "fig5307_white_fleck_star_test.*"))
+    finally:
+        plt.close(5307)
+
+
 def test_starry_zero_flux_is_differentiable_and_maps_affect_lightcurve():
     pars = orbit(fp=0.0, Y10=0.1, Y11=0.2, **{"Y1-1": -0.1})
     cfg = config(pars, time=np.linspace(0.2, 0.8, 21), ydeg=1)
@@ -514,6 +559,29 @@ def test_fitters_save_and_reuse_model(tmp_path, fitter, gp):
     # This failed in the old implementation after optimizer/sampler tracing.
     assert np.all(np.isfinite(result.eval(incl_GP=True)))
     assert result.physeval(interp=True)[0].shape == flux.shape
+
+
+def test_nuts_trace_plot_splits_posterior_into_saved_figures(tmp_path):
+    """Exercise ArviZ conversion and plotting with the supported API."""
+    import arviz as az
+
+    from eureka.S5_lightcurve_fitting import plots_s5
+
+    rng = np.random.default_rng(17)
+    freenames = ["c0", "c1", "c2"]
+    trace = az.from_dict(
+        posterior={name: rng.normal(size=(2, 32)) for name in freenames})
+    (tmp_path / "figs").mkdir()
+    meta = SimpleNamespace(outputdir=str(tmp_path) + "/", hide_plots=True)
+    lc = SimpleNamespace(white=True)
+
+    with az.rc_context({"plot.max_subplots": 4}):
+        plots_s5.plot_trace(trace, None, lc, freenames, meta)
+
+    figures = list((tmp_path / "figs").glob(
+        "fig5305_white_trace_nutsfigure*of2.*"))
+    assert len(figures) == 2
+    assert all(path.stat().st_size > 0 for path in figures)
 
 
 @pytest.mark.parametrize("ecc", [0.0, 0.2])

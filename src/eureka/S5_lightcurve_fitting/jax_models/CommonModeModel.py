@@ -4,7 +4,7 @@ import numpy as np
 
 from ...lib import astropytable
 from ...lib.split_channels import split
-from . import JaxModel
+from .JaxModel import JaxModel
 
 
 def evaluate_common_mode_jax(time, cm_flux, nints, multwhite,

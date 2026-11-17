@@ -113,12 +113,27 @@ NumPy has no package-wide upper bound. The maintained fleck fork extracts
 scalar spot coordinates explicitly and supports NumPy 2.4 in both transit
 modes and plotting.
 
+## ArviZ compatibility
+
+Stage 5 NUTS diagnostics currently require `arviz>=0.21,<1`. ArviZ 1.0
+replaced `InferenceData` and changed the trace-plotting API, so allowing that
+major release requires a separate migration of the diagnostics code.
+
+## JAX compatibility
+
+Stage 5 uses the maintained Harmonica fork pinned in `pyproject.toml` for
+JAX-compatible custom-call lowering. Upstream Harmonica's `main` branch
+still uses removed JAX/XLA interfaces, so substituting that branch breaks
+imports in a fresh environment. The oldest-practical constraints record
+the tested JAX 0.5 / NumPyro 0.19 stack; the latest-dependency lane can use
+newer releases without a package-wide JAX upper bound.
+
 ## CI expectations
 
 The permanent compatibility lane is intentionally small. The current tested
 floor is exercised in CI with:
 
-- Python 3.11.0
+- the latest available Python 3.11 patch release
 - the oldest-practical constraints file
 - `.[jwst,hst,test]`
 - the full `pytest tests` suite

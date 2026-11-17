@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 from ...lib.split_channels import split
-from . import JaxModel
+from .JaxModel import JaxModel
 
 
 def _maybe_get_channel_param(

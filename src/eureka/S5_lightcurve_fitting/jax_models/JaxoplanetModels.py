@@ -10,8 +10,8 @@ from jaxoplanet.orbits.keplerian import Body, Central, System
 
 from ...lib.split_channels import split
 from ..limb_darkening_fit import ld_profile
-from . import JaxModel
 from .AstroModel import compute_astroparams
+from .JaxModel import JaxModel
 
 jnp_Rsun = jnp.array(const.R_sun.value)
 jnp_Msun = jnp.array(const.M_sun.value)

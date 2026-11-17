@@ -1,5 +1,4 @@
 """Stage 5 model exports, sharing JAX implementations where supported."""
-# Load the base classes before JAX models import them during initialization.
 from ..jax_models import (CentroidModel, CommonModeModel,
                           DampedOscillatorModel, ExpRampModel, HSTRampModel,
                           LorentzianModel, PolynomialModel,

@@ -17,8 +17,8 @@ from jaxoplanet.starry.ylm import Ylm
 
 from ...lib.split_channels import split
 from ..limb_darkening_fit import ld_profile
-from . import JaxModel
 from .AstroModel import compute_astroparams, eclipse_midpoint_jax
+from .JaxModel import JaxModel
 
 jnp_Rsun = jnp.array(const.R_sun.value)
 jnp_Msun = jnp.array(const.M_sun.value)
