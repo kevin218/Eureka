@@ -187,8 +187,8 @@ class S3optMetaClass(MetaClass):
         self.scaling_MAED_white = getattr(self, 'scaling_MAED_white', 1.0)
 
         defaults = {
-            "sweep_bg_hw": range(15, 20),
-            "sweep_spec_hw": range(17, 25),
+            "sweep_spec_hw": range(15, 20),
+            "sweep_bg_hw": range(17, 25),
         }
 
         for key, default in defaults.items():

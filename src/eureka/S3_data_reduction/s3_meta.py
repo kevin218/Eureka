@@ -304,6 +304,7 @@ class S3MetaClass(MetaClass):
         self.record_ypos = getattr(self, 'record_ypos', False)
         self.xwindow = getattr(self, 'xwindow', [6, 2043])
         self.ywindow = getattr(self, 'ywindow', [0, -1])
+        self.pwcpos = getattr(self, 'pwcpos', None)
 
         # check for legacy trace offset name
         if hasattr(self, "trace_offset"):

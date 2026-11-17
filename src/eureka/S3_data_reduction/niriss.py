@@ -63,6 +63,14 @@ def read(filename, data, meta, log):
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
     int_times = hdulist['INT_TIMES', 1].data
+    if 'INT_TIMES_STRIPE' in hdulist:
+        # Record stripe times if using superstripe readout mode
+        int_times_stripe = hdulist['INT_TIMES_STRIPE', 1].data
+        nint = int_times_stripe['integration_number'].max() - \
+            int_times_stripe['integration_number'].min() + 1
+        nstripe = int_times_stripe['stripe_number'].max()
+        data['time_stripe'] = (['time', 'stripe'],
+            np.reshape(int_times_stripe['int_mid_BJD_TDB'], (nint, nstripe)))
 
     # Increase pixel resolution along cross-dispersion direction
     if meta.expand > 1:
@@ -133,8 +141,12 @@ def get_wave(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with...
     '''
-    # Report actual pupil position
-    pwcpos = data.attrs['mhdr']['PWCPOS']
+    if meta.pwcpos is None:
+        # Use pupil position reported in header
+        pwcpos = data.attrs['mhdr']['PWCPOS']
+    else:
+        # Use pupil position specified in ECF
+        pwcpos = meta.pwcpos
 
     log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
                  mute=(not meta.verbose))

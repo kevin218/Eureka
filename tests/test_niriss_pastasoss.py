@@ -2,13 +2,14 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import xarray as xr
 from jwst.extract_1d.soss_extract import pastasoss
 from stdatamodels.jwst import datamodels
 
-from eureka.S3_data_reduction import niriss
+from eureka.S3_data_reduction import niriss, plots_s3
 from eureka.S3_data_reduction.s3_meta import S3MetaClass
 
 
@@ -46,7 +47,7 @@ def trace_inputs(subarray='SUBSTRIP256', yoffset=None, xoffset=0.,
     data.attrs['mhdr'] = {'PWCPOS': pwcpos, 'XOFFSET': xoffset * 0.0653,
                           'SUBARRAY': subarray}
     meta = SimpleNamespace(all_orders=list(orders), src_ypos=[30, 80],
-                           trace_yoffset=yoffset, verbose=False)
+                           trace_yoffset=yoffset, pwcpos=None, verbose=False)
     log = SimpleNamespace(writelog=Mock())
     return data, meta, log
 
@@ -330,10 +331,29 @@ def test_missing_order_raises_and_closes_reference(reference_model):
 
 
 @pytest.mark.parametrize('xoffset', [-2., 0., 2.])
-def test_invalid_pupil_position_raises_and_closes_reference(reference_model,
-                                                           xoffset):
+def test_ecf_pupil_position_overrides_header(reference_model, xoffset):
+    """An explicit pupil position must control both trace and wavecal."""
+    data, meta, log = trace_inputs(xoffset=xoffset, pwcpos=245.85)
+    expected = niriss.get_wave(data.copy(deep=True), meta, log)
+    # An invalid header value must be ignored when the ECF specifies PWCPOS.
+    data.attrs['mhdr']['PWCPOS'] = 247.
+    meta.pwcpos = 245.85
+
+    result = niriss.get_wave(data, meta, log)
+
+    xr.testing.assert_equal(result.trace, expected.trace)
+    xr.testing.assert_equal(result.wave_1d, expected.wave_1d)
+
+
+@pytest.mark.parametrize('xoffset', [-2., 0., 2.])
+@pytest.mark.parametrize('source', ['header', 'ecf'])
+def test_invalid_pupil_position_raises_and_closes_reference(
+        reference_model, xoffset, source):
     model, _ = reference_model
     data, meta, log = trace_inputs(pwcpos=247., xoffset=xoffset)
+    if source == 'ecf':
+        data.attrs['mhdr']['PWCPOS'] = 245.85
+        meta.pwcpos = 247.
 
     with pytest.raises(ValueError, match='outside bounds'):
         niriss.get_wave(data, meta, log)
@@ -403,3 +423,38 @@ def test_niriss_metadata_initializes_trace_offsets():
 
     assert meta.trace_xoffset is None
     assert meta.trace_yoffset is None
+
+
+@pytest.mark.parametrize('orders', [[1], [2], [1, 2]])
+@pytest.mark.parametrize('subarray', ['SUBSTRIP256', 'SUBSTRIP96'])
+def test_median_frame_plots_requested_orders_with_valid_wavelengths(
+        tmp_path, orders, subarray):
+    """Keep fallback trace positions out of the requested-order overlays."""
+    data = xr.Dataset({
+        'flux': (['y', 'x'], np.arange(12.).reshape(3, 4)),
+        'trace': (['x', 'order'], np.full((4, 2), 100.)),
+        'wave_1d': (['x', 'order'], [[np.nan, 1.], [1., np.inf],
+                                    [2., 2.], [np.nan, np.nan]]),
+    }, coords={'x': np.arange(4), 'y': np.arange(3), 'order': [1, 2]},
+        attrs={'mhdr': {'SUBARRAY': subarray}})
+    meta = SimpleNamespace(inst='niriss', orders=orders, all_orders=[1, 2],
+                           num_data_files=1, outputdir=f'{tmp_path}/',
+                           hide_plots=True)
+    (tmp_path / 'figs').mkdir()
+
+    try:
+        plots_s3.median_frame(data, meta, 0, data.flux.values)
+
+        ax = plt.figure(3308).axes[0]
+        assert len(ax.lines) == 2 * len(orders)
+        for line, order in zip(ax.lines[1::2], orders):
+            assert line.get_label() == f'Trace Order {order}'
+            np.testing.assert_array_equal(
+                np.isfinite(line.get_ydata()),
+                np.isfinite(data.wave_1d.sel(order=order)))
+        np.testing.assert_allclose(ax.get_xlim(), [-0.5, 3.5])
+        np.testing.assert_allclose(ax.get_ylim(), [-0.5, 2.5])
+        assert len(list((tmp_path / 'figs').glob(
+            'fig3308_file0_MedianFrame.*'))) == 1
+    finally:
+        plt.close(3308)
