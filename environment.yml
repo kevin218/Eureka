@@ -50,7 +50,7 @@ dependencies:
     - arviz >=0.21,<1
     - astraeus-io
     - batman-package
-    - catwoman >=1.0.16
+    - catwoman >=1.1.0
     - celerite2
     - crds
     - exotic-ld @ git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8
