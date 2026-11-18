@@ -2,6 +2,7 @@ import inspect
 from copy import copy
 
 import astropy.constants as const
+import jax.numpy as jnp
 import numpy as np
 
 from ...lib.split_channels import split
@@ -36,10 +37,8 @@ class PlanetParams():
         if eval:
             lib = np
         else:
-            # No other option is currently supported until jax is added
-            raise NotImplementedError(
-                'JAX support is not yet implemented. '
-                'Please use eval=True to evaluate the model in numpy mode.')
+            # Jax/PyMC3 model that is being compiled
+            lib = jnp
 
         # Planet/Channel/Wavelength identifiers (ids remain for external uses)
         self.pid = pid

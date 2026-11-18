@@ -1,0 +1,192 @@
+from typing import Any, Optional
+
+import jax.numpy as jnp
+from jax.typing import ArrayLike
+
+from ...lib.split_channels import split
+from .JaxModel import JaxModel, get_param_array, get_param_index_map
+
+
+def evaluate_centroid_model_jax(
+    centroids: ArrayLike,
+    nints: list[int],
+    coeff_index_matrix: ArrayLike,
+    param_array: ArrayLike,
+    multwhite: bool
+) -> ArrayLike:
+    """Evaluate a multichannel centroid model in a JAX-pure way.
+
+    Parameters
+    ----------
+    centroids : jnp.ndarray
+        The full (possibly concatenated) centroid array.
+    nints : list[int]
+        Number of integrations per channel.
+    coeff_index_matrix : jnp.ndarray
+        Integer index matrix of shape (nchan, 1).
+    param_array : jnp.ndarray
+        Flattened parameter vector.
+    multwhite : bool
+        Whether this is a multwhite fit.
+
+    Returns
+    -------
+    jnp.ndarray
+        Evaluated model flux array.
+    """
+    nchan = coeff_index_matrix.shape[0]
+    total_len = sum(nints) if multwhite else centroids.size * nchan
+
+    lcfinal = jnp.zeros(total_len)
+    offset = 0
+    for chan in range(nchan):
+        if multwhite:
+            start = sum(nints[:chan])
+            stop = start + nints[chan]
+            centroid = centroids[start:stop]
+        else:
+            centroid = centroids
+
+        coeff_idx = coeff_index_matrix[chan, 0]
+        coeff = param_array[coeff_idx]
+        lcpiece = 1 + coeff * centroid
+
+        lcfinal = lcfinal.at[offset:offset + len(centroid)].set(lcpiece)
+        offset += len(centroid)
+
+    return lcfinal
+
+
+class CentroidModel(JaxModel):
+    """Centroid decorrelation model for use with JAX fitters.
+
+    This model applies a linear decorrelation against a single PSF metric,
+    such as:
+      - `xpos` or `xwidth`
+      - `ypos` or `ywidth`
+
+    The `axis` keyword determines which centroid quantity to use.
+    Channel-specific coefficients (e.g., xpos_ch1) are supported.
+    """
+
+    def __init__(self, axis: str = 'xpos', **kwargs: Any) -> None:
+        """Initialize the centroid model.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Optional keyword arguments. Expected keys include:
+                - parameters: a Parameters object
+                - nchan: number of fitted channels
+                - multwhite: whether using multwhite fits
+                - fitted_channels: list of channels to fit
+                - nints: integration counts per channel
+                - axis: one of 'xpos', 'xwidth', 'ypos', or 'ywidth'
+        """
+        if axis not in ('xpos', 'ypos', 'xwidth', 'ywidth'):
+            raise ValueError('CentroidModel requires xpos, ypos, xwidth, '
+                             'or ywidth as its axis.')
+        super().__init__(axis=axis, **kwargs)
+        self.axis = axis
+        self.name: str = self.axis
+        self.modeltype: str = 'systematic'
+
+    @property
+    def centroid(self) -> Optional[ArrayLike]:
+        """Get the centroid array."""
+        return self._centroid
+
+    @centroid.setter
+    def centroid(self, centroid_array: Any) -> None:
+        """Set and center the centroid array.
+
+        Parameters
+        ----------
+        centroid_array : array-like
+            Original centroid measurements along the selected `axis`.
+        """
+        if hasattr(centroid_array, 'filled'):
+            centroid_array = centroid_array.filled(jnp.nan)
+        self._centroid = centroid_array
+
+    def build_coeff_index_matrix(
+        self, param_index_map: dict[str, int]
+    ) -> ArrayLike:
+        """Build an index matrix for centroid coefficients per channel.
+
+        Parameters
+        ----------
+        param_index_map : dict[str, int]
+            Maps parameter names to flat array indices.
+
+        Returns
+        -------
+        jnp.ndarray
+            Integer index matrix of shape (nchan, 1).
+        """
+        index_matrix = []
+        for chan in self.fitted_channels:
+            key_specific = f"{self.axis}_ch{chan}"
+            key_fallback = self.axis
+            if key_specific in param_index_map:
+                idx = param_index_map[key_specific]
+            elif key_fallback in param_index_map:
+                idx = param_index_map[key_fallback]
+            else:
+                raise KeyError(
+                    f"Missing both {key_specific} and {key_fallback} "
+                    f"in param_index_map."
+                )
+            index_matrix.append([idx])
+        return jnp.array(index_matrix)
+
+    def eval(
+        self,
+        param_dict: Optional[dict[str, float]] = None,
+        channel: Optional[int] = None,
+        **kwargs: Any
+    ) -> ArrayLike:
+        """
+        Evaluate the centroid model using JAX.
+
+        Parameters
+        ----------
+        param_dict : dict; optional
+            If None, uses values from self.parameters (i.e., fitted mode).
+        channel : int; optional
+            If specified, evaluates only for a given channel.
+        **kwargs : dict
+            Optional extra keyword arguments (unused).
+
+        Returns
+        -------
+        jnp.ndarray
+            The model flux array at the centroid values.
+        """
+        param_dict = self._prepare_param_dict(param_dict)
+        channels = list(self._channels(channel)[1])
+        nints_global = kwargs.get('nints', self.nints)
+        data = jnp.asarray(kwargs.get('centroid', self.centroid))
+        pieces = []
+        for chan in channels:
+            piece = split([data], nints_global, chan)[
+                0] if self.multwhite else data
+            pieces.append(piece - jnp.nanmean(piece))
+        data_local = jnp.concatenate(pieces) if self.multwhite else pieces[0]
+        nints = [len(piece) for piece in pieces]
+
+        param_names = [key for key, value in param_dict.items()
+                       if not isinstance(value, str) and value is not None]
+        param_array = get_param_array(param_dict, param_names)
+        param_index_map = get_param_index_map(param_names)
+        matrix = self.build_coeff_index_matrix(param_index_map)
+        positions = [list(self.fitted_channels).index(chan)
+                     for chan in channels]
+        matrix = matrix[jnp.array(positions)]
+        return evaluate_centroid_model_jax(
+            centroids=data_local,
+            nints=nints,
+            coeff_index_matrix=matrix,
+            param_array=param_array,
+            multwhite=self.multwhite,
+        )

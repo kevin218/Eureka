@@ -1,17 +1,18 @@
 import os
-from copy import copy
+from copy import copy, deepcopy
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from ..lib import plots, util
 from ..lib.split_channels import get_trim, split
-from . import fitters
-from . import models as m
+# from . import gradient_fitters
+from . import fitters, jax_fitters
+from .models import Model
 from .utils import COLORS, color_gen
 
 
-class LightCurve(m.Model):
+class LightCurve(Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist,
                  parameters, freenames, unc=None, time_units='BJD',
                  name='My Light Curve', share=False, white=False,
@@ -58,7 +59,7 @@ class LightCurve(m.Model):
             which is required for multiprocessing.
         """
         # Initialize the model
-        super().__init__(**kwargs)
+        Model.__init__(self, **kwargs)
 
         self.name = name
         self.share = share
@@ -97,7 +98,7 @@ class LightCurve(m.Model):
             self.unc = unc
         else:
             self.unc = np.array([np.nan]*len(self.time))
-        self.unc_fit = np.ma.copy(self.unc)
+        self.unc_fit = deepcopy(self.unc)
 
         if hasattr(parameters, 'scatter_mult'):
             for chan in range(self.nchannel_fitted):
@@ -155,14 +156,13 @@ class LightCurve(m.Model):
             raise NotImplementedError(
                 'PyMC3/starry support within Eureka! had to be dropped because'
                 ' PyMC3 is now extremely deprecated and incompatible with the '
-                'current jwst pipeline version. For the time being, you must '
-                'instead use the numpy-based models.')
+                'current jwst pipeline version. Instead, consider using the '
+                'recently added jax/jaxoplanet models.')
+            # self.fitter_func = gradient_fitters.exoplanetfitter
+        elif fitter == 'jaxopt':
+            self.fitter_func = jax_fitters.jaxoptfitter
         elif fitter == 'nuts':
-            raise NotImplementedError(
-                'PyMC3/starry support within Eureka! had to be dropped because'
-                ' PyMC3 is now extremely deprecated and incompatible with the '
-                'current jwst pipeline version. For the time being, you must '
-                'instead use the numpy-based models.')
+            self.fitter_func = jax_fitters.nutsfitter
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
 
@@ -186,9 +186,9 @@ class LightCurve(m.Model):
         """
         # Make the figure
         for i, channel in enumerate(self.fitted_channels):
-            flux = np.ma.copy(self.flux)
-            unc = np.ma.copy(self.unc_fit)
-            time = np.ma.copy(self.time)
+            flux = deepcopy(self.flux)
+            unc = deepcopy(self.unc_fit)
+            time = deepcopy(self.time)
 
             if self.share and not meta.multwhite:
                 # Split the arrays that have lengths of the original time axis

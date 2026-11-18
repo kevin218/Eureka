@@ -44,6 +44,41 @@ It is therefore the responsibility of the contributor to update the tests and th
 there will be times where this might be harder than expected, and in those cases we welcome contributors to speak thoroughly on the
 issues within their pull request so other team members may help them and be aware of the problem.
 
+### Stage 5 JAX compilation and gradients
+
+From the repository root, run:
+
+```bash
+pytest tests/test_jax_compilation.py tests/test_jax_models.py tests/test_model_compatibility.py
+```
+
+The compilation tests explicitly lower, compile, and execute
+`jax.value_and_grad` functions for the supported JAX model families. They
+compare derivatives with central finite differences at smooth parameter
+values, check that changing parameters reuses the compiled executable, and
+check for leaked tracers. These tests temporarily enable JIT even if
+`JAX_DISABLE_JIT` is set, so compilation coverage cannot silently disappear.
+
+The posterior checks also exercise NumPyro's unconstrained potential,
+including parameter transforms, GP hyperparameters, uncertainty scaling,
+and missing observations. A Gaussian example checks the transformed
+gradient analytically. The existing fitter tests run actual optimization
+and NUTS sampling on synthetic data and check the recovered parameters.
+
+These checks establish compilation and derivative accuracy for the tested
+cases, rather than a timing or speedup guarantee. They do not establish
+smoothness at step locations, transit contacts, or Monte Carlo spot
+occultation boundaries. Parameters at discontinuities need separate
+consideration before using gradient-based inference. Mixed models with
+NumPy-only components remain supported by the ordinary fitters and are
+explicitly rejected by HMC tests.
+
+The symmetric Lorentzian currently uses the documented signed-distance
+expression `1/(1+x**lor_power)`. When observations span both sides of the
+peak, its exponent must remain fixed at an even integer: arbitrary real
+powers of negative distances are undefined. Its amplitude, width, and center
+are covered by the derivative-accuracy checks.
+
 ## Local Hygiene Checks with pre-commit
 
 Eureka! also supports a small set of fast local hygiene checks through `pre-commit`. These hooks are intended for deterministic checks and safe autofixes such as whitespace cleanup, basic file validation, merge-conflict detection, and Ruff lint fixes. Heavier validation such as the main test suite, build checks, and other project CI still runs in GitHub Actions.

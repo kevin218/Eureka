@@ -5,14 +5,14 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import rcParams
+from matplotlib.patches import Ellipse
 
 try:
     from mc3.stats import time_avg
 except ModuleNotFoundError:
     print("Could not import MC3. No RMS time-averaging plots will be made.")
-import astropy.units as unit
+import arviz as az
 import corner
-import fleck
 from scipy import stats
 
 try:
@@ -28,6 +28,9 @@ warnings.filterwarnings("ignore", message='Ignoring specified arguments in '
 from ..lib import plots, util
 from ..lib.split_channels import split
 from .models.AstroModel import PlanetParams
+
+# FINDME: Placeholder code until jaxoplanet.starry support is added
+starry = None
 
 
 @plots.apply_style
@@ -560,6 +563,58 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
 
 
 @plots.apply_style
+def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
+               **kwargs):
+    """Plot the evolution of the trace to look for temporal trends. (Figs 5305)
+
+    Parameters
+    ----------
+    trace : arviz.InferenceData
+        An ArviZ ``InferenceData`` like object that contains the samples.
+    model : Class
+        A model_class instance used to make the plot within the jax
+        model context.
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    freenames : iterable
+        The names of the fitted parameters.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str; optional
+        The name of the fitter (for plot filename). Defaults to 'nuts'.
+    compact: bool; optional
+        Plot multidimensional variables in a single plot. Defailts to False.
+    **kwargs : dict
+        Additional keyword arguments to pass to pm.traceplot.
+    """
+
+    max_subplots = az.rcParams['plot.max_subplots'] // 2
+    nplots = int(np.ceil(len(freenames)/max_subplots))
+    npanels = min([len(freenames), max_subplots])
+
+    for i in range(nplots):
+        ax = az.plot_trace(trace, var_names=freenames[i*npanels:(i+1)*npanels],
+                           compact=compact, show=False, **kwargs)
+        fig = ax[0][0].figure
+
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = f'figs{os.sep}fig5305_{fname_tag}_trace'
+        fname += '_'+fitter
+        fname += f'figure{i+1}of{nplots}'
+        fname += plots.get_filetype()
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight',
+                    pad_inches=0.05, dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+        else:
+            plt.close(fig)
+
+
+@plots.apply_style
 def plot_res_distr(lc, model, meta, fitter):
     """Plot the normalized distribution of residuals + a Gaussian. (Fig 5302)
 
@@ -822,6 +877,8 @@ def plot_fleck_star(lc, model, meta, fitter):
     fitter : str
         The name of the fitter (for plot filename).
     """
+    from .jax_models.FleckModel import build_fleck_star
+
     for chan in lc.fitted_channels:
         # Initialize PlanetParams object
         pl_params = PlanetParams(model, 0, chan)
@@ -852,14 +909,38 @@ def plot_fleck_star(lc, model, meta, fitter):
         fig.set_size_inches(8, 6, forward=True)
         fig.clf()
         ax = fig.gca()
-        star = fleck.Star(spot_contrast=pl_params.spotcon,
-                          u_ld=pl_params.u,
-                          rotation_period=pl_params.spotrot)
-        ax = star.plot(spotlon[:, None]*unit.deg,
-                       spotlat[:, None]*unit.deg,
-                       spotrad[:, None],
-                       pl_params.spotstari*unit.deg,
-                       planet=pl_params, time=pl_params.t0, ax=ax)
+        star = build_fleck_star(
+            np.array([pl_params.t0]), spotrad, spotlat, spotlon,
+            np.full(spotrad.shape, pl_params.spotcon),
+            pl_params.spotstari, pl_params.spotrot)
+        coords = star.spot_coords(times=np.array([pl_params.t0]),
+                                 t0_rot=pl_params.t0)
+        x, y, z = [np.asarray(c)[0, :, 0, 0] for c in coords[:3]]
+
+        # Draw from the same projected coordinates used by the light curve.
+        # Older Fleck plotters require temperatures and squeeze single spots.
+        max_contrast = max(1., pl_params.spotcon)
+        ax.add_patch(plt.Circle(
+            (0, 0), 1, facecolor=str(1. / max_contrast), edgecolor='k'))
+        for i in range(len(spotrad)):
+            if z[i] < 0:
+                projected = np.sqrt(np.clip(
+                    1. - x[i]**2 - y[i]**2, 0., 1.))
+                ax.add_patch(Ellipse(
+                    (y[i], x[i]), width=2. * spotrad[i],
+                    height=2. * spotrad[i] * projected,
+                    angle=-np.degrees(np.arctan2(y[i], x[i])),
+                    facecolor=str(np.clip(
+                        pl_params.spotcon / max_contrast, 0., 1.)),
+                    edgecolor='k'))
+
+        impact = (pl_params.a * np.cos(pl_params.inc_rad) *
+                  (1. - pl_params.ecc**2) /
+                  (1. + pl_params.ecc * np.sin(pl_params.w_rad)))
+        for edge in [-abs(pl_params.rp), abs(pl_params.rp)]:
+            ax.axhline(-impact + edge, color='gray', ls='--')
+        ax.set(xlim=[-1.05, 1.05], ylim=[-1.05, 1.05], aspect='equal')
+        ax.axis('off')
 
         if lc.white:
             fname_tag = 'white'
@@ -867,6 +948,60 @@ def plot_fleck_star(lc, model, meta, fitter):
             ch_number = str(chan).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5307_{fname_tag}_fleck_star_{fitter}'
+                 + plots.get_filetype())
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
+
+@plots.apply_style
+def plot_starry_star(lc, model, meta, fitter):
+    """Plot the location and contrast of the starry star spots (Figs 5308)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.jax_models.CompositeJaxModel
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    """
+    from .jax_models.AstroModel import compute_astroparams
+    from .jax_models.JaxoplanetStarryModels import build_stellar_surface
+
+    def find_starry(component):
+        if component.name == 'starry':
+            return component
+        for child in component.components:
+            found = find_starry(child)
+            if found is not None:
+                return found
+        return None
+
+    starry_model = find_starry(model)
+    if starry_model is None:
+        return
+    params = starry_model._prepare_param_dict()
+    for channel in lc.fitted_channels:
+        astro = compute_astroparams(params, channel=channel)
+        surface = build_stellar_surface(
+            astro, params, starry_model.spot_bases, starry_model.ydeg,
+            starry_model.default_spotnpts, starry_model.default_spotfac,
+            channel)
+        fig = plt.figure(5308, figsize=(8, 6))
+        plt.clf()
+        ax = fig.gca()
+        ax.imshow(np.asarray(surface.render(res=200)), origin='lower')
+        ax.set_axis_off()
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5308_{fname_tag}_starry_star_{fitter}'
                  + plots.get_filetype())
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
