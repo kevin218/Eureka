@@ -143,9 +143,10 @@ def get_wave(data, meta, log):
     '''
     # Apply the ECF pupil-position adjustment to the header value.
     pwcpos = data.attrs['mhdr']['PWCPOS'] + meta.pwcpos_offset
-
-    log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
-                 mute=(not meta.verbose))
+    if meta.pwcpos_offset != 0:
+        log.writelog(
+            f"  The updated NIRISS pupil position is {pwcpos:6f} degrees",
+            mute=(not meta.verbose))
 
     # Convert header dithers from arcsec to pixels, ignoring offsets smaller
     # than 0.01 pixel. Explicit ECF offsets are pixel adjustments to these
@@ -160,8 +161,9 @@ def get_wave(data, meta, log):
         trace_yoffset = 0.
     trace_yoffset += meta.trace_yoffset
 
-    log.writelog(f"  There is an X offset of {trace_xoffset:.3f} pixels",
-                 mute=(not meta.verbose))
+    if trace_xoffset != 0:
+        log.writelog(f"  There is an X offset of {trace_xoffset:.3f} pixels",
+                     mute=(not meta.verbose))
     if trace_yoffset != 0:
         log.writelog(f"  There is a Y offset of {trace_yoffset:.3f} pixels",
                      mute=(not meta.verbose))
