@@ -29,7 +29,7 @@ tqdm==4.66.3
 
 astraeus-io==1.0
 batman-package==2.5.3
-catwoman==1.0.16
+catwoman==1.1.0
 celerite2==0.3.2
 crds==12.0.4
 george==0.4.2
