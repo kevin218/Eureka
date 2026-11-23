@@ -304,7 +304,9 @@ class S3MetaClass(MetaClass):
         self.record_ypos = getattr(self, 'record_ypos', False)
         self.xwindow = getattr(self, 'xwindow', [6, 2043])
         self.ywindow = getattr(self, 'ywindow', [0, -1])
-        self.pwcpos = getattr(self, 'pwcpos', None)
+        self.pwcpos_offset = getattr(self, 'pwcpos_offset', 0.)
+        if self.pwcpos_offset is None:
+            self.pwcpos_offset = 0.
 
         # check for legacy trace offset name
         if hasattr(self, "trace_offset"):
@@ -312,12 +314,16 @@ class S3MetaClass(MetaClass):
                   " renamed to trace_yoffset.\n  Please switch to "
                   " using trace_yoffset instead, as support for"
                   " trace_offset will soon be deprecated.")
-            # Check before setting the default so an explicit None or zero
-            # takes precedence over the legacy spelling.
+            # Check before setting the default so an explicit zero takes
+            # precedence over the legacy spelling.
             if not hasattr(self, 'trace_yoffset'):
                 self.trace_yoffset = self.trace_offset
-        self.trace_yoffset = getattr(self, 'trace_yoffset', None)
-        self.trace_xoffset = getattr(self, 'trace_xoffset', None)
+        self.trace_yoffset = getattr(self, 'trace_yoffset', 0)
+        self.trace_xoffset = getattr(self, 'trace_xoffset', 0)
+        if self.trace_yoffset is None:
+            self.trace_yoffset = 0.
+        if self.trace_xoffset is None:
+            self.trace_xoffset = 0.
 
         self.set_spectral_defaults()
 

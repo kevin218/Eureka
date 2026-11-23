@@ -141,29 +141,24 @@ def get_wave(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with...
     '''
-    if meta.pwcpos is None:
-        # Use pupil position reported in header
-        pwcpos = data.attrs['mhdr']['PWCPOS']
-    else:
-        # Use pupil position specified in ECF
-        pwcpos = meta.pwcpos
+    # Apply the ECF pupil-position adjustment to the header value.
+    pwcpos = data.attrs['mhdr']['PWCPOS'] + meta.pwcpos_offset
 
     log.writelog(f"  The NIRISS pupil position is {pwcpos:3f} degrees",
                  mute=(not meta.verbose))
 
-    # Explicit ECF offsets are in pixels. Otherwise convert header dithers
-    # from arcsec, ignoring header offsets smaller than 0.01 pixel.
-    trace_xoffset = getattr(meta, 'trace_xoffset', None)
-    if trace_xoffset is None:
-        trace_xoffset = data.attrs['mhdr']['XOFFSET'] / 0.0653
-        if np.abs(trace_xoffset) < 0.01:
-            trace_xoffset = 0.
+    # Convert header dithers from arcsec to pixels, ignoring offsets smaller
+    # than 0.01 pixel. Explicit ECF offsets are pixel adjustments to these
+    # header-derived values.
+    trace_xoffset = data.attrs['mhdr'].get('XOFFSET', 0.) / 0.0653
+    if np.abs(trace_xoffset) < 0.01:
+        trace_xoffset = 0.
+    trace_xoffset += meta.trace_xoffset
 
-    trace_yoffset = meta.trace_yoffset
-    if trace_yoffset is None:
-        trace_yoffset = data.attrs['mhdr'].get('YOFFSET', 0.) / 0.0658
-        if np.abs(trace_yoffset) < 0.01:
-            trace_yoffset = 0.
+    trace_yoffset = data.attrs['mhdr'].get('YOFFSET', 0.) / 0.0658
+    if np.abs(trace_yoffset) < 0.01:
+        trace_yoffset = 0.
+    trace_yoffset += meta.trace_yoffset
 
     log.writelog(f"  There is an X offset of {trace_xoffset:.3f} pixels",
                  mute=(not meta.verbose))

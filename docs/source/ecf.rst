@@ -573,50 +573,25 @@ orders
 ''''''
 Only used for NIRISS. List of spectral orders to be reduced.
 
-pwcpos
-''''''
-Only used for NIRISS. Optional pupil-wheel position in degrees used to calculate the spectral trace. If set to ``None`` (default), the value is read from the FITS ``PWCPOS`` header keyword.
+pwcpos_offset
+'''''''''''''
+Only used for NIRISS. An additional pupil-wheel position adjustment, in degrees, applied to the FITS ``PWCPOS`` header value when calculating the spectral trace. The default is ``0``, which uses the header value without adjustment.
 
 trace_xoffset
 '''''''''''''
-Only used for NIRISS. An additional shift of the nominal trace along the
-dispersion direction, in pixels, before the pupil-wheel rotation. Positive
-values shift the nominal trace toward increasing detector X; negative values
-shift it toward decreasing detector X. The default is ``None``, which uses
-the FITS header's ``XOFFSET`` value in arcseconds, divided by the X pixel
-scale of 0.0653 arcsec/pixel. Header-derived offsets
-with an absolute value smaller than 0.01 pixel are ignored; offsets of exactly
-0.01 pixel or larger are retained.
+Only used for NIRISS. An additional shift of the nominal trace along the dispersion direction, in pixels, before the pupil-wheel rotation. Positive values shift the nominal trace toward increasing detector X; negative values shift it toward decreasing detector X. The default is ``0``, which applies no additional shift. The FITS header's ``XOFFSET`` value is always applied after conversion from arcseconds using the X pixel scale of 0.0653 arcsec/pixel. Header-derived offsets with an absolute value smaller than 0.01 pixel are ignored; offsets of exactly 0.01 pixel or larger are retained.
 
-An explicit ECF value overrides the header, including ``0`` to disable the
-header-derived shift. The threshold applies only to header-derived offsets;
-explicit ECF values smaller than 0.01 pixel are still applied.
+An explicit ECF value is added to the header-derived shift, including ``0`` to retain the header-derived shift without adjustment. The threshold applies only to header-derived offsets; explicit ECF values smaller than 0.01 pixel are still applied.
 
 trace_yoffset
 '''''''''''''
-Only used for NIRISS. An additional shift in the cross-dispersion direction,
-in pixels. The default is ``None``, which uses the FITS header's ``YOFFSET``
-value in arcseconds, divided by the Y pixel scale of 0.0658 arcsec/pixel. A
-missing ``YOFFSET`` is treated as zero. Header-derived offsets with an
-absolute value smaller than 0.01 pixel are ignored; offsets of exactly
-0.01 pixel or larger are retained. An explicit ECF value overrides the header,
-including ``0`` to disable the header-derived shift. Explicit ECF values
-smaller than 0.01 pixel are still applied. The X and Y settings are independent,
-so either axis can use the header while the other uses an explicit value.
+Only used for NIRISS. An additional shift in the cross-dispersion direction, in pixels. The default is ``0``, which applies no additional shift. The FITS header's ``YOFFSET`` value is always applied after conversion from arcseconds using the Y pixel scale of 0.0658 arcsec/pixel. A missing ``YOFFSET`` is treated as zero. Header-derived offsets with an absolute value smaller than 0.01 pixel are ignored; offsets of exactly 0.01 pixel or larger are retained. An explicit ECF value is added to the header-derived shift, including ``0`` to retain the header-derived shift without adjustment. Explicit ECF values smaller than 0.01 pixel are still applied. The X and Y settings are independent, so either axis can have an additional explicit adjustment.
 
-The legacy name ``trace_offset`` is still accepted when ``trace_yoffset`` is
-omitted. If both are supplied, ``trace_yoffset`` takes precedence, including
-an explicit ``0`` or ``None``. Replace ``trace_offset`` with ``trace_yoffset``
-in existing ECFs.
+The legacy name ``trace_offset`` is still accepted when ``trace_yoffset`` is omitted. If both are supplied, ``trace_yoffset`` takes precedence, including an explicit ``0``. Replace ``trace_offset`` with ``trace_yoffset`` in existing ECFs.
 
-Eureka! uses the PASTASOSS implementation in ``jwst`` with a reference file
-retrieved from CRDS, which already accounts for SUBSTRIP96 if needed. The
-header-derived or explicit Y shift is an additional correction to that trace.
-If you see in Fig. 3304 that the spectrum is not quite centered, adjust
-``trace_yoffset`` accordingly.
-Existing SUBSTRIP96 configurations that specified -12 pixels to compensate for
-the stand-alone PASTASOSS implementation should remove that setting or retune
-it as an additional correction to the JWST trace.
+Eureka! uses the PASTASOSS implementation in ``jwst`` with a reference file retrieved from CRDS, which already accounts for SUBSTRIP96 if needed. Existing SUBSTRIP96 configurations that specified -12 pixels to compensate for the stand-alone PASTASOSS implementation should remove that setting or retune it as an additional correction to the JWST trace.
+
+Use Fig. 3304 to tune NIRISS trace alignment. If the trace is not centered, adjust ``trace_yoffset`` for a cross-dispersion shift or ``pwcpos_offset`` for a pupil-wheel-position/rotation mismatch. Adjust one parameter at a time. You will rarely need to adjust ``trace_xoffset`` for a dispersion-direction shift unless an offset was intentionally applied in APT.
 
 src_ypos
 ''''''''

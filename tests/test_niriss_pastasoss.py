@@ -41,19 +41,20 @@ def reference_model(monkeypatch):
     model.close()
 
 
-def trace_inputs(subarray='SUBSTRIP256', yoffset=None, xoffset=0.,
+def trace_inputs(subarray='SUBSTRIP256', yoffset=0., xoffset=0.,
                  pwcpos=245.85, orders=(1, 2)):
     data = xr.Dataset(coords={'x': np.arange(70), 'order': list(orders)})
     data.attrs['mhdr'] = {'PWCPOS': pwcpos, 'XOFFSET': xoffset * 0.0653,
                           'SUBARRAY': subarray}
     meta = SimpleNamespace(all_orders=list(orders), src_ypos=[30, 80],
-                           trace_yoffset=yoffset, pwcpos=None, verbose=False)
+                           trace_xoffset=0., trace_yoffset=yoffset,
+                           pwcpos_offset=0., verbose=False)
     log = SimpleNamespace(writelog=Mock())
     return data, meta, log
 
 
 @pytest.mark.parametrize('subarray', ['SUBSTRIP256', 'SUBSTRIP96'])
-@pytest.mark.parametrize('yoffset', [None, -2.5, 3.])
+@pytest.mark.parametrize('yoffset', [0., -2.5, 3.])
 def test_jwst_traces_and_additional_yoffset(reference_model, subarray,
                                           yoffset):
     model, retrieve = reference_model
@@ -80,7 +81,7 @@ def test_jwst_traces_and_additional_yoffset(reference_model, subarray,
 
 
 @pytest.mark.parametrize('subarray', ['SUBSTRIP256', 'SUBSTRIP96'])
-@pytest.mark.parametrize('yoffset', [None, 3.])
+@pytest.mark.parametrize('yoffset', [0., 3.])
 @pytest.mark.parametrize('pwcpos', [245.6, 245.8, 245.85, 246.])
 @pytest.mark.parametrize('xoffset', [-2., 2.])
 def test_xoffset_uses_reference_pupil_position_and_pivots(
@@ -149,16 +150,13 @@ def test_small_xoffset_approaches_jwst_trace(reference_model, subarray,
 
 @pytest.mark.parametrize('subarray', ['SUBSTRIP256', 'SUBSTRIP96'])
 @pytest.mark.parametrize('ecf_x,ecf_y,expected_x,expected_y', [
-    (None, None, 2., 1.5),
-    (0., 0., 0., 0.),
-    (3., -2., 3., -2.),
-    (-3., -2., -3., -2.),
-    (0., None, 0., 1.5),
-    (None, 0., 2., 0.),
-    (1e-8, 1e-8, 1e-8, 1e-8),
-    (-1e-8, -1e-8, -1e-8, -1e-8),
+    (0., 0., 2., 1.5),
+    (3., -2., 5., -0.5),
+    (-3., -2., -1., -0.5),
+    (1e-8, 1e-8, 2. + 1e-8, 1.5 + 1e-8),
+    (-1e-8, -1e-8, 2. - 1e-8, 1.5 - 1e-8),
 ])
-def test_ecf_offsets_override_header_dithers(
+def test_ecf_offsets_adjust_header_dithers(
         reference_model, subarray, ecf_x, ecf_y, expected_x, expected_y):
     model, _ = reference_model
     data, meta, log = trace_inputs(subarray=subarray, xoffset=2.,
@@ -206,7 +204,6 @@ def test_header_dither_threshold(reference_model, subarray, axis,
     model, _ = reference_model
     data, meta, log = trace_inputs(subarray=subarray,
                                    pwcpos=model.meta.pwcpos_cmd)
-    meta.trace_xoffset = None
     pixel_scale = 0.0653 if axis == 'x' else 0.0658
     data.attrs['mhdr'][f'{axis.upper()}OFFSET'] = header_offset * pixel_scale
 
@@ -227,8 +224,8 @@ def test_header_dither_threshold(reference_model, subarray, axis,
             rtol=0, atol=1e-12)
         outside = ~np.isin(result.x, x)
         assert np.isnan(result.wave_1d.sel(order=order)[outside]).all()
-    assert meta.trace_xoffset is None
-    assert meta.trace_yoffset is None
+    assert meta.trace_xoffset == 0.
+    assert meta.trace_yoffset == 0.
     model.close.assert_called_once_with()
 
 
@@ -331,18 +328,22 @@ def test_missing_order_raises_and_closes_reference(reference_model):
 
 
 @pytest.mark.parametrize('xoffset', [-2., 0., 2.])
-def test_ecf_pupil_position_overrides_header(reference_model, xoffset):
-    """An explicit pupil position must control both trace and wavecal."""
+@pytest.mark.parametrize('header_pwcpos,pwcpos_offset', [
+    (245.75, 0.1),
+    (245.95, -0.1),
+])
+def test_ecf_pupil_position_offset_adjusts_header(
+        reference_model, xoffset, header_pwcpos, pwcpos_offset):
+    """An ECF pupil-position offset must control both trace and wavecal."""
     data, meta, log = trace_inputs(xoffset=xoffset, pwcpos=245.85)
     expected = niriss.get_wave(data.copy(deep=True), meta, log)
-    # An invalid header value must be ignored when the ECF specifies PWCPOS.
-    data.attrs['mhdr']['PWCPOS'] = 247.
-    meta.pwcpos = 245.85
+    data.attrs['mhdr']['PWCPOS'] = header_pwcpos
+    meta.pwcpos_offset = pwcpos_offset
 
     result = niriss.get_wave(data, meta, log)
 
-    xr.testing.assert_equal(result.trace, expected.trace)
-    xr.testing.assert_equal(result.wave_1d, expected.wave_1d)
+    xr.testing.assert_allclose(result.trace, expected.trace)
+    xr.testing.assert_allclose(result.wave_1d, expected.wave_1d)
 
 
 @pytest.mark.parametrize('xoffset', [-2., 0., 2.])
@@ -353,7 +354,7 @@ def test_invalid_pupil_position_raises_and_closes_reference(
     data, meta, log = trace_inputs(pwcpos=247., xoffset=xoffset)
     if source == 'ecf':
         data.attrs['mhdr']['PWCPOS'] = 245.85
-        meta.pwcpos = 247.
+        meta.pwcpos_offset = 1.15
 
     with pytest.raises(ValueError, match='outside bounds'):
         niriss.get_wave(data, meta, log)
@@ -361,7 +362,7 @@ def test_invalid_pupil_position_raises_and_closes_reference(
     model.close.assert_called_once_with()
 
 
-@pytest.mark.parametrize('yoffset', [None, -2.5, 0.])
+@pytest.mark.parametrize('yoffset', [-2.5, 0.])
 def test_niriss_metadata_preserves_trace_yoffset(yoffset):
     meta = S3MetaClass(topdir='.', spec_hw=17, bg_hw=22, window_len=13,
                        p7thresh=7,
@@ -372,7 +373,7 @@ def test_niriss_metadata_preserves_trace_yoffset(yoffset):
     assert meta.trace_yoffset == yoffset
 
 
-@pytest.mark.parametrize('legacy_offset', [None, -2., 0., 3.])
+@pytest.mark.parametrize('legacy_offset', [-2., 0., 3.])
 def test_niriss_metadata_accepts_legacy_trace_offset(legacy_offset):
     meta = S3MetaClass(topdir='.', spec_hw=17, bg_hw=22, window_len=13,
                        p7thresh=7, trace_offset=legacy_offset)
@@ -386,8 +387,8 @@ def test_niriss_metadata_accepts_legacy_trace_offset(legacy_offset):
 
 @pytest.mark.parametrize('source', ['kwargs', 'ecf'])
 @pytest.mark.parametrize('legacy_first', [True, False])
-@pytest.mark.parametrize('legacy_offset', [None, 3.])
-@pytest.mark.parametrize('yoffset', [None, -2.5, 0.])
+@pytest.mark.parametrize('legacy_offset', [3.])
+@pytest.mark.parametrize('yoffset', [-2.5, 0.])
 def test_niriss_metadata_modern_offset_takes_precedence(
         tmp_path, capsys, source, legacy_first, legacy_offset, yoffset):
     """Keep explicit modern values for either input spelling order."""
@@ -421,8 +422,9 @@ def test_niriss_metadata_initializes_trace_offsets():
 
     meta.set_NIRISS_defaults()
 
-    assert meta.trace_xoffset is None
-    assert meta.trace_yoffset is None
+    assert meta.trace_xoffset == 0.
+    assert meta.trace_yoffset == 0.
+    assert meta.pwcpos_offset == 0.
 
 
 @pytest.mark.parametrize('orders', [[1], [2], [1, 2]])
