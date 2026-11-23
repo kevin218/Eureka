@@ -128,7 +128,7 @@ if [[ "${FRESH_ENV}" == true ]]; then
     echo
     echo "==> Recreating conda env: ${ENV_NAME}"
     conda remove -n "${ENV_NAME}" --all -y >/dev/null 2>&1 || true
-    conda create -n "${ENV_NAME}" python=3.11.0 -y
+    conda create -n "${ENV_NAME}" python=3.11 -y
 fi
 
 echo
