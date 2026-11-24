@@ -720,15 +720,15 @@ def median_frame(data, meta, m, medflux, order=None):
         plt.legend()
     else:  # NIRSpec, NIRCam, MIRI
         # identify empirical smoothed center-of-mass trace
-        smooth_coms, new_center = find_column_median_shifts(data.medflux, meta, 
+        smooth_coms, new_center = find_column_median_shifts(data.medflux, meta,
                                                             m, plot_3308=True)
 
         # overplot empirical trace
         plt.plot(data.x.values, smooth_coms+meta.ywindow[0], c="white", lw=2)
-        plt.plot(data.x.values, smooth_coms+meta.ywindow[0], "--k", lw=1, 
+        plt.plot(data.x.values, smooth_coms+meta.ywindow[0], "--k", lw=1,
                  label="Spectral Trace")
         plt.legend()
-        
+
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
 
