@@ -2,6 +2,7 @@ import copy
 import os
 import sys
 import time as time_pkg
+from functools import partial
 from io import StringIO
 from multiprocessing import Pool
 
@@ -10,20 +11,20 @@ import h5py
 import lmfit
 import numpy as np
 import pandas as pd
+import tqdm as tqdm_module
 import xarray as xr
 from astraeus import xarrayIO as xrio
 from astropy import table
 from dynesty import DynamicNestedSampler, NestedSampler
+from dynesty.utils import print_fn as dynesty_print_fn
 from dynesty.utils import resample_equal
 from scipy.optimize import minimize
 
 from ..lib import astropytable, util
 from ..lib.split_channels import get_trim
 from . import plots_s5 as plots
-from .likelihood import (
-    computeRedChiSq, ln_like, lnprob, ptform,
-    update_uncertainty
-)
+from .likelihood import (computeRedChiSq, ln_like, lnprob, ptform,
+                         update_uncertainty)
 
 
 def _get_dynesty_checkpoint_file(meta, lc, fittername):
@@ -775,15 +776,15 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
     if len(ind_max) > 0 or len(ind_max_LU) > 0:
         log.writelog('Warning: >=1 params hit the upper bound in the lsq fit. '
                      'Setting to the middle of the interval.')
-        freepars[u][ind_max] = pmid[u][ind_max]
-        freepars[lu][ind_max_LU] = (np.exp(prior2[lu][ind_max_LU]) +
-                                    np.exp(prior1[lu][ind_max_LU]))/2.
+        freepars[u[ind_max]] = pmid[u[ind_max]]
+        freepars[lu[ind_max_LU]] = (np.exp(prior2[lu[ind_max_LU]]) +
+                                    np.exp(prior1[lu[ind_max_LU]]))/2.
     if len(ind_min) > 0 or len(ind_min_LU) > 0:
         log.writelog('Warning: >=1 params hit the lower bound in the lsq fit. '
                      'Setting to the middle of the interval.')
-        freepars[u][ind_min] = pmid[u][ind_min]
-        freepars[lu][ind_min_LU] = (np.exp(prior2[lu][ind_min_LU]) +
-                                    np.exp(prior1[lu][ind_min_LU]))/2.
+        freepars[u[ind_min]] = pmid[u[ind_min]]
+        freepars[lu[ind_min_LU]] = (np.exp(prior2[lu[ind_min_LU]]) +
+                                    np.exp(prior1[lu[ind_min_LU]]))/2.
 
     # Generate the walker positions
     pos = np.array([freepars + step_size*np.random.randn(ndim)
@@ -915,7 +916,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         log.writelog('  Resuming dynesty run from existing checkpoint: '
                      f'{meta.old_checkpoint_file}')
 
-    run_kwargs = {'print_progress': True}
+    # Use a custom tqdm bar showing only rate and dynesty diagnostics
+    _pbar = tqdm_module.tqdm(bar_format='[{rate_fmt}{postfix}]')
+    run_kwargs = {'print_progress': True,
+                  'print_func': partial(dynesty_print_fn, pbar=_pbar)}
     if meta.dynesty_checkpoint or meta.dynesty_resume:
         run_kwargs['checkpoint_file'] = meta.checkpoint_file
         run_kwargs['checkpoint_every'] = meta.dynesty_checkpoint_every
@@ -1016,6 +1020,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
         # Run the sampler
         sampler.run_nested(dlogz=meta.run_tol, **run_kwargs)
+
+    _pbar.close()
 
     # Get the results from the sampler
     res = sampler.results

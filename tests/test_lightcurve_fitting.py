@@ -1,17 +1,17 @@
 #! /usr/bin/env python
-import pytest
-import numpy as np
 import os
 import sys
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
+
+import numpy as np
+import pytest
 
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
-from eureka.S5_lightcurve_fitting import fitters, models, simulations
-from eureka.lib.readEPF import Parameters, Parameter
-from eureka.S5_lightcurve_fitting.s5_meta import S5MetaClass
 from eureka.lib import logedit
-from eureka.S5_lightcurve_fitting import s5_fit
+from eureka.lib.readEPF import Parameter, Parameters
+from eureka.S5_lightcurve_fitting import fitters, models, s5_fit, simulations
+from eureka.S5_lightcurve_fitting.s5_meta import S5MetaClass
 
 
 class testingMetaClass(S5MetaClass):
@@ -178,7 +178,7 @@ def test_dynesty_checkpoint_kwargs_passed_to_run_nested(tmp_path):
     assert meta.checkpoint_file == os.path.join(
         str(tmp_path), 'S5_dynesty_checkpoint_white.save')
     sampler.run_nested.assert_called_once_with(
-        dlogz=0.1, print_progress=True,
+        dlogz=0.1, print_progress=True, print_func=ANY,
         checkpoint_file=os.path.join(str(tmp_path),
                                      'S5_dynesty_checkpoint_white.save'),
         checkpoint_every=123.0)
@@ -205,7 +205,7 @@ def test_dynesty_resume_restores_sampler(tmp_path):
         str(tmp_path), 'S5_dynesty_checkpoint_white.save')
     restore.assert_called_once_with(str(old_checkpoint), pool=None)
     sampler.run_nested.assert_called_once_with(
-        dlogz=0.1, print_progress=True,
+        dlogz=0.1, print_progress=True, print_func=ANY,
         checkpoint_file=os.path.join(str(tmp_path),
                                      'S5_dynesty_checkpoint_white.save'),
         checkpoint_every=600.0, resume=True, maxiter=5, maxcall=6)

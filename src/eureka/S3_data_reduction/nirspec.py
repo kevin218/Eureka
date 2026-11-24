@@ -1,9 +1,10 @@
 # NIRSpec specific rountines go here
+import astraeus.xarrayIO as xrio
 import numpy as np
 from astropy.io import fits
-import astraeus.xarrayIO as xrio
-from . import nircam, sigrej, straighten, plots_s3
+
 from ..lib.util import read_time, supersample
+from . import nircam, plots_s3, sigrej, straighten
 
 __all__ = ['read', 'straighten_trace', 'flag_ff', 'flag_bg',
            'fit_bg', 'cut_aperture', 'standard_spectrum', 'clean_median_flux',
@@ -41,6 +42,7 @@ def read(filename, data, meta, log):
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
     meta.filter = data.attrs['mhdr']['GRATING']
+    meta.nirspec_filter = data.attrs['mhdr']['FILTER']
 
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
@@ -391,6 +393,6 @@ def lc_nodriftcorr(spec, meta):
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     '''
-    mad = meta.mad_s3[0]
+    maed = meta.maed_s3[0]
     plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
-                            optmask=spec.optmask, mad=mad)
+                            optmask=spec.optmask, maed=maed)

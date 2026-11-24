@@ -1,8 +1,9 @@
 import numpy as np
+from scipy.optimize import curve_fit
+
 from ..lib import smooth
 from . import plots_s3
 from .source_pos import gauss
-from scipy.optimize import curve_fit
 
 
 def find_column_median_shifts(data, meta, m, plot_3308=False):
@@ -125,7 +126,7 @@ def roll_columns(data, shifts):
         all_idcs = list(np.ogrid[[slice(0, n) for n in arr.shape]])
 
         # make the shifts positive
-        shifts_i = shifts[i]
+        shifts_i = np.copy(shifts[i])
         shifts_i[shifts_i < 0] += arr.shape[-1]
 
         # apply the shifts

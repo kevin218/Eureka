@@ -1,6 +1,7 @@
-import numpy as np
-import os
 import inspect
+import os
+
+import numpy as np
 
 
 class Parameter:

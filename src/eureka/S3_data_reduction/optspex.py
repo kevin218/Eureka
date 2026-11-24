@@ -1,13 +1,14 @@
-import numpy as np
+import multiprocessing as mp
+
 import matplotlib.pyplot as plt
+import numpy as np
 import scipy.interpolate as spi
 import scipy.ndimage as spn
 from astropy.stats import sigma_clip
 from tqdm import tqdm
-import multiprocessing as mp
 
 from ..lib import gaussian as g
-from ..lib import smooth, plots
+from ..lib import plots, smooth
 from . import plots_s3
 
 

@@ -1,9 +1,10 @@
 import numpy as np
 import scipy.signal as sps
+from astropy.convolution import Box1DKernel, convolve
 from tqdm import tqdm
+
 from ..lib import gaussian as g
 from . import plots_s4
-from astropy.convolution import convolve, Box1DKernel
 
 
 def highpassfilt(signal, highpassWidth):

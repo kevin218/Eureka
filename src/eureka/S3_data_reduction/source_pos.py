@@ -1,9 +1,11 @@
 # Determine source position for data where it's not in the header (MIRI)
 
+import multiprocessing as mp
+
 import numpy as np
 from scipy.optimize import curve_fit
 from tqdm import tqdm
-import multiprocessing as mp
+
 from . import plots_s3
 
 

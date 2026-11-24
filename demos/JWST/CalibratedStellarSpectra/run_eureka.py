@@ -1,4 +1,5 @@
 import os
+
 import eureka.lib.plots
 import eureka.S1_detector_processing.s1_process as s1
 import eureka.S2_calibrations.s2_calibrate as s2

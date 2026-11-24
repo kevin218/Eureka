@@ -1,6 +1,8 @@
-import numpy as np
 import re
+
+import numpy as np
 from scipy.constants import c
+
 from .splinterp import splinterp
 
 

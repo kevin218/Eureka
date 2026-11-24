@@ -3,21 +3,21 @@
 """
 A module for creating and managing grids of model spectra
 """
-from functools import partial
-from glob import glob
 import multiprocessing
 import os
 import pickle
-from importlib.resources import files
 import time
 import warnings
+from functools import partial
+from glob import glob
+from importlib.resources import files
 
-from astropy.io import fits
-from astropy.utils.exceptions import AstropyWarning
 import astropy.table as at
 import astropy.units as q
 import h5py
 import numpy as np
+from astropy.io import fits
+from astropy.utils.exceptions import AstropyWarning
 from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import zoom
 
@@ -161,7 +161,7 @@ class ModelGrid(object):
                         print(f, 'could not be read into the model grid.')
 
             # Fix data types, trim extraneous values, and make the table
-            dtypes = [str if d == bool else d for d in dtypes]
+            dtypes = [str if d is bool else d for d in dtypes]
             vals = [v[: len(dtypes)] for v in vals]
             table = at.Table(np.array(vals), names=keys, dtype=dtypes)
 

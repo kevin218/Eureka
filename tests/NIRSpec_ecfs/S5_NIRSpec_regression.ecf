@@ -1,0 +1,41 @@
+# Eureka! Control File for the Stage 5 NIRSpec regression test
+
+ncpu            1
+allapers        True
+fit_par         ./S5_NIRSpec_regression.epf
+verbose         True
+fit_method      [lsq]
+run_myfuncs     [polynomial]
+
+manual_clip     None
+use_generate_ld None
+ld_file         None
+ld_file_white   None
+
+lsq_method      'Powell'
+lsq_tol         1e-6
+
+old_chain       None
+lsq_first       True
+run_nsteps      4000
+run_nwalkers    50
+run_nburn       2000
+
+run_nlive       1024
+run_bound       'multi'
+run_sample      'unif'
+run_tol         0.1
+
+kernel_inputs   ['time']
+kernel_class    ['Matern32']
+GP_package      'celerite'
+
+interp          False
+isplots_S5      5
+testing_S5      False
+testing_model   False
+hide_plots      True
+
+topdir          ../tests
+inputdir        /data/JWST-Sim/NIRSpec/Stage4/
+outputdir       /data/JWST-Sim/NIRSpec/Stage5/

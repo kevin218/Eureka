@@ -1,10 +1,11 @@
+import crds
 import numpy as np
 import scipy.interpolate as spi
-from scipy.constants import arcsec
-from astropy.io import fits
-from ..lib.util import supersample
-import crds
 import xarray as xr
+from astropy.io import fits
+from scipy.constants import arcsec
+
+from ..lib.util import supersample
 
 
 def rate2count(data):
@@ -113,9 +114,9 @@ def dn2electrons(data, meta, log):
         # Get the gain subarray
         gain = gain[meta.ywindow[0]:meta.ywindow[1],
                     meta.xwindow[0]:meta.xwindow[1]]
+        gain = xr.DataArray(gain, dims=("y", "x"))
 
     # Convert to electrons
-    gain = xr.DataArray(gain, dims=("y", "x"))
     data['flux'] *= gain
     data['err'] *= gain
     # v0 is a variance-like quantity, so square the conversion

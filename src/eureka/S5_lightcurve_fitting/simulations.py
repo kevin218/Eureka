@@ -1,5 +1,6 @@
 import numpy as np
 from bokeh.plotting import figure, show
+
 try:
     import batman
 except ImportError:

@@ -323,7 +323,7 @@ def check_nans(data, mask, log, name='', mute=True):
     return mask
 
 
-def makedirectory(meta, stage, counter=None, **kwargs):
+def makedirectory(meta, stage, counter=None, outputdir_raw=None, **kwargs):
     """Creates a directory for the current stage.
 
     Parameters
@@ -335,6 +335,13 @@ def makedirectory(meta, stage, counter=None, **kwargs):
     counter : int; optional
         The run number if you want to force a particular run number.
         Defaults to None which automatically finds the run number.
+    outputdir_raw : str; optional
+        The stage's base output directory relative to topdir. Defaults to
+        None, in which case meta.outputdir_raw is used. Callers looping over
+        multiple aperture/annulus pairs on the same meta object should pass
+        this explicitly, since meta.outputdir_raw gets overwritten as a side
+        effect of assigning meta.outputdir to the per-pair directory returned
+        by this function on a previous iteration.
     **kwargs : dict
         Additional key,value pairs to add to the folder name
         (e.g. {'ap': 4, 'bg': 10}).
@@ -344,9 +351,12 @@ def makedirectory(meta, stage, counter=None, **kwargs):
     run : int
         The run number
     """
+    if outputdir_raw is None:
+        outputdir_raw = meta.outputdir_raw
+
     # This code allows the input and output files to be stored outside
     # of the Eureka! folder
-    rootdir = os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))
+    rootdir = os.path.join(meta.topdir, *outputdir_raw.split(os.sep))
     if rootdir[-1] != os.sep:
         rootdir += os.sep
 
@@ -390,7 +400,8 @@ def makedirectory(meta, stage, counter=None, **kwargs):
     return counter
 
 
-def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
+def pathdirectory(meta, stage, run, old_datetime=None, outputdir_raw=None,
+                  **kwargs):
     """Finds the directory for the requested stage, run, and datetime
     (or old_datetime).
 
@@ -405,6 +416,13 @@ def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
     old_datetime : str; optional
         The date that a previous run was made (for looking up old data).
         Defaults to None in which case meta.datetime is used instead.
+    outputdir_raw : str; optional
+        The stage's base output directory relative to topdir. Defaults to
+        None, in which case meta.outputdir_raw is used. Callers looping over
+        multiple aperture/annulus pairs on the same meta object should pass
+        this explicitly, since meta.outputdir_raw gets overwritten as a side
+        effect of assigning meta.outputdir to the per-pair directory returned
+        by this function on a previous iteration.
     **kwargs : dict
         Additional key,value pairs to add to the folder name
         (e.g. {'ap': 4, 'bg': 10}).
@@ -419,9 +437,12 @@ def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
     else:
         datetime = meta.datetime
 
+    if outputdir_raw is None:
+        outputdir_raw = meta.outputdir_raw
+
     # This code allows the input and output files to be stored outside
     # of the Eureka! folder
-    rootdir = os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))
+    rootdir = os.path.join(meta.topdir, *outputdir_raw.split(os.sep))
     if rootdir[-1] != os.sep:
         rootdir += os.sep
 
@@ -658,14 +679,14 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
         return normspec
 
 
-def get_mad(meta, log, wave_1d, optspec, optmask=None,
-            wave_min=None, wave_max=None, scandir=None):
-    """Computes variation on median absolute deviation (MAD) using ediff1d
-    for 2D data.
+def get_maed(meta, log, wave_1d, optspec, optmask=None,
+             wave_min=None, wave_max=None, scandir=None):
+    """Computes variation on median absolute element difference (MAED)
+    using ediff1d for 2D data.
 
-    The computed MAD is the average MAD along the time axis. In
-    otherwords, the MAD is computed in the time direction for each
-    wavelength, and then the returned value is the average of those MAD
+    The computed MAED is the average MAED along the time axis. In
+    otherwords, the MAED is computed in the time direction for each
+    wavelength, and then the returned value is the average of those MAED
     values.
 
     Parameters
@@ -696,14 +717,19 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
 
     Returns
     -------
-    mad : float
-        Single MAD value in ppm
+    maed : float
+        Single MAED value in ppm
     """
-    # Make sure wavelengths are in ascending order
-    if wave_1d[0] > wave_1d[-1]:
+    # Make sure wavelengths are in ascending order. Some instruments have
+    # detector pixels outside an order's wavelength solution, represented by
+    # NaNs at either end of wave_1d, so we handle that possibility as well.
+    finite_wave = np.flatnonzero(np.isfinite(wave_1d))
+    if finite_wave.size == 0:
+        return np.nan
+    if wave_1d[finite_wave[0]] > wave_1d[finite_wave[-1]]:
         wave_1d = wave_1d[::-1]
-        optspec = optspec[::-1]
-        optmask = optmask[::-1]
+        optspec = optspec[:, ::-1]
+        optmask = optmask[:, ::-1]
 
     optspec = np.ma.masked_invalid(optspec)
     optspec = np.ma.masked_where(optmask, optspec)
@@ -723,48 +749,48 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
                                   scandir=scandir)
 
     if meta.inst == 'wfc3':
-        # Setup 1D MAD arrays
+        # Setup 1D MAED arrays
         n_wav = normspec.shape[1]
         ediff = np.ma.zeros((2, n_wav))
 
-        # Compute the MAD for each scan direction
+        # Compute the MAED for each scan direction
         for p in range(2):
             iscans = np.atleast_1d(scandir == p).nonzero()[0]
             if len(iscans) > 0:
-                # Compute the MAD
+                # Compute the MAED
                 for m in range(n_wav):
-                    ediff[p, m] = get_mad_1d(normspec[iscans, m])
+                    ediff[p, m] = get_maed_1d(normspec[iscans, m])
 
-                mad = np.ma.mean(ediff[p])
-                log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
-                setattr(meta, f'mad_scandir{p}', mad)
+                maed = np.ma.mean(ediff[p])
+                log.writelog(f"Scandir {p} MAED = {int(np.round(maed))} ppm")
+                setattr(meta, f'maed_scandir{p}', maed)
 
         if np.all(scandir == scandir[0]):
             # Only scanned in one direction, so get rid of the other
             ediff = ediff[scandir[0]]
         else:
-            # Collapse the MAD along the scan direction
+            # Collapse the MAED along the scan direction
             ediff = np.mean(ediff, axis=0)
     else:
-        # Setup 1D MAD array
+        # Setup 1D MAED array
         n_wav = normspec.shape[1]
         ediff = np.ma.zeros(n_wav)
 
-        # Compute the MAD
+        # Compute the MAED
         for m in range(n_wav):
-            ediff[m] = get_mad_1d(normspec[:, m])
+            ediff[m] = get_maed_1d(normspec[:, m])
 
     return np.ma.mean(ediff)
 
 
-def get_mad_1d(data, ind_min=0, ind_max=None):
-    """Computes variation on median absolute deviation (MAD) using ediff1d
-    for 1D data.
+def get_maed_1d(data, ind_min=0, ind_max=None):
+    """Computes variation on median absolute element difference (MAED)
+    using ediff1d for 1D data.
 
     Parameters
     ----------
     data : ndarray
-        The array from which to calculate MAD.
+        The array from which to calculate MAED.
     int_min : int
         Minimum index to consider.
     ind_max : int
@@ -772,8 +798,8 @@ def get_mad_1d(data, ind_min=0, ind_max=None):
 
     Returns
     -------
-    mad : float
-        Single MAD value in ppm
+    maed : float
+        Single MAED value in ppm
     """
     return 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(data[ind_min:ind_max])))
 
@@ -1142,6 +1168,9 @@ def add_meta_to_xarray(meta, data):
         # None values cannot be saved, convert to string
         if attr_value is None:
             attr_value = 'None'
+        # Python ranges cannot be serialized as xarray attributes
+        if isinstance(attr_value, range):
+            attr_value = list(attr_value)
         # Bibliography needs special handling
         if attr == 'bibliography':
             # Can't have different sized lists, must collapse

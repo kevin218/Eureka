@@ -1,14 +1,16 @@
-import numpy as np
 import inspect
+
+import numpy as np
+
 try:
     import batman
 except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
-from . import Model
-from .AstroModel import PlanetParams, correct_light_travel_time, get_ecl_midpt
-from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
+from ..limb_darkening_fit import ld_profile
+from .AstroModel import PlanetParams, correct_light_travel_time, get_ecl_midpt
+from .Model import Model
 
 
 class BatmanTransitModel(Model):
@@ -116,7 +118,8 @@ class BatmanTransitModel(Model):
                 # Enforce physicality to avoid crashes from batman by returning
                 # something that should be a horrible fit
                 if (not ((0 < pl_params.per) and (0 < pl_params.inc <= 90) and
-                         (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
+                         (1 < pl_params.a) and (0 <= pl_params.ecc < 1) and
+                         (-1 <= pl_params.ecosw <= 1) and
                          (-1 <= pl_params.esinw <= 1))
                     or (self.parameters.limb_dark.value == 'kipping2013' and
                         pl_params.u_original[0] <= 0)):
@@ -166,12 +169,12 @@ class BatmanEclipseModel(Model):
         ltt_par3 = np.array(['ecc', 'w'])
         ltt_par4 = np.array(['ecosw', 'esinw'])
         # Check if able to do ltt correction
-        ltt_params_present = (np.all(np.in1d(ltt_params, self.paramtitles))
+        ltt_params_present = (np.all(np.isin(ltt_params, self.paramtitles))
                               and 'Rs' in self.parameters.dict.keys()
-                              and np.any(np.in1d(ltt_par2, self.paramtitles))
-                              and np.any([np.all(np.in1d(ltt_par3,
+                              and np.any(np.isin(ltt_par2, self.paramtitles))
+                              and np.any([np.all(np.isin(ltt_par3,
                                                          self.paramtitles)),
-                                          np.all(np.in1d(ltt_par4,
+                                          np.all(np.isin(ltt_par4,
                                                          self.paramtitles))]))
         if self.compute_ltt and not ltt_params_present:
             missing_params = ltt_params[~np.any(ltt_params.reshape(-1, 1) ==

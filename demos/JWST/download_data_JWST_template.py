@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-from astroquery.mast import Observations
-import eureka.lib.mastDownload as md
 from astropy.io import ascii
+from astroquery.mast import Observations
+
+import eureka.lib.mastDownload as md
 
 # Proposal/Program ID, can be string or int
 proposal_id = '02734'

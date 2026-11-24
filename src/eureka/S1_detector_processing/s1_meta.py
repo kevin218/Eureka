@@ -1,4 +1,7 @@
 # pylint: disable=attribute-defined-outside-init
+import warnings
+from numbers import Integral
+
 from ..lib.readECF import MetaClass
 
 
@@ -174,7 +177,7 @@ class S1MetaClass(MetaClass):
             self.bg_y2 = getattr(self, 'bg_y2')
             self.bg_deg = getattr(self, 'bg_deg', 0)
             # Options: std (Standard Deviation),
-            # median (Median Absolute Deviation), or
+            # median (Median Absolute Element Difference), or
             # mean (Mean Absolute Deviation)
             self.bg_method = getattr(self, 'bg_method', 'median')
             self.p3thresh = getattr(self, 'p3thresh', 3)
@@ -230,13 +233,33 @@ class S1MetaClass(MetaClass):
 
         # jwst skips by default for MIRI TSO, but should likely be set False
         # (that may depend on the dataset though).
-        self.skip_firstframe = getattr(self, 'skip_firstframe', True)
-        # jwst skips by default for MIRI TSO, but should likely be set False
-        # (that may depend on the dataset though).
         self.skip_lastframe = getattr(self, 'skip_lastframe', True)
         self.skip_reset = getattr(self, 'skip_reset', False)
-        # jwst skips by default for MIRI TSO.
         self.skip_rscd = getattr(self, 'skip_rscd', True)
+        # Keep None until the RSCD step resolves the effective group_skip,
+        # so inheritance follows optimizer sweeps and CRDS reference values.
+        self.rscd_group_skip1 = getattr(self, 'rscd_group_skip1', None)
+        self.rscd_group_skip = getattr(self, 'rscd_group_skip', None)
+
+        for parameter in ['rscd_group_skip1', 'rscd_group_skip']:
+            value = getattr(self, parameter)
+            if value is not None and (
+                    not isinstance(value, Integral) or isinstance(value, bool)
+                    or value < 0):
+                raise ValueError(
+                    f'{parameter} must be a nonnegative integer or None.')
+            if value is not None:
+                setattr(self, parameter, int(value))
+
+        # Preserve legacy "run firstframe, skip RSCD" ECFs by using the new
+        # RSCD machinery to flag exactly one group in every integration.
+        legacy_firstframe = getattr(self, 'skip_firstframe', True)
+        no_rscd_override = (self.rscd_group_skip1 is None and
+                            self.rscd_group_skip is None)
+        if not legacy_firstframe and self.skip_rscd and no_rscd_override:
+            self.skip_rscd = False
+            self.rscd_group_skip1 = 1
+            self.rscd_group_skip = 1
         # Skip since pretty time consuming and testing has shown it has
         # negligible effect on the data.
         self.skip_emicorr = getattr(self, 'skip_emicorr', True)
@@ -271,5 +294,15 @@ class S1MetaClass(MetaClass):
         '''Set Stage 1 specific defaults for NIRISS.
         '''
         self.orders = getattr(self, 'orders', [1, 2])
+
+        # NIRISS grouplevel_bg must be False in Stage 1
+        self.grouplevel_bg = getattr(self, 'grouplevel_bg', False)
+        if self.grouplevel_bg:
+            warnings.warn('grouplevel_bg must be False for Stage 1 NIRISS '
+                          'analyses! Standard background subtraction is '
+                          'performed in Stage 3 instead. '
+                          ''
+                          'Setting grouplevel_bg to False...')
+            self.grouplevel_bg = False
 
         self.set_NIR_defaults()

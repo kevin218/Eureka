@@ -1,4 +1,105 @@
-# conftest.py
+"""Shared pytest configuration for Eureka tests."""
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+import pytest
+
+# Import this checkout before regression fixtures and test modules load.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+
+# Set this before test modules and regression fixtures import Matplotlib.
+# Respect an explicit configuration directory supplied by the caller.
+os.environ.setdefault('MPLCONFIGDIR', tempfile.gettempdir())
+
+
+def pytest_addoption(parser):
+    """Register options used by Eureka's integration tests."""
+    parser.addoption(
+        "--keep-s3-output",
+        action="store_true",
+        default=False,
+        help=("Preserve Stage 3 output directories after integration tests. "
+              "Use this only when creating or inspecting regression "
+              "reference data."),
+    )
+    parser.addoption(
+        "--keep-s2-output",
+        action="store_true",
+        default=False,
+        help=("Preserve Stage 2 output directories after integration tests. "
+              "Use this only when preparing fixed Stage 2 inputs for Stage "
+              "3 regression tests."),
+    )
+    parser.addoption(
+        "--overwrite-ref-files",
+        "--overwrite_ref_files",
+        action="store_true",
+        dest="overwrite_ref_files",
+        default=False,
+        help=("Replace the selected regression-test reference files with "
+              "their current outputs after an interactive confirmation."),
+    )
+    parser.addoption(
+        "--keep-s4-output",
+        action="store_true",
+        default=False,
+        help=("Preserve Stage 4 output directories after integration tests. "
+              "Use this only when creating or inspecting regression "
+              "reference data."),
+    )
+
+
+@pytest.fixture
+def keep_s3_output(pytestconfig):
+    """Whether a test should retain its generated Stage 3 products."""
+    return pytestconfig.getoption("--keep-s3-output")
+
+
+@pytest.fixture
+def keep_s2_output(pytestconfig):
+    """Whether a test should retain its generated Stage 2 products."""
+    return pytestconfig.getoption("--keep-s2-output")
+
+
+@pytest.fixture(scope="session")
+def overwrite_ref_files(pytestconfig):
+    """Confirm whether selected regression references may be overwritten."""
+    if not pytestconfig.getoption("overwrite_ref_files"):
+        return False
+
+    stdin = sys.__stdin__
+    stderr = sys.__stderr__
+    if not stdin.isatty():
+        raise pytest.UsageError(
+            "--overwrite-ref-files requires an interactive terminal so its "
+            "confirmation prompt cannot be bypassed."
+        )
+
+    stderr.write(
+        "\nWARNING: This run will replace the Git-tracked reference file(s) "
+        "for every selected regression case. Review the resulting Git diff "
+        "before committing.\n"
+        "Type OVERWRITE to continue: "
+    )
+    stderr.flush()
+    if stdin.readline().strip() != "OVERWRITE":
+        raise pytest.UsageError("Reference overwrite cancelled.")
+    return True
+
+
+@pytest.fixture
+def keep_s4_output(pytestconfig):
+    """Whether a test should retain its generated Stage 4 products."""
+    return pytestconfig.getoption("--keep-s4-output")
+
+
+def is_unit_test(item):
+    """Return True for tests stored under tests/unit."""
+    return 'unit' in Path(str(item.fspath)).parts
+
+
 def pytest_collection_modifyitems(session, config, items):
     """Modifies test items to ensure test functions run in a given order
 
@@ -22,10 +123,14 @@ def pytest_collection_modifyitems(session, config, items):
                       "test_MIRI", "test_NIRCam", "test_NIRSpec",
                       "test_NIRCamPhotometry", "test_NIRCamPhotometry_hex",
                       "test_WFC3"]
-    item_names = [item.name for item in items]
-    function_mapping = {item.name: item for item in items
+    unit_items = [item for item in items if is_unit_test(item)]
+    unit_items.sort(key=lambda item: (str(item.fspath), item.name))
+    non_unit_items = [item for item in items if not is_unit_test(item)]
+
+    item_names = [item.name for item in non_unit_items]
+    function_mapping = {item.name: item for item in non_unit_items
                         if item.name in function_order}
-    extra_functions = [item for item in items
+    extra_functions = [item for item in non_unit_items
                        if item.name not in function_order]
 
     sorted_items = []
@@ -34,4 +139,4 @@ def pytest_collection_modifyitems(session, config, items):
             sorted_items.append(function_mapping[func_])
     sorted_items.extend(extra_functions)
 
-    items[:] = sorted_items
+    items[:] = unit_items + sorted_items

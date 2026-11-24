@@ -1,13 +1,13 @@
-import numpy as np
-import h5py as h5
-import pickle
-import os
 import glob
+import os
+import pickle
 import re
-import astraeus.xarrayIO as xrio
 
-from . import readECF
-from . import util
+import astraeus.xarrayIO as xrio
+import h5py as h5
+import numpy as np
+
+from . import readECF, util
 
 
 def filter_allapers_inputdir(meta):

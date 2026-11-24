@@ -6,18 +6,18 @@ name: eureka
 channels:
   - conda-forge
 dependencies:
-  - astropy
+  - astropy <=7.2.1
   - astroquery
   - bokeh
   - ccdproc
   - corner
   - dynesty >1.0
   - emcee >3.0.0
-  - flake8
   - h5py >=3.7.0
   - ipykernel >=6.0.0
   - ipympl >=0.9.3
   - ipython >=7.0.0
+  - isort
   - jupyter >=1.0.0
   - libblas =*=*openblas*
   - liblapack =*=*openblas*
@@ -25,10 +25,10 @@ dependencies:
   - lmfit
   - matplotlib >=3.6
   - nbsphinx >=0.8.9
-  - numpy >=1.25,<2.0
+  - numpy >=1.25
   - numpydoc >=1.5
   - pandas
-  - photutils
+  - photutils <3.1
   - pip
   - pre-commit
   - pytest <8.0
@@ -38,6 +38,7 @@ dependencies:
   - python-build
   - pyyaml
   - requests
+  - ruff
   - scipy >=1.12.0
   - shapely
   - sphinx >=6.0
@@ -52,17 +53,17 @@ dependencies:
     - celerite2
     - crds
     - exotic-ld @ git+https://github.com/taylorbell57/ExoTiC-LD.git@0bb2ff8
-    - fleck
+    - fleck @ git+https://github.com/taylorbell57/fleck.git@numpy_v2
     - george
     - image_registration >=0.2.10
-    - jwst ==2.0.1
+    - jwst ==3.0.0
     - mc3
     - myst-parser >=0.18.0
-    - pastasoss >=1.2.3
+    - pastasoss >=1.2.4
     - planet-harmonica @ git+https://github.com/Exo-TiC/harmonica@main
     - setuptools_scm >=6.2
     - sphinx-rtd-theme >=1.3.0
-    - stcal >=1.18.0
+    - stcal >=1.19.1
     - stdatamodels >=5.0.2
     - svo_filters >=0.5.3
 platforms:

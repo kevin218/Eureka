@@ -1,6 +1,6 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import astropy.constants as const
+import matplotlib.pyplot as plt
+import numpy as np
 import scipy.optimize
 
 from ...lib import plots
