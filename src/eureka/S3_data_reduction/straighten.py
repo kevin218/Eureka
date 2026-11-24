@@ -6,7 +6,7 @@ from . import plots_s3
 from .source_pos import gauss
 
 
-def find_column_median_shifts(data, meta, m):
+def find_column_median_shifts(data, meta, m, plot_3308=False):
     '''Takes the median frame (in time) and finds the
     center of mass (COM) in pixels for each column. It then returns the needed
     shift to apply to each column to bring the COM to the center
@@ -19,11 +19,18 @@ def find_column_median_shifts(data, meta, m):
         The metadata object.
     m : int
         The file number.
+    plot_3308 : boolean
+        Flag to determine if this method is being called to
+        get the smoothed spectral trace to plot over Fig. 3308
 
     Returns
     -------
     shifts : ndarray (2D)
-        The shifts to apply to each column to straighten the trace.
+        If plot_3308 is False, return the shifts to apply to each
+        column to straighten the trace.
+    smooth_coms : ndarray (1D)
+        If plot_3308 is True, the y positions of the smoothed center
+        of mass trace.
     new_center : int
         The central row of the detector where the trace is moved to.
     '''
@@ -68,7 +75,8 @@ def find_column_median_shifts(data, meta, m):
     # Convert to integer pixels
     int_coms = np.round(smooth_coms).astype(int)
 
-    if meta.isplots_S3 >= 1:
+    # only plot curvature plot during desired reduction step
+    if meta.isplots_S3 >= 1 and not plot_3308:
         plots_s3.curvature(meta, column_coms, smooth_coms, int_coms, m)
 
     # define the new center (where we will align the trace) in the
@@ -83,6 +91,11 @@ def find_column_median_shifts(data, meta, m):
     shifts[column_coms < 0] = 0
     shifts[column_coms > nb_rows] = 0
 
+    if plot_3308:
+        # return empirical smoothed center of mass trace
+        return smooth_coms, new_center
+
+    # return shifts to straighten trace
     return shifts, new_center
 
 
