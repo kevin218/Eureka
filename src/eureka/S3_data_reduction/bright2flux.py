@@ -95,8 +95,11 @@ def dn2electrons(data, meta, log):
         xstart_gain = gain_header['SUBSTRT1']
         ystart_gain = gain_header['SUBSTRT2']
 
-        ystart_trim = ystart-ystart_gain + 1  # 1 indexed, NOT zero
-        xstart_trim = xstart-xstart_gain + 1
+        # FITS subarray origins are 1-indexed, whereas NumPy slices are
+        # 0-indexed.  Do not add one here: for a reference and science
+        # subarray with the same origin, the slice must start at zero.
+        ystart_trim = ystart - ystart_gain
+        xstart_trim = xstart - xstart_gain
 
         gain = fits.getdata(meta.gainfile)[ystart_trim:ystart_trim+ny,
                                            xstart_trim:xstart_trim+nx]
@@ -112,8 +115,11 @@ def dn2electrons(data, meta, log):
         # Apply same gain values to all super-sampled pixels
         gain = supersample(gain, meta.expand, 'cal', axis=0)
         # Get the gain subarray
-        gain = gain[meta.ywindow[0]:meta.ywindow[1],
-                    meta.xwindow[0]:meta.xwindow[1]]
+        y0 = max(0, int(meta.ywindow[0]))
+        y1 = min(gain.shape[0], int(meta.ywindow[1]))
+        x0 = max(0, int(meta.xwindow[0]))
+        x1 = min(gain.shape[1], int(meta.xwindow[1]))
+        gain = gain[y0:y1, x0:x1]
         gain = xr.DataArray(gain, dims=("y", "x"))
 
     # Convert to electrons

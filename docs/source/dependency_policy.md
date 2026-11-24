@@ -118,7 +118,7 @@ modes and plotting.
 The permanent compatibility lane is intentionally small. The current tested
 floor is exercised in CI with:
 
-- Python 3.11.0
+- Python 3.11
 - the oldest-practical constraints file
 - `.[jwst,hst,test]`
 - the full `pytest tests` suite

@@ -128,8 +128,8 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
     if initial_run:
         # Setup Meta objects
         meta = deepcopy(s1opt_meta)
-        s1_meta, s2_meta, s3_meta, s4_meta = initialize_meta(meta, eventlabel,
-                                                             ecf_path=None)
+        s1_meta, s2_meta, s3_meta, s4_meta = initialize_meta(
+            meta, eventlabel, ecf_path=ecf_path)
 
         s1_meta = s1.rampfitJWST(eventlabel, input_meta=s1_meta)
         s2_meta = s2.calibrateJWST(eventlabel, input_meta=s2_meta)
@@ -166,7 +166,7 @@ def wrapper(eventlabel, ecf_path=None, initial_run=True, final_run=True):
 
     # Update S1 ECF file with optimized parameters
     s1_meta, s2_meta, s3_meta, s4_meta = initialize_meta(
-        s1opt_meta, eventlabel, ecf_path=None)
+        s1opt_meta, eventlabel, ecf_path=ecf_path)
     ecf_parameters = set()
     for line in s1_meta.lines:
         tokens = line.split('#', 1)[0].split()
@@ -261,8 +261,8 @@ def optimize(s1opt_meta, log, history, best, p, eventlabel, ecf_path, stage):
     # Setup Meta objects
     meta = deepcopy(s1opt_meta)
     meta.opt_param_name = p
-    s1_meta, s2_meta, s3_meta, s4_meta = initialize_meta(meta, eventlabel,
-                                                         ecf_path=None)
+    s1_meta, s2_meta, s3_meta, s4_meta = initialize_meta(
+        meta, eventlabel, ecf_path=ecf_path)
 
     # Extract sweep for parameter(s) to optimize
     if hasattr(meta, "sweep_" + p):

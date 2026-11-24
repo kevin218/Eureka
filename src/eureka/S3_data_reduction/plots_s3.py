@@ -711,22 +711,19 @@ def median_frame(data, meta, m, medflux, order=None):
     # Overplot nominal spectral trace for NIRISS SOSS
     # (TODO: Probably also useful for NIRSpec, etc.)
     if meta.inst == "niriss":
-        if data.attrs['mhdr']['SUBARRAY'] == 'SUBSTRIP96':
-            order = 1
-            trace = data["trace"].sel(order=order)
-
-            plt.plot(data.flux.x.values, trace,
-                     c="white", lw=2)
-            plt.plot(data.flux.x.values, trace,
-                     "--k", lw=1, label=f"Trace Order {order}")
-        else:
-            for order in meta.all_orders:
-                trace = data["trace"].sel(order=order)
-                plt.plot(data.flux.x.values, trace,
-                         c="white", lw=2)
-                plt.plot(data.flux.x.values, trace,
-                         "--k", lw=1, label=f"Trace Order {order}")
+        fmt = ["--", ":", "-."]
+        for trace_order in meta.orders:
+            x = data.flux.x.values
+            trace = data.trace.sel(order=trace_order).values
+            wave = data.wave_1d.sel(order=trace_order).values
+            # Only plot the trace where the wavelength is finite.
+            trace_plot = np.where(np.isfinite(wave), trace, np.nan)
+            plt.plot(x, trace_plot, c="white", lw=2)
+            plt.plot(x, trace_plot, fmt[trace_order-1], color='k', lw=1,
+                     label=f"Trace Order {trace_order}")
         plt.legend()
+    plt.xlim(xmin, xmax)
+    plt.ylim(ymin, ymax)
 
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
