@@ -544,6 +544,7 @@ def test_fitters_save_and_reuse_model(tmp_path, fitter, gp):
         ncpu=1,
         chains=1,
         dense_mass=False,
+        nuts_regularize_mass_matrix=not gp,
         run_nburn=100,
         run_nsteps=100,
         run_nwalkers=4,
@@ -556,6 +557,9 @@ def test_fitters_save_and_reuse_model(tmp_path, fitter, gp):
     assert list(tmp_path.glob("S5_*Table_Save*.txt"))
     if fitter == "nuts":
         assert list(tmp_path.glob("S5_nuts_samples*.h5"))
+        log_text = (tmp_path / "fit.log").read_text()
+        assert "Leapfrog steps per posterior draw" in log_text
+        assert f"nuts_regularize_mass_matrix={not gp}" in log_text
     # This failed in the old implementation after optimizer/sampler tracing.
     assert np.all(np.isfinite(result.eval(incl_GP=True)))
     assert result.physeval(interp=True)[0].shape == flux.shape
@@ -684,6 +688,52 @@ def test_numpy_and_numpyro_likelihood_agree_with_missing_data(gp):
     )
     expected = ln_like(list(values.values()), lc, model, names)
     np.testing.assert_allclose(observed_log_prob, expected, atol=1e-10)
+
+
+@pytest.mark.parametrize("normalize", [False, True])
+def test_scalable_matern32_matches_dense_gp(normalize):
+    """Keep the same GP and restore prediction order after sorting times."""
+    import tinygp
+    from tinygp.solvers import QuasisepSolver
+
+    time = np.array([0.04, 0.01, np.nan, 0., 0.025, 0.01, 0.09])
+    flux = np.array([1.002, 0.998, 1., 1.001, np.nan, 0.999, 1.003])
+    unc = np.linspace(0.0005, 0.0015, len(time))
+    fit = jnp.ones(len(time))
+    pars = parameters(A=-12., m=-2.)
+    lc = SimpleNamespace(flux=flux, unc=unc, unc_fit=unc)
+    model = jm.GPModel(
+        ["Matern32"], ["time"], lc, normalize=normalize,
+        **config(pars, time=time, nints=[len(time)]))
+    good = np.isfinite(time) & np.isfinite(flux)
+    x = time[good]
+    if normalize:
+        x = (x - x.mean()) / x.std()
+    residual = flux[good] - 1.
+
+    def dense_gp(theta):
+        log_amp, log_metric = theta
+        kernel = jnp.exp(log_amp) * tinygp.kernels.Matern32(
+            scale=jnp.exp(2. * log_metric))
+        return tinygp.GaussianProcess(kernel, x, diag=unc[good]**2)
+
+    def actual(theta):
+        return model.loglikelihood(
+            fit, param_dict={"A": theta[0], "m": theta[1]})
+
+    theta = jnp.array([-12., -2.])
+    gp, _ = model._channel_gp(0, {"A": theta[0], "m": theta[1]}, time, unc)
+    assert isinstance(gp.solver, QuasisepSolver)
+    expected = jax.value_and_grad(
+        lambda p: dense_gp(p).log_probability(residual))(theta)
+    result = jax.jit(jax.value_and_grad(actual))(theta)
+    np.testing.assert_allclose(result[0], expected[0], atol=1e-10)
+    np.testing.assert_allclose(result[1], expected[1], atol=1e-10)
+
+    prediction = jax.jit(model.eval)(fit)
+    np.testing.assert_allclose(
+        prediction[good], dense_gp(theta).predict(residual), atol=1e-10)
+    assert np.all(np.isnan(prediction[~good]))
 
 
 @pytest.mark.parametrize(

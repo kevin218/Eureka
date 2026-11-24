@@ -1439,27 +1439,44 @@ Use ``run_pfrac = 0.5`` for a balanced approach. Increase to ``0.7-0.9`` if you 
 
 NUTS Fitting Parameters
 '''''''''''''''''''''''
-The following set the parameters for running PyMC3's NUTS sampler. These options are described in more detail in: https://docs.pymc.io/en/v3/api/inference.html#pymc3.sampling.sample
+These settings apply to ``fit_method [nuts]``, which uses NumPyro's NUTS sampler.
+See the `NumPyro NUTS documentation <https://num.pyro.ai/en/stable/mcmc.html>`_
+for the sampler options.
 
-exoplanet_first
-'''''''''''''''
-Boolean to determine whether to run exoplanet optimizer before NUTS. This is generally not recommended, but it can sometimes be helpful if your initial manual guess is quite poor.
+jaxopt_first
+^^^^^^^^^^^^
+Boolean. Run JAX optimization to initialize NUTS. Defaults to ``False``.
 
-tune
-^^^^
-Number of iterations to tune. Samplers adjust the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition to the number specified in the draws argument.
+run_nburn
+^^^^^^^^^
+Integer. Number of warmup iterations per chain for adapting the step size and
+mass matrix. Warmup draws are excluded from the posterior samples.
 
-draws
-^^^^^
-The number of samples to draw. The number of tuned samples are discarded by default.
+run_nsteps
+^^^^^^^^^^
+Integer. Number of posterior draws per chain after warmup.
 
 chains
 ^^^^^^
-The number of chains to sample. Running independent chains is important for some convergence statistics and can also reveal multiple modes in the posterior. If None, then set to either ncpu or 2, whichever is larger.
+Integer. Number of independent chains. Defaults to 3. With ``ncpu=1``, Eureka!
+runs the chains sequentially. With ``ncpu>1``, it requests parallel chains.
 
-target_accept
-^^^^^^^^^^^^^
-Adapt the step size such that the average acceptance probability across the trajectories are close to target_accept. Higher values for target_accept lead to smaller step sizes. A default of 0.8 is recommended, but setting this to higher values like 0.9 or 0.99 can help with sampling from difficult posteriors. Valid values are between 0 and 1 (exclusive).
+dense_mass
+^^^^^^^^^^
+Use ``False`` for a diagonal mass matrix (default) or ``True`` for a full one.
+A list such as ``[('u1', 'u2')]`` estimates correlations within that block and
+uses a diagonal matrix for the remaining parameters. Use the exact sampled
+parameter names, including any channel suffixes.
+
+nuts_regularize_mass_matrix
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Boolean. NumPyro regularizes the mass matrix estimated during warmup by
+default (``True``). If the log shows long or capped trajectories in a
+well-identified fit with parameters on very different scales, try ``False``.
+This can help the sampler adapt to very narrow posteriors. It can also make
+adaptation less stable when the covariance estimate is poor. Compare
+divergences, R-hat, and effective sample size across independent chains before
+using the results.
 
 Plotting and Diagnostics
 ''''''''''''''''''''''''

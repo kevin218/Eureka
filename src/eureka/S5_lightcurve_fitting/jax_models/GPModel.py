@@ -23,7 +23,7 @@ def build_tinygp_kernel(kernel_name, log_amplitude, log_metric):
 
 
 def build_gp_jax(time, uncertainty, param_dict, channel=0, normalize=False):
-    """Build a Matern-3/2 GP using the current parameters and uncertainties.
+    """Build a scalable Matern-3/2 GP on sorted times.
 
     ``A`` is log covariance amplitude and ``m`` is log square-root scale,
     preserving the existing tinygp parameter convention in Stage 5.
@@ -37,9 +37,13 @@ def build_gp_jax(time, uncertainty, param_dict, channel=0, normalize=False):
     if normalize:
         std = jnp.std(x)
         x = (x - jnp.mean(x)) / jnp.where(std > 0., std, 1.)
-    kernel = build_tinygp_kernel('Matern32', amplitude, metric)
+    # The quasiseparable kernel uses a standard deviation, while A stores the
+    # log covariance amplitude. This preserves the same kernel as above.
+    kernel = tinygp.kernels.quasisep.Matern32(
+        scale=jnp.exp(2. * metric), sigma=jnp.exp(0.5 * amplitude))
     return tinygp.GaussianProcess(kernel, X=x,
-                                  diag=jnp.asarray(uncertainty)**2, mean=0.)
+                                  diag=jnp.asarray(uncertainty)**2, mean=0.,
+                                  assume_sorted=True)
 
 
 class GPModel(JaxModel):
@@ -89,10 +93,15 @@ class GPModel(JaxModel):
         return split([data], self.nints, channel)[0]
 
     def _channel_gp(self, channel, param_dict, time, scatter):
-        indices = self.good_indices[int(channel)]
-        x = jnp.asarray(self._time_for_channel(time, channel))[indices]
+        indices = jnp.asarray(self.good_indices[int(channel)])
+        time = jnp.asarray(self._time_for_channel(time, channel))
+        # The solver requires sorted coordinates. Keep the corresponding
+        # observations and errors aligned, even for unsorted input times.
+        indices = indices[jnp.argsort(time[indices])]
         unc = jnp.asarray(self._data_for_channel(scatter, channel))[indices]
-        return build_gp_jax(x, unc, param_dict, channel, self.normalize)
+        gp = build_gp_jax(time[indices], unc, param_dict, channel,
+                          self.normalize)
+        return gp, indices
 
     def _scatter(self, param_dict, time):
         return build_scatter_array_jax(
@@ -105,7 +114,7 @@ class GPModel(JaxModel):
             indices = self.good_indices[int(chan)]
             if not len(indices):
                 continue
-            gp = self._channel_gp(chan, param_dict, time, scatter)
+            gp, indices = self._channel_gp(chan, param_dict, time, scatter)
             observed = jnp.asarray(self._data_for_channel(flux, chan))
             residual = (observed[indices]
                         - self._data_for_channel(fit_lc, chan)[indices])
@@ -122,13 +131,15 @@ class GPModel(JaxModel):
             indices = self.good_indices[int(chan)]
             x = self._time_for_channel(time, chan)
             if len(indices):
-                gp = self._channel_gp(chan, params, time, scatter)
+                gp, indices = self._channel_gp(chan, params, time, scatter)
                 fit = (self._data_for_channel(fit_lc, chan)
                        if channel is None else fit_lc)
                 observed = jnp.asarray(self._data_for_channel(flux, chan))
                 residual = (observed[indices]
                             - jnp.asarray(fit)[indices])
-                mu = gp.condition(residual, gp.X).gp.loc
+                # Omitting prediction coordinates uses the fast path at the
+                # training points, without an explicit dense cross covariance.
+                mu = gp.predict(residual)
                 piece = jnp.full(len(x), jnp.nan).at[indices].set(mu)
             else:
                 piece = jnp.full(len(x), jnp.nan)
@@ -146,7 +157,7 @@ class GPModel(JaxModel):
             indices = self.good_indices[int(chan)]
             if not len(indices):
                 continue
-            gp = self._channel_gp(chan, params, time, scatter)
+            gp, indices = self._channel_gp(chan, params, time, scatter)
             fit = (self._data_for_channel(fit_lc, chan)
                    if channel is None else fit_lc)
             observed = jnp.asarray(self._data_for_channel(flux, chan))

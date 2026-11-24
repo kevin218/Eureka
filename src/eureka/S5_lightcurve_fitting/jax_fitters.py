@@ -1,5 +1,6 @@
 import sys
 from io import StringIO
+from time import perf_counter
 
 import arviz
 import numpy as np
@@ -321,7 +322,6 @@ def nutsfitter(lc, model, meta, log, **kwargs):
             fitter='nutsStartingPoint',
         )
 
-    log.writelog('Running numpyro\'s NUTS sampler...')
     if meta.ncpu > 1:
         nhost = min([meta.ncpu, meta.chains])
         numpyro.set_host_device_count(nhost)
@@ -336,6 +336,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     kernel = NUTS(
         numpyro_model,
         dense_mass=meta.dense_mass,
+        regularize_mass_matrix=meta.nuts_regularize_mass_matrix,
         init_strategy=numpyro.infer.init_to_value(values=start),
     )
     mcmc = MCMC(
@@ -345,10 +346,26 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         num_chains=meta.chains,
         chain_method=chain_method,
     )
-    mcmc.run(jax.random.PRNGKey(1), lc.time, lc.flux, lc.unc)
+    log.writelog(
+        f"Running NumPyro's NUTS sampler ({meta.chains} chains, "
+        f"{mcmc.chain_method}, {meta.run_nburn} warmup and "
+        f"{meta.run_nsteps} draws per chain)...")
+    log.writelog(f'NUTS mass matrix: dense_mass={meta.dense_mass!r}, '
+                 'nuts_regularize_mass_matrix='
+                 f'{meta.nuts_regularize_mass_matrix}.')
+    sampling_start = perf_counter()
+    mcmc.run(jax.random.PRNGKey(1), lc.time, lc.flux, lc.unc,
+             extra_fields=('num_steps',))
     samples_dict = mcmc.get_samples()
     # Wait for multi-threaded execution to finish before continuing
     jax.block_until_ready(samples_dict)
+    elapsed = perf_counter() - sampling_start
+    steps = np.asarray(mcmc.get_extra_fields()['num_steps'])
+    median, p90 = np.percentile(steps, [50, 90])
+    log.writelog(
+        f'NUTS warmup and sampling took {elapsed:.1f} s. '
+        f'Leapfrog steps per posterior draw: median {median:.0f}, '
+        f'90th percentile {p90:.0f}.')
 
     # Log detailed convergence and sampling statistics
     sys.stderr.flush()

@@ -184,9 +184,9 @@ class S5MetaClass(MetaClass):
         # numpyro NUTS sampler settings
         self.jaxopt_first = getattr(self, 'jaxopt_first', False)
         self.chains = getattr(self, 'chains', 3)
-        # Set this to True if you have really tight covariances or are getting
-        # divergences (will be more RAM and compute intensive)
         self.dense_mass = getattr(self, 'dense_mass', False)
+        self.nuts_regularize_mass_matrix = getattr(
+            self, 'nuts_regularize_mass_matrix', True)
         if 'nuts' in self.fit_method:
             # Must be provided in the ECF if relevant
             self.run_nsteps = getattr(self, 'run_nsteps')
