@@ -35,8 +35,6 @@ def rate2count(data):
     data['flux'] *= int_time
     data['err'] *= int_time
     data['v0'] *= int_time**2
-    if 'v1' in data:
-        data['v1'] *= int_time**2
 
     return data
 
@@ -129,8 +127,6 @@ def dn2electrons(data, meta, log):
     data['err'] *= gain
     # v0 is a variance-like quantity, so square the conversion
     data['v0'] *= (gain)**2
-    if 'v1' in data:
-        data['v1'] *= (gain)**2
 
     return data
 
@@ -227,8 +223,6 @@ def bright2dn(data, meta, log, mjy=False):
     data['err'] /= scalar * response
     # v0 is a variance-like quantity, so square the conversion
     data['v0'] /= (scalar * response)**2
-    if 'v1' in data:
-        data['v1'] /= (scalar * response)**2
 
     return data
 
@@ -262,8 +256,6 @@ def bright2flux(data, pixel_area):
     data['err'] *= srperas * 1e6 * pixel_area
     # v0 is a variance-like quantity, so square the conversion
     data['v0'] *= (srperas * 1e6 * pixel_area)**2
-    if 'v1' in data:
-        data['v1'] *= (srperas * 1e6 * pixel_area)**2
 
     return data
 

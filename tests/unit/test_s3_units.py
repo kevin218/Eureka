@@ -318,7 +318,6 @@ def test_rate2count_uses_effective_integration_time_header():
             'flux': (('y', 'x'), np.ones((2, 2))),
             'err': (('y', 'x'), np.full((2, 2), 2.0)),
             'v0': (('y', 'x'), np.full((2, 2), 3.0)),
-            'v1': (('y', 'x'), np.full((2, 2), 4.0)),
         },
         attrs={'mhdr': {'EFFINTTM': 5.0}},
     )
@@ -328,7 +327,6 @@ def test_rate2count_uses_effective_integration_time_header():
     np.testing.assert_allclose(result.flux.values, np.full((2, 2), 5.0))
     np.testing.assert_allclose(result.err.values, np.full((2, 2), 10.0))
     np.testing.assert_allclose(result.v0.values, np.full((2, 2), 75.0))
-    np.testing.assert_allclose(result.v1.values, np.full((2, 2), 100.0))
 
 
 def test_rate2count_requires_time_header():
@@ -353,7 +351,6 @@ def test_bright2flux_scales_flux_error_and_variance_by_pixel_area():
             'flux': (('y', 'x'), np.ones((2, 2))),
             'err': (('y', 'x'), np.full((2, 2), 2.0)),
             'v0': (('y', 'x'), np.full((2, 2), 3.0)),
-            'v1': (('y', 'x'), np.full((2, 2), 5.0)),
         }
     )
     pixel_area = np.array([[1.0, 2.0], [3.0, 4.0]])
@@ -364,7 +361,6 @@ def test_bright2flux_scales_flux_error_and_variance_by_pixel_area():
     np.testing.assert_allclose(result.flux.values, factor)
     np.testing.assert_allclose(result.err.values, 2*factor)
     np.testing.assert_allclose(result.v0.values, 3*factor**2)
-    np.testing.assert_allclose(result.v1.values, 5*factor**2)
 
 
 def test_dn2electrons_scales_flux_error_and_variance_with_scalar_gain():
@@ -374,7 +370,6 @@ def test_dn2electrons_scales_flux_error_and_variance_with_scalar_gain():
             'flux': (('y', 'x'), np.ones((2, 2))),
             'err': (('y', 'x'), np.full((2, 2), 2.0)),
             'v0': (('y', 'x'), np.full((2, 2), 3.0)),
-            'v1': (('y', 'x'), np.full((2, 2), 5.0)),
         },
         attrs={'mhdr': {'SUBSTRT1': 1, 'SUBSTRT2': 1, 'SUBSIZE1': 2,
                         'SUBSIZE2': 2},
@@ -387,7 +382,6 @@ def test_dn2electrons_scales_flux_error_and_variance_with_scalar_gain():
     np.testing.assert_allclose(result.flux.values, np.full((2, 2), 4.0))
     np.testing.assert_allclose(result.err.values, np.full((2, 2), 8.0))
     np.testing.assert_allclose(result.v0.values, np.full((2, 2), 48.0))
-    np.testing.assert_allclose(result.v1.values, np.full((2, 2), 80.0))
 
 
 def test_dn2electrons_applies_supersampled_array_gain_window():

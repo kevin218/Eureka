@@ -62,7 +62,6 @@ def read(filename, data, meta, log):
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
-    v1 = hdulist['VAR_POISSON', 1].data
     int_times = hdulist['INT_TIMES', 1].data
     if 'INT_TIMES_STRIPE' in hdulist:
         # Record stripe times if using superstripe readout mode
@@ -82,7 +81,6 @@ def read(filename, data, meta, log):
         err = supersample(err, meta.expand, 'err', axis=1)
         dq = supersample(dq, meta.expand, 'cal', axis=1)
         v0 = supersample(v0, meta.expand, 'flux', axis=1)
-        v1 = supersample(v1, meta.expand, 'flux', axis=1)
 
     # Record integration mid-times in BMJD_TDB
     if meta.time_file is not None:
@@ -102,7 +100,6 @@ def read(filename, data, meta, log):
     err = np.repeat(err[:, :, :, np.newaxis], norders, axis=3)
     dq = np.repeat(dq[:, :, :, np.newaxis], norders, axis=3)
     v0 = np.repeat(v0[:, :, :, np.newaxis], norders, axis=3)
-    v1 = np.repeat(v1[:, :, :, np.newaxis], norders, axis=3)
 
     if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
             meta.bg_hw == meta.bg_hw_range[0]):
@@ -118,8 +115,6 @@ def read(filename, data, meta, log):
                                      name='dq', order=meta.all_orders)
     data['v0'] = xrio.makeFluxLikeDA(v0, time, flux_units, time_units,
                                      name='v0', order=meta.all_orders)
-    data['v1'] = xrio.makeFluxLikeDA(v1, time, flux_units, time_units,
-                                     name='v1', order=meta.all_orders)
 
     # Initialize bad pixel mask (False = good, True = bad)
     data['mask'] = (['time', 'y', 'x', 'order'], np.zeros(data.flux.shape,
@@ -522,8 +517,6 @@ def cut_aperture(data, meta, log):
         The background flux values over the aperture region.
     apv0 : ndarray
         The v0 values over the aperture region.
-    apv1 : ndarray
-        The Poisson variance values over the aperture region.
     apmedflux : ndarray
         The median flux over the aperture region.
     """
@@ -536,7 +529,6 @@ def cut_aperture(data, meta, log):
     apmask = np.zeros_like(apdata, dtype=bool)
     apbg = np.zeros_like(apdata)
     apv0 = np.zeros_like(apdata)
-    apv1 = np.zeros_like(apdata)
     apmedflux = np.zeros_like(apdata[0])
     for k in range(len(meta.orders)):
         ap_y1 = int(meta.src_ypos[k] - meta.spec_hw)
@@ -546,7 +538,6 @@ def cut_aperture(data, meta, log):
         apmask[:, :, :, k] = data.mask.values[:, ap_y1:ap_y2, :, k]
         apbg[:, :, :, k] = data.bg.values[:, ap_y1:ap_y2, :, k]
         apv0[:, :, :, k] = data.v0.values[:, ap_y1:ap_y2, :, k]
-        apv1[:, :, :, k] = data.v1.values[:, ap_y1:ap_y2, :, k]
         apmedflux[:, :, k] = data.medflux.values[ap_y1:ap_y2, :, k]
         # Mask invalid regions
         inan = np.isnan(data.wave_1d[:, k])
@@ -558,7 +549,7 @@ def cut_aperture(data, meta, log):
             ioverlap = data.wave_1d[:, k] < 0.60
             apmask[:, :, ioverlap, k] = True
 
-    return apdata, aperr, apmask, apbg, apv0, apv1, apmedflux
+    return apdata, aperr, apmask, apbg, apv0, apmedflux
 
 
 def standard_spectrum(data, meta, apdata, apmask, aperr):

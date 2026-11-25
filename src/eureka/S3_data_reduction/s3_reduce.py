@@ -317,11 +317,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                                    data.mask.values,
                                                    log, name='V0',
                                                    mute=(not meta.verbose))
-                if 'v1' in data:
-                    data.mask.values = util.check_nans(data.v1.values,
-                                                       data.mask.values,
-                                                       log, name='V1',
-                                                       mute=(not meta.verbose))
 
                 # Start masking pixels based on DQ flags
                 # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
@@ -417,14 +412,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             plots_s3.driftywidth(data, meta, m)
 
                     # Select only aperture region
-                    aperture = inst.cut_aperture(data, meta, log)
-                    if len(aperture) == 7:
-                        apdata, aperr, apmask, apbg, apv0, apv1, \
-                            apmedflux = aperture
-                    else:
-                        apdata, aperr, apmask, apbg, apv0, apmedflux = \
-                            aperture
-                        apv1 = None
+                    apdata, aperr, apmask, apbg, apv0, apmedflux = \
+                        inst.cut_aperture(data, meta, log)
 
                     # Extract standard spectrum and its variance
                     log.writelog('  Computing standard spectrum...',
@@ -436,8 +425,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     data, meta, log = optspex.optimize_wrapper(data, meta, log,
                                                                apdata, apmask,
                                                                apbg, apv0,
-                                                               apmedflux,
-                                                               apv1=apv1, m=m)
+                                                               apmedflux, m=m)
 
                     # Plot results
                     if meta.isplots_S3 >= 3:
@@ -627,8 +615,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Remove large 3D arrays from Dataset
                 del (data['err'], data['dq'], data['v0'], data['mask'],
                      data.attrs['intstart'], data.attrs['intend'])
-                if 'v1' in data:
-                    del data['v1']
                 if not meta.photometry:
                     del (data['flux'], data['bg'])
                     if meta.inst != 'niriss':
