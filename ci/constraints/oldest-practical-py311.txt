@@ -21,7 +21,6 @@ lmfit==1.3.1
 matplotlib==3.9.0
 numpy==2.0.2
 pandas==2.2.3
-pastasoss==1.2.4
 photutils==3.0.0
 requests==2.32.2
 scipy==1.15.3
@@ -30,7 +29,7 @@ tqdm==4.66.3
 
 astraeus-io==1.0
 batman-package==2.5.3
-catwoman==1.0.16
+catwoman==1.1.0
 celerite2==0.3.2
 crds==12.0.4
 george==0.4.2

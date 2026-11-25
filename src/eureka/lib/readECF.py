@@ -361,6 +361,9 @@ class MetaClass:
 
             if len(line) > 0:
                 name = line.split()[0]
+                # ECF files may use parameter names that were renamed.
+                # Canonicalize the line name before looking up its value.
+                name = _canonicalize_parameter(name, None)[0]
                 val = ''.join(line.split()[1:])
                 new_val = self.params[name]
                 # Comparing val to new_val doesn't work since

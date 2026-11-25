@@ -303,7 +303,9 @@ def test_get_clean_interpolates_masked_pixels_and_removes_median_outlier():
               [False, False, True, False, False]],
     )
     mederr = np.ones((2, 5))
-    meta = SimpleNamespace(window_len=3, median_thresh=2)
+    meta = SimpleNamespace(window_len=3, median_thresh=2,
+                           sigma_clip_cenfunc='ma_median',
+                           sigma_clip_stdfunc='ma_std')
 
     clean = optspex.get_clean(data, meta, RecordingLog(), medflux, mederr)
 
@@ -311,8 +313,23 @@ def test_get_clean_interpolates_masked_pixels_and_removes_median_outlier():
                                        [10, 11, 12, 13, 14]])
 
 
+def test_get_clean_accepts_configured_sigma_clip_functions():
+    """Use configured NaN-aware functions for median-frame clipping."""
+    data = SimpleNamespace(x=np.arange(5), y=np.arange(2))
+    medflux = np.ma.array([[1., 1., 10., 1., 1.],
+                           [1., 1., 1., 1., 1.]])
+    mederr = np.ones((2, 5))
+    meta = SimpleNamespace(window_len=3, median_thresh=2,
+                           sigma_clip_cenfunc='nanmedian',
+                           sigma_clip_stdfunc='nanstd')
+
+    clean = optspex.get_clean(data, meta, RecordingLog(), medflux, mederr)
+
+    assert clean.shape == medflux.shape
+
+
 def test_rate2count_uses_effective_integration_time_header():
-    """Confirm rate-to-count conversion uses the effective integration time."""
+    """Confirm rates and variances use the effective integration time."""
     data = xr.Dataset(
         {
             'flux': (('y', 'x'), np.ones((2, 2))),
@@ -326,7 +343,7 @@ def test_rate2count_uses_effective_integration_time_header():
 
     np.testing.assert_allclose(result.flux.values, np.full((2, 2), 5.0))
     np.testing.assert_allclose(result.err.values, np.full((2, 2), 10.0))
-    np.testing.assert_allclose(result.v0.values, np.full((2, 2), 15.0))
+    np.testing.assert_allclose(result.v0.values, np.full((2, 2), 75.0))
 
 
 def test_rate2count_requires_time_header():
@@ -437,6 +454,10 @@ def test_find_column_median_shifts_aligns_trace_to_detector_center():
 
     assert new_center == 4
     np.testing.assert_array_equal(shifts, [0]*5 + [-1]*5 + [-2]*5)
+
+    shifts, _, trace_y = straighten.find_column_median_shifts(
+        image, meta, m=0, return_trace=True)
+    np.testing.assert_array_equal(trace_y, 4 - shifts)
 
 
 def test_roll_columns_applies_per_column_shifts_without_mutating_shifts():

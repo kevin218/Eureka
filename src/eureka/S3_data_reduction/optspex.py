@@ -11,6 +11,17 @@ from ..lib import gaussian as g
 from ..lib import plots, smooth
 from . import plots_s3
 
+SIGMA_CLIP_CENFUNCS = {
+    'ma_median': np.ma.median,
+    'nanmedian': np.nanmedian,
+    'median': 'median',
+}
+SIGMA_CLIP_STDFUNCS = {
+    'ma_std': np.ma.std,
+    'nanstd': np.nanstd,
+    'std': 'std',
+}
+
 
 def standard_spectrum(apdata, apmask, aperr):
     """Compute the standard box spectrum.
@@ -567,8 +578,10 @@ def get_clean(data, meta, log, medflux, mederr):
         residuals = (medflux - smoothflux)/smooth_mederr
 
         # Flag outliers
+        cenfunc = SIGMA_CLIP_CENFUNCS[meta.sigma_clip_cenfunc]
+        stdfunc = SIGMA_CLIP_STDFUNCS[meta.sigma_clip_stdfunc]
         outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
-                              axis=1, cenfunc=np.ma.median, stdfunc=np.ma.std)
+                              axis=1, cenfunc=cenfunc, stdfunc=stdfunc)
 
         # Interpolate over bad pixels
         clean_med = np.zeros((ny, nx))
@@ -683,7 +696,8 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
                     writeOptSpexMultiOrder(optimize(
                         meta, apdata[n, :, :, k], apmask[n, :, :, k],
                         apbg[n, :, :, k], data.stdspec[n, :, k].values,
-                        gain, apv0[n, :, :, k], p5thresh=meta.p5thresh,
+                        gain, apv0[n, :, :, k],
+                        p5thresh=meta.p5thresh,
                         p7thresh=meta.p7thresh, fittype=meta.fittype,
                         window_len=meta.window_len, deg=meta.prof_deg,
                         windowtype=windowtype, n=n, m=m,
@@ -709,7 +723,8 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
                     job = pool.apply_async(func=optimize, args=(
                         meta, apdata[n, :, :, k], apmask[n, :, :, k],
                         apbg[n, :, :, k], data.stdspec[n, :, k].values,
-                        gain, apv0[n, :, :, k], meta.p5thresh,
+                        gain, apv0[n, :, :, k],
+                        meta.p5thresh,
                         meta.p7thresh, meta.fittype, meta.window_len,
                         meta.prof_deg, windowtype, n, m, apmedflux[:, :, k],
                         meta.orders[k]), callback=writeOptSpexMultiOrder)

@@ -136,6 +136,19 @@ class S3MetaClass(MetaClass):
         self.spec_hw = getattr(self, 'spec_hw')
         self.fittype = getattr(self, 'fittype', 'meddata')
         self.median_thresh = getattr(self, 'median_thresh', 5)
+        self.sigma_clip_cenfunc = getattr(
+            self, 'sigma_clip_cenfunc', 'ma_median')
+        self.sigma_clip_stdfunc = getattr(
+            self, 'sigma_clip_stdfunc', 'ma_std')
+        if self.sigma_clip_cenfunc not in {'ma_median', 'nanmedian',
+                                           'median'}:
+            raise ValueError(
+                "sigma_clip_cenfunc must be one of 'ma_median', "
+                "'nanmedian', or 'median'.")
+        if self.sigma_clip_stdfunc not in {'ma_std', 'nanstd', 'std'}:
+            raise ValueError(
+                "sigma_clip_stdfunc must be one of 'ma_std', 'nanstd', "
+                "or 'std'.")
         if self.fittype in ['meddata', 'smooth']:
             # Require this parameter to be set if relevant
             self.window_len = getattr(self, 'window_len')
@@ -157,6 +170,7 @@ class S3MetaClass(MetaClass):
         # Curvature correction
         # By default, don't correct curvature
         self.curvature = getattr(self, 'curvature', None)
+        self.trace_y_file = getattr(self, 'trace_y_file', None)
 
         # Background parameters
         self.skip_bg = getattr(self, 'skip_bg', False)
@@ -272,14 +286,14 @@ class S3MetaClass(MetaClass):
         '''
         self.poly_wavelength = getattr(self, 'poly_wavelength', False)
         self.wave_pixel_offset = getattr(self, 'wave_pixel_offset', None)
-        self.curvature = getattr(self, 'curvature', True)
+        self.curvature = getattr(self, 'curvature', 'correct')
 
         self.set_spectral_defaults()
 
     def set_NIRSpec_defaults(self):
         '''Set Stage 3 specific defaults for NIRSpec.
         '''
-        self.curvature = getattr(self, 'curvature', True)
+        self.curvature = getattr(self, 'curvature', 'correct')
         # When calibrated_spectra is True, flux values above the cutoff
         # will be set to zero.
         self.cutoff = getattr(self, 'cutoff', 1e-4)
@@ -297,14 +311,16 @@ class S3MetaClass(MetaClass):
     def set_NIRISS_defaults(self):
         '''Set Stage 3 specific defaults for NIRISS.
         '''
-        self.curvature = getattr(self, 'curvature', True)
+        self.curvature = getattr(self, 'curvature', 'correct')
         self.src_ypos = getattr(self, 'src_ypos', [35, 80])
         self.orders = getattr(self, 'orders', [1, 2])
         self.all_orders = getattr(self, 'all_orders', [1, 2])
         self.record_ypos = getattr(self, 'record_ypos', False)
-        self.trace_offset = getattr(self, 'trace_offset', None)
         self.xwindow = getattr(self, 'xwindow', [6, 2043])
         self.ywindow = getattr(self, 'ywindow', [0, -1])
+        self.pwcpos_offset = getattr(self, 'pwcpos_offset', 0.)
+        if self.pwcpos_offset is None:
+            self.pwcpos_offset = 0.
 
         # check for legacy trace offset name
         if hasattr(self, "trace_offset"):
@@ -312,9 +328,16 @@ class S3MetaClass(MetaClass):
                   " renamed to trace_yoffset.\n  Please switch to "
                   " using trace_yoffset instead, as support for"
                   " trace_offset will soon be deprecated.")
-            self.trace_yoffset = self.trace_offset
-        else:
-            self.trace_yoffset = getattr(self, 'trace_yoffset', None)
+            # Check before setting the default so an explicit zero takes
+            # precedence over the legacy spelling.
+            if not hasattr(self, 'trace_yoffset'):
+                self.trace_yoffset = self.trace_offset
+        self.trace_yoffset = getattr(self, 'trace_yoffset', 0)
+        self.trace_xoffset = getattr(self, 'trace_xoffset', 0)
+        if self.trace_yoffset is None:
+            self.trace_yoffset = 0.
+        if self.trace_xoffset is None:
+            self.trace_xoffset = 0.
 
         self.set_spectral_defaults()
 
