@@ -589,7 +589,7 @@ def get_clean(data, meta, log, medflux, mederr):
 
 
 def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
-                     gain=1, windowtype='hanning', m=0):
+                     gain=1, windowtype='hanning', m=0, apv1=None):
     '''Extract optimal spectrum with uncertainties for many frames.
 
     Parameters
@@ -607,7 +607,10 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
     apbg : ndarray
         Background array.
     apv0 : ndarray
-        Variance array for data.
+        Read-noise variance array for data.
+    apv1 : ndarray, optional
+        Poisson variance array for data. If omitted, Poisson variance is
+        estimated from the expected signal.
     apmedflux : ndarray
         Median flux array.
     gain : float
@@ -672,6 +675,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
                 writeOptSpex(optimize(
                     meta, apdata[n], apmask[n], apbg[n],
                     data.stdspec[n].values, gain, apv0[n],
+                    v1=None if apv1 is None else apv1[n],
                     p5thresh=meta.p5thresh, p7thresh=meta.p7thresh,
                     fittype=meta.fittype, window_len=meta.window_len,
                     deg=meta.prof_deg, windowtype=windowtype,
@@ -683,7 +687,9 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
                     writeOptSpexMultiOrder(optimize(
                         meta, apdata[n, :, :, k], apmask[n, :, :, k],
                         apbg[n, :, :, k], data.stdspec[n, :, k].values,
-                        gain, apv0[n, :, :, k], p5thresh=meta.p5thresh,
+                        gain, apv0[n, :, :, k],
+                        v1=None if apv1 is None else apv1[n, :, :, k],
+                        p5thresh=meta.p5thresh,
                         p7thresh=meta.p7thresh, fittype=meta.fittype,
                         window_len=meta.window_len, deg=meta.prof_deg,
                         windowtype=windowtype, n=n, m=m,
@@ -700,7 +706,8 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
                     meta.p5thresh, meta.p7thresh,
                     meta.fittype, meta.window_len,
                     meta.prof_deg, windowtype,
-                    n, m, apmedflux), callback=writeOptSpex)
+                    n, m, apmedflux,
+                    None if apv1 is None else apv1[n]), callback=writeOptSpex)
                 jobs.append(job)
         else:
             norders = len(meta.orders)
@@ -709,10 +716,13 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
                     job = pool.apply_async(func=optimize, args=(
                         meta, apdata[n, :, :, k], apmask[n, :, :, k],
                         apbg[n, :, :, k], data.stdspec[n, :, k].values,
-                        gain, apv0[n, :, :, k], meta.p5thresh,
+                        gain, apv0[n, :, :, k],
+                        meta.p5thresh,
                         meta.p7thresh, meta.fittype, meta.window_len,
                         meta.prof_deg, windowtype, n, m, apmedflux[:, :, k],
-                        meta.orders[k]), callback=writeOptSpexMultiOrder)
+                        meta.orders[k],
+                        None if apv1 is None else apv1[n, :, :, k]),
+                        callback=writeOptSpexMultiOrder)
                     jobs.append(job)
         pool.close()
         iterfn = jobs
@@ -733,7 +743,8 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, apmedflux,
 @plots.apply_style
 def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
              p7thresh=10, fittype='smooth', window_len=21, deg=3,
-             windowtype='hanning', n=0, m=0, meddata=None, order=None):
+             windowtype='hanning', n=0, m=0, meddata=None, order=None,
+             v1=None):
     '''Extract optimal spectrum with uncertainties for a single frame.
 
     Parameters
@@ -751,7 +762,10 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
     Q : float
         The gain factor.
     v0 : ndarray
-        Variance array for data.
+        Read-noise variance array for data.
+    v1 : ndarray, optional
+        Poisson variance array for data. If omitted, Poisson variance is
+        estimated from the expected signal.
     p5thresh : float; optional
         Sigma threshold for outlier rejection while constructing
         spatial profile. Defaults to 10.
@@ -831,7 +845,11 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
             subdata = np.ma.masked_where(submask, subdata)
             # STEP 6: Revise variance estimates
             expected = np.ma.masked_invalid(profile*spectrum)
-            variance = np.ma.abs(expected + bg) / Q + v0
+            if v1 is None:
+                poisson = np.ma.abs(expected + bg) / Q
+            else:
+                poisson = np.ma.masked_invalid(v1)
+            variance = poisson + v0
             # STEP 7: Mask cosmic ray hits
             stdevs = np.ma.abs(subdata - expected)/np.ma.sqrt(variance)
             submask[np.ma.getmaskarray(stdevs)] = True
