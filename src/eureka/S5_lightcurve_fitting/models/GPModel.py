@@ -1,18 +1,12 @@
 import celerite2
 import george
 import numpy as np
+import tinygp
 from george import kernels
 
 from ...lib.split_channels import split
 from ..likelihood import update_uncertainty
 from .Model import Model
-
-try:
-    import tinygp
-except ModuleNotFoundError:
-    # tinygp is optional and isn't supported yet, so don't throw an exception
-    # if it isn't installed
-    tinygp = None
 
 
 class GPModel(Model):
@@ -57,17 +51,33 @@ class GPModel(Model):
         self.modeltype = 'GP'
 
         # Do some initial sanity checks and raise errors if needed
+        self.sho = 'SHO' in self.kernel_types
+        if self.sho:
+            if (list(self.kernel_types) != ['SHO'] or
+                    self.gp_code_name not in ('celerite', 'tinygp') or
+                    list(self.kernel_input_names) != ['time']):
+                raise ValueError('SHO requires one time kernel and '
+                                 'GP_package = celerite or tinygp.')
+            for chan in self.fitted_channels:
+                self._sho_quality(chan)
         if self.gp_code_name == 'celerite':
             if self.nkernels > 1:
                 raise AssertionError(
                     'celerite2 cannot compute multi-dimensional GPs. '
                     'Use a single kernel or a different GP backend.'
                 )
-            if self.kernel_types[0] != 'Matern32':
+            if self.kernel_types[0] not in ('Matern32', 'SHO'):
                 raise AssertionError(
                     'Our celerite2 implementation currently supports only '
-                    'a Matern32 kernel.'
+                    'Matern32 and SHO kernels.'
                 )
+
+    def _sho_quality(self, chan):
+        quality = self._get_param_value('Q', default=None, chan=chan)
+        if quality is None or not np.isfinite(quality) or quality <= 0.:
+            raise ValueError(f'SHO requires a finite, positive Q for channel '
+                             f'{chan}.')
+        return quality
 
     def update(self, newparams, **kwargs):
         """Update parameters and refresh uncertainty fit array."""
@@ -102,38 +112,47 @@ class GPModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        lcfinal = np.ma.array([])
+        lcfinal = np.zeros(0)
         for chan in channels:
             if self.nchannel_fitted > 1:
                 # get flux and uncertainties for current channel
                 flux, unc_fit = split([self.flux, self.unc_fit],
                                       self.nints, chan)
                 if nchan > 1:
-                    fit_temp = split([fit_lc, ], self.nints, chan)[0]
+                    fit_lc_temp = split([fit_lc, ], self.nints, chan)[0]
                 else:
                     # If only a specific channel is being evaluated, then only
                     # that channel's fitted model will be passed in
-                    fit_temp = fit_lc
+                    fit_lc_temp = fit_lc
             else:
                 # get flux and uncertainties for current channel
                 flux = self.flux
-                fit_temp = fit_lc
+                fit_lc_temp = fit_lc
                 unc_fit = self.unc_fit
-            residuals = np.ma.masked_invalid(flux-fit_temp)
+            residuals = flux-fit_lc_temp
+
             if self.multwhite:
                 time = split([self.time, ], self.nints, chan)[0]
             else:
                 time = self.time
-            residuals = np.ma.masked_where(time.mask, residuals)
 
-            # Remove poorly handled masked values
-            good = ~np.ma.getmaskarray(residuals)
-            unc_good = unc_fit[good]
-            res_good = residuals[good]
+            # Remove poorly handled invalid values
+            good = (~np.ma.getmaskarray(np.ma.masked_invalid(time)) &
+                    ~np.ma.getmaskarray(np.ma.masked_invalid(residuals)) &
+                    ~np.ma.getmaskarray(np.ma.masked_invalid(unc_fit)))
+            unc_fit = unc_fit[good]
+            if isinstance(unc_fit, np.ma.MaskedArray):
+                unc_fit = unc_fit.data
+            residuals = residuals[good]
+            if isinstance(residuals, np.ma.MaskedArray):
+                residuals = residuals.data
+            if not len(residuals):
+                lcfinal = np.ma.append(lcfinal, np.ma.masked_all(len(time)))
+                continue
 
             # Build or reuse the GP object
             if input_gp is None:
-                gp = self.setup_GP(chan)
+                gp = self.setup_GP(chan, unc_fit, good)
             else:
                 gp = input_gp
                 # If caller passed a pre-built GP, we may still need
@@ -143,22 +162,23 @@ class GPModel(Model):
 
             if self.gp_code_name == 'george':
                 kin = self.kernel_inputs[chan][:, good].T
-                gp.compute(kin, unc_good)
-                mu = gp.predict(res_good, kin, return_cov=False)
+                gp.compute(kin, unc_fit)
+                mu = gp.predict(residuals, kin, return_cov=False)
             elif self.gp_code_name == 'celerite':
-                kin = self.kernel_inputs[chan][0][good]
-                gp.compute(kin, yerr=unc_good)
-                mu = gp.predict(res_good)
+                order = self._compute_celerite(gp, chan, good, unc_fit)
+                mu = gp.predict(residuals[order])[np.argsort(order)]
             elif self.gp_code_name == 'tinygp':
-                if tinygp is None:
-                    raise RuntimeError('tinygp is not available.')
-                cond_gp = gp.condition(res_good, noise=unc_good).gp
-                mu = cond_gp.loc
+                if isinstance(gp.kernel, tinygp.kernels.quasisep.Quasisep):
+                    order = np.argsort(self.kernel_inputs[chan][0][good])
+                    mu = np.asarray(gp.predict(residuals[order]))[
+                        np.argsort(order)]
+                else:
+                    mu = gp.predict(residuals)
             else:
                 raise ValueError(f'Unknown gp_code_name: {self.gp_code_name}')
 
             # Re-insert and mask bad values
-            mu_full = np.ma.zeros(len(time))
+            mu_full = np.ma.masked_all(len(time))
             mu_full[good] = mu
             mu_full = np.ma.masked_where(~good, mu_full)
 
@@ -184,7 +204,7 @@ class GPModel(Model):
             kin_chan = np.ma.zeros((0, time.size))
             for name in self.kernel_input_names:
                 if name == 'time':
-                    x = np.ma.copy(self.time)
+                    x = np.ma.masked_invalid(np.ma.copy(self.time))
                 else:
                     # add more input options here
                     raise ValueError(
@@ -195,20 +215,44 @@ class GPModel(Model):
                 if self.multwhite:
                     x = split([x, ], self.nints, chan)[0]
 
-                if self.normalize:
+                if self.normalize and not self.sho:
                     x = (x-np.ma.mean(x))/np.ma.std(x)
 
                 kin_chan = np.ma.append(kin_chan, x[np.newaxis], axis=0)
 
             self.kernel_inputs[chan] = kin_chan
 
-    def setup_GP(self, chan=0):
-        """Construct the GP object for channel index c.
+    def _kernel_coordinates(self, chan, good):
+        x = self.kernel_inputs[chan][0]
+        if good is not None:
+            x = x[good]
+        x = np.asarray(x)
+        if self.normalize and self.sho:
+            # Use the same valid observations to standardize SHO in both
+            # the ordinary and functional wrappers.
+            std = np.std(x)
+            x = (x - np.mean(x)) / (std if std > 0. else 1.)
+        return x
+
+    def _compute_celerite(self, gp, chan, good, unc_fit):
+        x = self._kernel_coordinates(chan, good)
+        order = np.argsort(x)
+        gp.compute(x[order], yerr=unc_fit[order])
+        return order
+
+    def setup_GP(self, chan=0, unc_fit=None, good=None):
+        """Set up GP kernels and GP object.
 
         Parameters
         ----------
         chan : int; optional
             The current channel index. Defaults to 0.
+        unc_fit : ndarray; optional
+            The uncertainties to use for GP setup. If None, uses self.unc_fit.
+            Defaults to None.
+        good : ndarray of bool; optional
+            Mask of good data points. Only needed for tinygp backend.
+            Defaults to None.
 
         Returns
         -------
@@ -218,7 +262,12 @@ class GPModel(Model):
         if self.kernel_inputs is None:
             self.setup_inputs()
 
-        # Build kernel as a sum over per-kernel components
+        if unc_fit is None:
+            unc_fit = self.unc_fit
+        if isinstance(unc_fit, np.ma.MaskedArray):
+            unc_fit = unc_fit.data
+
+        # get the kernel which is the sum of the individual kernel functions
         kernel = self.get_kernel(self.kernel_types[0], 0, chan)
         for k in range(1, self.nkernels):
             kernel += self.get_kernel(self.kernel_types[k], k, chan)
@@ -229,16 +278,20 @@ class GPModel(Model):
                 solver = george.solvers.HODLRSolver
             else:
                 solver = None
-            gp = george.GP(kernel, mean=0, fit_mean=False, solver=solver)
+            gp = george.GP(kernel, mean=0., fit_mean=False, solver=solver)
         elif self.gp_code_name == 'celerite':
-            gp = celerite2.GaussianProcess(kernel, mean=0, fit_mean=False)
+            gp = celerite2.GaussianProcess(kernel, mean=0., fit_mean=False)
         elif self.gp_code_name == 'tinygp':
-            if tinygp is None:
-                raise RuntimeError('tinygp is not available.')
-            gp = tinygp.GaussianProcess(kernel, self.kernel_inputs[chan].T,
-                                        mean=0)
-        else:
-            raise ValueError(f'Unknown gp_code_name: {self.gp_code_name}')
+            kernel_inputs = self._kernel_coordinates(chan, good)
+            solver_kwargs = {}
+            if isinstance(kernel, tinygp.kernels.quasisep.Quasisep):
+                order = np.argsort(kernel_inputs)
+                kernel_inputs = kernel_inputs[order]
+                unc_fit = unc_fit[order]
+                solver_kwargs['assume_sorted'] = True
+            gp = tinygp.GaussianProcess(kernel, kernel_inputs,
+                                        diag=unc_fit**2, mean=0.,
+                                        **solver_kwargs)
 
         return gp
 
@@ -249,7 +302,7 @@ class GPModel(Model):
         ----------
         kernel_name : str
             Kernel type ('Matern32', 'ExpSquared', 'RationalQuadratic',
-            'Exp').
+            'Exp', 'SHO').
         k : int
             Kernel index (0-based).
         chan : int; optional
@@ -293,33 +346,25 @@ class GPModel(Model):
                     'Supported: Matern32, ExpSquared, RationalQuadratic, Exp.'
                 )
         elif self.gp_code_name == 'celerite':
-            # celerite2: Matern32 term with sigma, rho
             sigma = np.sqrt(np.exp(amp_log))
             rho = np.exp(metric_log)
-            if kernel_name != 'Matern32':
-                raise AssertionError('celerite2 path only supports Matern32,'
-                                     f' got {kernel_name}.')
-            kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=rho)
-        elif self.gp_code_name == 'tinygp':
-            if tinygp is None:
-                raise RuntimeError('tinygp is not available.')
-            amp = np.exp(amp_log)
-            metric = np.exp(metric_log*2)
-
             if kernel_name == 'Matern32':
-                kernel = amp*tinygp.kernels.Matern32(metric)
-            elif kernel_name == 'ExpSquared':
-                kernel = amp*tinygp.kernels.ExpSquared(metric)
-            elif kernel_name == 'RationalQuadratic':
-                kernel = amp*tinygp.kernels.RationalQuadratic(alpha=1,
-                                                              scale=metric)
-            elif kernel_name == 'Exp':
-                kernel = amp*tinygp.kernels.Exp(metric)
+                kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=rho)
+            elif kernel_name == 'SHO':
+                kernel = celerite2.terms.SHOTerm(
+                    sigma=sigma, w0=np.sqrt(3) / rho,
+                    Q=self._sho_quality(chan))
             else:
                 raise AssertionError(
-                    f'Unsupported kernel for tinygp: {kernel_name}. '
-                    'Supported: Matern32, ExpSquared, '
-                    'RationalQuadratic, Exp.')
+                    f'Unsupported kernel for celerite2: {kernel_name}. '
+                    'Supported: Matern32, SHO.'
+                )
+        elif self.gp_code_name == 'tinygp':
+            from ..jax_models.GPModel import build_tinygp_kernel
+            quality = self._sho_quality(chan) if kernel_name == 'SHO' else None
+            kernel = build_tinygp_kernel(kernel_name, amp_log, metric_log,
+                                         quasiseparable=self.nkernels == 1,
+                                         quality=quality)
         else:
             raise ValueError(f'Unknown gp_code_name: {self.gp_code_name}')
 
@@ -349,45 +394,54 @@ class GPModel(Model):
                 flux, unc_fit = split([self.flux, self.unc_fit],
                                       self.nints, chan)
                 if channel is None:
-                    fit_temp = split([fit_lc, ], self.nints, chan)[0]
+                    fit_lc_temp = split([fit_lc, ], self.nints, chan)[0]
                 else:
                     # If only a specific channel is being evaluated, then only
                     # that channel's fitted model will be passed in
-                    fit_temp = fit_lc
+                    fit_lc_temp = fit_lc
             else:
                 # get flux and uncertainties for current channel
                 flux = self.flux
-                fit_temp = fit_lc
+                fit_lc_temp = fit_lc
                 unc_fit = self.unc_fit
-            residuals = np.ma.masked_invalid(flux-fit_temp)
+            residuals = flux-fit_lc_temp
             if self.multwhite:
                 time = split([self.time, ], self.nints, chan)[0]
             else:
                 time = self.time
-            residuals = np.ma.masked_where(time.mask, residuals)
 
-            # Remove poorly handled masked values
-            good = ~np.ma.getmaskarray(residuals)
-            unc_good = unc_fit[good]
-            res_good = residuals[good]
+            # Remove poorly handled invalid values
+            good = (~np.ma.getmaskarray(np.ma.masked_invalid(time)) &
+                    ~np.ma.getmaskarray(np.ma.masked_invalid(residuals)) &
+                    ~np.ma.getmaskarray(np.ma.masked_invalid(unc_fit)))
+            unc_fit = unc_fit[good]
+            if isinstance(unc_fit, np.ma.MaskedArray):
+                unc_fit = unc_fit.data
+            residuals = residuals[good]
+            if isinstance(residuals, np.ma.MaskedArray):
+                residuals = residuals.data
+            if not len(residuals):
+                continue
+            if self.sho:
+                quality = self._get_param_value('Q', default=None, chan=chan)
+                if (quality is None or not np.isfinite(quality)
+                        or quality <= 0.):
+                    return -np.inf
 
             # set up GP with current parameters
-            gp = self.setup_GP(chan)
+            gp = self.setup_GP(chan, unc_fit, good)
 
             if self.gp_code_name == 'george':
                 kin = self.kernel_inputs[chan][:, good].T
-                gp.compute(kin, unc_good)
-                logL += gp.lnlikelihood(res_good, quiet=True)
+                gp.compute(kin, unc_fit)
+                logL += gp.lnlikelihood(residuals, quiet=True)
             elif self.gp_code_name == 'celerite':
-                kin = self.kernel_inputs[chan][0][good]
-                gp.compute(kin, yerr=unc_good)
-                logL += gp.log_likelihood(res_good)
+                order = self._compute_celerite(gp, chan, good, unc_fit)
+                logL += gp.log_likelihood(residuals[order])
             elif self.gp_code_name == 'tinygp':
-                if tinygp is None:
-                    raise RuntimeError('tinygp is not available.')
-                cond = gp.condition(res_good, diag=unc_good)
-                logL += cond.log_probability
-            else:
-                raise ValueError(f'Unknown gp_code_name: {self.gp_code_name}')
+                if isinstance(gp.kernel, tinygp.kernels.quasisep.Quasisep):
+                    order = np.argsort(self.kernel_inputs[chan][0][good])
+                    residuals = residuals[order]
+                logL += gp.log_probability(residuals)
 
         return logL

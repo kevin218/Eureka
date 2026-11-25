@@ -182,8 +182,8 @@ def test_polynomial_model_evaluates_centered_time_coefficients():
     np.testing.assert_allclose(result, expected)
 
 
-def test_polynomial_model_keeps_time_mask_in_output():
-    """Masked time samples should remain masked in polynomial evaluations."""
+def test_polynomial_model_keeps_invalid_time_samples_in_output():
+    """Masked times remain invalid in the shared model's dense JAX output."""
     params = Parameters()
     params.c0 = 1.0, 'free'
     params.c1 = 2.0, 'free'
@@ -192,8 +192,9 @@ def test_polynomial_model_keeps_time_mask_in_output():
 
     result = model.eval()
 
-    np.testing.assert_array_equal(np.ma.getmaskarray(result),
-                                  [False, True, False])
+    result = np.asarray(result)
+    np.testing.assert_array_equal(np.isnan(result), [False, True, False])
+    np.testing.assert_allclose(result[[0, 2]], [-1.0, 3.0])
 
 
 def test_clip_outliers_masks_or_replaces_known_time_series_outlier():

@@ -1299,11 +1299,17 @@ Only used for fits with a GP. A list of the covariates to be used when fitting a
 
 kernel_class
 ^^^^^^^^^^^^
-Only used for fits with a GP. A list of the types of GP kernels to use. For the george GP package, this includes ExpSquared, Matern32, Exp, and RationalQuadratic. For the celerite package, this only includes Matern32. It is possible to sum multiple kernels possible for george by listing multiple kernels.
+Only used for fits with a GP. With ordinary fitters, ``george`` and ``tinygp``
+support ``ExpSquared``, ``Matern32``, ``Exp``, and ``RationalQuadratic``.
+List multiple kernels to sum them with those backends. ``celerite`` supports
+one ``Matern32`` or ``SHO`` kernel. With ``tinygp``, choose a single kernel
+for ``SHO``. The ``jaxopt`` and ``nuts`` fitters require ``tinygp`` with one
+``Matern32`` or ``SHO`` kernel.
 
 GP_package
 ^^^^^^^^^^
-Only used for fits with a GP. The Python GP package to use, with the options of 'george' or 'celerite'.
+Only used for fits with a GP. Choose ``'george'``, ``'celerite'`` (celerite2),
+or ``'tinygp'``.
 
 useHODLR
 ^^^^^^^^
@@ -1439,27 +1445,44 @@ Use ``run_pfrac = 0.5`` for a balanced approach. Increase to ``0.7-0.9`` if you 
 
 NUTS Fitting Parameters
 '''''''''''''''''''''''
-The following set the parameters for running PyMC3's NUTS sampler. These options are described in more detail in: https://docs.pymc.io/en/v3/api/inference.html#pymc3.sampling.sample
+These settings apply to ``fit_method [nuts]``, which uses NumPyro's NUTS sampler.
+See the `NumPyro NUTS documentation <https://num.pyro.ai/en/stable/mcmc.html>`_
+for the sampler options.
 
-exoplanet_first
-'''''''''''''''
-Boolean to determine whether to run exoplanet optimizer before NUTS. This is generally not recommended, but it can sometimes be helpful if your initial manual guess is quite poor.
+jaxopt_first
+^^^^^^^^^^^^
+Boolean. Run JAX optimization to initialize NUTS. Defaults to ``False``.
 
-tune
-^^^^
-Number of iterations to tune. Samplers adjust the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition to the number specified in the draws argument.
+run_nburn
+^^^^^^^^^
+Integer. Number of warmup iterations per chain for adapting the step size and
+mass matrix. Warmup draws are excluded from the posterior samples.
 
-draws
-^^^^^
-The number of samples to draw. The number of tuned samples are discarded by default.
+run_nsteps
+^^^^^^^^^^
+Integer. Number of posterior draws per chain after warmup.
 
 chains
 ^^^^^^
-The number of chains to sample. Running independent chains is important for some convergence statistics and can also reveal multiple modes in the posterior. If None, then set to either ncpu or 2, whichever is larger.
+Integer. Number of independent chains. Defaults to 3. With ``ncpu=1``, Eureka!
+runs the chains sequentially. With ``ncpu>1``, it requests parallel chains.
 
-target_accept
-^^^^^^^^^^^^^
-Adapt the step size such that the average acceptance probability across the trajectories are close to target_accept. Higher values for target_accept lead to smaller step sizes. A default of 0.8 is recommended, but setting this to higher values like 0.9 or 0.99 can help with sampling from difficult posteriors. Valid values are between 0 and 1 (exclusive).
+dense_mass
+^^^^^^^^^^
+Use ``False`` for a diagonal mass matrix (default) or ``True`` for a full one.
+A list such as ``[('u1', 'u2')]`` estimates correlations within that block and
+uses a diagonal matrix for the remaining parameters. Use the exact sampled
+parameter names, including any channel suffixes.
+
+nuts_regularize_mass_matrix
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Boolean. NumPyro regularizes the mass matrix estimated during warmup by
+default (``True``). If the log shows long or capped trajectories in a
+well-identified fit with parameters on very different scales, try ``False``.
+This can help the sampler adapt to very narrow posteriors. It can also make
+adaptation less stable when the covariance estimate is poor. Compare
+divergences, R-hat, and effective sample size across independent chains before
+using the results.
 
 Plotting and Diagnostics
 ''''''''''''''''''''''''
@@ -1640,11 +1663,25 @@ Available fitting parameters are:
 
          The common-mode systematics model is defined as follows: ``1 + cm1*cm_flux + cm2*cm_flux**2``, where ``cm1`` and ``cm2`` are common-mode amplitude parameters and ``cm_flux`` represents the common-mode flux variations.  The ``cm_flux`` array is read in from ``common_mode_file`` (generated from a Stage 5 white light curve fit) and uses mean-subtracted values from the ECSV parameter name ``common_mode_name`` (e.g., ``GP`` or ``residuals``).
 
-      - ``A`` and ``m`` - The natural logarithm (``ln``) of the covariance amplitude and lengthscale to use for the GP model specified in your Stage 5 ECF.
+      - ``A`` and ``m`` - ``A`` is the natural logarithm of the GP variance.
+         The interpretation of ``m`` depends on the kernel and backend. For
+         ``Matern32``, the length scale is ``exp(m)`` with celerite2 and
+         ``exp(2*m)`` with tinygp.
 
          Significant care should be used when specifying the priors on these parameters as an excessively flexible GP model may end up competing with your astrophysical model.
          That said, there are no hard and fast rules about what your priors should be, and you will need to experiment to find what works best.
          If there are multiple kernels that are being added, the second kernel's parameters will be ``A1`` and ``m1``, and so on.
+
+      - ``Q`` - The positive, linear quality factor for the ``SHO`` kernel.
+         Use it alongside ``A`` and ``m``. In both celerite2 and tinygp,
+         the undamped angular frequency is ``sqrt(3)*exp(-m)`` and the
+         undamped period is ``2*pi*exp(m)/sqrt(3)``, in the units of the GP
+         time coordinates. At critical damping (``Q = 0.5``), the
+         covariance has the Matérn-3/2 form with length scale ``exp(m)``.
+         To initialize ``SHO`` from a tinygp ``Matern32`` fit at this
+         limit, use twice the fitted ``m`` and the same ``A``. For a
+         discussion of quality factors, see
+         `Foreman-Mackey et al. (2017), Section 3 <https://arxiv.org/abs/1703.09710>`_.
 
    - White Noise Parameters - options are ``scatter_mult`` for a multiplier to the expected noise from Stage 3 (recommended), or ``scatter_ppm`` to directly fit the noise level in ppm.
 

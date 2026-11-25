@@ -4,7 +4,7 @@ import sys
 import time as time_pkg
 from functools import partial
 from io import StringIO
-from multiprocessing import Pool
+from multiprocessing import get_context
 
 import emcee
 import h5py
@@ -390,7 +390,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     # Initialize tread pool
     if meta.ncpu > 1:
-        pool = Pool(meta.ncpu)
+        # Spawn (not fork): forking after JAX starts its threads can deadlock
+        pool = get_context('spawn').Pool(meta.ncpu)
     else:
         meta.ncpu = 1
         pool = None
@@ -969,7 +970,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # Set up multiprocessing if applicable
     if meta.ncpu > 1:
-        pool = Pool(meta.ncpu)
+        # Spawn (not fork): forking after JAX starts its threads can deadlock
+        pool = get_context('spawn').Pool(meta.ncpu)
         queue_size = meta.ncpu
     else:
         meta.ncpu = 1

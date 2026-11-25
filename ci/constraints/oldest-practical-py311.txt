@@ -30,7 +30,8 @@ tqdm==4.66.3
 
 astraeus-io==1.0
 batman-package==2.5.3
-catwoman==1.0.16
+# 1.0.16 passes incompatible C pointers in _power2_ld; modern GCC rejects it.
+catwoman==1.1.0
 celerite2==0.3.2
 crds==12.0.4
 george==0.4.2
@@ -38,6 +39,18 @@ mc3==3.2.1
 setuptools-scm==8.3.0
 stdatamodels==6.0.0
 svo_filters==0.5.3
+
+# Stage 5's tested baseline; the latest-dependency lane stays unconstrained.
+arviz==0.23.4
+equinox==0.13.8
+jax==0.5.3
+jaxlib==0.5.3
+jaxoplanet==0.2.0
+jaxopt==0.8.5
+numpyro==0.19.0
+numpyro-ext==0.0.4
+specutils==2.4.0
+tinygp==0.3.1
 
 jwst==3.0.0
 stcal==1.19.1

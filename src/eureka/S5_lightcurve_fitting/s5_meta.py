@@ -181,10 +181,38 @@ class S5MetaClass(MetaClass):
                 raise ValueError(
                     'run_pfrac must be between 0 and 1, exclusive.')
 
+        # numpyro NUTS sampler settings
+        self.jaxopt_first = getattr(self, 'jaxopt_first', False)
+        self.chains = getattr(self, 'chains', 3)
+        self.dense_mass = getattr(self, 'dense_mass', False)
+        self.nuts_regularize_mass_matrix = getattr(
+            self, 'nuts_regularize_mass_matrix', True)
+        if 'nuts' in self.fit_method:
+            # Must be provided in the ECF if relevant
+            self.run_nsteps = getattr(self, 'run_nsteps')
+            self.run_nburn = getattr(self, 'run_nburn')
+
+        # Starry eclipse mapping pixel-sampling parameters
+        self.pixelsampling = getattr(self, 'pixelsampling', False)
+        self.oversample = getattr(self, 'oversample', 3)
+        if self.pixelsampling:
+            # Must be provided in the ECF if relevant
+            self.ydeg = getattr(self, 'ydeg')
+            # Compute the number of pixels used in sampling
+            raise NotImplementedError(
+                'Pixel sampling has not been ported to jaxoplanet. '
+                'Set pixelsampling=False and fit Ylm coefficients instead.')
+        else:
+            self.ydeg = getattr(self, 'ydeg', None)
+            self.npix = 0
+
         # GP inputs
         self.kernel_inputs = getattr(self, 'kernel_inputs', ['time'])
         self.kernel_class = getattr(self, 'kernel_class', ['Matern32'])
-        self.GP_package = getattr(self, 'GP_package', 'celerite')
+        default_gp = ('tinygp' if any(f in self.fit_method
+                                      for f in ('jaxopt', 'nuts'))
+                      else 'celerite')
+        self.GP_package = getattr(self, 'GP_package', default_gp)
         self.useHODLR = getattr(self, 'useHODLR', False)
 
         # Plotting controls
