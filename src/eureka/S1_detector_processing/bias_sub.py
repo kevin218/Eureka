@@ -40,6 +40,15 @@ def do_correction(input_model, bias_model, meta, log):
     if not reffile_utils.ref_matches_sci(input_model, bias_model):
         bias_model = reffile_utils.get_subarray_model(input_model, bias_model)
 
+    nint, ngroup, nrow, ncol = input_model.data.shape
+    nstripe = getattr(input_model.meta.subarray, 'num_superstripe', 0)
+    if nstripe is None:
+        nstripe = 0
+    if nstripe > 0 and nint % nstripe != 0:
+        raise ValueError(
+            f'Science integrations ({nint}) are not divisible by the '
+            f'number of superstripes ({nstripe})')
+
     if meta.bias_correction is not None and meta.masktrace:
         # Compute trace mask, where ones are good background regions
         input_model = mask_trace(input_model, log, meta)
@@ -52,7 +61,6 @@ def do_correction(input_model, bias_model, meta, log):
         log.writelog('  Computing scale factor for superbias correction.')
         # Compute median of each integration/group outside of trace
         # Using double-for loop to avoid heavy memory usage
-        nint, ngroup, nrow, ncol = input_model.data.shape
         scale_factor = np.zeros((nint, ngroup))
         for ii in range(nint):
             for jj in range(ngroup):
@@ -87,8 +95,14 @@ def do_correction(input_model, bias_model, meta, log):
         if meta.bias_correction == "mean":
             # Create 4D bias array for each integration/group and
             # apply scale factor
-            bias_data = np.ones((nint, ngroup, nrow, ncol)) * \
-                bias_model.data[np.newaxis, np.newaxis, :, :]
+            if nstripe > 0:
+                bias_data = bias_model.data[:, np.newaxis, :, :].repeat(
+                    ngroup, axis=1)
+                bias_data = np.tile(bias_data,
+                                    reps=(nint // nstripe, 1, 1, 1))
+            else:
+                bias_data = np.ones((nint, ngroup, nrow, ncol)) * \
+                    bias_model.data[np.newaxis, np.newaxis, :, :]
             if isinstance(meta.bias_group, int):
                 # Scale superbias frame using single value for all groups
                 jj = meta.bias_group
@@ -113,8 +127,14 @@ def do_correction(input_model, bias_model, meta, log):
              (meta.bias_correction == "smooth"):
             # Create 4D bias array for each integration/group and
             # apply scale factor
-            bias_data = np.ones((nint, ngroup, nrow, ncol)) * \
-                bias_model.data[np.newaxis, np.newaxis, :, :]
+            if nstripe > 0:
+                bias_data = bias_model.data[:, np.newaxis, :, :].repeat(
+                    ngroup, axis=1)
+                bias_data = np.tile(bias_data,
+                                    reps=(nint // nstripe, 1, 1, 1))
+            else:
+                bias_data = np.ones((nint, ngroup, nrow, ncol)) * \
+                    bias_model.data[np.newaxis, np.newaxis, :, :]
             # Apply correction for zeroframe
             bias_model.data *= mean_scale_factor[0]
             if isinstance(meta.bias_group, int):
@@ -147,14 +167,14 @@ def do_correction(input_model, bias_model, meta, log):
         raise error
 
     # Subtract the bias data from the science data
-    output_model = subtract_bias(input_model, bias_model, bias_data)
+    output_model = subtract_bias(input_model, bias_model, bias_data, nstripe)
 
     output_model.meta.cal_step.superbias = 'COMPLETE'
 
     return output_model
 
 
-def subtract_bias(input, bias, bias_data=None):
+def subtract_bias(input, bias, bias_data=None, nstripe=0):
     """
     Subtracts a superbias image from a science data set, subtracting the
     superbias from each group of each integration in the science data.
@@ -172,6 +192,10 @@ def subtract_bias(input, bias, bias_data=None):
     bias_data: array
         4D array of superbias images
 
+    nstripe : int, optional
+        Number of superstripes in the input data.  A value of zero selects
+        the standard, non-superstripe representation.
+
     Returns
     -------
     output: data model object
@@ -180,23 +204,36 @@ def subtract_bias(input, bias, bias_data=None):
     # Create output as a copy of the input science data model
     output = input.copy()
 
-    # combine the science and superbias DQ arrays
+    # Combine the science and superbias DQ arrays.  Superstripe ramps use a
+    # SuperstripeRampModel, whose pixeldq field is intentionally 3-D.
     output.pixeldq = np.bitwise_or(input.pixeldq, bias.dq)
+
+    # Expand a superstripe reference to match the flattened science
+    # integration axis, following the JWST superbias implementation.
+    if nstripe > 0:
+        nint, ngroup, _, _ = output.data.shape
+        bias_data_expanded = bias.data[:, np.newaxis, :, :].repeat(
+            ngroup, axis=1)
+        bias_data_expanded = np.tile(
+            bias_data_expanded, reps=(nint // nstripe, 1, 1, 1))
+    else:
+        bias_data_expanded = bias.data
 
     # Subtract the superbias image from all groups and integrations
     # of the science data
     if bias_data is None:
-        # Same bias frame for all groups/integrations
-        output.data -= bias.data
+        output.data -= bias_data_expanded
     else:
-        # Different bias frames for each group/integration
         output.data -= bias_data
 
     # If ZEROFRAME is present, subtract the super bias.  Zero values
     # indicate bad data, so should be kept zero.
     if input.meta.exposure.zero_frame:
         wh_zero = output.zeroframe == 0.
-        output.zeroframe -= bias.data
+        if bias_data_expanded.ndim == 4:
+            output.zeroframe -= bias_data_expanded[:, 0, :, :]
+        else:
+            output.zeroframe -= bias_data_expanded
         output.zeroframe[wh_zero] = 0.  # Zero values indicate unusable data
 
     return output
