@@ -286,14 +286,14 @@ class S3MetaClass(MetaClass):
         '''
         self.poly_wavelength = getattr(self, 'poly_wavelength', False)
         self.wave_pixel_offset = getattr(self, 'wave_pixel_offset', None)
-        self.curvature = getattr(self, 'curvature', True)
+        self.curvature = getattr(self, 'curvature', 'correct')
 
         self.set_spectral_defaults()
 
     def set_NIRSpec_defaults(self):
         '''Set Stage 3 specific defaults for NIRSpec.
         '''
-        self.curvature = getattr(self, 'curvature', True)
+        self.curvature = getattr(self, 'curvature', 'correct')
         # When calibrated_spectra is True, flux values above the cutoff
         # will be set to zero.
         self.cutoff = getattr(self, 'cutoff', 1e-4)
@@ -311,7 +311,7 @@ class S3MetaClass(MetaClass):
     def set_NIRISS_defaults(self):
         '''Set Stage 3 specific defaults for NIRISS.
         '''
-        self.curvature = getattr(self, 'curvature', True)
+        self.curvature = getattr(self, 'curvature', 'correct')
         self.src_ypos = getattr(self, 'src_ypos', [35, 80])
         self.orders = getattr(self, 'orders', [1, 2])
         self.all_orders = getattr(self, 'all_orders', [1, 2])
