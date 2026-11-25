@@ -138,7 +138,7 @@ def test_phasecurve_compiles_with_accurate_gradients(name, values):
     check_model_gradient(model, values)
 
 
-@pytest.mark.parametrize('gp', [False, True])
+@pytest.mark.parametrize('gp', [False, True, 'SHO'])
 @pytest.mark.parametrize('masked', [False, True])
 def test_hmc_potential_compiles_with_accurate_gradients(gp, masked):
     model, time, flux, unc = composite(gp=gp, masked=masked)

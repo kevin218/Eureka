@@ -1299,11 +1299,17 @@ Only used for fits with a GP. A list of the covariates to be used when fitting a
 
 kernel_class
 ^^^^^^^^^^^^
-Only used for fits with a GP. A list of the types of GP kernels to use. For the george and tinygp GP packages, this includes ExpSquared, Matern32, Exp, and RationalQuadratic. For the celerite package, this includes Matern32 and SHO. It is possible to sum multiple kernels possible for george by listing multiple kernels.
+Only used for fits with a GP. With ordinary fitters, ``george`` and ``tinygp``
+support ``ExpSquared``, ``Matern32``, ``Exp``, and ``RationalQuadratic``.
+List multiple kernels to sum them with those backends. ``celerite`` supports
+one ``Matern32`` or ``SHO`` kernel. With ``tinygp``, choose a single kernel
+for ``SHO``. The ``jaxopt`` and ``nuts`` fitters require ``tinygp`` with one
+``Matern32`` or ``SHO`` kernel.
 
 GP_package
 ^^^^^^^^^^
-Only used for fits with a GP. The Python GP package to use, with the options of 'george', 'celerite' or 'tinygp'.
+Only used for fits with a GP. Choose ``'george'``, ``'celerite'`` (celerite2),
+or ``'tinygp'``.
 
 useHODLR
 ^^^^^^^^
@@ -1657,13 +1663,25 @@ Available fitting parameters are:
 
          The common-mode systematics model is defined as follows: ``1 + cm1*cm_flux + cm2*cm_flux**2``, where ``cm1`` and ``cm2`` are common-mode amplitude parameters and ``cm_flux`` represents the common-mode flux variations.  The ``cm_flux`` array is read in from ``common_mode_file`` (generated from a Stage 5 white light curve fit) and uses mean-subtracted values from the ECSV parameter name ``common_mode_name`` (e.g., ``GP`` or ``residuals``).
 
-      - ``A`` and ``m`` - The natural logarithm (``ln``) of the covariance amplitude and lengthscale to use for the GP model specified in your Stage 5 ECF.
+      - ``A`` and ``m`` - ``A`` is the natural logarithm of the GP variance.
+         The interpretation of ``m`` depends on the kernel and backend. For
+         ``Matern32``, the length scale is ``exp(m)`` with celerite2 and
+         ``exp(2*m)`` with tinygp.
 
          Significant care should be used when specifying the priors on these parameters as an excessively flexible GP model may end up competing with your astrophysical model.
          That said, there are no hard and fast rules about what your priors should be, and you will need to experiment to find what works best.
          If there are multiple kernels that are being added, the second kernel's parameters will be ``A1`` and ``m1``, and so on.
 
-      - ``Q`` - ``SHO`` kernel only (in addition to ``A`` and ``m``)! The quality factor of the damped harmonic oscillator for the ``SHO`` kernel as used in the ``celerite`` GP implementation. Different values of ``Q`` can describe different physical processes (such as stellar granulation and pulsations), and a detailed discussion of these can be found in Section 3. of Foreman-Mackey et al. (2017, arxiv:1703.09710).
+      - ``Q`` - The positive, linear quality factor for the ``SHO`` kernel.
+         Use it alongside ``A`` and ``m``. In both celerite2 and tinygp,
+         the undamped angular frequency is ``sqrt(3)*exp(-m)`` and the
+         undamped period is ``2*pi*exp(m)/sqrt(3)``, in the units of the GP
+         time coordinates. At critical damping (``Q = 0.5``), the
+         covariance has the Matérn-3/2 form with length scale ``exp(m)``.
+         To initialize ``SHO`` from a tinygp ``Matern32`` fit at this
+         limit, use twice the fitted ``m`` and the same ``A``. For a
+         discussion of quality factors, see
+         `Foreman-Mackey et al. (2017), Section 3 <https://arxiv.org/abs/1703.09710>`_.
 
    - White Noise Parameters - options are ``scatter_mult`` for a multiplier to the expected noise from Stage 3 (recommended), or ``scatter_ppm`` to directly fit the noise level in ppm.
 

@@ -313,14 +313,19 @@ def composite(gp=False, masked=False):
     if gp:
         pars.A = -12.0, "free", -20.0, -5.0, "U"
         pars.m = -2.0, "free", -5.0, 0.0, "U"
+        if gp == "SHO":
+            pars.Q = 0.5, "free", 0.1, 3.0, "U"
         lc = SimpleNamespace(flux=flux, unc=unc, unc_fit=unc)
+        kernel = "SHO" if gp == "SHO" else "Matern32"
         components.append(
-            jm.GPModel(["Matern32"], ["time"], lc, **config(pars, time=time))
+            jm.GPModel([kernel], ["time"], lc, **config(pars, time=time))
         )
     model = jm.CompositeJaxModel(
         components, **config(pars, time=time), flux=flux, lc_unc=unc
     )
     model.freenames = ["c0", "A", "m"] if gp else ["c0"]
+    if gp == "SHO":
+        model.freenames.append("Q")
     return model, time, flux, unc
 
 
@@ -500,13 +505,14 @@ def test_nonzero_channel_and_explicit_data(name):
 
 
 @pytest.mark.parametrize("fitter", ["jaxopt", "nuts"])
-@pytest.mark.parametrize("gp", [False, True])
+@pytest.mark.parametrize("gp", [False, True, "SHO"])
 def test_fitters_save_and_reuse_model(tmp_path, fitter, gp):
     from eureka.lib.logedit import Logedit
     from eureka.S5_lightcurve_fitting import jax_fitters, jax_lightcurve
 
     model, time, flux, unc = composite(gp=gp)
-    model.freenames = ["c0"]
+    names = ["c0", "Q"] if gp == "SHO" else ["c0"]
+    model.freenames = names
     model.parameters.A = -12.0, "fixed"
     model.parameters.m = -2.0, "fixed"
     log = Logedit(str(tmp_path / "fit.log"))
@@ -518,7 +524,7 @@ def test_fitters_save_and_reuse_model(tmp_path, fitter, gp):
         log,
         [list(model.parameters.dict)],
         model.parameters,
-        ["c0"],
+        names,
         unc=unc,
         nints=[11],
     )
@@ -736,6 +742,67 @@ def test_scalable_matern32_matches_dense_gp(normalize):
     assert np.all(np.isnan(prediction[~good]))
 
 
+@pytest.mark.parametrize("quality", [0.35, 0.5, 0.707, 3.0])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_sho_backends_match_dense_reference(quality, normalize):
+    """Exercise unsorted times, duplicate coordinates, masks and long lags."""
+    from scipy.linalg import expm
+    from tinygp.solvers import QuasisepSolver
+
+    time = np.array([0.04, 0.01, np.nan, 0., 0.025, 0.01, 200.])
+    flux = np.array([1.002, 0.998, 1., 1.001, np.nan, 0.999, 1.003])
+    unc = np.linspace(0.0005, 0.0015, len(time))
+    fit = np.ones(len(time))
+    good = np.isfinite(time) & np.isfinite(flux)
+    lc = SimpleNamespace(flux=flux, unc=unc, unc_fit=unc)
+    pars = parameters(A=-12., m=-2., Q=quality)
+    cfg = config(pars, time=time, nints=[len(time)], normalize=normalize)
+    x = time[good]
+    if normalize:
+        x = (x - x.mean()) / x.std()
+    omega = np.sqrt(3.) * np.exp(2.)
+    drift = np.array([[0., 1.], [-omega**2, -omega / quality]])
+    lags = np.abs(x[:, None] - x)
+    covariance = np.exp(-12.) * np.array([
+        expm(drift * lag)[0, 0] for lag in lags.ravel()
+    ]).reshape(lags.shape)
+    noisy_cov = covariance + np.diag(unc[good]**2)
+    residual = flux[good] - fit[good]
+    alpha = np.linalg.solve(noisy_cov, residual)
+    expected_logp = -0.5 * (residual @ alpha
+                            + np.linalg.slogdet(noisy_cov)[1]
+                            + len(x) * np.log(2. * np.pi))
+    expected_mu = covariance @ alpha
+
+    functional = jm.GPModel(["SHO"], ["time"], lc, **cfg)
+    gp, _ = functional._channel_gp(0, functional._prepare_param_dict(),
+                                   time, unc)
+    assert isinstance(gp.solver, QuasisepSolver)
+    celerite = models.GPModel(["SHO"], ["time"], lc, **cfg)
+    tiny = models.GPModel(["SHO"], ["time"], lc, gp_code_name="tinygp", **cfg)
+    for model in [functional, tiny, celerite]:
+        # celerite2 approximates the repeated root at critical damping.
+        tol = 5e-5 if model is celerite and quality == 0.5 else 1e-10
+        np.testing.assert_allclose(model.loglikelihood(fit), expected_logp,
+                                   rtol=0., atol=tol)
+        pred = np.ma.filled(model.eval(fit), np.nan)
+        np.testing.assert_allclose(pred[good], expected_mu, rtol=tol,
+                                   atol=tol * 0.001)
+        assert np.all(np.isnan(pred[~good]))
+
+
+def test_sho_rejects_invalid_quality():
+    model, time, flux, unc = composite(gp="SHO")
+    pars = {"c0": 1.003, "A": -12., "m": -2., "Q": -0.1}
+    # Test the GP support factor with a prior whose support includes Q < 0.
+    model.parameters.Q = 0.5, "free", 0.5, 1.0, "N"
+    numpyro_model = make_numpyro_composite_model(model, time, flux, unc)
+    density = jax.jit(lambda p: log_density(
+        numpyro_model, (time, flux, unc), {}, p)[0])
+    assert np.isneginf(density(pars))
+    assert np.isfinite(density({**pars, "Q": 0.5}))
+
+
 @pytest.mark.parametrize(
     "fitter,transit",
     [
@@ -872,7 +939,7 @@ def test_mixed_model_multiplication(jax_first):
     np.testing.assert_allclose(mixed.eval(), expected)
 
 
-@pytest.mark.parametrize("gp", [False, True])
+@pytest.mark.parametrize("gp", [False, True, "SHO"])
 @pytest.mark.parametrize("multwhite", [False, True])
 def test_multichannel_numpyro_and_gp_predictions(gp, multwhite):
     model, _, _, _ = composite(gp=gp)
@@ -880,6 +947,8 @@ def test_multichannel_numpyro_and_gp_predictions(gp, multwhite):
     pars.c0_ch1 = 1.02, "free", 0.8, 1.2, "U"
     pars.scatter_mult = 1.2, "fixed"
     pars.scatter_mult_ch1 = 1.5, "fixed"
+    if gp == "SHO":
+        pars.Q_wl4 = 0.8, "free", 0.1, 3.0, "U"
     t = np.linspace(-0.05, 0.05, 11)
     nints = [11, 7 if multwhite else 11]
     time = np.r_[t, np.linspace(0.2, 0.3, 7)] if multwhite else t
@@ -895,13 +964,17 @@ def test_multichannel_numpyro_and_gp_predictions(gp, multwhite):
         multwhite=multwhite,
         nchannel_fitted=2,
         fitted_channels=[0, 1],
+        wl_groups=[0, 4],
     )
     components = [jm.PolynomialModel(**cfg)]
     if gp:
         lc = SimpleNamespace(flux=flux, unc=unc, unc_fit=unc)
-        components.append(jm.GPModel(["Matern32"], ["time"], lc, **cfg))
+        kernel = "SHO" if gp == "SHO" else "Matern32"
+        components.append(jm.GPModel([kernel], ["time"], lc, **cfg))
     model = jm.CompositeJaxModel(components, **cfg, flux=flux, lc_unc=unc)
     names = ["c0", "c0_ch1", "A", "m"] if gp else ["c0", "c0_ch1"]
+    if gp == "SHO":
+        names += ["Q", "Q_wl4"]
     model.freenames = names
     values = {key: getattr(pars, key).value for key in names}
     function = make_numpyro_composite_model(model, time, flux, unc)
@@ -909,8 +982,12 @@ def test_multichannel_numpyro_and_gp_predictions(gp, multwhite):
     def density(parameters):
         return log_density(function, (time, flux, unc), {}, parameters)[0]
 
-    assert np.isfinite(jax.jit(density)(values))
-    assert all(np.isfinite(v) for v in jax.grad(density)(values).values())
+    result, gradient = jax.jit(jax.value_and_grad(density))(values)
+    assert np.isfinite(result)
+    assert all(np.isfinite(v) for v in gradient.values())
+    if gp == "SHO":
+        assert abs(gradient["Q"]) > 1e-10
+        assert abs(gradient["Q_wl4"]) > 1e-10
     prediction = model.eval(incl_GP=True)
     assert prediction.shape == flux.shape
     np.testing.assert_allclose(
