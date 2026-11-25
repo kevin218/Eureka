@@ -6,7 +6,7 @@ from . import plots_s3
 from .source_pos import gauss
 
 
-def find_column_median_shifts(data, meta, m):
+def find_column_median_shifts(data, meta, m, return_trace=False):
     '''Takes the median frame (in time) and finds the
     center of mass (COM) in pixels for each column. It then returns the needed
     shift to apply to each column to bring the COM to the center
@@ -19,6 +19,9 @@ def find_column_median_shifts(data, meta, m):
         The metadata object.
     m : int
         The file number.
+    return_trace : bool
+        If True, also return the effective integer trace used to construct
+        the shifts.
 
     Returns
     -------
@@ -83,6 +86,10 @@ def find_column_median_shifts(data, meta, m):
     shifts[column_coms < 0] = 0
     shifts[column_coms > nb_rows] = 0
 
+    if return_trace:
+        # For invalid/empty columns the applied shift is deliberately zero;
+        # save that effective trace so replaying it is exactly reproducible.
+        return shifts, new_center, new_center - shifts
     return shifts, new_center
 
 
@@ -127,7 +134,7 @@ def roll_columns(data, shifts):
     return rolled_data
 
 
-def straighten_trace(data, meta, log, m):
+def straighten_trace(data, meta, log, m, trace_y=None):
     '''Takes a set of integrations with a curved trace and shifts the
     columns to bring the center of mass to the middle of the detector
     (and straighten the trace)
@@ -146,6 +153,9 @@ def straighten_trace(data, meta, log, m):
         The open log in which notes from this step can be added.
     m : int
         The file number.
+    trace_y : ndarray, optional
+        Previously computed integer trace position for each spectral column.
+        If supplied, it is used instead of recomputing the trace.
 
     Returns
     -------
@@ -161,8 +171,17 @@ def straighten_trace(data, meta, log, m):
 
     log.writelog('  Correcting curvature and bringing the trace to the '
                  'center of the detector...', mute=(not meta.verbose))
-    # compute the correction needed from this median frame
-    shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
+    # Compute or reuse the integer trace used for straightening.
+    if trace_y is None:
+        shifts, new_center, trace_y = find_column_median_shifts(
+            data.medflux, meta, m, return_trace=True)
+    else:
+        trace_y = np.asarray(trace_y, dtype=int)
+        new_center = int(data.flux.shape[1]/2) - 1
+        shifts = new_center - trace_y
+
+    data['trace_y'] = (['x'], trace_y)
+    data.trace_y.attrs['units'] = 'pixels'
 
     # Correct wavelength (only one frame)
     log.writelog('    Correcting the wavelength solution...',

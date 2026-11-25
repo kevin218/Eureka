@@ -170,6 +170,7 @@ class S3MetaClass(MetaClass):
         # Curvature correction
         # By default, don't correct curvature
         self.curvature = getattr(self, 'curvature', None)
+        self.trace_y_file = getattr(self, 'trace_y_file', None)
 
         # Background parameters
         self.skip_bg = getattr(self, 'skip_bg', False)

@@ -434,7 +434,7 @@ def calibrated_spectra(data, meta, log):
     return data
 
 
-def straighten_trace(data, meta, log, m):
+def straighten_trace(data, meta, log, m, trace_y=None):
     """Instrument wrapper for computing the standard box spectrum.
 
     Parameters
@@ -455,7 +455,7 @@ def straighten_trace(data, meta, log, m):
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
     """
-    return straighten.straighten_trace(data, meta, log, m)
+    return straighten.straighten_trace(data, meta, log, m, trace_y=trace_y)
 
 
 def clean_median_flux(data, meta, log, m):

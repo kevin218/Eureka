@@ -780,6 +780,10 @@ curvature
 '''''''''
 Current options: 'None', 'correct'. Using 'None' will not use any curvature correction and is strongly recommended against for instruments with strong curvature like NIRSpec/G395. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. If using 'correct', you should also be using fittype = 'meddata'.
 
+trace_y_file
+''''''''''''
+Optional path to a Stage 3 ``_SpecData.h5`` file containing a previously computed one-dimensional ``trace_y`` variable. When supplied with ``curvature = 'correct'``, this trace is used for every batch of the current reduction. With ``indep_batches = True``, the trace from the first batch is saved in the combined output. This option is not available for NIRISS, which uses separate traces for its spectral orders. This option can be useful when computing calibrated spectra.
+
 interp_method
 '''''''''''''
 Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic

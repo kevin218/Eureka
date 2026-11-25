@@ -336,7 +336,7 @@ def calibrated_spectra(data, meta, log):
     return data
 
 
-def straighten_trace(data, meta, log, m):
+def straighten_trace(data, meta, log, m, trace_y=None):
     """Instrument-specific wrapper for straighten.straighten_trace
 
     Parameters
@@ -357,7 +357,7 @@ def straighten_trace(data, meta, log, m):
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
     """
-    return straighten.straighten_trace(data, meta, log, m)
+    return straighten.straighten_trace(data, meta, log, m, trace_y=trace_y)
 
 
 def residualBackground(data, meta, m, vmin=None, vmax=None):

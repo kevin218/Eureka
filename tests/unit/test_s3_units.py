@@ -455,6 +455,10 @@ def test_find_column_median_shifts_aligns_trace_to_detector_center():
     assert new_center == 4
     np.testing.assert_array_equal(shifts, [0]*5 + [-1]*5 + [-2]*5)
 
+    shifts, _, trace_y = straighten.find_column_median_shifts(
+        image, meta, m=0, return_trace=True)
+    np.testing.assert_array_equal(trace_y, 4 - shifts)
+
 
 def test_roll_columns_applies_per_column_shifts_without_mutating_shifts():
     """Ensure per-column rolling preserves reusable shift arrays."""

@@ -212,6 +212,24 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
             datasets = []
 
+            reference_trace_y = None
+            reference_trace_x = None
+            if meta.trace_y_file is not None:
+                if meta.curvature != 'correct':
+                    raise ValueError(
+                        'trace_y_file requires curvature="correct".')
+                if meta.inst == 'niriss':
+                    raise ValueError(
+                        'trace_y_file is not supported for NIRISS, which '
+                        'uses a separate trace for each spectral order.')
+                trace_data = xrio.readXR(meta.trace_y_file, verbose=False)
+                reference_trace_y = np.asarray(trace_data.trace_y.values,
+                                               dtype=int)
+                reference_trace_x = np.asarray(trace_data.x.values)
+                trace_data.close()
+                log.writelog(f'Using trace_y from {meta.trace_y_file}',
+                             mute=(not meta.verbose))
+
             saved_refrence_tilt_frame = None
             saved_ref_median_frame = None
             saved_photometric_profile = None
@@ -302,6 +320,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Dataset object no longer contains untrimmed data
                 data, meta = util.trim(data, meta)
 
+                if reference_trace_y is not None:
+                    if not np.array_equal(np.asarray(data.x.values),
+                                          reference_trace_x):
+                        raise ValueError(
+                            'trace_y_file x coordinates do not match the '
+                            'current Stage 3 spectral columns.')
+
                 # Check if arrays have NaNs/infs
                 log.writelog('  Masking NaNs/infs in data arrays...',
                              mute=(not meta.verbose))
@@ -375,8 +400,26 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                     # correct spectral curvature
                     if meta.curvature == 'correct':
-                        data, meta = inst.straighten_trace(data, meta,
-                                                           log, m)
+                        if meta.inst == 'niriss':
+                            data, meta = inst.straighten_trace(data, meta,
+                                                               log, m)
+                        else:
+                            trace_for_batch = reference_trace_y
+                            if (meta.indep_batches and
+                                    meta.trace_y_file is None):
+                                trace_for_batch = None
+                            data, meta = inst.straighten_trace(
+                                data, meta, log, m,
+                                trace_y=trace_for_batch)
+                            if reference_trace_y is None:
+                                reference_trace_y = \
+                                    data.trace_y.values.copy()
+                            elif (meta.indep_batches and
+                                  meta.trace_y_file is None):
+                                # Each independent batch is processed with
+                                # its own trace, but the combined product
+                                # records the first batch's trace.
+                                data['trace_y'] = (['x'], reference_trace_y)
                     elif meta.inst == 'nirspec' and meta.filter != 'PRISM':
                         log.writelog('WARNING: NIRSpec GRISM spectra is '
                                      'significantly curved and will very '
