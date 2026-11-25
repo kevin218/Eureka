@@ -12,6 +12,18 @@ from ..lib import plots, smooth
 from . import plots_s3
 
 
+SIGMA_CLIP_CENFUNCS = {
+    'ma_median': np.ma.median,
+    'nanmedian': np.nanmedian,
+    'median': 'median',
+}
+SIGMA_CLIP_STDFUNCS = {
+    'ma_std': np.ma.std,
+    'nanstd': np.nanstd,
+    'std': 'std',
+}
+
+
 def standard_spectrum(apdata, apmask, aperr):
     """Compute the standard box spectrum.
 
@@ -567,8 +579,10 @@ def get_clean(data, meta, log, medflux, mederr):
         residuals = (medflux - smoothflux)/smooth_mederr
 
         # Flag outliers
+        cenfunc = SIGMA_CLIP_CENFUNCS[meta.sigma_clip_cenfunc]
+        stdfunc = SIGMA_CLIP_STDFUNCS[meta.sigma_clip_stdfunc]
         outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
-                              axis=1, cenfunc=np.ma.median, stdfunc=np.ma.std)
+                              axis=1, cenfunc=cenfunc, stdfunc=stdfunc)
 
         # Interpolate over bad pixels
         clean_med = np.zeros((ny, nx))

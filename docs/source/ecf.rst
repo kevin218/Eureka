@@ -760,6 +760,14 @@ median_thresh
 '''''''''''''
 Used during Optimal Extraction. Sigma threshold when flagging outliers in median frame, when fittype=meddata and window_len > 1. Default is 5.
 
+sigma_clip_cenfunc
+''''''''''''''''''
+Used during optimal spectral extraction when cleaning the median frame. This selects the ``cenfunc`` passed to ``astropy.stats.sigma_clip``. Options are ``'ma_median'`` (default), ``'nanmedian'``, or ``'median'``.
+
+sigma_clip_stdfunc
+''''''''''''''''''
+Used during optimal spectral extraction when cleaning the median frame. This selects the ``stdfunc`` passed to ``astropy.stats.sigma_clip``. Options are ``'ma_std'`` (default), ``'nanstd'``, or ``'std'``.
+
 prof_deg
 ''''''''
 Used during Optimal Extraction. prof_deg is only used when fittype = 'poly'. It sets the polynomial degree when constructing the spatial profile. Default is 3. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.

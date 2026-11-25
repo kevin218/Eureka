@@ -136,6 +136,19 @@ class S3MetaClass(MetaClass):
         self.spec_hw = getattr(self, 'spec_hw')
         self.fittype = getattr(self, 'fittype', 'meddata')
         self.median_thresh = getattr(self, 'median_thresh', 5)
+        self.sigma_clip_cenfunc = getattr(
+            self, 'sigma_clip_cenfunc', 'ma_median')
+        self.sigma_clip_stdfunc = getattr(
+            self, 'sigma_clip_stdfunc', 'ma_std')
+        if self.sigma_clip_cenfunc not in {'ma_median', 'nanmedian',
+                                           'median'}:
+            raise ValueError(
+                "sigma_clip_cenfunc must be one of 'ma_median', "
+                "'nanmedian', or 'median'.")
+        if self.sigma_clip_stdfunc not in {'ma_std', 'nanstd', 'std'}:
+            raise ValueError(
+                "sigma_clip_stdfunc must be one of 'ma_std', 'nanstd', "
+                "or 'std'.")
         if self.fittype in ['meddata', 'smooth']:
             # Require this parameter to be set if relevant
             self.window_len = getattr(self, 'window_len')
