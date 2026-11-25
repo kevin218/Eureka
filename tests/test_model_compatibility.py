@@ -139,9 +139,10 @@ def test_tinygp_kernel_is_shared_by_both_fitters(kernel_name):
         build_tinygp_kernel
 
     pars = parameters(A=-12.0, m=-2.0)
-    time = np.linspace(0.0, 1.0, 11)
+    time = np.roll(np.linspace(0.0, 0.1, 11), 3)
     lc = SimpleNamespace(
-        flux=np.ones(11), unc=np.full(11, 0.001), unc_fit=np.full(11, 0.001)
+        flux=1. + 0.01 * time, unc=np.linspace(0.001, 0.002, 11),
+        unc_fit=np.linspace(0.001, 0.002, 11),
     )
     legacy = models.GPModel(
         [kernel_name],
@@ -156,7 +157,8 @@ def test_tinygp_kernel_is_shared_by_both_fitters(kernel_name):
         scale=np.exp(-4.0), **kwargs
     )
     np.testing.assert_allclose(
-        kernel.evaluate(0.0, 0.02), reference.evaluate(0.0, 0.02)
+        kernel.evaluate(jnp.array(0.0), jnp.array(0.02)),
+        reference.evaluate(0.0, 0.02),
     )
     result = jax.jit(
         lambda amp: build_tinygp_kernel(kernel_name, amp, -2.0).evaluate(
@@ -164,6 +166,17 @@ def test_tinygp_kernel_is_shared_by_both_fitters(kernel_name):
         )
     )(-12.0)
     np.testing.assert_allclose(result, reference.evaluate(0.0, 0.02))
+
+    residual = lc.flux - 1.
+    fit = np.ones_like(time)
+    dense = tinygp.GaussianProcess(reference, time, diag=lc.unc**2)
+    expected = dense.log_probability(residual)
+    np.testing.assert_allclose(legacy.loglikelihood(fit), expected, rtol=1e-10)
+    np.testing.assert_allclose(legacy.eval(fit), dense.predict(residual),
+                               rtol=1e-10)
+    if kernel_name in ("Matern32", "Exp"):
+        solver = legacy.setup_GP().solver
+        assert isinstance(solver, tinygp.solvers.QuasisepSolver)
 
 
 def test_mixed_astrophysical_adapter_with_shared_phasecurve():

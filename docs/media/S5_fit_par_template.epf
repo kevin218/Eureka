@@ -108,7 +108,8 @@ u2          0.2             'free'          0           1           U
 # ** Systematic variables **
 # Polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
 # Exponential ramp model variables (r0--r1 for one exponential ramp, r2--r3 for a second exponential ramp)
-# GP model parameters (A, m for the first kernel; A1, m1 for the second kernel; etc.) in log scale
+# GP model parameters (A, m for the first kernel; A1, m1 for the second kernel; etc.)
+# For SHO, A is log variance, m gives angular frequency sqrt(3)*exp(-m), and Q is a positive quality factor.
 # Step-function model variables (step# and steptime# for step-function model #; e.g. step0 and steptime0)
 # Drift model variables (xpos, ypos, xwidth, ywidth)
 # --------------------
@@ -116,6 +117,7 @@ c0          1.015           'free'          1           0.05        N
 c1          0               'free'          0           0.01        N
 # A           -15             'free'          -25         0           U
 # m           -4              'free'          -7          0           U
+# Q           0.707           'free'          0.1         10          U # SHO only
 
 # -----------
 # ** White noise **
