@@ -34,7 +34,7 @@ def rate2count(data):
 
     data['flux'] *= int_time
     data['err'] *= int_time
-    data['v0'] *= int_time
+    data['v0'] *= int_time**2
 
     return data
 

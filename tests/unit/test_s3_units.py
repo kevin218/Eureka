@@ -312,7 +312,7 @@ def test_get_clean_interpolates_masked_pixels_and_removes_median_outlier():
 
 
 def test_rate2count_uses_effective_integration_time_header():
-    """Confirm rate-to-count conversion uses the effective integration time."""
+    """Confirm rates and variances use the effective integration time."""
     data = xr.Dataset(
         {
             'flux': (('y', 'x'), np.ones((2, 2))),
@@ -326,7 +326,7 @@ def test_rate2count_uses_effective_integration_time_header():
 
     np.testing.assert_allclose(result.flux.values, np.full((2, 2), 5.0))
     np.testing.assert_allclose(result.err.values, np.full((2, 2), 10.0))
-    np.testing.assert_allclose(result.v0.values, np.full((2, 2), 15.0))
+    np.testing.assert_allclose(result.v0.values, np.full((2, 2), 75.0))
 
 
 def test_rate2count_requires_time_header():
