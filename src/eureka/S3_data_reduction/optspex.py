@@ -11,7 +11,6 @@ from ..lib import gaussian as g
 from ..lib import plots, smooth
 from . import plots_s3
 
-
 SIGMA_CLIP_CENFUNCS = {
     'ma_median': np.ma.median,
     'nanmedian': np.nanmedian,
